@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.werstreamt.domainvalues.AvailabilityType;
+import tech.dobler.werstreamt.domainvalues.Price;
 import tech.dobler.werstreamt.entities.Availability;
 import tech.dobler.werstreamt.entities.QueryResult;
 import tech.dobler.werstreamt.entities.SearchResult;
@@ -107,13 +108,13 @@ public class ApiClient {
                         e.childNode(0).childNode(0).toString(),
                         e.childNode(1).toString()))
                 .collect(Collectors.toMap(List::getFirst, e -> e.get(1)));
-        final var rentSD = qualities.get("SD");
-        final var rentHD = qualities.get("HD");
-        final var rent4k = qualities.get("4K");
-        if (rentSD == null && rentHD == null && rent4k == null) {
+        final var sd = qualities.get("SD");
+        final var hd = qualities.get("HD");
+        final var fourK = qualities.get("4K");
+        if (sd == null && hd == null && fourK == null) {
             return Optional.empty();
         }
-        return Optional.of(new Availability(type, rentSD, rentHD, rent4k));
+        return Optional.of(new Availability(type, new Price(sd), new Price(hd), new Price(fourK)));
     }
 
     private static Connection getConnectionWithUserAgent(UriComponents query) {
