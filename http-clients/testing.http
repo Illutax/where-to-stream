@@ -1,0 +1,7 @@
+### Found
+GET http://localhost:8001/api/v1/query?id=1
+Accept: application/json
+
+### Not Found
+GET http://localhost:8001/api/v1/query?id=9001
+Accept: application/json
