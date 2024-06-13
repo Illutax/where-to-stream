@@ -75,7 +75,7 @@ public class ApiClient {
                                     new QueryResult(imdbId, name + "(2)", f2,
                                             Stream.of(e3, e4).filter(Optional::isPresent).map(Optional::get).toList()));
                         } else {
-                            log.error("Got something unexpected. {}", columns);
+                            log.error("Got something unexpected. for id {} \n{}", imdbId, columns);
                             return Stream.of();
                         }
                     })
