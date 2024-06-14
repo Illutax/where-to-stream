@@ -89,19 +89,6 @@ public class ApiClient {
         return List.of();
     }
 
-//    //    @EventListener(ApplicationReadyEvent.class)
-//    public void s() {
-//        final var search = search("cube+1997");
-//        log.info("Found {} results", search.size());
-//        search.forEach(e -> log.info(e.toString()));
-//    }
-//
-////    @EventListener(ApplicationReadyEvent.class)
-//    public void q() {
-//        final var result = query("tt0123755");
-//        final var result2 = query("tt1375666");
-//    }
-
     private static Optional<Availability> parseAvailability(Element column, AvailabilityType type) {
         final var qualities = column.select("em").stream()
                 .map(e -> List.of(
