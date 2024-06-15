@@ -2,12 +2,10 @@ package tech.dobler.werstreamt.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.entities.QueryResult;
-import tech.dobler.werstreamt.persistence.QueryResultDB;
 import tech.dobler.werstreamt.persistence.QueryResultRepository;
+import tech.dobler.werstreamt.services.mappers.QueryResultMapper;
 
 import java.util.List;
 
@@ -25,11 +23,7 @@ public class StreamInfoService {
             return fetch(imdbId);
         }
         return result.stream()
-                .map(this::map).toList();
-    }
-
-    private QueryResult map(QueryResultDB db) {
-        return new QueryResult(db.getImdbId(), db.getTitle(), db.isFlatrate(), db.getAvailabilities());
+                .map(QueryResultMapper.INSTANCE::dtoToEntity).toList();
     }
 
     private List<QueryResult> fetch(String imdbId) {
@@ -37,16 +31,7 @@ public class StreamInfoService {
         final var queryResults = imdbEntryRepository.findByImdb(imdbId)
                 .map(entry -> apiClient.query(entry.imdbId()))
                 .orElse(List.of());
-        queryResultRepository.saveAll(queryResults.stream().map(this::map2db).toList());
+        queryResultRepository.saveAll(queryResults.stream().map(QueryResultMapper.INSTANCE::entityToDto).toList());
         return queryResults;
-    }
-
-    private QueryResultDB map2db(QueryResult q) {
-        return new QueryResultDB(q.imdbId(), q.title(), q.flatrate(), q.availabilities());
-    }
-
-    @EventListener(ApplicationReadyEvent.class)
-    void resolve() {
-        final var prices = resolve("tt0292644");
     }
 }
