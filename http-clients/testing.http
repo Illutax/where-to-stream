@@ -5,3 +5,12 @@ Accept: application/json
 ### Not Found
 GET http://localhost:8001/api/v1/query?id=9001
 Accept: application/json
+
+###
+GET http://localhost:8001/api/v1/search?imdbId=tt0292644
+Accept: application/json
+
+###
+#GET http://localhost:8001/api/v1/search?id=5
+GET http://localhost:8001/api/v1/search?imdbId=tt0101452
+Accept: application/json
