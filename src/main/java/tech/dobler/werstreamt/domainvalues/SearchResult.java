@@ -1,4 +1,4 @@
-package tech.dobler.werstreamt.entities;
+package tech.dobler.werstreamt.domainvalues;
 
 import java.net.URI;
 

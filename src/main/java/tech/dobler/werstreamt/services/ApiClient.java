@@ -12,7 +12,7 @@ import tech.dobler.werstreamt.domainvalues.AvailabilityType;
 import tech.dobler.werstreamt.domainvalues.Price;
 import tech.dobler.werstreamt.entities.Availability;
 import tech.dobler.werstreamt.entities.QueryResult;
-import tech.dobler.werstreamt.entities.SearchResult;
+import tech.dobler.werstreamt.domainvalues.SearchResult;
 
 import java.io.IOException;
 import java.net.URI;
