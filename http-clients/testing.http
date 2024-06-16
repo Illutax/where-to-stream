@@ -11,6 +11,17 @@ GET http://localhost:8001/api/v1/search?imdbId=tt0292644
 Accept: application/json
 
 ###
-#GET http://localhost:8001/api/v1/search?id=5
 GET http://localhost:8001/api/v1/search?imdbId=tt0101452
+Accept: application/json
+
+###
+GET http://localhost:8001/api/v1/pre-cache
+Accept: application/json
+
+###
+GET http://localhost:8001/api/v1/check-pre-cache
+Accept: application/json
+
+###
+GET http://localhost:8001/api/v1/pre-cache-missing
 Accept: application/json
