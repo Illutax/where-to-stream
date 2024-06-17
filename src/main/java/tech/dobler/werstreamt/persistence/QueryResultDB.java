@@ -23,7 +23,7 @@ public final class QueryResultDB {
     @Column(name = "imdbId")
     private final String imdbId;
     @Column(name = "title")
-    private final String title;
+    private final String streamingServiceName;
     @Column(name = "flatrate")
     private final boolean flatrate;
     @ElementCollection
@@ -37,10 +37,10 @@ public final class QueryResultDB {
     })
     private final List<Availability> availabilities = new ArrayList<>();
 
-    public QueryResultDB(String imdbId, String title, boolean flatrate, List<Availability> availabilities) {
+    public QueryResultDB(String imdbId, String streamingServiceName, boolean flatrate, List<Availability> availabilities) {
         this.id = null;
         this.imdbId = imdbId;
-        this.title = title;
+        this.streamingServiceName = streamingServiceName;
         this.flatrate = flatrate;
         this.availabilities.addAll(availabilities);
     }

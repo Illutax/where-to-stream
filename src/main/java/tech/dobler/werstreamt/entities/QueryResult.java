@@ -4,7 +4,7 @@ import java.util.List;
 
 public record QueryResult(
         String imdbId,
-        String title, //TODO: Rename to Streaming-Service-Name
+        String streamingServiceName,
         boolean flatrate,
         List<Availability> availabilities
 ) {
