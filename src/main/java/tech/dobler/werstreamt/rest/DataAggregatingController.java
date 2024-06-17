@@ -10,6 +10,9 @@ import tech.dobler.werstreamt.services.FavoriteStreamingServicesRepository;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;
 import tech.dobler.werstreamt.services.StreamInfoService;
 
+import java.util.List;
+import java.util.function.Predicate;
+
 import static org.springframework.http.ResponseEntity.ok;
 
 @Slf4j
@@ -25,12 +28,19 @@ public class DataAggregatingController {
     public ResponseEntity<String> q(){
         final var allImdbEntries = imdbEntryRepository.findAll();
         final var favoriteServices = favoriteStreamingServicesRepository.getFavoriteServices();
-        final var queryResults = allImdbEntries.parallelStream()
+        final var queryResults = allImdbEntries.stream()
                 .map(e -> streamInfoService.resolve(e.imdbId()))
                 .toList();
-        final var queriesWithMyServices = queryResults.stream()
-                .filter(e -> e.stream().anyMatch(k -> favoriteServices.contains(k.title())))
+        final var resultsOnMyServices = queryResults.stream()
+                .map(e -> e.stream().filter(k -> favoriteServices.contains(k.streamingServiceName())).toList())
+                .filter(Predicate.not(List::isEmpty))
                 .toList();
+
+        final var resultsOnMyServicesWithFlatrate = queryResults.stream()
+                .map(e -> e.stream().filter(k -> favoriteServices.contains(k.streamingServiceName()) && k.flatrate()).toList())
+                .filter(Predicate.not(List::isEmpty))
+                .toList();
+        // TODO: get a good overview of <What> is available <Where> and <How>
 
         return ok("k");
     }
