@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.werstreamt.entities.ImdbEntry;
 import tech.dobler.werstreamt.entities.QueryResult;
-import tech.dobler.werstreamt.services.ApiClient;
+import tech.dobler.werstreamt.services.WerStreamtEsApiClient;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;
 import tech.dobler.werstreamt.services.StreamInfoService;
 
@@ -22,7 +22,7 @@ import static org.springframework.http.ResponseEntity.ok;
 @RequiredArgsConstructor
 public class QueryController {
     private final ImdbEntryRepository entryRepository;
-    private final ApiClient apiClient;
+    private final WerStreamtEsApiClient werStreamtEsApiClient;
     private final StreamInfoService streamInfoService;
 
     @GetMapping("/query")
@@ -31,7 +31,7 @@ public class QueryController {
         final var maybeEntry = entryRepository.findById(id);
         log(id, maybeEntry);
         return maybeEntry
-                .map(imdbEntry -> ok(apiClient.query(imdbEntry.imdbId())))
+                .map(imdbEntry -> ok(werStreamtEsApiClient.query(imdbEntry.imdbId())))
                 .orElse(notFound());
 
     }

@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
-public class ApiClient {
+public class WerStreamtEsApiClient {
     private final URI baseUrl = URI.create("https://www.werstreamt.es/filme/");
 
     public List<SearchResult> search(String searchTerm) {
