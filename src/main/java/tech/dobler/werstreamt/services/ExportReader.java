@@ -40,7 +40,7 @@ public class ExportReader {
             "Date Rated",
     };
 
-    @Value("${wer-streamt.path:d3918245-a9b8-48ea-99fb-cce13ef4bee3}")
+    @Value("${wer-streamt.path}")
     private String fileName;
 
     private final static Pattern PATTERN = Pattern.compile("https://www.imdb.com/title/(tt\\w+)/");
