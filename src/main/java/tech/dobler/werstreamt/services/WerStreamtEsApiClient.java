@@ -1,12 +1,9 @@
 package tech.dobler.werstreamt.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.werstreamt.domainvalues.AvailabilityType;
 import tech.dobler.werstreamt.domainvalues.Price;
@@ -29,7 +26,7 @@ public class WerStreamtEsApiClient {
     public List<SearchResult> search(String searchTerm) {
         log.info("Searching for: " + searchTerm);
         final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", searchTerm).build();
-        final var connect = getConnectionWithUserAgent(query);
+        final var connect = ApiClientUtils.getConnectionWithUserAgent(query);
         try {
             final var document = connect.get();
             final var elements = document.select(".results > ul > li[data-contentid]");
@@ -51,7 +48,7 @@ public class WerStreamtEsApiClient {
         log.info("Query with id: {}", imdbId);
 
         final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", imdbId).queryParam("action_results", "suchen").build();
-        final var connect = getConnectionWithUserAgent(query).followRedirects(true);
+        final var connect = ApiClientUtils.getConnectionWithUserAgent(query).followRedirects(true);
         try {
             final var document = connect.get();
             final var elements = document.select("#avalibility > .provider");
@@ -104,9 +101,4 @@ public class WerStreamtEsApiClient {
         return Optional.of(new Availability(type, new Price(sd), new Price(hd), new Price(fourK)));
     }
 
-    private static Connection getConnectionWithUserAgent(UriComponents query) {
-        return Jsoup.connect(query.toString())
-                .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
-                .referrer("http://www.google.com");
-    }
 }
