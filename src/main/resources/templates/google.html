@@ -5,8 +5,8 @@
 <body layout:fragment="content">
 
 <h1>Google Play</h1>
-<ul th:each="entry : ${entries}">
-    <li>
+<ul>
+    <li th:each="entry : ${entries}">
         <span th:if="${entry.isRated}">✅</span>
         <span th:text="${entry.price}"></span>
         <a th:text="${entry.name}" th:href="@{'https://www.imdb.com/title/' + ${entry.imdbId}}"></a>

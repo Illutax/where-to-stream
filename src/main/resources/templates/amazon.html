@@ -6,8 +6,8 @@
 
 <h1>Amazon Prime</h1>
 <h2>Inkludiert</h2>
-<ul th:each="entry : ${primeIncluded}">
-    <li>
+<ul>
+    <li th:each="entry : ${primeIncluded}">
         <span th:if="${entry.isRated}">✅</span>
         <a th:text="${entry.name}" th:href="@{'https://www.imdb.com/title/' + ${entry.imdbId}}"></a>
         (<span th:text="${entry.year}"></span>)
@@ -16,8 +16,8 @@
 </ul>
 
 <h2>Kaufbar</h2>
-<ul th:each="entry : ${primeOthers}">
-    <li>
+<ul>
+    <li th:each="entry : ${primeOthers}">
         <span th:if="${entry.isRated}">✅</span>
         <span th:text="${entry.price}"></span>
         <a th:text="${entry.name}" th:href="@{'https://www.imdb.com/title/' + ${entry.imdbId}}"></a>

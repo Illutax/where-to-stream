@@ -4,9 +4,9 @@
 </head>
 <body layout:fragment="content">
 
-<h1>Disney</h1>
-<ul th:each="entry : ${entries}">
-    <li>
+<h1>Disney <i class="fa-plus"></i></h1>
+<ul>
+    <li th:each="entry : ${entries}">
         <span th:if="${entry.isRated}">✅</span>
         <a th:text="${entry.name}" th:href="@{'https://www.imdb.com/title/' + ${entry.imdbId}}"></a>
         (<span th:text="${entry.year}"></span>)
