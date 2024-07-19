@@ -54,9 +54,10 @@ public class ExportReader {
                 final var created = record.get("Created");
                 final var name = record.get("Title");
                 final var url = record.get("URL");
+                final var year = Integer.parseInt(record.get("Year"));
                 final var isRated = !record.get("Your Rating").isBlank();
                 final var id = extractImdbId(url);
-                final var entry = new ImdbEntry(counter.incrementAndGet(), name, URI.create(url), created, isRated, id);
+                final var entry = new ImdbEntry(counter.incrementAndGet(), name, URI.create(url), created, isRated, year, id);
                 entries.add(entry);
             }
         } catch (IOException e) {
