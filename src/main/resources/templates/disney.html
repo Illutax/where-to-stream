@@ -1,3 +1,9 @@
+<html layout:decorate="~{layout/layout}">
+<head>
+    <title>Disney Plus</title>
+</head>
+<body layout:fragment="content">
+
 <h1>Disney</h1>
 <ul th:each="entry : ${entries}">
     <li>
@@ -6,3 +12,6 @@
         Hinzuzgefügt: <span th:text="${entry.added}"></span>
     </li>
 </ul>
+
+</body>
+</html>

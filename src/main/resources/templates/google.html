@@ -1,3 +1,9 @@
+<html layout:decorate="~{layout/layout}">
+<head>
+    <title>Google Play</title>
+</head>
+<body layout:fragment="content">
+
 <h1>Google Play</h1>
 <ul th:each="entry : ${entries}">
     <li>
@@ -7,3 +13,6 @@
         Hinzuzgefügt: <span th:text="${entry.added}"></span>
     </li>
 </ul>
+
+</body>
+</html>

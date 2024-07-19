@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <!-- Required meta tags -->
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <base th:href="@{/}">
+    <link rel="shortcut icon" th:href="@{/favicon.ico}" type="image/x-icon">
+
+    <!-- Bootstrap CSS -->
+    <link media="screen" rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}"/>
+    <link media="screen" rel="stylesheet" th:href="@{/webjars/font-awesome/6.5.2/css/all.min.css}"/>
+
+    <link href="css/style.css" rel="stylesheet">
+
+    <!--  Each token will be replaced by their respective titles in the resulting page. -->
+    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">WS</title>
+
+</head>
+
+<body class="d-flex flex-column text-primary min-vh-100">
+<!-- Navbar -->
+<header class="sticky-top">
+    <div class="bg-primary">
+        <nav th:replace="~{layout/navbar-fragment :: navbar}"></nav>
+    </div>
+</header>
+
+<!-- Content -->
+<main class="container my-3 mt-lg-4">
+    <div layout:fragment="content"></div>
+</main>
+
+<!-- Footer -->
+<footer th:replace="~{layout/footer-fragment :: footer}"></footer>
+
+</body>
+</html>

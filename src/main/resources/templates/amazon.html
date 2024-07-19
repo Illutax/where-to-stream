@@ -1,3 +1,9 @@
+<html layout:decorate="~{layout/layout}">
+<head>
+    <title>Amazon Prime</title>
+</head>
+<body layout:fragment="content">
+
 <h1>Amazon Prime</h1>
 <h2>Inkludiert</h2>
 <ul th:each="entry : ${primeIncluded}">
@@ -17,3 +23,6 @@
         Hinzuzgefügt: <span th:text="${entry.added}"></span>
     </li>
 </ul>
+
+</body>
+</html>
