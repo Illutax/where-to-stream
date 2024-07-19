@@ -45,6 +45,15 @@ public class DataAggregateController {
         return "disney";
     }
 
+    @GetMapping(path = "netflix")
+    public String getNetflix(Model model) {
+        final var included = service.included("Netflix").stream()
+                .sorted(Comparator.comparing(ImdbEntry::added))
+                .toList();
+        model.addAttribute("entries", included);
+        return "netflix";
+    }
+
     @GetMapping(path = "google")
     public String getGoogle(Model model) {
         final var included = service.paid("Google Play").stream()
