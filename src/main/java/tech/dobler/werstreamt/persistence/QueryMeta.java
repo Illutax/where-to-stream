@@ -26,7 +26,7 @@ public class QueryMeta {
     private final Instant creationTime;
     @Column(name = "invalidated")
     private final boolean invalidated;
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JoinColumn(name = "query_meta_id")
     private final List<QueryResultDB> queries;
 

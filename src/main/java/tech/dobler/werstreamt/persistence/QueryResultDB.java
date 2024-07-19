@@ -26,7 +26,7 @@ public final class QueryResultDB {
     private final String streamingServiceName;
     @Column(name = "flatrate")
     private final boolean flatrate;
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "query_result_availablilities", joinColumns = @JoinColumn(name = "imdb_id"))
     @Column(name = "availabilities")
     @AttributeOverrides({
