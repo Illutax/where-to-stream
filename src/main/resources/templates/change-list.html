@@ -1,0 +1,28 @@
+<html layout:decorate="~{layout/layout}">
+<head>
+    <title>Change List</title>
+</head>
+
+<body layout:fragment="content">
+
+<div class="alert alert-success" role="alert" th:if="${param.success}">
+    Successfully Changed!
+</div>
+<div class="alert alert-danger" role="alert" th:if="${param.error}">
+    Unknown list!
+</div>
+
+
+<h1>Change list</h1>
+
+<form method="post" action="list-change">
+    <label for="list">Choose a list:</label>
+
+    <select class="form-control" name="list" id="list">
+        <option th:each="entry : ${availableLists}" th:value="${entry}" th:text="${entry}"></option>
+    </select>
+    <button type="submit">Submit</button>
+</form>
+
+</body>
+</html>

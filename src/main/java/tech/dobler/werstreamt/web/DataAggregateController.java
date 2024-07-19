@@ -64,10 +64,13 @@ public class DataAggregateController {
         return "google";
     }
 
-    public record PaidDto(String name, String imdbId, String price, String added, boolean isRated, int year) {
+    public record PaidDto(String name, String imdbId, String price, String added, boolean isRated, String year) {
         static PaidDto from(QueryResult result, ImdbEntry imdbEntry) {
             String price = prettyPrint(result.availabilities());
-            return new PaidDto(imdbEntry.name(), imdbEntry.imdbId(), price, imdbEntry.added(), imdbEntry.isRated(), imdbEntry.year());
+            String year = imdbEntry.year() == 0
+                    ? "Not yet released"
+                    : String.valueOf(imdbEntry.year());
+            return new PaidDto(imdbEntry.name(), imdbEntry.imdbId(), price, imdbEntry.added(), imdbEntry.isRated(), year);
         }
     }
 

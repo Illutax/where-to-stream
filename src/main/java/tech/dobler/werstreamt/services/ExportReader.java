@@ -46,6 +46,10 @@ public class ExportReader {
     private final static Pattern PATTERN = Pattern.compile("https://www.imdb.com/title/(tt\\w+)/");
 
     public List<ImdbEntry> parse() {
+        return parse(fileName);
+    }
+
+    public List<ImdbEntry> parse(String fileName) {
         final var entries = new ArrayList<ImdbEntry>();
         AtomicInteger counter = new AtomicInteger(0);
         try (var reader = makeReader(fileName)) {
@@ -54,7 +58,8 @@ public class ExportReader {
                 final var created = record.get("Created");
                 final var name = record.get("Title");
                 final var url = record.get("URL");
-                final var year = Integer.parseInt(record.get("Year"));
+                String yearString = record.get("Year");
+                final var year = yearString.isBlank() ? 0 : Integer.parseInt(yearString);
                 final var isRated = !record.get("Your Rating").isBlank();
                 final var id = extractImdbId(url);
                 final var entry = new ImdbEntry(counter.incrementAndGet(), name, URI.create(url), created, isRated, year, id);
@@ -76,7 +81,7 @@ public class ExportReader {
     }
 
     private static CSVParser makeReader(String filePath) throws IOException {
-        final var csvFilePath = Paths.get("assets", filePath + ".csv");
+        final var csvFilePath = Paths.get("assets", filePath);
         log.info("Reading csv from path: {}", csvFilePath.toAbsolutePath());
 
         final var fileReader = new FileReader(csvFilePath.toFile());

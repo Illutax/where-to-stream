@@ -29,7 +29,7 @@ public class PreCacheController {
     private final QueryMetaRepository queryMetaRepository;
 
     @GetMapping("/pre-cache")
-    ResponseEntity<String> cache() {
+    public ResponseEntity<String> cache() {
         final var all = imdbEntryRepository.findAll();
         final var counter = new AtomicInteger(0);
         all.parallelStream()

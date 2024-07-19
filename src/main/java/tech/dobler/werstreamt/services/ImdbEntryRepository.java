@@ -9,15 +9,24 @@ import java.util.function.Predicate;
 @Slf4j
 public class ImdbEntryRepository {
     private final Map<Integer, ImdbEntry> all = new HashMap<>();
-    private final Map<Integer, ImdbEntry> unread = new HashMap<>();
     private final Map<String, ImdbEntry> byID= new HashMap<>();
+
+    public ImdbEntryRepository() {
+    }
 
     public void init(Collection<ImdbEntry> entries) {
         entries.forEach(e -> all.put(e.id(), e));
         entries.forEach(e -> byID.put(e.imdbId(), e));
-        entries.stream().filter(Predicate.not(ImdbEntry::isRated)).forEach(e -> unread.put(e.id(), e));
+        final var unseen = new HashMap<>();
+        entries.stream().filter(Predicate.not(ImdbEntry::isRated)).forEach(e -> unseen.put(e.id(), e));
 
-        log.info("Imported {} unread entries ({})", unread.size(), all.size());
+        log.info("Imported {} unseen entries ({})", unseen.size(), all.size());
+    }
+
+    public void clear()
+    {
+        all.clear();
+        byID.clear();
     }
 
     public Optional<ImdbEntry> findById(int id) {
