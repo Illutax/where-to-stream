@@ -26,6 +26,6 @@ Accept: application/json
 GET http://localhost:8001/api/v1/pre-cache-missing
 Accept: application/json
 
-###
+### deprecated
 GET http://localhost:8001/api/v1/data/q
 Accept: application/json
