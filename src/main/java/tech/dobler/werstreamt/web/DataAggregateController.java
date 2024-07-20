@@ -78,6 +78,12 @@ public class DataAggregateController {
         return availabilities.stream()
                 .map(a -> {
                     final var sb = new StringBuilder();
+                    if (a.type() == AvailabilityType.RENT) {
+                        sb.append("leihen: ");
+                    } else {
+                        sb.append("kaufen: ");
+                    }
+
                     if (a.fourK() != null) {
                         sb.append("4k: ").append(a.fourK().value()).append(" ");
                     }
