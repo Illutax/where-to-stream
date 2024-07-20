@@ -11,14 +11,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import tech.dobler.werstreamt.entities.ImdbEntry;
 import tech.dobler.werstreamt.rest.PreCacheController;
+import tech.dobler.werstreamt.services.CommonAttributeService;
 import tech.dobler.werstreamt.services.ExportReader;
+import tech.dobler.werstreamt.services.FileUtils;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 @Transactional
 @Controller
@@ -29,18 +27,20 @@ public class ChangeListController {
     private final ImdbEntryRepository imdbEntryRepository;
     private final ExportReader exportReader;
     private final PreCacheController cacheController;
+    private final CommonAttributeService commonAttributeService;
 
     @GetMapping("/list")
     public String get(Model model)
     {
-        model.addAttribute("availableLists", availableLists());
+        model.addAttribute("availableLists", FileUtils.availableLists());
+        commonAttributeService.add(model);
         return "change-list";
     }
 
     @PostMapping("/list-change")
     public String post(@RequestParam("list") String listName, RedirectAttributes attributes)
     {
-        if (!availableLists().contains(listName))
+        if (!FileUtils.availableLists().contains(listName))
         {
             attributes.addAttribute("unknownEntry", listName);
             return "redirect:/list?error";
@@ -51,14 +51,8 @@ public class ChangeListController {
         log.info("Reading new list {}", listName);
         List<ImdbEntry> entries = exportReader.parse(listName);
         log.info("Initializing with {} entries", entries.size());
-        imdbEntryRepository.init(entries);
+        imdbEntryRepository.init(entries, listName);
         cacheController.cache();
         return "redirect:/list?success";
-    }
-
-    private static List<String> availableLists()
-    {
-        Path assetsPath = Paths.get("assets");
-        return Arrays.asList(Objects.requireNonNull(assetsPath.toFile().list()));
     }
 }

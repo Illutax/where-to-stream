@@ -4,37 +4,41 @@
 <body>
 <nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark py-lg-0 h-lg-55px">
     <div class="container">
-        <div>
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item py-lg-2 mx-lg-2">
-                    <a class="nav-link text-light px-0 py-lg-2" th:href="@{/disney}">
-                        Disney<i class="fas fa-plus"></i>
-                    </a>
-                </li>
-                <li class="nav-item py-lg-2 mx-lg-2">
-                    <a class="nav-link text-light px-0 py-lg-2" th:href="@{/amazon}">
-                        Amazon Prime
-                    </a>
-                </li>
-                <li class="nav-item py-lg-2 mx-lg-2">
-                    <a class="nav-link text-light px-0 py-lg-2" th:href="@{/google}">
-                        Google Play
-                    </a>
-                </li>
-                <li class="nav-item py-lg-2 mx-lg-2">
-                    <a class="nav-link text-light px-0 py-lg-2" th:href="@{/netflix}">
-                        Nietflix
-                    </a>
-                </li>
-            </ul>
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item py-lg-2 mx-lg-2">
-                    <a class="nav-link text-light px-0 py-lg-2" th:href="@{/list}">
-                        <i class="fas fa-cog"></i> Change List
-                    </a>
-                </li>
-            </ul>
-        </div>
+        <ul class="navbar-nav me-auto">
+            <li class="navbar-brand">
+                <a class="nav-link" href="/">WS</a>
+            </li>
+            <li class="nav-item py-lg-2 mx-lg-2">
+                <a class="nav-link text-light px-0 py-lg-2" th:href="@{/disney}">
+                    Disney<i class="fas fa-plus"></i>
+                </a>
+            </li>
+            <li class="nav-item py-lg-2 mx-lg-2">
+                <a class="nav-link text-light px-0 py-lg-2" th:href="@{/amazon}">
+                    Amazon Prime
+                </a>
+            </li>
+            <li class="nav-item py-lg-2 mx-lg-2">
+                <a class="nav-link text-light px-0 py-lg-2" th:href="@{/google}">
+                    Google Play
+                </a>
+            </li>
+            <li class="nav-item py-lg-2 mx-lg-2">
+                <a class="nav-link text-light px-0 py-lg-2" th:href="@{/netflix}">
+                    Nietflix
+                </a>
+            </li>
+        </ul>
+        <ul class="navbar-nav me-auto">
+            <li class="nav-item py-lg-2 mx-lg-2">
+                <a class="nav-link text-light px-0 py-lg-2" th:href="@{/list}">
+                    <i class="fas fa-cog"></i> Change List
+                </a>
+            </li>
+            <li class="nav-item py-lg-2 mx-lg-2 text-light px-0 py-lg-2">
+                Selected list: <span th:text="${selectedList}"></span>
+            </li>
+        </ul>
     </div>
 </nav>
 </body>

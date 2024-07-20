@@ -3,8 +3,12 @@ package tech.dobler.werstreamt.configurations;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import tech.dobler.werstreamt.entities.ImdbEntry;
 import tech.dobler.werstreamt.services.ExportReader;
+import tech.dobler.werstreamt.services.FileUtils;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;
+
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
@@ -15,7 +19,9 @@ public class JpaConfig {
     @Bean
     public ImdbEntryRepository imdbEntryRepository() {
         final var imdbEntryRepository = new ImdbEntryRepository();
-        imdbEntryRepository.init(this.exportReader.parse());
+        String list = FileUtils.availableLists().getFirst();
+        List<ImdbEntry> entries = this.exportReader.parse(list);
+        imdbEntryRepository.init(entries, list);
         return imdbEntryRepository;
     }
 }

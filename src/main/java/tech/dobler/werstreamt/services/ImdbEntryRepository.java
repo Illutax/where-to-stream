@@ -9,12 +9,14 @@ import java.util.function.Predicate;
 @Slf4j
 public class ImdbEntryRepository {
     private final Map<Integer, ImdbEntry> all = new HashMap<>();
-    private final Map<String, ImdbEntry> byID= new HashMap<>();
+    private final Map<String, ImdbEntry> byID = new HashMap<>();
+    private String nameOfList;
 
     public ImdbEntryRepository() {
     }
 
-    public void init(Collection<ImdbEntry> entries) {
+    public void init(Collection<ImdbEntry> entries, String listName) {
+        this.nameOfList = listName.substring(0, listName.length() - 4);
         entries.forEach(e -> all.put(e.id(), e));
         entries.forEach(e -> byID.put(e.imdbId(), e));
         final var unseen = new HashMap<>();
@@ -23,8 +25,7 @@ public class ImdbEntryRepository {
         log.info("Imported {} unseen entries ({})", unseen.size(), all.size());
     }
 
-    public void clear()
-    {
+    public void clear() {
         all.clear();
         byID.clear();
     }
@@ -33,11 +34,15 @@ public class ImdbEntryRepository {
         return Optional.ofNullable(all.get(id));
     }
 
-    public Optional<ImdbEntry> findByImdb(String  imdbId) {
+    public Optional<ImdbEntry> findByImdb(String imdbId) {
         return Optional.ofNullable(byID.get(imdbId));
     }
 
     public List<ImdbEntry> findAll() {
         return all.values().stream().toList();
+    }
+
+    public String getNameOfList() {
+        return Objects.requireNonNull(nameOfList);
     }
 }

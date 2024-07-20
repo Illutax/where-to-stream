@@ -41,13 +41,9 @@ public class ExportReader {
     };
 
     @Value("${wer-streamt.path}")
-    private String fileName;
+    private String filePath;
 
     private final static Pattern PATTERN = Pattern.compile("https://www.imdb.com/title/(tt\\w+)/");
-
-    public List<ImdbEntry> parse() {
-        return parse(fileName);
-    }
 
     public List<ImdbEntry> parse(String fileName) {
         final var entries = new ArrayList<ImdbEntry>();
@@ -80,8 +76,8 @@ public class ExportReader {
         return matcher.group(1);
     }
 
-    private static CSVParser makeReader(String filePath) throws IOException {
-        final var csvFilePath = Paths.get("assets", filePath);
+    private CSVParser makeReader(String fileName) throws IOException {
+        final var csvFilePath = Paths.get(filePath, fileName);
         log.info("Reading csv from path: {}", csvFilePath.toAbsolutePath());
 
         final var fileReader = new FileReader(csvFilePath.toFile());

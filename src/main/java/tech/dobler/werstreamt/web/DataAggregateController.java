@@ -5,9 +5,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import tech.dobler.werstreamt.domainvalues.AvailabilityType;
 import tech.dobler.werstreamt.entities.Availability;
 import tech.dobler.werstreamt.entities.ImdbEntry;
 import tech.dobler.werstreamt.entities.QueryResult;
+import tech.dobler.werstreamt.services.CommonAttributeService;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;
 import tech.dobler.werstreamt.services.AggregateService;
 
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class DataAggregateController {
     private final AggregateService service;
     private final ImdbEntryRepository imdbEntryRepository;
+    private final CommonAttributeService commonAttributeService;
 
     @GetMapping(path = {"amazon", "prime"})
     public String getAmazon(Model model) {
@@ -33,6 +36,7 @@ public class DataAggregateController {
                 .toList();
         model.addAttribute("primeIncluded", included);
         model.addAttribute("primeOthers", paid);
+        commonAttributeService.add(model);
         return "amazon";
     }
 
@@ -42,6 +46,7 @@ public class DataAggregateController {
                 .sorted(Comparator.comparing(ImdbEntry::added))
                 .toList();
         model.addAttribute("entries", included);
+        commonAttributeService.add(model);
         return "disney";
     }
 
@@ -51,6 +56,7 @@ public class DataAggregateController {
                 .sorted(Comparator.comparing(ImdbEntry::added))
                 .toList();
         model.addAttribute("entries", included);
+        commonAttributeService.add(model);
         return "netflix";
     }
 
@@ -61,6 +67,7 @@ public class DataAggregateController {
                 .sorted(Comparator.comparing(PaidDto::added))
                 .toList();
         model.addAttribute("entries", included);
+        commonAttributeService.add(model);
         return "google";
     }
 
