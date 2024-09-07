@@ -3,7 +3,6 @@ package tech.dobler.werstreamt.services;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -13,7 +12,10 @@ import java.util.Objects;
 public final class FileUtils {
     public static List<String> availableLists()
     {
-        Path assetsPath = Paths.get("assets");
-        return Arrays.asList(Objects.requireNonNull(assetsPath.toFile().list()));
+        final var assetsPath = Paths.get("assets");
+        final var fileNames = Objects.requireNonNull(assetsPath.toFile().list());
+        return Arrays.stream(fileNames)
+                .sorted()
+                .toList();
     }
 }

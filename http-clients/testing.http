@@ -15,7 +15,7 @@ GET http://localhost:8001/api/v1/search?imdbId=tt0101452
 Accept: application/json
 
 ###
-GET http://localhost:8001/api/v1/pre-cache
+GET http://localhost:8001/pre-cache
 Accept: application/json
 
 ###

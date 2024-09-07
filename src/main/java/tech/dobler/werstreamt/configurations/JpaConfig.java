@@ -19,7 +19,7 @@ public class JpaConfig {
     @Bean
     public ImdbEntryRepository imdbEntryRepository() {
         final var imdbEntryRepository = new ImdbEntryRepository();
-        String list = FileUtils.availableLists().getFirst();
+        String list = FileUtils.availableLists().getLast();
         List<ImdbEntry> entries = this.exportReader.parse(list);
         imdbEntryRepository.init(entries, list);
         return imdbEntryRepository;
