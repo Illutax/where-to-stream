@@ -2,6 +2,7 @@ package tech.dobler.werstreamt.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.entities.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryMeta;
@@ -10,6 +11,7 @@ import tech.dobler.werstreamt.services.mappers.QueryResultMapper;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -19,9 +21,24 @@ public class StreamInfoService {
     private final ImdbEntryRepository imdbEntryRepository;
     private final QueryMetaRepository queryMetaRepository;
 
+    @Value("${wer-streamt.invalidate.after-days:28}")
+    private int duration;
+
     public List<QueryResult> resolve(String imdbId) {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
-        return result.map(queryMeta -> queryMeta.getQueries()
+        final var daysSeconds = TimeUnit.DAYS.toSeconds(duration);
+        return result
+                .filter(queryMeta -> {
+                    Instant threshold = queryMeta.getCreationTime()
+                            .plusSeconds(daysSeconds);
+                    Instant now = Instant.now();
+                    boolean passedThreshold = threshold.isBefore(now);
+                    if (passedThreshold) {
+                        log.warn("Entry with id {} passed threshold {} > {}", queryMeta.getImdbId(), threshold, now);
+                    }
+                    return !passedThreshold;
+                })
+                .map(queryMeta -> queryMeta.getQueries()
                         .stream()
                         .map(QueryResultMapper.INSTANCE::dtoToEntity)
                         .toList())
