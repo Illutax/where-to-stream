@@ -19,7 +19,8 @@
     <label for="list">Choose a list:</label>
 
     <select class="form-control" name="list" id="list">
-        <option th:each="entry : ${availableLists}" th:value="${entry}" th:text="${entry}"></option>
+        <option th:value="${current}" th:text="${current}" th:selected="selected" ></option>
+        <option th:each="entry : ${availableLists}" th:value="${entry}" th:text="${entry}" th:unless="${entry} == ${current}"></option>
     </select>
     <button type="submit">Submit</button>
 </form>

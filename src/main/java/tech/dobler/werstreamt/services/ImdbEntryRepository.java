@@ -16,7 +16,7 @@ public class ImdbEntryRepository {
     }
 
     public void init(Collection<ImdbEntry> entries, String listName) {
-        this.nameOfList = listName.substring(0, listName.length() - 4);
+        this.nameOfList = listName;
         entries.forEach(e -> all.put(e.id(), e));
         entries.forEach(e -> byID.put(e.imdbId(), e));
         final var unseen = new HashMap<>();

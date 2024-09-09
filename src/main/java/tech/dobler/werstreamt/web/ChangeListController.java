@@ -32,6 +32,7 @@ public class ChangeListController {
     @GetMapping("/list")
     public String get(Model model)
     {
+        model.addAttribute("current", imdbEntryRepository.getNameOfList());
         model.addAttribute("availableLists", FileUtils.availableLists());
         commonAttributeService.add(model);
         return "change-list";
