@@ -8,11 +8,13 @@
         <version>3.3.2</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <groupId>tech.dobler</groupId>
-    <artifactId>wer-streamt</artifactId>
+    <artifactId>where-to-stream</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>wer-streamt</name>
-    <description>wer-streamt</description>
+    <name>where-to-stream</name>
+    <description>Manage lists of movies to watch and where to stream them.</description>
+
     <properties>
         <java.version>21</java.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
