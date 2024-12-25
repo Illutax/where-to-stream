@@ -1,0 +1,18 @@
+<html layout:decorate="~{layout/layout}">
+<head>
+    <title>WOW</title>
+</head>
+
+<body layout:fragment="content">
+<h1>Sky WOW</h1>
+<ul>
+    <li th:each="entry : ${entries}">
+        <span th:if="${entry.isRated}">✅</span>
+        <a th:text="${entry.name}" th:href="@{'https://www.imdb.com/title/' + ${entry.imdbId}}"></a>
+        (<span th:text="${entry.year}"></span>)
+        Hinzuzgefügt: <span th:text="${entry.added}"></span>
+    </li>
+</ul>
+
+</body>
+</html>

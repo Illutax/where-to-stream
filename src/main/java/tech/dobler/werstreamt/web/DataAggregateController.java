@@ -60,6 +60,16 @@ public class DataAggregateController {
         return "netflix";
     }
 
+    @GetMapping(path = "wow")
+    public String getWow(Model model) {
+        final var included = service.included("WOW").stream()
+                .sorted(Comparator.comparing(ImdbEntry::added))
+                .toList();
+        model.addAttribute("entries", included);
+        commonAttributeService.add(model);
+        return "wow";
+    }
+
     @GetMapping(path = "google")
     public String getGoogle(Model model) {
         final var included = service.paid("Google Play").stream()

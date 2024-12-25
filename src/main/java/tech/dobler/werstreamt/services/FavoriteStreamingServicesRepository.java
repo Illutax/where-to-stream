@@ -6,7 +6,7 @@ import java.util.Set;
 
 @Service
 public class FavoriteStreamingServicesRepository {
-    Set<String> favoriteServices = Set.of("Prime Video", "Google Play", "Netflix", "Disney", "YouTube");
+    Set<String> favoriteServices = Set.of("Prime Video", "Google Play", "Netflix", "Disney", "YouTube", "Wow");
 
     public Set<String> getFavoriteServices() {
         return favoriteServices;
