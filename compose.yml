@@ -1,0 +1,11 @@
+services:
+  app:
+    container_name: where2stream
+    build:
+      dockerfile: Dockerfile
+    volumes:
+      - .\assets:/opt/app/assets
+    environment:
+      - SERVER_PORT=8080
+    ports:
+      - 8001:8080
