@@ -19,11 +19,31 @@
     <label for="list">Choose a list:</label>
 
     <select class="form-control" name="list" id="list">
-        <option th:value="${current}" th:text="${current}" th:selected="selected" ></option>
-        <option th:each="entry : ${availableLists}" th:value="${entry}" th:text="${entry}" th:unless="${entry} == ${current}"></option>
+        <option th:value="${current}" th:text="${current}" th:selected="selected"></option>
+        <option th:each="entry : ${availableLists}" th:value="${entry}" th:text="${entry}"
+                th:unless="${entry} == ${current}"></option>
     </select>
     <button type="submit">Submit</button>
 </form>
+
+<h1>Refresh Lists</h1>
+<div>
+    <form method="get" action="refresh/seen">
+        <label>Refresh seen moveis</label>
+        <button type="submit">
+            Refresh
+        </button>
+    </form>
+</div>
+
+<div>
+    <form method="get" action="refresh/all">
+        <label>Refresh all moveis</label>
+        <button type="submit">
+            Refresh
+        </button>
+    </form>
+</div>
 
 </body>
 </html>

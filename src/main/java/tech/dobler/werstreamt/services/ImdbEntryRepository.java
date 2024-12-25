@@ -42,6 +42,12 @@ public class ImdbEntryRepository {
         return all.values().stream().toList();
     }
 
+    public List<ImdbEntry> findAllSeen() {
+        return all.values().stream()
+                .filter(ImdbEntry::isRated)
+                .toList();
+    }
+
     public String getNameOfList() {
         return Objects.requireNonNull(nameOfList);
     }

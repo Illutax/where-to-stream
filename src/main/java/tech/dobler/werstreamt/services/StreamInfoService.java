@@ -24,11 +24,12 @@ public class StreamInfoService {
     @Value("${wer-streamt.invalidate.after-days:28}")
     private int duration;
 
-    public List<QueryResult> resolve(String imdbId) {
+    public List<QueryResult> resolve(String imdbId, boolean forceRefresh) {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
         final var daysSeconds = TimeUnit.DAYS.toSeconds(duration);
         return result
                 .filter(queryMeta -> {
+                    if (forceRefresh) return true;
                     Instant threshold = queryMeta.getCreationTime()
                             .plusSeconds(daysSeconds);
                     Instant now = Instant.now();
@@ -43,6 +44,10 @@ public class StreamInfoService {
                         .map(QueryResultMapper.INSTANCE::dtoToEntity)
                         .toList())
                 .orElseGet(() -> fetch(imdbId));
+    }
+
+    public List<QueryResult> resolve(String imdbId) {
+        return resolve(imdbId, false);
     }
 
     private List<QueryResult> fetch(String imdbId) {
