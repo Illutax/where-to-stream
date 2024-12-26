@@ -11,7 +11,7 @@ RUN apt update &&  \
     apt install tree -y
 
 WORKDIR /opt/app
-COPY pom.xml .
+COPY --from=DEPENDENCIES pom.xml .
 COPY --from=DEPENDENCIES /root/.m2 /root/.m2
 COPY src/ ./src/
 
