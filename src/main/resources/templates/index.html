@@ -4,7 +4,16 @@
 </head>
 
 <body layout:fragment="content">
-<h1>Hello World!</h1>
-
+<h1>Where 2 Stream</h1>
+<ul>
+    <li th:each="entry : ${entries}">
+        <span th:if="${entry.isRated}">✅</span>
+        <a th:text="${entry.name}" th:href="@{'https://www.imdb.com/title/' + ${entry.imdbId}}"></a>
+        (<span th:text="${entry.year}"></span>)
+        Hinzuzgefügt: <span th:text="${entry.added}"></span>
+        <span th:if="${entry.availableStreamingServices.isPresent()}" th:text="${entry.availableStreamingServices.get()}"></span>
+        <em th:if="${entry.availableStreamingServices.isEmpty()}">N/A</em>
+    </li>
+</ul>
 </body>
 </html>

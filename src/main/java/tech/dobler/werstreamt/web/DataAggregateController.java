@@ -9,12 +9,14 @@ import tech.dobler.werstreamt.domainvalues.AvailabilityType;
 import tech.dobler.werstreamt.entities.Availability;
 import tech.dobler.werstreamt.entities.ImdbEntry;
 import tech.dobler.werstreamt.entities.QueryResult;
+import tech.dobler.werstreamt.services.AggregateService;
 import tech.dobler.werstreamt.services.CommonAttributeService;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;
-import tech.dobler.werstreamt.services.AggregateService;
+import tech.dobler.werstreamt.services.StreamInfoService;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
@@ -24,6 +26,27 @@ public class DataAggregateController {
     private final AggregateService service;
     private final ImdbEntryRepository imdbEntryRepository;
     private final CommonAttributeService commonAttributeService;
+    private final StreamInfoService streamInfoService;
+
+
+    public record IndexDto(boolean isRated, String name, String imdbId, int year, String added, Optional<String> availableStreamingServices) {}
+
+    @GetMapping(path = {"", "/"})
+    public String index(Model model) {
+        final var included = imdbEntryRepository.findAll()
+                .stream()
+                .map(entry -> new IndexDto(entry.isRated(),
+                        entry.name(),
+                        entry.imdbId(),
+                        entry.year(),
+                        entry.added(),
+                        streamInfoService.listAllAvailableServiceNames(entry.imdbId())))
+                .sorted(Comparator.comparing(IndexDto::name))
+                .toList();
+        model.addAttribute("entries", included);
+        commonAttributeService.add(model);
+        return "index";
+    }
 
     @GetMapping(path = {"amazon", "prime"})
     public String getAmazon(Model model) {

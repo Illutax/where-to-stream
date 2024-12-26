@@ -11,7 +11,9 @@ import tech.dobler.werstreamt.services.mappers.QueryResultMapper;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -48,6 +50,14 @@ public class StreamInfoService {
 
     public List<QueryResult> resolve(String imdbId) {
         return resolve(imdbId, false);
+    }
+
+    public Optional<String> listAllAvailableServiceNames(String imdbId) {
+        final var queryResults = resolve(imdbId);
+        if (queryResults.isEmpty()) return Optional.empty();
+        return Optional.of(queryResults.stream()
+                .map(QueryResult::streamingServiceName)
+                .collect(Collectors.joining(", ")));
     }
 
     private List<QueryResult> fetch(String imdbId) {
