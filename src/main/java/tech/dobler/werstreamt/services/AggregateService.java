@@ -16,7 +16,7 @@ public class AggregateService {
     private final StreamInfoService streamInfoService;
 
     public List<ImdbEntry> included(String serviceName){
-        final var queryResults = getAllPrimeVideos();
+        final var queryResults = getAll();
 
         return queryResults.stream()
                 .map(e -> e.stream().filter(k -> serviceName.equals(k.streamingServiceName()) && k.flatrate()).toList())
@@ -27,7 +27,7 @@ public class AggregateService {
     }
 
     public List<QueryResult> paid(String serviceName){
-        final var queryResults = getAllPrimeVideos();
+        final var queryResults = getAll();
 
         return queryResults.stream()
                 .map(e -> e.stream().filter(k -> serviceName.equals(k.streamingServiceName()) && !k.flatrate()).toList())
@@ -36,7 +36,7 @@ public class AggregateService {
                 .toList();
     }
 
-    private List<List<QueryResult>> getAllPrimeVideos() {
+    public List<List<QueryResult>> getAll() {
         final var allImdbEntries = imdbEntryRepository.findAll();
         return allImdbEntries.stream()
                 .map(e -> streamInfoService.resolve(e.imdbId()))

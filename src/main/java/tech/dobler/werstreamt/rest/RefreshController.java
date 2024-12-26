@@ -35,9 +35,9 @@ public class RefreshController {
         return refreshEntries(imdbEntryRepository.findAll());
     }
 
-    private ResponseEntity<String> refreshEntries(List<ImdbEntry> allSeen) {
-        log.info("Refreshing {} entries", allSeen.size());
-        final var refreshed = allSeen.parallelStream()
+    private ResponseEntity<String> refreshEntries(List<ImdbEntry> entries) {
+        log.info("Refreshing {} entries", entries.size());
+        final var refreshed = entries.parallelStream()
                 .map(entry -> streamInfoService.resolve(entry.imdbId(), true))
                 .toList();
         return ok("Refreshed %s".formatted(refreshed.size()));
