@@ -10,8 +10,6 @@ services:
       - SERVER_PORT=8080
       - logging.level.org.springframework.web.servlet.DispatcherServlet=TRACE
       - server.servlet.context-path=/w2s
-    ports:
-      - "8001:8080"
     networks:
       - webserver
     restart: always
