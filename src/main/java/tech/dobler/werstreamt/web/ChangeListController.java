@@ -28,12 +28,13 @@ public class ChangeListController {
     private final ExportReader exportReader;
     private final PreCacheController cacheController;
     private final CommonAttributeService commonAttributeService;
+    private final FileUtils fileUtils;
 
     @GetMapping("/list")
     public String get(Model model)
     {
         model.addAttribute("current", imdbEntryRepository.getNameOfList());
-        model.addAttribute("availableLists", FileUtils.availableLists());
+        model.addAttribute("availableLists", fileUtils.availableLists());
         commonAttributeService.add(model);
         return "change-list";
     }
@@ -41,7 +42,7 @@ public class ChangeListController {
     @PostMapping("/list-change")
     public String post(@RequestParam("list") String listName, RedirectAttributes attributes)
     {
-        if (!FileUtils.availableLists().contains(listName))
+        if (!fileUtils.availableLists().contains(listName))
         {
             attributes.addAttribute("unknownEntry", listName);
             return "redirect:/list?error";

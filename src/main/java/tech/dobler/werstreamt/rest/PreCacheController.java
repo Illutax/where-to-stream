@@ -42,40 +42,6 @@ public class PreCacheController {
         return ok("cached " + counter.get() + " imdb entries");
     }
 
-    @GetMapping("/pre-cache-missing")
-    ResponseEntity<String> cache2() {
-        Stream.of(6,
-        7,
-        137,
-        138,
-        139,
-        140,
-        141,
-        142,
-        143,
-        197,
-        216,
-        217,
-        218,
-        219,
-        220,
-        221,
-        222,
-        223,
-        224,
-        225,
-        226,
-        227,
-        228,
-        229,
-        230).parallel()
-                .forEach(i -> {
-                    final var e = imdbEntryRepository.findById(i).orElseThrow();
-                    streamInfoService.resolve(e.imdbId());
-                });
-        return ok("cached ");
-    }
-
     @GetMapping("/check-pre-cache")
     ResponseEntity<String> checkCache() {
         record IsPresent(ImdbEntry entry, Optional<QueryMeta> queryMeta) {}

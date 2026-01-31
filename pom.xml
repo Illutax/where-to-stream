@@ -19,8 +19,8 @@
         <java.version>25</java.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.40</lombok.version>
-        <bootstrap.version>5.3.3</bootstrap.version>
-        <fontawesome.version>6.5.2</fontawesome.version>
+        <bootstrap.version>5.3.8</bootstrap.version>
+        <fontawesome.version>7.1.0</fontawesome.version>
     </properties>
     <dependencies>
         <!-- WEB -->
