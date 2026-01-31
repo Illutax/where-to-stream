@@ -6,7 +6,6 @@ import tech.dobler.werstreamt.entities.Availability;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -15,10 +14,12 @@ import java.util.UUID;
 @Getter
 @Setter
 @ToString(exclude = "availabilities")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public final class QueryResultDB {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
+    @EqualsAndHashCode.Include
     private final UUID id;
     @Column(name = "imdbId")
     private final String imdbId;
@@ -44,18 +45,5 @@ public final class QueryResultDB {
         this.flatrate = flatrate;
         this.availabilities.addAll(availabilities);
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof QueryResultDB that)) return false;
-        return Objects.equals(id, that.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(id);
-    }
-
 
 }
