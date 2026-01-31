@@ -4,14 +4,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.domainvalues.AvailabilityType;
 import tech.dobler.werstreamt.domainvalues.Price;
 import tech.dobler.werstreamt.entities.Availability;
 
 import java.util.List;
+import java.util.Objects;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
@@ -78,7 +79,7 @@ public class QueryResultRepositoryTest {
         saveAndFlush(queryResult);
         final var sanityCheck = sut.findByImdbId(imdbId);
         log.info("Loaded query result: {}", queryResult);
-        final var idToDelete = queryResult.getId();
+        final var idToDelete = Objects.requireNonNull(queryResult.getId());
         assertThat(sanityCheck).containsExactly(queryResult);
 
         // Act
