@@ -28,7 +28,6 @@ public class DataAggregateController {
     private final CommonAttributeService commonAttributeService;
     private final StreamInfoService streamInfoService;
 
-
     public record IndexDto(boolean isRated, String name, String imdbId, int year, String added, Optional<String> availableStreamingServices) {}
 
     @GetMapping(path = {"", "/"})
