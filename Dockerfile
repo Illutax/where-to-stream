@@ -1,9 +1,9 @@
 # pre-fetch dependencies
-FROM maven:3.9.9-eclipse-temurin-23 AS DEPENDENCIES
+FROM maven:3.9.12-eclipse-temurin-25 AS DEPENDENCIES
 COPY pom.xml .
 RUN mvn -B -e org.apache.maven.plugins:maven-dependency-plugin:3.1.2:go-offline
 
-FROM maven:3.9.9-eclipse-temurin-23 as builder
+FROM maven:3.9.12-eclipse-temurin-25 as builder
 LABEL authors="VDobler"
 
 RUN apt update &&  \
@@ -19,7 +19,7 @@ RUN mvn clean package -DskipTests
 
 #ENTRYPOINT ["ls","-la", "target"]
 
-FROM openjdk:23-slim
+FROM  openjdk:25-ea-21-jdk-slim
 
 WORKDIR /opt/app
 COPY --from=builder /opt/app/target/*.jar /app.jar
