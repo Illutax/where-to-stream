@@ -5,6 +5,9 @@ handle_error() {
   exit 1
 }
 
+cd /home/ubu/docker/w2s
+
+echo "$(date)"
 echo "Trying to upgrade Spring-Boot..."
 ./upgrade-spring-boot.sh || handle_error
 echo "Updating application..."
