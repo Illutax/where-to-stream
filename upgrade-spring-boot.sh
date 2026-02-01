@@ -31,7 +31,7 @@ mvn clean package || handle_error
 echo "Update to $NEW_SPRING_BOOT_VERSION succeeded, committing and pushing..."
 
 git add pom.xml
-git commit -m "Update sb $SPRING_BOOT_VERSION -> $NEW_SPRING_BOOT_VERSION"
+git commit -m "(Cron) update sb $SPRING_BOOT_VERSION -> $NEW_SPRING_BOOT_VERSION"
 git pull --rebase
 echo "pushing..."
 git push || handle_error
