@@ -25,3 +25,4 @@ echo "DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG" > .env
 docker build . --build-arg "DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG" -t "w2s:$DOCKER_IMAGE_TAG"
 docker compose --env-file .env up -d
 docker compose logs -f
+
