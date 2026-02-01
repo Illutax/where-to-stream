@@ -35,3 +35,4 @@ build/
 /db/
 *.csv~
 *.csv
+.env
