@@ -20,7 +20,7 @@ NEW_SPRING_BOOT_VERSION=$(get_spring_boot_version)
 if [ "$SPRING_BOOT_VERSION" = "$NEW_SPRING_BOOT_VERSION" ]; then
   echo "Version didn't change (already at $SPRING_BOOT_VERSION). Exiting."
   git reset --hard
-  exit 0
+  exit 1 # no new version -> considered a fail
 fi
 
 ## Test
