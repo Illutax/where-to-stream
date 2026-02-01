@@ -16,6 +16,13 @@ echo "Updating parent version..."
 mvn versions:update-parent -DgenerateBackupPoms=false || handle_error
 NEW_SPRING_BOOT_VERSION=$(get_spring_boot_version)
 
+# Check if version changed
+if [ "$SPRING_BOOT_VERSION" = "$NEW_SPRING_BOOT_VERSION" ]; then
+  echo "Version didn't change (already at $SPRING_BOOT_VERSION). Exiting."
+  git reset --hard
+  exit 0
+fi
+
 ## Test
 echo "Running tests..."
 mvn clean package || handle_error
