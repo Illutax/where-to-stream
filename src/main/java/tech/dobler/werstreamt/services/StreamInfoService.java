@@ -11,7 +11,11 @@ import tech.dobler.werstreamt.persistence.QueryMetaRepository;
 import tech.dobler.werstreamt.services.mappers.QueryResultMapper;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -37,23 +41,10 @@ public class StreamInfoService {
     @Transactional
     public List<QueryResult> resolve(String imdbId, boolean forceRefresh) {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
-        final var daysSeconds = TimeUnit.DAYS.toSeconds(duration);
+        final var now = Instant.now();
         return result
-                .filter(queryMeta -> {
-                    if (forceRefresh) return true;
-                    Instant threshold = queryMeta.getCreationTime()
-                            .plusSeconds(daysSeconds);
-                    Instant now = Instant.now();
-                    boolean passedThreshold = threshold.isBefore(now);
-                    if (passedThreshold) {
-                        log.warn("Entry with id {} passed threshold {} > {}", queryMeta.getImdbId(), threshold, now);
-                    }
-                    return !passedThreshold;
-                })
-                .map(queryMeta -> queryMeta.getQueries()
-                        .stream()
-                        .map(QueryResultMapper.INSTANCE::dtoToEntity)
-                        .toList())
+                .filter(queryMeta -> forceRefresh || isFresh(queryMeta, now))
+                .map(StreamInfoService::toQueryResults)
                 .orElseGet(() -> fetch(imdbId));
     }
 
@@ -62,12 +53,53 @@ public class StreamInfoService {
         return resolve(imdbId, false);
     }
 
+    /**
+     * Batch variant of {@link #resolve(String)}: reads the cached metadata for all given
+     * imdbIds with a single query (instead of one query per id) and only falls back to a
+     * remote fetch for the misses. Returns the results keyed by imdbId, preserving the
+     * iteration order of {@code imdbIds}.
+     */
+    @Transactional
+    public Map<String, List<QueryResult>> resolveAll(Collection<String> imdbIds) {
+        final var now = Instant.now();
+        final var latestFreshByImdbId = queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(imdbIds).stream()
+                .collect(Collectors.groupingBy(QueryMeta::getImdbId));
+
+        final var resolved = new LinkedHashMap<String, List<QueryResult>>();
+        for (String imdbId : imdbIds) {
+            final var cached = latestFreshByImdbId.getOrDefault(imdbId, List.of()).stream()
+                    .max(Comparator.comparing(QueryMeta::getCreationTime))
+                    .filter(queryMeta -> isFresh(queryMeta, now))
+                    .map(StreamInfoService::toQueryResults);
+            resolved.put(imdbId, cached.orElseGet(() -> fetch(imdbId)));
+        }
+        return resolved;
+    }
+
     public Optional<String> listAllAvailableServiceNames(String imdbId) {
-        final var queryResults = resolve(imdbId);
+        return toAvailableServiceNames(resolve(imdbId));
+    }
+
+    public static Optional<String> toAvailableServiceNames(List<QueryResult> queryResults) {
         if (queryResults.isEmpty()) return Optional.empty();
         return Optional.of(queryResults.stream()
                 .map(QueryResult::streamingServiceName)
                 .collect(Collectors.joining(", ")));
+    }
+
+    private boolean isFresh(QueryMeta queryMeta, Instant now) {
+        final var threshold = queryMeta.getCreationTime().plusSeconds(TimeUnit.DAYS.toSeconds(duration));
+        final var passedThreshold = threshold.isBefore(now);
+        if (passedThreshold) {
+            log.warn("Entry with id {} passed threshold {} > {}", queryMeta.getImdbId(), threshold, now);
+        }
+        return !passedThreshold;
+    }
+
+    private static List<QueryResult> toQueryResults(QueryMeta queryMeta) {
+        return queryMeta.getQueries().stream()
+                .map(QueryResultMapper.INSTANCE::dtoToEntity)
+                .toList();
     }
 
     private List<QueryResult> fetch(String imdbId) {

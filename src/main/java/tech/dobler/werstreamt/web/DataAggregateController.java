@@ -32,14 +32,16 @@ public class DataAggregateController {
 
     @GetMapping(path = {"", "/"})
     public String index(Model model) {
-        final var included = imdbEntryRepository.findAll()
-                .stream()
+        final var entries = imdbEntryRepository.findAll();
+        // Resolve all entries in a single batch instead of one query per entry (avoids N+1).
+        final var resolved = streamInfoService.resolveAll(entries.stream().map(ImdbEntry::imdbId).toList());
+        final var included = entries.stream()
                 .map(entry -> new IndexDto(entry.isRated(),
                         entry.name(),
                         entry.imdbId(),
                         entry.year(),
                         entry.added(),
-                        streamInfoService.listAllAvailableServiceNames(entry.imdbId())))
+                        StreamInfoService.toAvailableServiceNames(resolved.getOrDefault(entry.imdbId(), List.of()))))
                 .sorted(Comparator.comparing(IndexDto::name))
                 .toList();
         model.addAttribute("entries", included);
