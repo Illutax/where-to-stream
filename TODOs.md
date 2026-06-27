@@ -181,3 +181,53 @@ ausgegeben werden.
   #15 aufgefallen.)
 - **Erledigt:** `priceOrNull(...)` liefert `null` für nicht angebotene Qualitäten;
   `prettyPrint` (das bereits auf `!= null` prüft) gibt damit keine `null`-Werte mehr aus.
+
+---
+
+## Aus dem Re-Scan (2026-06-27, nach Umsetzung von TODO-6/7/8/9/17/18)
+
+### 🟠 TODO-19 — `/query` umgeht den Cache
+`rest/QueryController.query(...)` ruft `werStreamtEsApiClient.query(...)` **direkt** auf und
+scrapet damit bei jedem Aufruf live, während `/search` über `StreamInfoService` (gecacht)
+geht. Inkonsistent und teuer.
+- **Akzeptanzkriterium:** `/query` ebenfalls über `StreamInfoService.resolve(...)` laufen
+  lassen (oder den Endpunkt entfernen, falls redundant zu `/search`).
+
+### 🟠 TODO-20 — Kein zentrales Fehler-Handling
+Scraping-/IO-Fehler werden in `WerStreamtEsApiClient`/`ImdbApiClient` als nacktes
+`new RuntimeException(e)` weitergeworfen und landen ungefiltert als HTTP 500. Es gibt keinen
+`@ControllerAdvice`/`@ExceptionHandler`.
+- **Akzeptanzkriterium:** Zentrales Exception-Handling ergänzen; IO-Fehler in eine
+  domänenspezifische Exception kapseln und sauber als 502/503 o. ä. abbilden.
+
+### 🟠 TODO-21 — `ExportReader` bricht beim ganzen Import ab, wenn eine Zeile fehlerhaft ist
+`services/ExportReader.parse(...)`: `Integer.parseInt(year)` (NumberFormatException) bzw.
+`extractImdbId(url)` (IllegalArgumentException) sind nicht pro Zeile abgesichert — eine
+einzige kaputte Zeile lässt den gesamten Import (und damit den App-Start) scheitern.
+- **Akzeptanzkriterium:** Pro Zeile try/catch, fehlerhafte Zeilen loggen und überspringen
+  (analog zur Provider-Robustheit aus TODO-9).
+
+### 🟢 TODO-22 — Hartkodiertes CSV-Header-Array
+`services/ExportReader.headers`: feste Spaltenliste; bricht still, wenn IMDb das
+Exportformat ändert.
+- **Akzeptanzkriterium:** Header aus der Datei lesen
+  (`CSVFormat.builder().setHeader().setSkipHeaderRecord(true)`) und nur die benötigten
+  Spalten gezielt referenzieren.
+
+### 🟢 TODO-23 — `ResponseEntity<?>` mit rohem Wildcard
+`rest/QueryController`: `query(...)` und `search(...)` geben `ResponseEntity<?>` zurück —
+keine Typsicherheit für die Aufrufer/Tests.
+- **Akzeptanzkriterium:** Konkrete Rückgabetypen (`ResponseEntity<List<QueryResult>>` o. ä.).
+
+### 🟢 TODO-24 — Tests für neue/ungetestete Service-Logik fehlen
+Nach den Refactorings sind `PreCacheService`, `StreamInfoService.resolveAll(...)`
+(Caching/Threshold/Batch-Miss-Fetch) und das atomare Reload-Verhalten von
+`ImdbEntryRepository` nicht durch Unit-Tests abgedeckt.
+- **Akzeptanzkriterium:** Gezielte Unit-Tests ergänzen (Mockito für die Repos/Clients).
+
+### 🟢 TODO-25 — Aggregat-Seiten berechnen bei jedem Request alles neu
+`web/DataAggregateController` + `services/AggregateService`: jede Anbieter-Seite ruft
+`getAll()` auf und löst damit sämtliche Einträge sequenziell auf (über TODO-11 hinaus, das
+nur den doppelten `getAll()`-Aufruf der Amazon-Seite betrifft).
+- **Akzeptanzkriterium:** Aggregat-Ergebnisse cachen/vorberechnen bzw. die Batch-Logik aus
+  `resolveAll(...)` (TODO-13/#13) wiederverwenden.
