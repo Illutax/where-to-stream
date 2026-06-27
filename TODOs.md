@@ -1,10 +1,22 @@
 # TODOs / Bug-Tickets
 
-Backlog aus dem Code-Review vom 2026-06-27. Erledigte Punkte aus dem Review
-(#2 Transaktionen, #3 UTF-8, #13 N+1 auf der Startseite, #15 Parser-/Reader-Tests)
-sind bereits umgesetzt und stehen hier nicht mehr.
+Backlog aus dem Code-Review vom 2026-06-27.
 
-Priorität: 🔴 hoch · 🟠 mittel · 🟢 niedrig
+Priorität: 🔴 hoch · 🟠 mittel · 🟢 niedrig · Status: ✅ erledigt · ⬜ offen
+
+---
+
+## ✅ Erledigt
+
+Review-Punkte (eigene Nummerierung des Reviews, nicht TODO-N):
+
+- ✅ **#2** — Wirkungsloses `@Transactional` über `parallelStream` behoben (`440b810`).
+- ✅ **#3** — CSV-Import liest jetzt explizit UTF-8 (`d85ad4d`).
+- ✅ **#13** — N+1 auf der Startseite per Batch-Query beseitigt (`31f56d9`).
+- ✅ **#15** — Tests für CSV-Import und werstreamt.es-Parsing ergänzt (`8e20cdf`);
+  Assertions konsolidiert (`8498adf`).
+
+TODO-Tickets: _(werden hier eingetragen, sobald erledigt)_
 
 ---
 
