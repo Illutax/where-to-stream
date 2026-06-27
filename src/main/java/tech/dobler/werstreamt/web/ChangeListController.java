@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import tech.dobler.werstreamt.entities.ImdbEntry;
-import tech.dobler.werstreamt.rest.PreCacheController;
 import tech.dobler.werstreamt.services.CommonAttributeService;
 import tech.dobler.werstreamt.services.ExportReader;
 import tech.dobler.werstreamt.services.FileUtils;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;
+import tech.dobler.werstreamt.services.PreCacheService;
 
 import java.util.List;
 
@@ -26,7 +26,7 @@ public class ChangeListController {
 
     private final ImdbEntryRepository imdbEntryRepository;
     private final ExportReader exportReader;
-    private final PreCacheController cacheController;
+    private final PreCacheService preCacheService;
     private final CommonAttributeService commonAttributeService;
     private final FileUtils fileUtils;
 
@@ -54,7 +54,7 @@ public class ChangeListController {
         List<ImdbEntry> entries = exportReader.parse(listName);
         log.info("Initializing with {} entries", entries.size());
         imdbEntryRepository.init(entries, listName);
-        cacheController.cache();
+        preCacheService.cacheAll();
         return "redirect:/list?success";
     }
 }

@@ -5,16 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import tech.dobler.werstreamt.entities.ImdbEntry;
-import tech.dobler.werstreamt.persistence.QueryMeta;
-import tech.dobler.werstreamt.persistence.QueryMetaRepository;
-import tech.dobler.werstreamt.services.ImdbEntryRepository;
-import tech.dobler.werstreamt.services.StreamInfoService;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
+import tech.dobler.werstreamt.services.PreCacheService;
 
 import static org.springframework.http.ResponseEntity.ok;
 
@@ -22,40 +13,17 @@ import static org.springframework.http.ResponseEntity.ok;
 @RestController
 @RequiredArgsConstructor
 public class PreCacheController {
-    private final StreamInfoService streamInfoService;
-    private final ImdbEntryRepository imdbEntryRepository;
-    private final QueryMetaRepository queryMetaRepository;
+    private final PreCacheService preCacheService;
 
     @GetMapping("/pre-cache")
     public ResponseEntity<String> cache() {
-        final var all = imdbEntryRepository.findAll();
-        final var counter = new AtomicInteger(0);
-        all.parallelStream()
-                .forEach(e -> {
-                    streamInfoService.resolve(e.imdbId());
-                    if (counter.incrementAndGet() % 10 == 0) {
-                        log.info("got {} imdb entries", counter.get());
-                    }
-                });
-        return ok("cached " + counter.get() + " imdb entries");
+        final var count = preCacheService.cacheAll();
+        return ok("cached " + count + " imdb entries");
     }
 
     @GetMapping("/check-pre-cache")
     ResponseEntity<String> checkCache() {
-        record IsPresent(ImdbEntry entry, Optional<QueryMeta> queryMeta) {}
-
-        final var all = imdbEntryRepository.findAll();
-        final var list = all.parallelStream()
-                .map(e -> new IsPresent(e, queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(e.imdbId())))
-                .filter(e -> e.queryMeta.isEmpty())
-                .toList();
-
-        list.stream()
-                .map(IsPresent::toString)
-                .forEach(log::warn);
-        return ok("");
-
+        final var uncached = preCacheService.findUncached();
+        return ok("%d uncached imdb entries".formatted(uncached.size()));
     }
-
-
 }

@@ -16,7 +16,10 @@ Review-Punkte (eigene Nummerierung des Reviews, nicht TODO-N):
 - ✅ **#15** — Tests für CSV-Import und werstreamt.es-Parsing ergänzt (`8e20cdf`);
   Assertions konsolidiert (`8498adf`).
 
-TODO-Tickets: _(werden hier eingetragen, sobald erledigt)_
+TODO-Tickets:
+
+- ✅ **TODO-6** — Cache-Logik in `PreCacheService` extrahiert; Controller hängen nicht
+  mehr voneinander ab.
 
 ---
 
@@ -57,11 +60,13 @@ Remote-Crawls aus, sind per GET erreichbar und damit von Crawlern/Prefetch trigg
 
 ## Architektur / Design
 
-### 🟠 TODO-6 — Controller ruft Controller
-`web/ChangeListController.java` injiziert `rest/PreCacheController` und ruft
+### ✅ TODO-6 — Controller ruft Controller
+`web/ChangeListController.java` injizierte `rest/PreCacheController` und rief
 `cacheController.cache()`.
 - **Akzeptanzkriterium:** Cache-Logik in einen `PreCacheService` extrahieren, den
   beide Controller verwenden.
+- **Erledigt:** `PreCacheService.cacheAll()` / `findUncached()` eingeführt;
+  `PreCacheController` und `ChangeListController` nutzen den Service.
 
 ### 🟠 TODO-7 — Verstreute Konfiguration per `@Value`
 `wer-streamt.path` wird in `ExportReader` und `FileUtils` separat injiziert,
