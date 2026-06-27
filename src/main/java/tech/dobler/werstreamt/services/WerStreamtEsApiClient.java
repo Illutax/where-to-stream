@@ -2,6 +2,7 @@ package tech.dobler.werstreamt.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.HttpStatusException;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -50,33 +51,7 @@ public class WerStreamtEsApiClient {
         final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", imdbId).queryParam("action_results", "suchen").build();
         final var connect = ApiClientUtils.getConnectionWithUserAgent(query).followRedirects(true);
         try {
-            final var document = connect.get();
-            final var elements = document.select("#avalibility > .provider");
-
-            return elements.stream()
-                    .flatMap(e -> {
-                        final var name = e.attr("data-ext-provider-name");
-                        final var columns = e.select(".columns.small-4");
-                        final var flatrate = columns.get(0).selectFirst(".fi-check") != null;
-                        final var e1 = parseAvailability(columns.get(1), AvailabilityType.RENT);
-                        final var e2 = parseAvailability(columns.get(2), AvailabilityType.BUY);
-                        if (columns.size() == 3) {
-                            return Stream.of(new QueryResult(imdbId, name, flatrate,
-                                    Stream.of(e1, e2).filter(Optional::isPresent).map(Optional::get).toList()));
-                        } else if (columns.size() == 6) {
-                            final var f2 = columns.get(3).selectFirst(".fi-check") != null;
-                            final var e3 = parseAvailability(columns.get(4), AvailabilityType.RENT);
-                            final var e4 = parseAvailability(columns.get(5), AvailabilityType.BUY);
-                            return Stream.of(new QueryResult(imdbId, name + "(1)", flatrate,
-                                            Stream.of(e1, e2).filter(Optional::isPresent).map(Optional::get).toList()),
-                                    new QueryResult(imdbId, name + "(2)", f2,
-                                            Stream.of(e3, e4).filter(Optional::isPresent).map(Optional::get).toList()));
-                        } else {
-                            log.error("Got something unexpected. for id {} \n{}", imdbId, columns);
-                            return Stream.of();
-                        }
-                    })
-                    .toList();
+            return parse(connect.get(), imdbId);
         } catch (HttpStatusException e) {
             log.error("Not found %s".formatted(e.getMessage()));
         } catch (IOException e) {
@@ -84,6 +59,36 @@ public class WerStreamtEsApiClient {
         }
         log.info("Found none for id: {}", imdbId);
         return List.of();
+    }
+
+    // Package-private so the (network-free) HTML parsing can be unit tested with a fixture.
+    List<QueryResult> parse(Document document, String imdbId) {
+        final var elements = document.select("#avalibility > .provider");
+
+        return elements.stream()
+                .flatMap(e -> {
+                    final var name = e.attr("data-ext-provider-name");
+                    final var columns = e.select(".columns.small-4");
+                    final var flatrate = columns.get(0).selectFirst(".fi-check") != null;
+                    final var e1 = parseAvailability(columns.get(1), AvailabilityType.RENT);
+                    final var e2 = parseAvailability(columns.get(2), AvailabilityType.BUY);
+                    if (columns.size() == 3) {
+                        return Stream.of(new QueryResult(imdbId, name, flatrate,
+                                Stream.of(e1, e2).filter(Optional::isPresent).map(Optional::get).toList()));
+                    } else if (columns.size() == 6) {
+                        final var f2 = columns.get(3).selectFirst(".fi-check") != null;
+                        final var e3 = parseAvailability(columns.get(4), AvailabilityType.RENT);
+                        final var e4 = parseAvailability(columns.get(5), AvailabilityType.BUY);
+                        return Stream.of(new QueryResult(imdbId, name + "(1)", flatrate,
+                                        Stream.of(e1, e2).filter(Optional::isPresent).map(Optional::get).toList()),
+                                new QueryResult(imdbId, name + "(2)", f2,
+                                        Stream.of(e3, e4).filter(Optional::isPresent).map(Optional::get).toList()));
+                    } else {
+                        log.error("Got something unexpected. for id {} \n{}", imdbId, columns);
+                        return Stream.of();
+                    }
+                })
+                .toList();
     }
 
     private static Optional<Availability> parseAvailability(Element column, AvailabilityType type) {

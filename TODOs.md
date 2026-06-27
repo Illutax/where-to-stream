@@ -137,3 +137,13 @@ Kein Setup-Dokument vorhanden.
   String-Konkatenation im Logging (`"Searching for: " + ...`) → parametrisiertes Logging.
 - `web/StatusController.java`: `@GetMapping("public/status")` ohne führenden Slash
   (inkonsistent zu den übrigen Mappings).
+
+### 🟢 TODO-18 — `Price` wrappt fehlende Werte statt `null`
+`services/WerStreamtEsApiClient.parseAvailability(...)`: fehlende Qualitäten werden als
+`new Price(null)` gespeichert, d. h. `availability.sd()` etc. ist nie `null`, sondern ein
+Price-Objekt mit `value() == null`. Aufrufer (z. B. `DataAggregateController.prettyPrint`)
+prüfen aber auf `a.fourK() != null` — das ist dadurch immer wahr und `value()` kann `null`
+ausgegeben werden.
+- **Akzeptanzkriterium:** Fehlende Preise konsistent als `null`-`Price` (Optional/echtes
+  `null`) modellieren und die Aufrufer entsprechend anpassen. (Beim Code-Review-Test
+  #15 aufgefallen.)
