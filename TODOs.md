@@ -22,6 +22,8 @@ TODO-Tickets:
   mehr voneinander ab.
 - ✅ **TODO-7** — `wer-streamt.*` in `WerStreamtProperties` (`@ConfigurationProperties`)
   gebündelt; `@Value`-Field-Injection entfernt.
+- ✅ **TODO-8** — `ImdbEntryRepository` nutzt einen unveränderlichen Snapshot hinter
+  `AtomicReference` (lock-freie Reads, atomarer Reload).
 
 ---
 
@@ -80,12 +82,15 @@ Remote-Crawls aus, sind per GET erreichbar und damit von Crawlern/Prefetch trigg
   `@ConfigurationPropertiesScan` aktiviert. `FileUtils` ist jetzt `@Component` mit
   Konstruktor-Injection; `JpaConfig` injiziert es, statt `new FileUtils()` zu bauen.
 
-### 🟠 TODO-8 — `ImdbEntryRepository` ist nicht thread-safe
-`services/ImdbEntryRepository.java`: In-Memory-Store auf `HashMap`, wird aber während
+### ✅ TODO-8 — `ImdbEntryRepository` ist nicht thread-safe
+`services/ImdbEntryRepository.java`: In-Memory-Store auf `HashMap`, wurde aber während
 laufender `parallelStream`-Requests via `clear()`/`init()` aus `ChangeListController`
 neu befüllt → Race-Potenzial.
 - **Akzeptanzkriterium:** `ConcurrentHashMap` + atomarer Austausch der Maps beim Reload,
   oder Reload synchronisieren.
+- **Erledigt:** Gesamter Zustand (beide Maps + Listenname) als unveränderliches `State`-Record
+  hinter einer `AtomicReference`; `init`/`clear` tauschen den Snapshot atomar, Reads sind
+  lock-frei und konsistent.
 
 ### 🟢 TODO-9 — Robustes Scraping (NPE-Schutz)
 `services/WerStreamtEsApiClient.java`: `selectFirst(...).childNode(0)` u. ä. ohne
