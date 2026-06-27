@@ -28,6 +28,8 @@ TODO-Tickets:
   vor Zugriff geprüft; aktueller User-Agent.
 - ✅ **TODO-18** — Fehlende Qualitäten sind jetzt `null`-`Price` statt `new Price(null)`;
   `prettyPrint`-Null-Checks greifen dadurch korrekt.
+- ✅ **TODO-17** — Aufräumarbeiten: ungenutzter `@Value`-Import (in TODO-7), parametrisiertes
+  Logging (`WerStreamtEsApiClient` in TODO-9, `ImdbApiClient`), `@GetMapping("/public/status")`.
 
 ---
 
@@ -159,12 +161,14 @@ Kein Setup-Dokument vorhanden.
 
 ## Kleinigkeiten
 
-### 🟢 TODO-17 — Aufräumarbeiten
+### ✅ TODO-17 — Aufräumarbeiten
 - `configurations/JpaConfig.java`: ungenutzter Import `org.springframework.beans.factory.annotation.Value`.
+  → in TODO-7 entfernt (Klasse umgebaut).
 - `services/WerStreamtEsApiClient.java` (`search`) und `services/ImdbApiClient.java` (`search`):
   String-Konkatenation im Logging (`"Searching for: " + ...`) → parametrisiertes Logging.
+  → erledigt (WerStreamtEsApiClient in TODO-9, ImdbApiClient hier).
 - `web/StatusController.java`: `@GetMapping("public/status")` ohne führenden Slash
-  (inkonsistent zu den übrigen Mappings).
+  (inkonsistent zu den übrigen Mappings). → erledigt: `@GetMapping("/public/status")`.
 
 ### ✅ TODO-18 — `Price` wrappt fehlende Werte statt `null`
 `services/WerStreamtEsApiClient.parseAvailability(...)`: fehlende Qualitäten werden als

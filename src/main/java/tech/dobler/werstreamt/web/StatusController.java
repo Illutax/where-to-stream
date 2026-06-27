@@ -11,7 +11,7 @@ public class StatusController
 {
     private static final Instant SERVER_START_TIME = Instant.now();
 
-    @GetMapping("public/status")
+    @GetMapping("/public/status")
     public String status(Model model)
     {
         model.addAttribute("version", getClass().getPackage().getImplementationVersion());

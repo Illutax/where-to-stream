@@ -14,7 +14,7 @@ public class ImdbApiClient {
     private final URI baseUrl = URI.create("https://www.imdb.com/list/");
 
     public List<SearchResult> search(String listId) {
-        log.info("Searching for: " + listId);
+        log.info("Searching for: {}", listId);
         final var query = UriComponentsBuilder.fromUri(baseUrl).pathSegment(listId).build();
         final var connect = ApiClientUtils.getConnectionWithUserAgent(query);
         try {
