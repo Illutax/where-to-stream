@@ -20,6 +20,8 @@ TODO-Tickets:
 
 - ✅ **TODO-6** — Cache-Logik in `PreCacheService` extrahiert; Controller hängen nicht
   mehr voneinander ab.
+- ✅ **TODO-7** — `wer-streamt.*` in `WerStreamtProperties` (`@ConfigurationProperties`)
+  gebündelt; `@Value`-Field-Injection entfernt.
 
 ---
 
@@ -68,12 +70,15 @@ Remote-Crawls aus, sind per GET erreichbar und damit von Crawlern/Prefetch trigg
 - **Erledigt:** `PreCacheService.cacheAll()` / `findUncached()` eingeführt;
   `PreCacheController` und `ChangeListController` nutzen den Service.
 
-### 🟠 TODO-7 — Verstreute Konfiguration per `@Value`
-`wer-streamt.path` wird in `ExportReader` und `FileUtils` separat injiziert,
+### ✅ TODO-7 — Verstreute Konfiguration per `@Value`
+`wer-streamt.path` wurde in `ExportReader` und `FileUtils` separat injiziert,
 `wer-streamt.invalidate.after-days` in `StreamInfoService`.
 - **Akzeptanzkriterium:** In ein `@ConfigurationProperties`-Record `WerStreamtProperties`
   bündeln. Damit entfällt auch die fragile `@Value`-Field-Injection in `FileUtils`
   (wird in `JpaConfig` per `new FileUtils()` erzeugt).
+- **Erledigt:** `WerStreamtProperties` (mit `Invalidate.afterDays`, Default 28) per
+  `@ConfigurationPropertiesScan` aktiviert. `FileUtils` ist jetzt `@Component` mit
+  Konstruktor-Injection; `JpaConfig` injiziert es, statt `new FileUtils()` zu bauen.
 
 ### 🟠 TODO-8 — `ImdbEntryRepository` ist nicht thread-safe
 `services/ImdbEntryRepository.java`: In-Memory-Store auf `HashMap`, wird aber während

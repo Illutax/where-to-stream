@@ -2,7 +2,7 @@ package tech.dobler.werstreamt.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
+import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.entities.ImdbEntry;
 
 import java.net.URI;
@@ -18,8 +18,10 @@ class ExportReaderTest {
 
     @BeforeEach
     void setUp() {
-        exportReader = new ExportReader();
-        ReflectionTestUtils.setField(exportReader, "filePath", "src/test/resources/test-assets");
+        final var properties = new WerStreamtProperties(
+                "src/test/resources/test-assets",
+                new WerStreamtProperties.Invalidate(28));
+        exportReader = new ExportReader(properties);
     }
 
     @Test

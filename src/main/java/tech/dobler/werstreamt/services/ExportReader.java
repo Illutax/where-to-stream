@@ -1,10 +1,11 @@
 package tech.dobler.werstreamt.services;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.entities.ImdbEntry;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ExportReader {
     private static final String[] headers = new String[]{
             "Position",
@@ -41,8 +43,7 @@ public class ExportReader {
             "Date Rated",
     };
 
-    @Value("${wer-streamt.path}")
-    private String filePath;
+    private final WerStreamtProperties properties;
 
     private final static Pattern PATTERN = Pattern.compile("https://www.imdb.com/title/(tt\\w+)/");
 
@@ -78,7 +79,7 @@ public class ExportReader {
     }
 
     private CSVParser makeReader(String fileName) throws IOException {
-        final var csvFilePath = Paths.get(filePath, fileName);
+        final var csvFilePath = Paths.get(properties.path(), fileName);
         log.info("Reading csv from path: {}", csvFilePath.toAbsolutePath());
 
         final var fileReader = Files.newBufferedReader(csvFilePath, StandardCharsets.UTF_8);

@@ -2,9 +2,9 @@ package tech.dobler.werstreamt.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.entities.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryMeta;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
@@ -27,9 +27,7 @@ public class StreamInfoService {
     private final WerStreamtEsApiClient werStreamtEsApiClient;
     private final ImdbEntryRepository imdbEntryRepository;
     private final QueryMetaRepository queryMetaRepository;
-
-    @Value("${wer-streamt.invalidate.after-days:28}")
-    private int duration;
+    private final WerStreamtProperties properties;
 
     // NOTE: both public resolve(...) overloads are annotated on purpose. resolve(imdbId)
     // delegates to resolve(imdbId, false) via self-invocation, which bypasses the Spring
@@ -88,7 +86,7 @@ public class StreamInfoService {
     }
 
     private boolean isFresh(QueryMeta queryMeta, Instant now) {
-        final var threshold = queryMeta.getCreationTime().plusSeconds(TimeUnit.DAYS.toSeconds(duration));
+        final var threshold = queryMeta.getCreationTime().plusSeconds(TimeUnit.DAYS.toSeconds(properties.invalidate().afterDays()));
         final var passedThreshold = threshold.isBefore(now);
         if (passedThreshold) {
             log.warn("Entry with id {} passed threshold {} > {}", queryMeta.getImdbId(), threshold, now);
