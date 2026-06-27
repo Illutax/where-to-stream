@@ -5,6 +5,7 @@ import tech.dobler.werstreamt.domainvalues.AvailabilityType;
 import tech.dobler.werstreamt.domainvalues.Price;
 import tech.dobler.werstreamt.entities.Availability;
 import tech.dobler.werstreamt.entities.QueryResult;
+import tech.dobler.werstreamt.persistence.QueryResultDB;
 
 import java.util.List;
 
@@ -22,8 +23,19 @@ class QueryResultMapperTest {
         final var dto = QueryResultMapper.INSTANCE.entityToDto(pojo);
         final var back = QueryResultMapper.INSTANCE.dtoToEntity(dto);
 
-        assertThat(dto).isNotNull();
-        assertThat(back).isNotNull();
+        // Forward mapping carries every field...
+        assertThat(dto)
+                .extracting(
+                        QueryResultDB::getImdbId,
+                        QueryResultDB::getStreamingServiceName,
+                        QueryResultDB::isFlatrate,
+                        QueryResultDB::getAvailabilities)
+                .containsExactly(
+                        pojo.imdbId(),
+                        pojo.streamingServiceName(),
+                        pojo.flatrate(),
+                        pojo.availabilities());
+        // ...and the round trip reproduces the original.
         assertThat(back).isEqualTo(pojo);
     }
 }
