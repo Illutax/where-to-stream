@@ -26,6 +26,8 @@ TODO-Tickets:
   `AtomicReference` (lock-freie Reads, atomarer Reload).
 - ✅ **TODO-9** — Robustes Scraping: Null-Guards + try/catch pro Provider, Spalten-Anzahl
   vor Zugriff geprüft; aktueller User-Agent.
+- ✅ **TODO-18** — Fehlende Qualitäten sind jetzt `null`-`Price` statt `new Price(null)`;
+  `prettyPrint`-Null-Checks greifen dadurch korrekt.
 
 ---
 
@@ -164,7 +166,7 @@ Kein Setup-Dokument vorhanden.
 - `web/StatusController.java`: `@GetMapping("public/status")` ohne führenden Slash
   (inkonsistent zu den übrigen Mappings).
 
-### 🟢 TODO-18 — `Price` wrappt fehlende Werte statt `null`
+### ✅ TODO-18 — `Price` wrappt fehlende Werte statt `null`
 `services/WerStreamtEsApiClient.parseAvailability(...)`: fehlende Qualitäten werden als
 `new Price(null)` gespeichert, d. h. `availability.sd()` etc. ist nie `null`, sondern ein
 Price-Objekt mit `value() == null`. Aufrufer (z. B. `DataAggregateController.prettyPrint`)
@@ -173,3 +175,5 @@ ausgegeben werden.
 - **Akzeptanzkriterium:** Fehlende Preise konsistent als `null`-`Price` (Optional/echtes
   `null`) modellieren und die Aufrufer entsprechend anpassen. (Beim Code-Review-Test
   #15 aufgefallen.)
+- **Erledigt:** `priceOrNull(...)` liefert `null` für nicht angebotene Qualitäten;
+  `prettyPrint` (das bereits auf `!= null` prüft) gibt damit keine `null`-Werte mehr aus.

@@ -4,6 +4,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.Test;
 import tech.dobler.werstreamt.domainvalues.AvailabilityType;
+import tech.dobler.werstreamt.domainvalues.Price;
 import tech.dobler.werstreamt.entities.Availability;
 import tech.dobler.werstreamt.entities.QueryResult;
 
@@ -91,16 +92,15 @@ class WerStreamtEsApiClientTest {
                 .extracting(QueryResult::flatrate, QueryResult::isAvailable)
                 .containsExactly(false, true);
 
-        // NOTE: missing qualities are wrapped in a Price with a null value rather than a
-        // null Price (see TODO-18), so we assert on value() here.
-        final var expectedRent = Arrays.asList(" 3.99 €", " 5.99 €", null);
+        // Offered qualities are Price(...), missing ones are a null Price (TODO-18).
+        final var expectedRent = Arrays.asList(new Price(" 3.99 €"), new Price(" 5.99 €"), null);
         assertThat(byType(amazon, AvailabilityType.RENT))
-                .extracting(a -> a.sd().value(), a -> a.hd().value(), a -> a.fourK().value())
+                .extracting(Availability::sd, Availability::hd, Availability::fourK)
                 .isEqualTo(expectedRent);
 
-        final var expectedBuy = Arrays.asList(null, " 9.99 €", null);
+        final var expectedBuy = Arrays.asList(null, new Price(" 9.99 €"), null);
         assertThat(byType(amazon, AvailabilityType.BUY))
-                .extracting(a -> a.sd().value(), a -> a.hd().value(), a -> a.fourK().value())
+                .extracting(Availability::sd, Availability::hd, Availability::fourK)
                 .isEqualTo(expectedBuy);
     }
 

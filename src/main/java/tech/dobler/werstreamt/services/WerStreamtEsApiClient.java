@@ -133,7 +133,12 @@ public class WerStreamtEsApiClient {
         if (sd == null && hd == null && fourK == null) {
             return Optional.empty();
         }
-        return Optional.of(new Availability(type, new Price(sd), new Price(hd), new Price(fourK)));
+        return Optional.of(new Availability(type, priceOrNull(sd), priceOrNull(hd), priceOrNull(fourK)));
+    }
+
+    /** Wraps a price string, or returns {@code null} when the quality is not offered. */
+    private static Price priceOrNull(String value) {
+        return value == null ? null : new Price(value);
     }
 
     /** Quality label of an {@code <em>} (e.g. "SD"), or {@code null} if the markup differs. */
