@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.entities.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryMeta;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
@@ -26,6 +27,14 @@ public class StreamInfoService {
     @Value("${wer-streamt.invalidate.after-days:28}")
     private int duration;
 
+    // NOTE: both public resolve(...) overloads are annotated on purpose. resolve(imdbId)
+    // delegates to resolve(imdbId, false) via self-invocation, which bypasses the Spring
+    // proxy, so the transaction must already be open when either entry point is the one
+    // called through the proxy. This is what makes parallelStream callers (PreCacheController,
+    // RefreshController) correct: each parallel call gets its own transaction on its own
+    // thread, instead of relying on a controller-level @Transactional that does not span
+    // ForkJoinPool worker threads.
+    @Transactional
     public List<QueryResult> resolve(String imdbId, boolean forceRefresh) {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
         final var daysSeconds = TimeUnit.DAYS.toSeconds(duration);
@@ -48,6 +57,7 @@ public class StreamInfoService {
                 .orElseGet(() -> fetch(imdbId));
     }
 
+    @Transactional
     public List<QueryResult> resolve(String imdbId) {
         return resolve(imdbId, false);
     }
