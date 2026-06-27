@@ -24,6 +24,8 @@ TODO-Tickets:
   gebündelt; `@Value`-Field-Injection entfernt.
 - ✅ **TODO-8** — `ImdbEntryRepository` nutzt einen unveränderlichen Snapshot hinter
   `AtomicReference` (lock-freie Reads, atomarer Reload).
+- ✅ **TODO-9** — Robustes Scraping: Null-Guards + try/catch pro Provider, Spalten-Anzahl
+  vor Zugriff geprüft; aktueller User-Agent.
 
 ---
 
@@ -92,13 +94,17 @@ neu befüllt → Race-Potenzial.
   hinter einer `AtomicReference`; `init`/`clear` tauschen den Snapshot atomar, Reads sind
   lock-frei und konsistent.
 
-### 🟢 TODO-9 — Robustes Scraping (NPE-Schutz)
+### ✅ TODO-9 — Robustes Scraping (NPE-Schutz)
 `services/WerStreamtEsApiClient.java`: `selectFirst(...).childNode(0)` u. ä. ohne
-Null-Checks; eine Layout-Änderung bei werstreamt.es kann NPEs auslösen. (Review-Punkt #4,
+Null-Checks; eine Layout-Änderung bei werstreamt.es konnte NPEs auslösen. (Review-Punkt #4,
 Korrektheit; wurde aber bewusst zurückgestellt.)
 - **Akzeptanzkriterium:** Null-Guards + try/catch pro Eintrag, damit ein fehlerhafter
   Eintrag nicht den ganzen Lauf abbricht. Veralteter User-Agent (Firefox 2.0.0.6, 2007)
   aktualisieren.
+- **Erledigt:** `parseProvider` kapselt jeden Provider in try/catch und prüft die
+  Spalten-Anzahl vor dem Indexzugriff; `qualityLabel`/`priceText` und `toSearchResult`
+  sind null-sicher; User-Agent auf aktuellen Chrome aktualisiert. Tests
+  `skipsProviderWithUnexpectedColumnCount` / `skipsMalformedEmWithoutCrashing` ergänzt.
 
 ### 🟢 TODO-10 — Schema-Versionierung statt `ddl-auto=update`
 `application.properties`: `spring.jpa.hibernate.ddl-auto=update`.

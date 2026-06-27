@@ -134,6 +134,50 @@ class WerStreamtEsApiClientTest {
         assertThat(results).isEmpty();
     }
 
+    @Test
+    void skipsProviderWithUnexpectedColumnCount() {
+        final String html = """
+                <div id="avalibility">
+                  <div class="provider" data-ext-provider-name="Broken">
+                    <div class="columns small-4"></div>
+                    <div class="columns small-4"></div>
+                  </div>
+                  <div class="provider" data-ext-provider-name="Netflix">
+                    <div class="columns small-4"><i class="fi-check"></i></div>
+                    <div class="columns small-4"></div>
+                    <div class="columns small-4"></div>
+                  </div>
+                </div>
+                """;
+
+        final List<QueryResult> results = client.parse(Jsoup.parse(html), IMDB_ID);
+
+        // The 2-column "Broken" provider is skipped, not thrown on; "Netflix" still parses.
+        assertThat(results)
+                .extracting(QueryResult::streamingServiceName)
+                .containsExactly("Netflix");
+    }
+
+    @Test
+    void skipsMalformedEmWithoutCrashing() {
+        final String html = """
+                <div id="avalibility">
+                  <div class="provider" data-ext-provider-name="Weird">
+                    <div class="columns small-4"></div>
+                    <div class="columns small-4"><em></em></div>
+                    <div class="columns small-4"></div>
+                  </div>
+                </div>
+                """;
+
+        final List<QueryResult> results = client.parse(Jsoup.parse(html), IMDB_ID);
+
+        // The malformed <em> yields no availability, but the provider is still returned.
+        assertThat(results).singleElement()
+                .extracting(QueryResult::streamingServiceName, QueryResult::availabilities)
+                .containsExactly("Weird", List.of());
+    }
+
     private static QueryResult byName(List<QueryResult> results, String name) {
         return results.stream()
                 .filter(r -> r.streamingServiceName().equals(name))
