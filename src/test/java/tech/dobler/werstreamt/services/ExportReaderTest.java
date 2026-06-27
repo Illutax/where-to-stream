@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import tech.dobler.werstreamt.entities.ImdbEntry;
 
+import java.net.URI;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,13 +33,24 @@ class ExportReaderTest {
     void mapsColumnsOfFirstEntry() {
         final ImdbEntry first = exportReader.parse(LIST_NAME).getFirst();
 
-        assertThat(first.id()).isEqualTo(1);
-        assertThat(first.name()).isEqualTo("The Prestige");
-        assertThat(first.imdbId()).isEqualTo("tt0482571");
-        assertThat(first.url()).hasToString("https://www.imdb.com/title/tt0482571/");
-        assertThat(first.added()).isEqualTo("2012-06-22");
-        assertThat(first.year()).isEqualTo(2006);
-        assertThat(first.isRated()).isTrue();
+        final var expected = List.of(
+                1,
+                "The Prestige",
+                "tt0482571",
+                URI.create("https://www.imdb.com/title/tt0482571/"),
+                "2012-06-22",
+                2006,
+                true);
+        assertThat(first)
+                .extracting(
+                        ImdbEntry::id,
+                        ImdbEntry::name,
+                        ImdbEntry::imdbId,
+                        ImdbEntry::url,
+                        ImdbEntry::added,
+                        ImdbEntry::year,
+                        ImdbEntry::isRated)
+                .isEqualTo(expected);
     }
 
     @Test

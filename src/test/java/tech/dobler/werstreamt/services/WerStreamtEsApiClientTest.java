@@ -7,9 +7,11 @@ import tech.dobler.werstreamt.domainvalues.AvailabilityType;
 import tech.dobler.werstreamt.entities.Availability;
 import tech.dobler.werstreamt.entities.QueryResult;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class WerStreamtEsApiClientTest {
 
@@ -63,38 +65,43 @@ class WerStreamtEsApiClientTest {
         final List<QueryResult> results = parseFixture();
 
         assertThat(results)
-                .extracting(QueryResult::streamingServiceName)
-                .containsExactly("Netflix", "Amazon Prime Video", "Apple TV(1)", "Apple TV(2)");
-        assertThat(results).allSatisfy(r -> assertThat(r.imdbId()).isEqualTo(IMDB_ID));
+                .extracting(QueryResult::streamingServiceName, QueryResult::imdbId)
+                .containsExactly(
+                        tuple("Netflix", IMDB_ID),
+                        tuple("Amazon Prime Video", IMDB_ID),
+                        tuple("Apple TV(1)", IMDB_ID),
+                        tuple("Apple TV(2)", IMDB_ID));
     }
 
     @Test
     void parsesFlatrateProvider() {
         final QueryResult netflix = byName(parseFixture(), "Netflix");
 
-        assertThat(netflix.flatrate()).isTrue();
-        assertThat(netflix.availabilities()).isEmpty();
-        assertThat(netflix.isAvailable()).isTrue();
+        final var expected = List.of(true, List.of(), true);
+        assertThat(netflix)
+                .extracting(QueryResult::flatrate, QueryResult::availabilities, QueryResult::isAvailable)
+                .isEqualTo(expected);
     }
 
     @Test
     void parsesRentAndBuyPrices() {
         final QueryResult amazon = byName(parseFixture(), "Amazon Prime Video");
 
-        assertThat(amazon.flatrate()).isFalse();
-        assertThat(amazon.isAvailable()).isTrue();
+        assertThat(amazon)
+                .extracting(QueryResult::flatrate, QueryResult::isAvailable)
+                .containsExactly(false, true);
 
         // NOTE: missing qualities are wrapped in a Price with a null value rather than a
         // null Price (see TODO-18), so we assert on value() here.
-        final Availability rent = byType(amazon, AvailabilityType.RENT);
-        assertThat(rent.sd().value()).contains("3.99");
-        assertThat(rent.hd().value()).contains("5.99");
-        assertThat(rent.fourK().value()).isNull();
+        final var expectedRent = Arrays.asList(" 3.99 €", " 5.99 €", null);
+        assertThat(byType(amazon, AvailabilityType.RENT))
+                .extracting(a -> a.sd().value(), a -> a.hd().value(), a -> a.fourK().value())
+                .isEqualTo(expectedRent);
 
-        final Availability buy = byType(amazon, AvailabilityType.BUY);
-        assertThat(buy.hd().value()).contains("9.99");
-        assertThat(buy.sd().value()).isNull();
-        assertThat(buy.fourK().value()).isNull();
+        final var expectedBuy = Arrays.asList(null, " 9.99 €", null);
+        assertThat(byType(amazon, AvailabilityType.BUY))
+                .extracting(a -> a.sd().value(), a -> a.hd().value(), a -> a.fourK().value())
+                .isEqualTo(expectedBuy);
     }
 
     @Test
@@ -102,13 +109,22 @@ class WerStreamtEsApiClientTest {
         final List<QueryResult> results = parseFixture();
 
         final QueryResult first = byName(results, "Apple TV(1)");
-        assertThat(first.flatrate()).isFalse();
-        assertThat(byType(first, AvailabilityType.RENT).sd().value()).contains("2.99");
+        final var expectedFirst = List.of(false, " 2.99 €");
+        assertThat(first)
+                .extracting(QueryResult::flatrate, q -> byType(q, AvailabilityType.RENT).sd().value())
+                .isEqualTo(expectedFirst);
 
         final QueryResult second = byName(results, "Apple TV(2)");
-        assertThat(second.flatrate()).isTrue();
-        assertThat(byType(second, AvailabilityType.RENT).fourK().value()).contains("7.99");
-        assertThat(byType(second, AvailabilityType.BUY).hd().value()).contains("12.99");
+        final var expectedSecond = List.of(
+                true,
+                " 7.99 €",
+                " 12.99 €");
+        assertThat(second)
+                .extracting(
+                        QueryResult::flatrate,
+                        q -> byType(q, AvailabilityType.RENT).fourK().value(),
+                        q -> byType(q, AvailabilityType.BUY).hd().value())
+                .isEqualTo(expectedSecond);
     }
 
     @Test
