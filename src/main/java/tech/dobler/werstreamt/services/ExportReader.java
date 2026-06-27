@@ -7,9 +7,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.entities.ImdbEntry;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,7 +81,7 @@ public class ExportReader {
         final var csvFilePath = Paths.get(filePath, fileName);
         log.info("Reading csv from path: {}", csvFilePath.toAbsolutePath());
 
-        final var fileReader = new FileReader(csvFilePath.toFile());
+        final var fileReader = Files.newBufferedReader(csvFilePath, StandardCharsets.UTF_8);
         CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
                 .setHeader(headers)
                 .setSkipHeaderRecord(true)
