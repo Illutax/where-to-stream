@@ -35,13 +35,6 @@ joint tatsächlich auf die UUID-PK von `QueryResultDB`, nicht auf eine IMDb-ID.
 
 ## Sicherheit
 
-### 🔴 TODO-4 — Klartext-Credentials im Repo
-`src/main/resources/application.properties`: `spring.datasource.username=sa`,
-`spring.datasource.password=password` eingecheckt.
-- **Akzeptanzkriterium:** Credentials über Umgebungsvariablen
-  (`SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD`) bzw. ein nicht
-  eingechecktes Profil beziehen; Default-Werte aus dem Repo entfernen.
-
 ### 🔴 TODO-5 — Zustandsändernde Endpunkte als GET ohne Auth
 `/pre-cache`, `/check-pre-cache`, `/refresh/all`, `/refresh/seen` lösen teure
 Remote-Crawls aus, sind per GET erreichbar und damit von Crawlern/Prefetch triggerbar.
