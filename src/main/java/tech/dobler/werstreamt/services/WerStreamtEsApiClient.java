@@ -36,9 +36,9 @@ public class WerStreamtEsApiClient {
                     .map(Optional::get)
                     .toList();
         } catch (HttpStatusException e) {
-            log.error("Not found %s".formatted(e.getMessage()));
+            log.error("Search for '{}' failed: {}", searchTerm, e.getMessage());
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Search for '%s' failed".formatted(searchTerm), e);
         }
         return List.of();
     }
@@ -63,9 +63,9 @@ public class WerStreamtEsApiClient {
         try {
             return parse(connect.get(), imdbId);
         } catch (HttpStatusException e) {
-            log.error("Not found %s".formatted(e.getMessage()));
+            log.error("Query for imdbId '{}' failed: {}", imdbId, e.getMessage());
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Query for imdbId '%s' failed".formatted(imdbId), e);
         }
         log.info("Found none for id: {}", imdbId);
         return List.of();

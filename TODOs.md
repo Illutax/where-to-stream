@@ -244,14 +244,15 @@ nur den doppelten `getAll()`-Aufruf der Amazon-Seite betrifft).
 
 ## Aus dem Re-Scan (2026-06-28)
 
-### 🟢 TODO-26 — Fehler-Logs ohne Query-Kontext
+### ✅ TODO-26 — Fehler-Logs ohne Query-Kontext
 `services/WerStreamtEsApiClient`: Die `catch`-Blöcke in `query(...)` und `search(...)`
-loggen `log.error("Not found %s".formatted(e.getMessage()))` bzw. werfen
+loggten `log.error("Not found %s".formatted(e.getMessage()))` bzw. warfen
 `new RuntimeException(e)`, ohne anzugeben, **für welche Query/imdbId** der Fehler auftrat.
-Bei den `parallelStream`-Läufen (Pre-Cache/Refresh) ist so nicht nachvollziehbar, welcher
+Bei den `parallelStream`-Läufen (Pre-Cache/Refresh) war so nicht nachvollziehbar, welcher
 Eintrag fehlschlug.
 - **Akzeptanzkriterium:** In allen Fehlerausgaben des Clients die betroffene Query
   (imdbId bzw. Suchbegriff) mitloggen.
+- **Erledigt:** `query`/`search` loggen bzw. wrappen Fehler jetzt mit imdbId/Suchbegriff.
 
 ### ✅ TODO-27 — Liquibase einführen und DB-Schema als Changelog ablegen
 Das Schema wurde von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-10).
