@@ -41,7 +41,8 @@ public class StreamInfoService {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
         final var now = Instant.now();
         return result
-                .filter(queryMeta -> forceRefresh || isFresh(queryMeta, now))
+                // forceRefresh must drop the cached entry so it is refetched (not keep it).
+                .filter(queryMeta -> !forceRefresh && isFresh(queryMeta, now))
                 .map(StreamInfoService::toQueryResults)
                 .orElseGet(() -> fetch(imdbId));
     }

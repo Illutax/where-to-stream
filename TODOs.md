@@ -263,6 +263,15 @@ Eintrag fehlschlug.
   (imdbId bzw. Suchbegriff) mitloggen.
 - **Erledigt:** `query`/`search` loggen bzw. wrappen Fehler jetzt mit imdbId/Suchbegriff.
 
+### ✅ TODO-28 — `forceRefresh` war invertiert (Refresh refetchte nie)
+`services/StreamInfoService.resolve(imdbId, forceRefresh)`: Der Filter lautete
+`forceRefresh || isFresh(...)`. Bei `forceRefresh == true` wurde der gecachte Eintrag dadurch
+**behalten** statt neu geholt — d. h. die `/refresh/*`-Endpunkte (die `resolve(id, true)`
+aufrufen) aktualisierten die Daten nie.
+- **Akzeptanzkriterium:** `forceRefresh == true` erzwingt einen erneuten Fetch.
+- **Erledigt:** Bedingung zu `!forceRefresh && isFresh(...)` korrigiert; beim Schreiben der
+  Tests (TODO-24) aufgefallen. Test `resolveForceRefreshAlwaysFetches` deckt es ab.
+
 ### ✅ TODO-27 — Liquibase einführen und DB-Schema als Changelog ablegen
 Das Schema wurde von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-10).
 - **Akzeptanzkriterium:** Liquibase einbinden, das vollständige Schema als Changelog
