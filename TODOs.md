@@ -265,6 +265,15 @@ Eintrag fehlschlug.
   (imdbId bzw. Suchbegriff) mitloggen.
 - **Erledigt:** `query`/`search` loggen bzw. wrappen Fehler jetzt mit imdbId/Suchbegriff.
 
+### ✅ TODO-29 — Requests/Sekunde gegen werstreamt.es begrenzen
+Pre-Cache/Refresh feuern via `parallelStream` viele Requests gleichzeitig gegen
+werstreamt.es — unhöflich und ein Block-Risiko.
+- **Akzeptanzkriterium:** Outbound-Requests drosseln; konfigurierbares, sinnvoll
+  vorbelegtes Property.
+- **Erledigt:** `RateLimiter` (global, `synchronized`, mindest-Abstand zwischen Requests),
+  `WerStreamtEsApiClient.query/search` rufen `acquire()` vor dem HTTP-Get; Property
+  `wer-streamt.rate-limit.requests-per-second` (Default `2`, `<= 0` deaktiviert).
+
 ### ✅ TODO-28 — `forceRefresh` war invertiert (Refresh refetchte nie)
 `services/StreamInfoService.resolve(imdbId, forceRefresh)`: Der Filter lautete
 `forceRefresh || isFresh(...)`. Bei `forceRefresh == true` wurde der gecachte Eintrag dadurch

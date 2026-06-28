@@ -28,8 +28,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class StreamInfoServiceTest {
 
-    private static final WerStreamtProperties PROPS =
-            new WerStreamtProperties("assets", new WerStreamtProperties.Invalidate(28));
+    private static final WerStreamtProperties PROPS = new WerStreamtProperties(
+            "assets", new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0));
 
     @Mock
     private WerStreamtEsApiClient werStreamtEsApiClient;

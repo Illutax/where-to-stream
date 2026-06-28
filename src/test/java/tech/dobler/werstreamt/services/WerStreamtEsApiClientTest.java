@@ -3,6 +3,7 @@ package tech.dobler.werstreamt.services;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.Test;
+import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.domainvalues.AvailabilityType;
 import tech.dobler.werstreamt.domainvalues.Price;
 import tech.dobler.werstreamt.entities.Availability;
@@ -18,7 +19,9 @@ class WerStreamtEsApiClientTest {
 
     private static final String IMDB_ID = "tt0482571";
 
-    private final WerStreamtEsApiClient client = new WerStreamtEsApiClient();
+    // parse() does not hit the network, so the rate limiter is irrelevant here (disabled).
+    private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(new RateLimiter(
+            new WerStreamtProperties(null, new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0))));
 
     /**
      * Mirrors the relevant structure of a werstreamt.es result page:

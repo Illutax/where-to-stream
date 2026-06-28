@@ -1,5 +1,6 @@
 package tech.dobler.werstreamt.services;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.HttpStatusException;
 import org.jsoup.nodes.Document;
@@ -21,14 +22,17 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class WerStreamtEsApiClient {
     private final URI baseUrl = URI.create("https://www.werstreamt.es/filme/");
+    private final RateLimiter rateLimiter;
 
     public List<SearchResult> search(String searchTerm) {
         log.info("Searching for: {}", searchTerm);
         final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", searchTerm).build();
         final var connect = ApiClientUtils.getConnectionWithUserAgent(query);
         try {
+            rateLimiter.acquire();
             final var document = connect.get();
             return document.select(".results > ul > li[data-contentid]").stream()
                     .map(WerStreamtEsApiClient::toSearchResult)
@@ -61,6 +65,7 @@ public class WerStreamtEsApiClient {
         final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", imdbId).queryParam("action_results", "suchen").build();
         final var connect = ApiClientUtils.getConnectionWithUserAgent(query).followRedirects(true);
         try {
+            rateLimiter.acquire();
             return parse(connect.get(), imdbId);
         } catch (HttpStatusException e) {
             log.error("Query for imdbId '{}' failed: {}", imdbId, e.getMessage());

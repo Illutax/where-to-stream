@@ -24,7 +24,8 @@ class ExportReaderTest {
     void setUp() {
         final var properties = new WerStreamtProperties(
                 "src/test/resources/test-assets",
-                new WerStreamtProperties.Invalidate(28));
+                new WerStreamtProperties.Invalidate(28),
+                new WerStreamtProperties.RateLimit(0));
         exportReader = new ExportReader(properties);
     }
 
@@ -95,8 +96,8 @@ class ExportReaderTest {
                 4,tt0000004,2012-06-22,2012-06-22,,"Good Two","Good Two",https://www.imdb.com/title/tt0000004/,Movie,8.5,130,2011,"Drama",1,2006-10-20,"Dir",10,2012-06-22
                 """;
         Files.writeString(dir.resolve("list.csv"), csv);
-        final var reader = new ExportReader(
-                new WerStreamtProperties(dir.toString(), new WerStreamtProperties.Invalidate(28)));
+        final var reader = new ExportReader(new WerStreamtProperties(
+                dir.toString(), new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)));
 
         final List<ImdbEntry> entries = reader.parse("list.csv");
 
