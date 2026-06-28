@@ -231,3 +231,25 @@ Nach den Refactorings sind `PreCacheService`, `StreamInfoService.resolveAll(...)
 nur den doppelten `getAll()`-Aufruf der Amazon-Seite betrifft).
 - **Akzeptanzkriterium:** Aggregat-Ergebnisse cachen/vorberechnen bzw. die Batch-Logik aus
   `resolveAll(...)` (TODO-13/#13) wiederverwenden.
+
+---
+
+## Aus dem Re-Scan (2026-06-28)
+
+### 🟢 TODO-26 — Fehler-Logs ohne Query-Kontext
+`services/WerStreamtEsApiClient`: Die `catch`-Blöcke in `query(...)` und `search(...)`
+loggen `log.error("Not found %s".formatted(e.getMessage()))` bzw. werfen
+`new RuntimeException(e)`, ohne anzugeben, **für welche Query/imdbId** der Fehler auftrat.
+Bei den `parallelStream`-Läufen (Pre-Cache/Refresh) ist so nicht nachvollziehbar, welcher
+Eintrag fehlschlug.
+- **Akzeptanzkriterium:** In allen Fehlerausgaben des Clients die betroffene Query
+  (imdbId bzw. Suchbegriff) mitloggen.
+
+### 🟠 TODO-27 — Liquibase einführen und DB-Schema als Changelog ablegen
+Das Schema wird aktuell von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-10).
+- **Akzeptanzkriterium:** Liquibase einbinden, das vollständige Schema als Changelog
+  hinterlegen und `ddl-auto` auf `validate` umstellen, sodass das Schema reproduzierbar und
+  versioniert ist. Dies ist auch die Voraussetzung für die Umbenennungen aus TODO-2/TODO-3.
+- **Hinweis:** Die H2-DB hält ausschließlich gecachte Scrape-Ergebnisse; das Baseline-Schema
+  geht von einer frischen DB aus (für bestehende Deployments altes `./db` entfernen — der
+  Cache füllt sich via `/pre-cache` neu).
