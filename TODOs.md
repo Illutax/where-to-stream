@@ -327,10 +327,15 @@ Service-/View-Namen.
   die Handler delegieren nur noch. (Explizite Routen beibehalten statt Catch-all-`{path}`,
   um Routing-Mehrdeutigkeit zu vermeiden.)
 
-### 🟢 TODO-33 — Transaktionsgrenze auf einem Controller
-`DataAggregateController` ist `@Transactional(readOnly = true)` auf Klassenebene.
+### ✅ TODO-33 — Transaktionsgrenze auf einem Controller
+`DataAggregateController` war `@Transactional(readOnly = true)` auf Klassenebene.
 - **Akzeptanzkriterium:** Transaktionsgrenzen in die Service-Schicht verschieben; Controller
   nicht transaktional.
+- **Erledigt:** `@Transactional` von `DataAggregateController` **und** `ChangeListController`
+  entfernt. DB-Zugriffe laufen über transaktionale Service-Methoden
+  (`StreamInfoService.resolve/resolveAll`); die zurückgegebenen Records sind losgelöst, daher
+  kein Open-Session-in-View nötig. (Nebeneffekt: Cache-Writes bei Miss laufen jetzt in einer
+  Read-Write-Tx statt in einer Read-only-Tx.)
 
 ### 🟢 TODO-34 — View-Model-Aufbau im Controller
 `IndexDto`, `PaidDto` und `prettyPrint(...)` stecken im `DataAggregateController`.

@@ -2,7 +2,6 @@ package tech.dobler.werstreamt.web;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import tech.dobler.werstreamt.domain.AvailabilityType;
@@ -20,7 +19,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class DataAggregateController {
     private final AggregateService service;
