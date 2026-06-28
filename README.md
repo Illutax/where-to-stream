@@ -45,8 +45,11 @@ Put at least one IMDb CSV export in `assets/` before starting, otherwise startup
 ## Running with Docker
 
 The image builds the jar and runs it (see `Dockerfile` / `compose.yml`). `compose.yml`
-maps `./assets` and `./db` as volumes, runs on port `8080`, and serves under the context
-path `/w2s` on an external `webserver` network.
+mounts `./assets` (read-only) and `./logs`, runs on port `8080`, and serves under the context
+path `/w2s` on an external `webserver` network. It also starts a bundled `mariadb` service
+(activated via the `mariadb` Spring profile) whose data lives in the `mariadb-data` **named
+volume** — a named volume (not a host bind mount) so the database directory gets the right
+ownership under rootless Podman/Docker and SELinux without manual `chown`/relabeling.
 
 ```bash
 DOCKER_IMAGE_TAG=local docker build . --build-arg DOCKER_IMAGE_TAG=local -t w2s:local

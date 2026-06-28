@@ -34,7 +34,6 @@ build/
 
 /db/
 /logs/
-/mariadb-data/
 *.csv~
 *.csv
 .env

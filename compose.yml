@@ -29,10 +29,16 @@ services:
       - MARIADB_PASSWORD=w2s
       - MARIADB_ROOT_PASSWORD=change-me
     volumes:
-      - ./mariadb-data:/var/lib/mysql:Z
+      # Named volume (not a bind mount): the engine initialises it with the image's
+      # mysql:mysql ownership and handles the rootless-Podman uid mapping, avoiding the
+      # "Permission denied" a host-owned bind mount causes. The DB is a regenerable cache.
+      - mariadb-data:/var/lib/mysql
     networks:
       - db
-    restart: always
+    restart: no
+
+volumes:
+  mariadb-data:
 
 networks:
   webserver:
