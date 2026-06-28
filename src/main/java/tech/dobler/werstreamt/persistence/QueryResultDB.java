@@ -28,7 +28,7 @@ public final class QueryResultDB {
     @Column(name = "flatrate")
     private final boolean flatrate;
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "query_result_availablilities", joinColumns = @JoinColumn(name = "imdb_id"))
+    @CollectionTable(name = "query_result_availabilities", joinColumns = @JoinColumn(name = "query_result_id"))
     @Column(name = "availabilities")
     @AttributeOverrides({
             @AttributeOverride(name = "type", column = @Column(name = "type")),

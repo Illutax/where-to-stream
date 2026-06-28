@@ -18,6 +18,8 @@ Review-Punkte (eigene Nummerierung des Reviews, nicht TODO-N):
 
 TODO-Tickets:
 
+- ✅ **TODO-2** — Tabellen-/Spalten-Tippfehler (`QueryMeta`, `query_result_availabilities`).
+- ✅ **TODO-3** — Irreführende Join-Spalte → `query_result_id`.
 - ✅ **TODO-6** — Cache-Logik in `PreCacheService` extrahiert; Controller hängen nicht
   mehr voneinander ab.
 - ✅ **TODO-7** — `wer-streamt.*` in `WerStreamtProperties` (`@ConfigurationProperties`)
@@ -45,16 +47,19 @@ und wird nirgends produktiv verwendet.
   gegen imdb.com ohne Assertion und schlägt in der Sandbox am Egress-Proxy (403) fehl.
   Beim Aufräumen mitnehmen (durch einen Test gegen ein gespeichertes HTML-Fixture ersetzen).
 
-### 🟢 TODO-2 — Tabellen-/Spalten-Tippfehler
+### ✅ TODO-2 — Tabellen-/Spalten-Tippfehler
 - `persistence/QueryMeta.java`: `@Table(name = "QeryMeta")` → `QueryMeta`.
 - `persistence/QueryResultDB.java`: `query_result_availablilities` → `query_result_availabilities`.
 - **Achtung:** Schema-Migration nötig (siehe TODO-10), `ddl-auto=update` benennt
   Tabellen nicht automatisch um → bestehende Daten gehen sonst verloren.
+- **Erledigt:** Entity-Annotationen korrigiert; das korrigierte Schema steckt im
+  Liquibase-Baseline (TODO-27).
 
-### 🟠 TODO-3 — Irreführender Join-Spaltenname
+### ✅ TODO-3 — Irreführender Join-Spaltenname
 `persistence/QueryResultDB.java`: `@CollectionTable(joinColumns = @JoinColumn(name = "imdb_id"))`
 joint tatsächlich auf die UUID-PK von `QueryResultDB`, nicht auf eine IMDb-ID.
 - **Akzeptanzkriterium:** Spalte z. B. in `query_result_id` umbenennen (mit Migration).
+- **Erledigt:** Join-Spalte heißt jetzt `query_result_id`; Schema via Liquibase (TODO-27).
 
 ---
 
