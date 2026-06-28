@@ -3,8 +3,8 @@ services:
     container_name: w2s
     image: "w2s:${DOCKER_IMAGE_TAG}"
     volumes:
-      - ./assets:/opt/app/assets
-      - ./db:/opt/app/db
+      - ./assets:/opt/app/assets:ro,Z
+      - ./db:/opt/app/db:Z
     environment:
       - SERVER_PORT=8080
       - logging.level.org.springframework.web.servlet.DispatcherServlet=TRACE
