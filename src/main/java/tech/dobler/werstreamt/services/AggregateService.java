@@ -39,6 +39,7 @@ public class AggregateService {
         return all.stream()
                 .filter(on(serviceName).and(QueryResult::flatrate))
                 .map(e -> imdbCatalog.findByImdb(e.imdbId()).get())
+                .distinct() // a film is "in the flatrate" once per provider, even with language variants
                 .toList();
     }
 

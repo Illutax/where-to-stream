@@ -1,15 +1,12 @@
 package tech.dobler.werstreamt.services;
 
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.Test;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.domain.AvailabilityType;
-import tech.dobler.werstreamt.domain.Price;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.QueryResult;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,174 +15,143 @@ import static org.assertj.core.api.Assertions.tuple;
 class WerStreamtEsApiClientTest {
 
     private static final String IMDB_ID = "tt0482571";
+    private static final String MINUS = "<i class=\"fi-minus-circle\"></i>";
+    private static final String CHECK = "<i class=\"fi-check\"></i>";
 
     // parse() does not hit the network, so the rate limiter is irrelevant here (disabled).
     private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(new RateLimiter(
             new WerStreamtProperties(null, new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0))));
 
-    /**
-     * Mirrors the relevant structure of a werstreamt.es result page:
-     * <ul>
-     *     <li>Netflix – flatrate only (3 columns, check mark in the first column),</li>
-     *     <li>Amazon Prime Video – rent + buy prices (3 columns),</li>
-     *     <li>Apple TV – a provider rendered with two offerings (6 columns) which the
-     *         parser splits into "(1)" and "(2)".</li>
-     * </ul>
-     * The {@code <em>} layout is significant: the quality label lives in a nested element
-     * (childNode(0).childNode(0)) and the price in the following text node (childNode(1)).
-     */
-    private static final String HTML = """
-            <html><body>
-            <div id="avalibility">
-              <div class="provider" data-ext-provider-name="Netflix">
-                <div class="columns small-4"><i class="fi-check"></i></div>
-                <div class="columns small-4"></div>
-                <div class="columns small-4"></div>
-              </div>
-              <div class="provider" data-ext-provider-name="Amazon Prime Video">
-                <div class="columns small-4"></div>
-                <div class="columns small-4"><em><span>SD</span> 3.99 &euro;</em><em><span>HD</span> 5.99 &euro;</em></div>
-                <div class="columns small-4"><em><span>HD</span> 9.99 &euro;</em></div>
-              </div>
-              <div class="provider" data-ext-provider-name="Apple TV">
-                <div class="columns small-4"></div>
-                <div class="columns small-4"><em><span>SD</span> 2.99 &euro;</em></div>
-                <div class="columns small-4"></div>
-                <div class="columns small-4"><i class="fi-check"></i></div>
-                <div class="columns small-4"><em><span>4K</span> 7.99 &euro;</em></div>
-                <div class="columns small-4"><em><span>HD</span> 12.99 &euro;</em></div>
-              </div>
-            </div>
-            </body></html>
-            """;
+    // --- fixture builders mirroring the real werstreamt.es per-listing structure ---
 
-    private List<QueryResult> parseFixture() {
-        final Document document = Jsoup.parse(HTML);
-        return client.parse(document, IMDB_ID);
+    private static String price(String quality, String value) {
+        return "<em><strong>" + quality + "</strong> " + value + "</em>";
     }
 
-    @Test
-    void splitsSixColumnProviderIntoTwoResults() {
-        final List<QueryResult> results = parseFixture();
-
-        assertThat(results)
-                .extracting(QueryResult::streamingServiceName, QueryResult::imdbId)
-                .containsExactly(
-                        tuple("Netflix", IMDB_ID),
-                        tuple("Amazon Prime Video", IMDB_ID),
-                        tuple("Apple TV(1)", IMDB_ID),
-                        tuple("Apple TV(2)", IMDB_ID));
+    /** One listing row: title/meta block + the 3 Flatrate/Leihen/Kaufen columns. */
+    private static String offering(String meta, String flatrate, String rent, String buy) {
+        return "<div class=\"row panel small-collapse available\">"
+                + "<div class=\"columns large-5\"><button>"
+                + "<strong class=\"title\">Title</strong><br>" + meta + "<br>"
+                + "<span class=\"badges\"></span></button></div>"
+                + "<div class=\"columns large-5\"><div class=\"row small-collapse large-uncollapse\">"
+                + "<div class=\"columns small-4\"><small>Flatrate</small><br>" + flatrate + "</div>"
+                + "<div class=\"columns small-4\"><small>Leihen</small><br>" + rent + "</div>"
+                + "<div class=\"columns small-4\"><small>Kaufen</small><br>" + buy + "</div>"
+                + "</div></div></div>";
     }
+
+    private static String provider(String name, String... offerings) {
+        return "<div class=\"provider\" data-ext-provider-name=\"" + name + "\">"
+                + "<div class=\"large-10 columns\">" + String.join("", offerings) + "</div></div>";
+    }
+
+    private List<QueryResult> parse(String... providers) {
+        final var html = "<div id=\"avalibility\">" + String.join("", providers) + "</div>";
+        return client.parse(Jsoup.parse(html), IMDB_ID);
+    }
+
+    // --- tests ---
 
     @Test
     void parsesFlatrateProvider() {
-        final QueryResult netflix = byName(parseFixture(), "Netflix");
+        final var results = parse(provider("Netflix",
+                offering("90 Min. | Deutsch", CHECK, "-", "-")));
 
-        final var expected = List.of(true, List.of(), true);
-        assertThat(netflix)
-                .extracting(QueryResult::flatrate, QueryResult::availabilities, QueryResult::isAvailable)
-                .isEqualTo(expected);
+        final var netflix = single(results, "Netflix");
+        assertThat(netflix.flatrate()).isTrue();
+        assertThat(netflix.availabilities()).isEmpty();
+        assertThat(netflix.isAvailable()).isTrue();
+        assertThat(netflix.languages()).isNull(); // single offering ⇒ no differentiator
     }
 
     @Test
     void parsesRentAndBuyPrices() {
-        final QueryResult amazon = byName(parseFixture(), "Amazon Prime Video");
+        final var results = parse(provider("Amazon Prime Video",
+                offering("120 Min. | Deutsch", MINUS,
+                        price("SD", "3.99 €") + "<br>" + price("HD", "5.99 €"),
+                        price("HD", "9.99 €"))));
 
-        assertThat(amazon)
-                .extracting(QueryResult::flatrate, QueryResult::isAvailable)
-                .containsExactly(false, true);
+        final var amazon = single(results, "Amazon Prime Video");
+        assertThat(amazon.flatrate()).isFalse();
 
-        // Offered qualities are Price(...), missing ones are a null Price (TODO-18).
-        final var expectedRent = Arrays.asList(new Price(" 3.99 €"), new Price(" 5.99 €"), null);
-        assertThat(byType(amazon, AvailabilityType.RENT))
-                .extracting(Availability::sd, Availability::hd, Availability::fourK)
-                .isEqualTo(expectedRent);
+        final var rent = byType(amazon, AvailabilityType.RENT);
+        assertThat(rent.sd().value()).contains("3.99");
+        assertThat(rent.hd().value()).contains("5.99");
+        assertThat(rent.fourK()).isNull();
 
-        final var expectedBuy = Arrays.asList(null, new Price(" 9.99 €"), null);
-        assertThat(byType(amazon, AvailabilityType.BUY))
-                .extracting(Availability::sd, Availability::hd, Availability::fourK)
-                .isEqualTo(expectedBuy);
+        final var buy = byType(amazon, AvailabilityType.BUY);
+        assertThat(buy.hd().value()).contains("9.99");
+        assertThat(buy.sd()).isNull();
     }
 
     @Test
-    void carriesFlatrateAndPricesOfSecondOfferingFromSixColumnProvider() {
-        final List<QueryResult> results = parseFixture();
+    void collapsesIdenticalOfferings() {
+        final var sameRent = price("HD", "3.99 €");
+        final var results = parse(provider("Disney+",
+                offering("90 Min. | Deutsch", MINUS, sameRent, "-"),
+                offering("90 Min. | Deutsch", MINUS, sameRent, "-")));
 
-        final QueryResult first = byName(results, "Apple TV(1)");
-        final var expectedFirst = List.of(false, " 2.99 €");
-        assertThat(first)
-                .extracting(QueryResult::flatrate, q -> byType(q, AvailabilityType.RENT).sd().value())
-                .isEqualTo(expectedFirst);
-
-        final QueryResult second = byName(results, "Apple TV(2)");
-        final var expectedSecond = List.of(
-                true,
-                " 7.99 €",
-                " 12.99 €");
-        assertThat(second)
-                .extracting(
-                        QueryResult::flatrate,
-                        q -> byType(q, AvailabilityType.RENT).fourK().value(),
-                        q -> byType(q, AvailabilityType.BUY).hd().value())
-                .isEqualTo(expectedSecond);
+        // identical flatrate + prices + language ⇒ merged into one
+        final var disney = single(results, "Disney+");
+        assertThat(disney.languages()).isNull();
     }
 
     @Test
-    void returnsEmptyWhenNoProvidersPresent() {
-        final List<QueryResult> results = client.parse(Jsoup.parse("<html><body></body></html>"), IMDB_ID);
+    void keepsLanguageVariantsWithSamePricesAndLabelsThem() {
+        final var rent = price("HD", "3.99 €");
+        final var results = parse(provider("Prime Video",
+                offering("87 Min. | Deutsch", MINUS, rent, "-"),
+                offering("88 Min. | Englisch", MINUS, rent, "-")));
 
-        assertThat(results).isEmpty();
+        assertThat(results)
+                .extracting(QueryResult::streamingServiceName, QueryResult::languages, QueryResult::label)
+                .containsExactly(
+                        tuple("Prime Video", "Deutsch", "Prime Video (Deutsch)"),
+                        tuple("Prime Video", "Englisch", "Prime Video (Englisch)"));
+    }
+
+    @Test
+    void keepsPriceDistinctOfferings() {
+        final var results = parse(provider("Apple TV",
+                offering("90 Min. | Deutsch", MINUS, price("SD", "2.99 €"), "-"),
+                offering("90 Min. | Englisch", MINUS, price("HD", "4.99 €"), "-")));
+
+        assertThat(results).hasSize(2)
+                .allSatisfy(r -> assertThat(r.streamingServiceName()).isEqualTo("Apple TV"));
+        assertThat(byType(results.get(0), AvailabilityType.RENT).sd().value()).contains("2.99");
+        assertThat(byType(results.get(1), AvailabilityType.RENT).hd().value()).contains("4.99");
     }
 
     @Test
     void skipsProviderWithUnexpectedColumnCount() {
-        final String html = """
-                <div id="avalibility">
-                  <div class="provider" data-ext-provider-name="Broken">
-                    <div class="columns small-4"></div>
-                    <div class="columns small-4"></div>
-                  </div>
-                  <div class="provider" data-ext-provider-name="Netflix">
-                    <div class="columns small-4"><i class="fi-check"></i></div>
-                    <div class="columns small-4"></div>
-                    <div class="columns small-4"></div>
-                  </div>
-                </div>
-                """;
+        // "Broken" uses the flat layout with 2 columns (no listing rows) ⇒ skipped via fallback.
+        final var broken = "<div class=\"provider\" data-ext-provider-name=\"Broken\">"
+                + "<div class=\"columns small-4\"></div><div class=\"columns small-4\"></div></div>";
 
-        final List<QueryResult> results = client.parse(Jsoup.parse(html), IMDB_ID);
+        final var results = parse(broken, provider("Netflix", offering("90 Min. | Deutsch", CHECK, "-", "-")));
 
-        // The 2-column "Broken" provider is skipped, not thrown on; "Netflix" still parses.
-        assertThat(results)
-                .extracting(QueryResult::streamingServiceName)
-                .containsExactly("Netflix");
+        assertThat(results).extracting(QueryResult::streamingServiceName).containsExactly("Netflix");
     }
 
     @Test
     void skipsMalformedEmWithoutCrashing() {
-        final String html = """
-                <div id="avalibility">
-                  <div class="provider" data-ext-provider-name="Weird">
-                    <div class="columns small-4"></div>
-                    <div class="columns small-4"><em></em></div>
-                    <div class="columns small-4"></div>
-                  </div>
-                </div>
-                """;
+        final var results = parse(provider("Weird",
+                offering("90 Min. | Deutsch", MINUS, "<em></em>", "-")));
 
-        final List<QueryResult> results = client.parse(Jsoup.parse(html), IMDB_ID);
-
-        // The malformed <em> yields no availability, but the provider is still returned.
-        assertThat(results).singleElement()
-                .extracting(QueryResult::streamingServiceName, QueryResult::availabilities)
-                .containsExactly("Weird", List.of());
+        final var weird = single(results, "Weird");
+        assertThat(weird.availabilities()).isEmpty();
     }
 
-    private static QueryResult byName(List<QueryResult> results, String name) {
-        return results.stream()
-                .filter(r -> r.streamingServiceName().equals(name))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("No result for " + name));
+    @Test
+    void returnsEmptyWhenNoProvidersPresent() {
+        assertThat(client.parse(Jsoup.parse("<html><body></body></html>"), IMDB_ID)).isEmpty();
+    }
+
+    private static QueryResult single(List<QueryResult> results, String name) {
+        final var matches = results.stream().filter(r -> r.streamingServiceName().equals(name)).toList();
+        assertThat(matches).as("exactly one %s entry", name).hasSize(1);
+        return matches.getFirst();
     }
 
     private static Availability byType(QueryResult result, AvailabilityType type) {

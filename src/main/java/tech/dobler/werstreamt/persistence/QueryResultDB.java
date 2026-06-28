@@ -27,6 +27,8 @@ public final class QueryResultDB {
     private final String streamingServiceName;
     @Column(name = "flatrate")
     private final boolean flatrate;
+    @Column(name = "languages")
+    private final String languages;
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "query_result_availabilities", joinColumns = @JoinColumn(name = "query_result_id"))
     @Column(name = "availabilities")
@@ -38,11 +40,12 @@ public final class QueryResultDB {
     })
     private final List<Availability> availabilities = new ArrayList<>();
 
-    public QueryResultDB(String imdbId, String streamingServiceName, boolean flatrate, List<Availability> availabilities) {
+    public QueryResultDB(String imdbId, String streamingServiceName, boolean flatrate, List<Availability> availabilities, String languages) {
         this.id = null;
         this.imdbId = imdbId;
         this.streamingServiceName = streamingServiceName;
         this.flatrate = flatrate;
+        this.languages = languages;
         this.availabilities.addAll(availabilities);
     }
 

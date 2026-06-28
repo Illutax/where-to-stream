@@ -409,3 +409,18 @@ Eine UI, die gezielt nur die invalidierten (bzw. nie gecachten) Einträge scrapt
 - **Empfehlung:** Kurzfristig Variante 1 (konkreter `ResponseEntity<List<QueryResult>>`);
   mittelfristig zusammen mit TODO-20 (zentrales Error-Handling) auf reine Body-Rückgaben +
   `ResponseStatusException` umstellen.
+
+---
+
+## Bugfixes
+
+### ✅ BUG — Provider mit mehreren Sprach-Listings wurde komplett verworfen
+`WerStreamtEsApiClient` verarbeitete nur 3 oder 6 `.columns.small-4` pro Anbieter. Listet ein
+Anbieter denselben Titel mehrfach (z. B. Prime Video „Priest" in 3 Sprachen → 9 Spalten), wurde
+mit `Unexpected column count 9` der **ganze Anbieter** fallen gelassen.
+- **Erledigt:** Parser arbeitet jetzt pro Listing-Zeile (`.panel.available`), liest die Sprache
+  aus dem Titelblock und dedupliziert nach (Flatrate + Preise + Sprache). Mehrere distinkte
+  Listings ergeben je einen Eintrag, per Sprache unterschieden (`label()` = „Prime Video (…)"),
+  ein einzelnes Listing bleibt ohne Suffix. Neues Feld `QueryResult.languages` +
+  Spalte `query_result.languages` (Liquibase `002`). `included()` dedupliziert nach `imdbId`.
+  Integrationstest gegen eine bereinigte echte Detailseite (`priest-tt0822847.html`).

@@ -82,7 +82,7 @@ public class StreamInfoService {
     public static Optional<String> toAvailableServiceNames(List<QueryResult> queryResults) {
         if (queryResults.isEmpty()) return Optional.empty();
         return Optional.of(queryResults.stream()
-                .map(QueryResult::streamingServiceName)
+                .map(QueryResult::label)
                 .collect(Collectors.joining(", ")));
     }
 

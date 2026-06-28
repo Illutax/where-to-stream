@@ -17,7 +17,7 @@ class QueryResultMapperTest {
     void name() {
         // Arrange
         final var availability = new Availability(AvailabilityType.RENT, new Price("1.99 €"), null, new Price("9.99 €"));
-        final var pojo = new QueryResult("tt0123755", "Cube", true, List.of(availability));
+        final var pojo = new QueryResult("tt0123755", "Cube", true, List.of(availability), "Deutsch, Englisch (OV)");
 
         // Act
         final var dto = QueryResultMapper.INSTANCE.entityToDto(pojo);
@@ -29,12 +29,14 @@ class QueryResultMapperTest {
                         QueryResultDB::getImdbId,
                         QueryResultDB::getStreamingServiceName,
                         QueryResultDB::isFlatrate,
-                        QueryResultDB::getAvailabilities)
+                        QueryResultDB::getAvailabilities,
+                        QueryResultDB::getLanguages)
                 .containsExactly(
                         pojo.imdbId(),
                         pojo.streamingServiceName(),
                         pojo.flatrate(),
-                        pojo.availabilities());
+                        pojo.availabilities(),
+                        pojo.languages());
         // ...and the round trip reproduces the original.
         assertThat(back).isEqualTo(pojo);
     }

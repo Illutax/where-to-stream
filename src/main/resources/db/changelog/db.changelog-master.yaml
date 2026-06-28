@@ -2,3 +2,6 @@ databaseChangeLog:
   - include:
       file: changes/001-baseline-schema.sql
       relativeToChangelogFile: true
+  - include:
+      file: changes/002-add-query-result-languages.sql
+      relativeToChangelogFile: true

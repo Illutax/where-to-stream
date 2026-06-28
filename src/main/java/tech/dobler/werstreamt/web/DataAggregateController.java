@@ -96,13 +96,15 @@ public class DataAggregateController {
                 .toList();
     }
 
-    public record PaidDto(String name, String imdbId, String price, String added, boolean isRated, String year) {
+    public record PaidDto(String name, String imdbId, String price, String added, boolean isRated, String year,
+                          String languages) {
         static PaidDto from(QueryResult result, ImdbEntry imdbEntry) {
             String price = prettyPrint(result.availabilities());
             String year = imdbEntry.year() == 0
                     ? "Not yet released"
                     : String.valueOf(imdbEntry.year());
-            return new PaidDto(imdbEntry.name(), imdbEntry.imdbId(), price, imdbEntry.added(), imdbEntry.isRated(), year);
+            return new PaidDto(imdbEntry.name(), imdbEntry.imdbId(), price, imdbEntry.added(), imdbEntry.isRated(),
+                    year, result.languages());
         }
     }
 

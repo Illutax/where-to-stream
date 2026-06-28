@@ -20,6 +20,7 @@
     <li th:each="entry : ${primeOthers}">
         <span th:if="${entry.isRated}">✅</span>
         <a th:text="${entry.name}" th:href="@{'https://www.imdb.com/title/' + ${entry.imdbId}}"></a>
+        <span th:if="${entry.languages}" th:text="'[' + ${entry.languages} + ']'"></span>
         <span th:text="${entry.price}"></span>
         (<span th:text="${entry.year}"></span>)
         Hinzuzgefügt: <span th:text="${entry.added}"></span>

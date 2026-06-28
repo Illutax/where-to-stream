@@ -36,7 +36,7 @@ public class QueryResultRepositoryTest {
     void saveAndLoadOneWithoutAvailabilities() {
         // Arrange
         final var imdbId = "tt0123755";
-        final var queryResult = new QueryResultDB(imdbId, "Cube", false, List.of());
+        final var queryResult = new QueryResultDB(imdbId, "Cube", false, List.of(), null);
         saveAndFlush(queryResult);
 
         // Act
@@ -55,7 +55,7 @@ public class QueryResultRepositoryTest {
         // Arrange
         final var imdbId = "tt0123755";
         final var availabilities = List.of(new Availability(AvailabilityType.RENT, null, null, new Price("15.00 €")));
-        final var queryResult = new QueryResultDB(imdbId, "Cube", false, availabilities);
+        final var queryResult = new QueryResultDB(imdbId, "Cube", false, availabilities, "Deutsch");
         saveAndFlush(queryResult);
 
         // Act
@@ -66,6 +66,7 @@ public class QueryResultRepositoryTest {
         final var result = results.getFirst();
         assertThat(result).isNotSameAs(queryResult);
         assertThat(result.getId()).isNotNull();
+        assertThat(result.getLanguages()).isEqualTo("Deutsch");
         assertThat(result.getAvailabilities()).containsExactlyElementsOf(availabilities);
     }
 
@@ -74,7 +75,7 @@ public class QueryResultRepositoryTest {
     void saveAndDeleteOne() {
         // Arrange
         final var imdbId = "tt0123755";
-        final var queryResult = new QueryResultDB(imdbId, "Cube", false, List.of(new Availability(AvailabilityType.RENT, null, null, new Price("15.00 €"))));
+        final var queryResult = new QueryResultDB(imdbId, "Cube", false, List.of(new Availability(AvailabilityType.RENT, null, null, new Price("15.00 €"))), null);
         log.info("Created query result: {}", queryResult);
         saveAndFlush(queryResult);
         final var sanityCheck = sut.findByImdbId(imdbId);

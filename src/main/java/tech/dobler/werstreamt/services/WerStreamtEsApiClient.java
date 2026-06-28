@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.HttpStatusException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.werstreamt.domain.AvailabilityType;
@@ -15,8 +16,11 @@ import tech.dobler.werstreamt.domain.SearchResult;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -84,34 +88,81 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
                 .toList();
     }
 
+    /** One listing of a provider: its flatrate/rent/buy prices plus the language variant. */
+    private record Offering(boolean flatrate, List<Availability> availabilities, String languages) {
+    }
+
     /**
-     * Parses a single provider block. Returns one result for the 3-column layout and two
-     * results ("(1)"/"(2)") for the 6-column layout. Any unexpected layout or malformed
-     * markup is logged and skipped so that one bad provider never aborts the whole parse.
+     * Parses a provider block into one {@link QueryResult} per <em>distinct</em> listing.
+     * A provider may list the same title several times (e.g. different languages); identical
+     * listings (same flatrate + prices + languages) are merged. When more than one distinct
+     * listing remains, each keeps its {@code languages} so callers can tell them apart;
+     * a single listing keeps {@code languages == null} (no differentiator needed). Malformed
+     * markup is logged and skipped so one bad provider never aborts the whole parse.
      */
     private List<QueryResult> parseProvider(Element provider, String imdbId) {
         final var name = provider.attr("data-ext-provider-name");
         try {
-            final var columns = provider.select(".columns.small-4");
-            if (columns.size() != 3 && columns.size() != 6) {
-                log.error("Unexpected column count {} for id {} provider '{}'", columns.size(), imdbId, name);
-                log.error("Columns: {}", columns);
+            final var offerings = parseOfferings(provider);
+            if (offerings.isEmpty()) {
+                log.warn("No parseable offering for id {} provider '{}'", imdbId, name);
                 return List.of();
             }
-            final var first = new QueryResult(imdbId, columns.size() == 3 ? name : name + "(1)",
-                    hasCheck(columns.get(0)),
-                    availabilities(columns.get(1), columns.get(2)));
-            if (columns.size() == 3) {
-                return List.of(first);
-            }
-            final var second = new QueryResult(imdbId, name + "(2)",
-                    hasCheck(columns.get(3)),
-                    availabilities(columns.get(4), columns.get(5)));
-            return List.of(first, second);
+            final var distinct = new ArrayList<>(new LinkedHashSet<>(offerings));
+            final boolean single = distinct.size() == 1;
+            return distinct.stream()
+                    .map(o -> new QueryResult(imdbId, name, o.flatrate(), o.availabilities(),
+                            single ? null : o.languages()))
+                    .toList();
         } catch (RuntimeException ex) {
             log.error("Failed to parse provider '{}' for id {}: {}", name, imdbId, ex.toString());
             return List.of();
         }
+    }
+
+    private List<Offering> parseOfferings(Element provider) {
+        final var rows = provider.select(".panel.available");
+        if (!rows.isEmpty()) {
+            return rows.stream().map(WerStreamtEsApiClient::parseOfferingRow).filter(Objects::nonNull).toList();
+        }
+        // Fallback for the flat layout (no per-listing rows): chunk the columns into groups of 3.
+        final var columns = provider.select(".columns.small-4");
+        if (columns.isEmpty() || columns.size() % 3 != 0) {
+            return List.of();
+        }
+        final var offerings = new ArrayList<Offering>();
+        for (int i = 0; i < columns.size(); i += 3) {
+            offerings.add(new Offering(hasCheck(columns.get(i)),
+                    availabilities(columns.get(i + 1), columns.get(i + 2)), null));
+        }
+        return offerings;
+    }
+
+    private static Offering parseOfferingRow(Element offering) {
+        final var columns = offering.select(".columns.small-4");
+        if (columns.size() < 3) {
+            return null;
+        }
+        return new Offering(hasCheck(columns.get(0)),
+                availabilities(columns.get(1), columns.get(2)),
+                extractLanguages(offering));
+    }
+
+    /** Language list from a listing's title block ("87 Min. | Deutsch, Englisch (OV)"), or null. */
+    private static String extractLanguages(Element offering) {
+        final var titleCol = offering.selectFirst(".columns.large-5");
+        if (titleCol == null) {
+            return null;
+        }
+        final var holder = titleCol.selectFirst("button");
+        return (holder != null ? holder : titleCol).childNodes().stream()
+                .filter(TextNode.class::isInstance)
+                .map(node -> ((TextNode) node).text().trim())
+                .filter(text -> text.contains("|"))
+                .findFirst()
+                .map(text -> text.substring(text.indexOf('|') + 1).trim())
+                .filter(languages -> !languages.isBlank())
+                .orElse(null);
     }
 
     private static boolean hasCheck(Element column) {

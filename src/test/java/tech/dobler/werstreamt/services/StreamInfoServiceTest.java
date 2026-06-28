@@ -51,7 +51,7 @@ class StreamInfoServiceTest {
     }
 
     private static QueryMeta meta(String imdbId, Instant creationTime, String serviceName) {
-        return QueryMeta.of(imdbId, creationTime, List.of(new QueryResultDB(imdbId, serviceName, true, List.of())));
+        return QueryMeta.of(imdbId, creationTime, List.of(new QueryResultDB(imdbId, serviceName, true, List.of(), null)));
     }
 
     private void stubFindFirst(String imdbId, Optional<QueryMeta> result) {
@@ -74,7 +74,7 @@ class StreamInfoServiceTest {
     void resolveFetchesAndCachesOnMiss() {
         stubFindFirst("tt2", Optional.empty());
         when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
-        final var fetched = new QueryResult("tt2", "Prime Video", false, List.of());
+        final var fetched = new QueryResult("tt2", "Prime Video", false, List.of(), null);
         when(streamProvider.query("tt2")).thenReturn(List.of(fetched));
 
         final var result = service.resolve("tt2");
@@ -88,7 +88,7 @@ class StreamInfoServiceTest {
     void resolveRefetchesWhenCacheExpired() {
         stubFindFirst("tt3", Optional.of(meta("tt3", Instant.now().minus(40, ChronoUnit.DAYS), "Stale")));
         when(imdbCatalog.findByImdb("tt3")).thenReturn(Optional.of(entry("tt3")));
-        when(streamProvider.query("tt3")).thenReturn(List.of(new QueryResult("tt3", "Fresh", false, List.of())));
+        when(streamProvider.query("tt3")).thenReturn(List.of(new QueryResult("tt3", "Fresh", false, List.of(), null)));
 
         final var result = service.resolve("tt3");
 
@@ -100,7 +100,7 @@ class StreamInfoServiceTest {
     void resolveForceRefreshAlwaysFetches() {
         stubFindFirst("tt4", Optional.of(meta("tt4", Instant.now(), "Cached")));
         when(imdbCatalog.findByImdb("tt4")).thenReturn(Optional.of(entry("tt4")));
-        when(streamProvider.query("tt4")).thenReturn(List.of(new QueryResult("tt4", "Refreshed", false, List.of())));
+        when(streamProvider.query("tt4")).thenReturn(List.of(new QueryResult("tt4", "Refreshed", false, List.of(), null)));
 
         final var result = service.resolve("tt4", true);
 
@@ -114,7 +114,7 @@ class StreamInfoServiceTest {
                 .thenReturn(List.of(meta("tt1", Instant.now(), "Netflix")));
         // tt2 is a cache miss -> fetched individually
         when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
-        when(streamProvider.query("tt2")).thenReturn(List.of(new QueryResult("tt2", "Prime Video", false, List.of())));
+        when(streamProvider.query("tt2")).thenReturn(List.of(new QueryResult("tt2", "Prime Video", false, List.of(), null)));
 
         final var result = service.resolveAll(List.of("tt1", "tt2"));
 
