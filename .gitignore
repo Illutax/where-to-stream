@@ -33,6 +33,7 @@ build/
 .vscode/
 
 /db/
+/logs/
 *.csv~
 *.csv
 .env
