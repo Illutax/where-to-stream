@@ -20,6 +20,8 @@ TODO-Tickets:
 
 - ✅ **TODO-2** — Tabellen-/Spalten-Tippfehler (`QueryMeta`, `query_result_availabilities`).
 - ✅ **TODO-3** — Irreführende Join-Spalte → `query_result_id`.
+- ✅ **TODO-10 / TODO-27** — Liquibase eingeführt, Schema als versioniertes Changelog,
+  `ddl-auto=validate`.
 - ✅ **TODO-6** — Cache-Logik in `PreCacheService` extrahiert; Controller hängen nicht
   mehr voneinander ab.
 - ✅ **TODO-7** — `wer-streamt.*` in `WerStreamtProperties` (`@ConfigurationProperties`)
@@ -115,10 +117,11 @@ Korrektheit; wurde aber bewusst zurückgestellt.)
   sind null-sicher; User-Agent auf aktuellen Chrome aktualisiert. Tests
   `skipsProviderWithUnexpectedColumnCount` / `skipsMalformedEmWithoutCrashing` ergänzt.
 
-### 🟢 TODO-10 — Schema-Versionierung statt `ddl-auto=update`
+### ✅ TODO-10 — Schema-Versionierung statt `ddl-auto=update`
 `application.properties`: `spring.jpa.hibernate.ddl-auto=update`.
 - **Akzeptanzkriterium:** Flyway oder Liquibase einführen für reproduzierbare,
   versionierte Schemata (Voraussetzung für TODO-2 und TODO-3).
+- **Erledigt:** Über TODO-27 (Liquibase) umgesetzt; `ddl-auto=validate`.
 
 ---
 
@@ -250,11 +253,15 @@ Eintrag fehlschlug.
 - **Akzeptanzkriterium:** In allen Fehlerausgaben des Clients die betroffene Query
   (imdbId bzw. Suchbegriff) mitloggen.
 
-### 🟠 TODO-27 — Liquibase einführen und DB-Schema als Changelog ablegen
-Das Schema wird aktuell von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-10).
+### ✅ TODO-27 — Liquibase einführen und DB-Schema als Changelog ablegen
+Das Schema wurde von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-10).
 - **Akzeptanzkriterium:** Liquibase einbinden, das vollständige Schema als Changelog
   hinterlegen und `ddl-auto` auf `validate` umstellen, sodass das Schema reproduzierbar und
   versioniert ist. Dies ist auch die Voraussetzung für die Umbenennungen aus TODO-2/TODO-3.
 - **Hinweis:** Die H2-DB hält ausschließlich gecachte Scrape-Ergebnisse; das Baseline-Schema
   geht von einer frischen DB aus (für bestehende Deployments altes `./db` entfernen — der
   Cache füllt sich via `/pre-cache` neu).
+- **Erledigt:** `spring-boot-liquibase` ergänzt; Baseline-Changelog unter
+  `src/main/resources/db/changelog/` (`db.changelog-master.yaml` → `changes/001-baseline-schema.sql`),
+  generiert aus dem Hibernate-Schema (inkl. der TODO-2/TODO-3-Namen); `ddl-auto=validate`
+  in Haupt- und Test-Konfiguration. Tests laufen grün gegen das von Liquibase erzeugte Schema.
