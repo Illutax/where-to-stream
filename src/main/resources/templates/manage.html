@@ -1,0 +1,56 @@
+<html layout:decorate="~{layout/layout}">
+<head>
+    <title>Manage cache</title>
+</head>
+
+<body layout:fragment="content">
+
+<div class="alert alert-success" role="alert" th:if="${param.invalidated}">
+    Invalidated <span th:text="${param.invalidated}"></span> cache row(s).
+</div>
+<div class="alert alert-success" role="alert" th:if="${param.scraped}">
+    (Re-)scraped <span th:text="${param.scraped}"></span> title(s).
+</div>
+
+<h1>Manage cache</h1>
+
+<form method="post" action="scrape-invalidated">
+    <p>
+        <span th:text="${needsScrapeCount}">0</span> title(s) currently need scraping
+        (never cached or invalidated).
+    </p>
+    <button type="submit" class="btn btn-primary">Scrape invalidated / missing</button>
+</form>
+
+<hr/>
+
+<h2>Invalidate selected titles</h2>
+<form method="post" action="invalidate">
+    <table class="table table-sm">
+        <thead>
+        <tr>
+            <th></th>
+            <th>Title</th>
+            <th>IMDb id</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${rows}">
+            <td>
+                <input type="checkbox" name="imdbIds" th:value="${row.imdbId}"/>
+            </td>
+            <td th:text="${row.name}"></td>
+            <td th:text="${row.imdbId}"></td>
+            <td>
+                <span th:if="${row.needsScrape}" class="badge bg-warning text-dark">needs scrape</span>
+                <span th:unless="${row.needsScrape}" class="badge bg-success">cached</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-danger">Invalidate selected</button>
+</form>
+
+</body>
+</html>

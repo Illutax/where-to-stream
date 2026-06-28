@@ -15,7 +15,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,5 +60,36 @@ class PreCacheServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThat(preCacheService.findUncached()).containsExactly(uncached);
+    }
+
+    @Test
+    void cacheUncachedResolvesOnlyUncachedEntries() {
+        final var cached = entry("tt1");
+        final var uncached = entry("tt2");
+        when(imdbCatalog.findAll()).thenReturn(List.of(cached, uncached));
+        when(queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt1"))
+                .thenReturn(Optional.of(QueryMeta.of("tt1", Instant.now(), List.of())));
+        when(queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt2"))
+                .thenReturn(Optional.empty());
+
+        final int scraped = preCacheService.cacheUncached();
+
+        assertThat(scraped).isEqualTo(1);
+        verify(streamInfoService).resolve("tt2");
+        verify(streamInfoService, never()).resolve("tt1");
+    }
+
+    @Test
+    void invalidateDelegatesToRepository() {
+        when(queryMetaRepository.invalidateByImdbIds(List.of("tt1", "tt2"))).thenReturn(2);
+
+        assertThat(preCacheService.invalidate(List.of("tt1", "tt2"))).isEqualTo(2);
+        verify(queryMetaRepository).invalidateByImdbIds(List.of("tt1", "tt2"));
+    }
+
+    @Test
+    void invalidateWithNoSelectionIsANoop() {
+        assertThat(preCacheService.invalidate(List.of())).isZero();
+        verifyNoInteractions(queryMetaRepository);
     }
 }

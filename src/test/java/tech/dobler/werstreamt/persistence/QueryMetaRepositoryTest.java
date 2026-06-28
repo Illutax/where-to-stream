@@ -102,4 +102,25 @@ public class QueryMetaRepositoryTest {
         // Assert
         assertThat(loadFromDb).isEmpty();
     }
+
+    @Test
+    @Transactional
+    void invalidateByImdbIds_marksRowsAndHidesThem() {
+        // Arrange
+        final var timestamp = Instant.now();
+        sut.save(new QueryMeta(null, "tt1", timestamp, false, List.of()));
+        sut.save(new QueryMeta(null, "tt2", timestamp, false, List.of()));
+        entityManager.flush();
+        entityManager.clear();
+
+        // Act
+        final int affected = sut.invalidateByImdbIds(List.of("tt1"));
+        entityManager.flush();
+        entityManager.clear();
+
+        // Assert
+        assertThat(affected).isEqualTo(1);
+        assertThat(sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt1")).isEmpty();
+        assertThat(sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt2")).isPresent();
+    }
 }

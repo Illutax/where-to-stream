@@ -34,6 +34,10 @@ TODO-Tickets:
   `prettyPrint`-Null-Checks greifen dadurch korrekt.
 - ✅ **TODO-17** — Aufräumarbeiten: ungenutzter `@Value`-Import (in TODO-7), parametrisiertes
   Logging (`WerStreamtEsApiClient` in TODO-9, `ImdbApiClient`), `@GetMapping("/public/status")`.
+- ✅ **TODO-30/31/32/33/36/37** — Architektur-Konsolidierung (`domain/`-Paket, `ImdbCatalog`,
+  Provider-Handler, Tx-Grenzen, `StreamAvailabilityProvider`, flaches `getAll`).
+- ✅ **TODO-35/38/39** — `invalidated`-Flag aktiviert: Einträge invalidieren + nur
+  invalidierte/fehlende scrapen (`/manage`-UI).
 
 ---
 
@@ -342,10 +346,12 @@ Service-/View-Namen.
 - **Akzeptanzkriterium:** In einen Assembler/Formatter (oder DTO-Factory-Methoden)
   auslagern; Controller ruft nur noch den Assembler.
 
-### 🟢 TODO-35 — `invalidated`-Flag ist faktisch tot
-`QueryMeta.invalidated` wird nie auf `true` gesetzt, aber überall mitgefiltert.
+### ✅ TODO-35 — `invalidated`-Flag ist faktisch tot
+`QueryMeta.invalidated` wurde nie auf `true` gesetzt, aber überall mitgefiltert.
 - **Akzeptanzkriterium:** Invalidierung tatsächlich umsetzen (z. B. beim Refresh alte Zeilen
   invalidieren) **oder** Flag + Query-Suffix entfernen.
+- **Erledigt:** Über TODO-38/TODO-39 zum Leben erweckt — `invalidateByImdbIds(...)` setzt das
+  Flag; invalidierte Einträge gelten als „uncached" und werden gezielt neu gescraped.
 
 ### ✅ TODO-36 — Provider-Abstraktion fürs Scraping
 Kein Interface über „Stream-Verfügbarkeits-Provider"; fest an jsoup/werstreamt.es gekoppelt
@@ -363,3 +369,43 @@ Verschachtelte Form, die Aufrufer sofort flachklopfen.
   zurückgeben; `included`/`paid` als ein Filter mit Prädikat.
 - **Erledigt:** `getAll()` liefert flaches `List<QueryResult>`; `included`/`paid` teilen das
   Prädikat `on(serviceName)` (kombiniert mit `flatrate` bzw. dessen Negation).
+
+---
+
+## Invalidierungs-Feature (2026-06-28)
+
+### ✅ TODO-38 — Einträge gezielt invalidieren (UI)
+Eintrage in der UI auswählen und deren Cache invalidieren (für bewusstes Neu-Scrapen).
+- **Akzeptanzkriterium:** Auswahl in der UI → markierte Einträge werden invalidiert.
+- **Erledigt:** `QueryMetaRepository.invalidateByImdbIds(...)` (`@Modifying`),
+  `PreCacheService.invalidate(...)`, Web-Endpunkt `POST /invalidate` und die `/manage`-Seite
+  (Checkbox-Auswahl). Integrationstest gegen H2 + Mockito-Tests ergänzt.
+
+### ✅ TODO-39 — Nur invalidierte/fehlende Einträge scrapen (UI)
+Eine UI, die gezielt nur die invalidierten (bzw. nie gecachten) Einträge scrapt.
+- **Akzeptanzkriterium:** Button/Endpunkt scrapt nur die Einträge ohne gültigen Cache.
+- **Erledigt:** `PreCacheService.cacheUncached()` (nutzt `findUncached()`), Endpunkt
+  `POST /scrape-invalidated`, Button auf `/manage`; Navbar-Link „Manage Cache".
+
+---
+
+## Empfehlung zu TODO-23 (`ResponseEntity<?>`)
+
+`rest/QueryController.query(...)`/`search(...)` geben `ResponseEntity<?>` zurück. Empfehlung:
+
+- **Konkreter Typ + sprechende Fehler:** Beide Handler liefern logisch
+  `List<QueryResult>`. Auf `ResponseEntity<List<QueryResult>>` umstellen und die
+  „nicht gefunden"-Fälle nicht über einen rohen `ResponseEntity<?>`-Mischtyp, sondern über
+  `ResponseEntity.notFound().build()` (gleicher generischer Typ) bzw. eine
+  `ResponseStatusException(NOT_FOUND)` abbilden. Damit ist die Methode typsicher und Tests
+  können `getBody()` ohne Cast nutzen.
+- **Hilfsmethoden vereinheitlichen:** `searchById`/`searchByImdbId` geben bereits
+  `ResponseEntity<List<QueryResult>>` zurück — `query()`/`search()` sollten denselben Typ
+  führen statt `?`.
+- **Optional (sauberer):** Statt `ResponseEntity` ganz auf den Body-Typ gehen
+  (`List<QueryResult>`) und 404 über eine zentrale `@ControllerAdvice`/
+  `ResponseStatusException` behandeln (greift in TODO-20 ein) — dann braucht der Controller
+  gar kein `ResponseEntity` mehr.
+- **Empfehlung:** Kurzfristig Variante 1 (konkreter `ResponseEntity<List<QueryResult>>`);
+  mittelfristig zusammen mit TODO-20 (zentrales Error-Handling) auf reine Body-Rückgaben +
+  `ResponseStatusException` umstellen.

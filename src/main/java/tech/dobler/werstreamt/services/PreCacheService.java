@@ -3,9 +3,11 @@ package tech.dobler.werstreamt.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,16 +43,39 @@ public class PreCacheService {
     }
 
     /**
-     * Returns the entries that currently have no valid cached query result and logs each
-     * one as a warning.
+     * Resolves only the entries that currently have no valid cached result — i.e. never-cached
+     * titles and ones that were invalidated (see {@link #invalidate}). Returns how many were
+     * (re)scraped.
+     */
+    public int cacheUncached() {
+        final var uncached = findUncached();
+        uncached.parallelStream().forEach(e -> streamInfoService.resolve(e.imdbId()));
+        return uncached.size();
+    }
+
+    /**
+     * Marks the cached results of the given titles as invalidated so they are refetched on the
+     * next resolve / {@link #cacheUncached()} run. Returns the number of cache rows affected.
+     */
+    @Transactional
+    public int invalidate(Collection<String> imdbIds) {
+        if (imdbIds.isEmpty()) {
+            return 0;
+        }
+        final int affected = queryMetaRepository.invalidateByImdbIds(imdbIds);
+        log.info("Invalidated {} cache rows for {} titles", affected, imdbIds.size());
+        return affected;
+    }
+
+    /**
+     * Returns the entries that currently have no valid cached query result (never cached or
+     * invalidated).
      */
     public List<ImdbEntry> findUncached() {
-        final var uncached = imdbCatalog.findAll().parallelStream()
+        return imdbCatalog.findAll().parallelStream()
                 .filter(e -> queryMetaRepository
                         .findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(e.imdbId())
                         .isEmpty())
                 .toList();
-        uncached.forEach(e -> log.warn("No cached query result for {}", e));
-        return uncached;
     }
 }
