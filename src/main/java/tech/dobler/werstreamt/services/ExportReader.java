@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.entities.ImdbEntry;
@@ -51,17 +52,12 @@ public class ExportReader {
         final var entries = new ArrayList<ImdbEntry>();
         AtomicInteger counter = new AtomicInteger(0);
         try (var reader = makeReader(fileName)) {
-            final var records = reader.getRecords();
-            for (var record : records) {
-                final var created = record.get("Created");
-                final var name = record.get("Title");
-                final var url = record.get("URL");
-                String yearString = record.get("Year");
-                final var year = yearString.isBlank() ? 0 : Integer.parseInt(yearString);
-                final var isRated = !record.get("Your Rating").isBlank();
-                final var id = extractImdbId(url);
-                final var entry = new ImdbEntry(counter.incrementAndGet(), name, URI.create(url), created, isRated, year, id);
-                entries.add(entry);
+            for (var record : reader.getRecords()) {
+                try {
+                    entries.add(toEntry(record, counter));
+                } catch (RuntimeException e) {
+                    log.warn("Skipping malformed CSV row {}: {}", record.getRecordNumber(), e.getMessage());
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -70,6 +66,18 @@ public class ExportReader {
                 .map(ImdbEntry::toString)
                 .collect(Collectors.joining(System.lineSeparator())));
         return entries;
+    }
+
+    private ImdbEntry toEntry(CSVRecord record, AtomicInteger counter) {
+        final var created = record.get("Created");
+        final var name = record.get("Title");
+        final var url = record.get("URL");
+        final var yearString = record.get("Year");
+        final var year = yearString.isBlank() ? 0 : Integer.parseInt(yearString);
+        final var isRated = !record.get("Your Rating").isBlank();
+        final var id = extractImdbId(url);
+        // counter advances only after the row parsed cleanly, so ids stay contiguous.
+        return new ImdbEntry(counter.incrementAndGet(), name, URI.create(url), created, isRated, year, id);
     }
 
     private static String extractImdbId(String url) {

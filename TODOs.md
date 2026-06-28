@@ -210,12 +210,16 @@ Scraping-/IO-Fehler werden in `WerStreamtEsApiClient`/`ImdbApiClient` als nackte
 - **Akzeptanzkriterium:** Zentrales Exception-Handling ergänzen; IO-Fehler in eine
   domänenspezifische Exception kapseln und sauber als 502/503 o. ä. abbilden.
 
-### 🟠 TODO-21 — `ExportReader` bricht beim ganzen Import ab, wenn eine Zeile fehlerhaft ist
+### ✅ TODO-21 — `ExportReader` bricht beim ganzen Import ab, wenn eine Zeile fehlerhaft ist
 `services/ExportReader.parse(...)`: `Integer.parseInt(year)` (NumberFormatException) bzw.
-`extractImdbId(url)` (IllegalArgumentException) sind nicht pro Zeile abgesichert — eine
-einzige kaputte Zeile lässt den gesamten Import (und damit den App-Start) scheitern.
+`extractImdbId(url)` (IllegalArgumentException) waren nicht pro Zeile abgesichert — eine
+einzige kaputte Zeile ließ den gesamten Import (und damit den App-Start) scheitern.
 - **Akzeptanzkriterium:** Pro Zeile try/catch, fehlerhafte Zeilen loggen und überspringen
   (analog zur Provider-Robustheit aus TODO-9).
+- **Erledigt:** Zeilen-Parsing in `toEntry(...)` extrahiert; der Loop fängt
+  `RuntimeException` pro Zeile, loggt die Zeilennummer und überspringt. Der id-Zähler
+  läuft nur bei Erfolg weiter (kontinuierliche ids). Test
+  `skipsMalformedRowsAndKeepsIdsContiguous` ergänzt.
 
 ### 🟢 TODO-22 — Hartkodiertes CSV-Header-Array
 `services/ExportReader.headers`: feste Spaltenliste; bricht still, wenn IMDb das
