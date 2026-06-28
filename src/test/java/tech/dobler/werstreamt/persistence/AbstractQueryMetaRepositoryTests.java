@@ -1,0 +1,125 @@
+package tech.dobler.werstreamt.persistence;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
+
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+
+/**
+ * Repository behaviour for {@link QueryMetaRepository}, run against both H2 and a Testcontainers
+ * MariaDB via the concrete subclasses.
+ */
+public abstract class AbstractQueryMetaRepositoryTests {
+    @Autowired
+    private QueryMetaRepository sut;
+
+    @Autowired
+    private TestEntityManager entityManager;
+
+    @BeforeEach
+    void setup()
+    {
+        sut.deleteAll();
+    }
+
+    @Test
+    @Transactional
+    void saveAndLoadOne() {
+        // Arrange
+//        final var timestamp = Instant.parse("2024-06-17T10:00:00Z");
+        final var imdbId = "tt0123755";
+        final var timestamp = Instant.now();
+        final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
+
+        // Act
+        final var saveResult = sut.save(entry);
+        entityManager.flush();
+        entityManager.clear();
+        final var loadFromDb = sut.findById(saveResult.getId());
+
+        // Assert
+        assertThat(loadFromDb).contains(entry);
+    }
+
+    @Test
+    @Transactional
+    void findByImdbId() {
+        // Arrange
+        final var imdbId = "tt0123755";
+        final var timestamp = Instant.now();
+        final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
+
+        // Act
+        sut.save(entry);
+        entityManager.flush();
+        entityManager.clear();
+        final var loadFromDb = sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
+
+        // Assert
+        assertThat(loadFromDb).contains(entry);
+    }
+
+    @Test
+    @Transactional
+    void findByImdbId_saveThree_returnNewest() {
+        // Arrange
+        final var imdbId = "tt0123755";
+        final var timestamp = Instant.parse("2024-06-15T10:15:30Z");
+        final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
+        final var entry2 = new QueryMeta(null, imdbId, timestamp.plusSeconds(15), false, List.of());
+        final var entry3 = new QueryMeta(null, imdbId, timestamp.plusSeconds(20), true, List.of());
+        final var entry4 = new QueryMeta(null, imdbId, timestamp.minusSeconds(15), false, List.of());
+
+        // Act
+        sut.saveAll(List.of(entry, entry2, entry3, entry4));
+        entityManager.flush();
+        entityManager.clear();
+        final var loadFromDb = sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
+
+        // Assert
+        assertThat(loadFromDb).contains(entry2);
+    }
+
+    @Test
+    @Transactional
+    void findByImdbId_doesntFindInvalidated() {
+        // Arrange
+        final var imdbId = "tt0123755";
+        final var timestamp = Instant.now();
+        final var entry = new QueryMeta(null, imdbId, timestamp, true, List.of());
+
+        // Act
+        sut.save(entry);
+        final var loadFromDb = sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
+
+        // Assert
+        assertThat(loadFromDb).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    void invalidateByImdbIds_marksRowsAndHidesThem() {
+        // Arrange
+        final var timestamp = Instant.now();
+        sut.save(new QueryMeta(null, "tt1", timestamp, false, List.of()));
+        sut.save(new QueryMeta(null, "tt2", timestamp, false, List.of()));
+        entityManager.flush();
+        entityManager.clear();
+
+        // Act
+        final int affected = sut.invalidateByImdbIds(List.of("tt1"));
+        entityManager.flush();
+        entityManager.clear();
+
+        // Assert
+        assertThat(affected).isEqualTo(1);
+        assertThat(sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt1")).isEmpty();
+        assertThat(sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt2")).isPresent();
+    }
+}

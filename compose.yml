@@ -4,12 +4,31 @@ services:
     image: "w2s:${DOCKER_IMAGE_TAG}"
     volumes:
       - ./assets:/opt/app/assets:ro,Z
-      - ./db:/opt/app/db:Z
       - ./logs:/opt/app/logs:Z
     environment:
       - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=mariadb
+      - MARIADB_URL=jdbc:mariadb://mariadb:3306/w2s
+      - MARIADB_USER=w2s
+      - MARIADB_PASSWORD=w2s
       - logging.level.org.springframework.web.servlet.DispatcherServlet=TRACE
       - server.servlet.context-path=/w2s
+    depends_on:
+      - mariadb
+    networks:
+      - webserver
+    restart: always
+
+  mariadb:
+    container_name: w2s-mariadb
+    image: mariadb:11
+    environment:
+      - MARIADB_DATABASE=w2s
+      - MARIADB_USER=w2s
+      - MARIADB_PASSWORD=w2s
+      - MARIADB_ROOT_PASSWORD=change-me
+    volumes:
+      - ./mariadb-data:/var/lib/mysql:Z
     networks:
       - webserver
     restart: always
