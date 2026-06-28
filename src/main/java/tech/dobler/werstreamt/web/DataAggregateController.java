@@ -52,58 +52,50 @@ public class DataAggregateController {
     @GetMapping(path = {"amazon", "prime"})
     public String getAmazon(Model model) {
         final var content = service.contentFor("Prime Video");
-        final var included = content.included().stream()
-                .sorted(Comparator.comparing(ImdbEntry::added))
-                .toList();
-        final var paid = content.paid().stream()
-                .map((it -> PaidDto.from(it, imdbCatalog.findByImdb(it.imdbId()).orElseThrow())))
-                .sorted(Comparator.comparing(PaidDto::added))
-                .toList();
-        model.addAttribute("primeIncluded", included);
-        model.addAttribute("primeOthers", paid);
+        model.addAttribute("primeIncluded", sortedByAdded(content.included()));
+        model.addAttribute("primeOthers", paidDtos(content.paid()));
         commonAttributeService.add(model);
         return "amazon";
     }
 
     @GetMapping(path = "disney")
     public String getDisney(Model model) {
-        final var included = service.included("Disney+").stream()
-                .sorted(Comparator.comparing(ImdbEntry::added))
-                .toList();
-        model.addAttribute("entries", included);
-        commonAttributeService.add(model);
-        return "disney";
+        return flatratePage("Disney+", "disney", model);
     }
 
     @GetMapping(path = "netflix")
     public String getNetflix(Model model) {
-        final var included = service.included("Netflix").stream()
-                .sorted(Comparator.comparing(ImdbEntry::added))
-                .toList();
-        model.addAttribute("entries", included);
-        commonAttributeService.add(model);
-        return "netflix";
+        return flatratePage("Netflix", "netflix", model);
     }
 
     @GetMapping(path = "wow")
     public String getWow(Model model) {
-        final var included = service.included("WOW").stream()
-                .sorted(Comparator.comparing(ImdbEntry::added))
-                .toList();
-        model.addAttribute("entries", included);
-        commonAttributeService.add(model);
-        return "wow";
+        return flatratePage("WOW", "wow", model);
     }
 
     @GetMapping(path = "google")
     public String getGoogle(Model model) {
-        final var included = service.paid("Google Play").stream()
-                .map((it -> PaidDto.from(it, imdbCatalog.findByImdb(it.imdbId()).orElseThrow())))
-                .sorted(Comparator.comparing(PaidDto::added))
-                .toList();
-        model.addAttribute("entries", included);
+        model.addAttribute("entries", paidDtos(service.paid("Google Play")));
         commonAttributeService.add(model);
         return "google";
+    }
+
+    /** Renders a single-service "flatrate / included" page (Disney+, Netflix, WOW, …). */
+    private String flatratePage(String serviceName, String view, Model model) {
+        model.addAttribute("entries", sortedByAdded(service.included(serviceName)));
+        commonAttributeService.add(model);
+        return view;
+    }
+
+    private static List<ImdbEntry> sortedByAdded(List<ImdbEntry> entries) {
+        return entries.stream().sorted(Comparator.comparing(ImdbEntry::added)).toList();
+    }
+
+    private List<PaidDto> paidDtos(List<QueryResult> paid) {
+        return paid.stream()
+                .map(it -> PaidDto.from(it, imdbCatalog.findByImdb(it.imdbId()).orElseThrow()))
+                .sorted(Comparator.comparing(PaidDto::added))
+                .toList();
     }
 
     public record PaidDto(String name, String imdbId, String price, String added, boolean isRated, String year) {

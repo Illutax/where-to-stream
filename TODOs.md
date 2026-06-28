@@ -318,11 +318,14 @@ Stateful In-Memory-Katalog, benannt wie ein Spring-Data-Repository und in `servi
   Spring-Data-Repos in `persistence/` abgrenzen.
 - **Erledigt:** Klasse → `ImdbCatalog` (Felder/Variablen/Bean-Methode `imdbCatalog`).
 
-### 🟠 TODO-32 — Nahezu identische Provider-Handler in `DataAggregateController`
-`getDisney`/`getNetflix`/`getWow` (und `getAmazon`/`getGoogle`) unterscheiden sich nur durch
+### ✅ TODO-32 — Nahezu identische Provider-Handler in `DataAggregateController`
+`getDisney`/`getNetflix`/`getWow` (und `getAmazon`/`getGoogle`) unterschieden sich nur durch
 Service-/View-Namen.
 - **Akzeptanzkriterium:** Datengetrieben zusammenfassen (Enum/Map aus Pfad → Service+View),
   ~4 Methoden auf eine reduzieren.
+- **Erledigt:** Gemeinsame Helfer `flatratePage(...)`, `sortedByAdded(...)`, `paidDtos(...)`;
+  die Handler delegieren nur noch. (Explizite Routen beibehalten statt Catch-all-`{path}`,
+  um Routing-Mehrdeutigkeit zu vermeiden.)
 
 ### 🟢 TODO-33 — Transaktionsgrenze auf einem Controller
 `DataAggregateController` ist `@Transactional(readOnly = true)` auf Klassenebene.
