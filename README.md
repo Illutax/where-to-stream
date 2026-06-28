@@ -56,6 +56,47 @@ DOCKER_IMAGE_TAG=local docker build . --build-arg DOCKER_IMAGE_TAG=local -t w2s:
 DOCKER_IMAGE_TAG=local docker compose up -d
 ```
 
+### MariaDB data: named volume vs. host bind mount (rootless Podman)
+
+`compose.yml` stores the MariaDB data in the **`mariadb-data` named volume**. This is the
+robust default: the engine creates the volume and initialises it with the image's
+`mysql:mysql` ownership (including the correct user-namespace uid mapping), so it works
+out of the box under rootless Podman + SELinux. Since the DB is a regenerable cache, the
+storage location doesn't matter — prefer the named volume unless you specifically want the
+files visible on the host.
+
+If you *do* want a **host bind mount** (e.g. to inspect the data files directly), it needs
+one manual step under rootless Podman. The reason: rootless containers run in a user
+namespace where your host uid maps to container *root*, while `mariadbd` runs as the
+container's `mysql` user (a different uid that maps to one of your *subuids*). A freshly
+created host directory is owned by you (= container root), so the `mysql` process can't
+write to it → `Can't create test file … (Errcode: 13 "Permission denied")`. The `:Z`
+suffix only fixes SELinux labels, and `:U` chowns to the container's *declared* user
+(root here — the image only drops to `mysql` later at runtime), so neither solves it.
+
+The fix is to chown the host directory to the uid the container sees as `mysql`, from
+*inside* the same user namespace via `podman unshare`:
+
+```bash
+# 1. find the uid this image uses for mysql (UBI variants differ from the Debian 999):
+docker run --rm mariadb:lts-ubi id mysql        # -> uid=NNN(mysql) gid=NNN(mysql)
+
+# 2. create the dir and chown it to that uid *within the user namespace*:
+mkdir -p mariadb-data
+podman unshare chown -R NNN:NNN mariadb-data    # NNN from step 1
+```
+
+Then point the `db` service at the bind mount (keeping `:Z` for SELinux):
+
+```yaml
+    volumes:
+      - ./mariadb-data:/var/lib/mysql:Z
+```
+
+`podman unshare` enters the container's user namespace, so `chown NNN` there sets the host
+subuid that the container sees as `mysql`. Re-run the `podman unshare chown` whenever you
+recreate the directory.
+
 The helper scripts `update-and-restart.sh` (pull + rebuild + restart) and
 `upgrade-spring-boot.sh` (bump the Spring Boot parent, test, push) are intended to run on
 the host, driven by `cron.sh`.
