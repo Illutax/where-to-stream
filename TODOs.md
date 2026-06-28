@@ -235,12 +235,15 @@ Nach den Refactorings sind `PreCacheService`, `StreamInfoService.resolveAll(...)
 `ImdbEntryRepository` nicht durch Unit-Tests abgedeckt.
 - **Akzeptanzkriterium:** Gezielte Unit-Tests ergänzen (Mockito für die Repos/Clients).
 
-### 🟢 TODO-25 — Aggregat-Seiten berechnen bei jedem Request alles neu
+### ✅ TODO-25 — Aggregat-Seiten berechnen bei jedem Request alles neu
 `web/DataAggregateController` + `services/AggregateService`: jede Anbieter-Seite ruft
-`getAll()` auf und löst damit sämtliche Einträge sequenziell auf (über TODO-11 hinaus, das
+`getAll()` auf und löste damit sämtliche Einträge sequenziell auf (über TODO-11 hinaus, das
 nur den doppelten `getAll()`-Aufruf der Amazon-Seite betrifft).
 - **Akzeptanzkriterium:** Aggregat-Ergebnisse cachen/vorberechnen bzw. die Batch-Logik aus
   `resolveAll(...)` (TODO-13/#13) wiederverwenden.
+- **Erledigt:** `getAll()` nutzt jetzt `streamInfoService.resolveAll(...)` → eine
+  Batch-Query statt N Einzelabfragen. (Echtes Aggregat-Caching bleibt als optionale
+  spätere Optimierung offen.)
 
 ---
 

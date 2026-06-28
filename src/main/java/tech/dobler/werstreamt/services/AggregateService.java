@@ -52,8 +52,11 @@ public class AggregateService {
 
     public List<List<QueryResult>> getAll() {
         final var allImdbEntries = imdbEntryRepository.findAll();
+        // One batched lookup for the whole catalogue instead of one query per entry.
+        final var resolved = streamInfoService.resolveAll(
+                allImdbEntries.stream().map(ImdbEntry::imdbId).toList());
         return allImdbEntries.stream()
-                .map(e -> streamInfoService.resolve(e.imdbId()))
+                .map(e -> resolved.getOrDefault(e.imdbId(), List.of()))
                 .toList();
     }
 }
