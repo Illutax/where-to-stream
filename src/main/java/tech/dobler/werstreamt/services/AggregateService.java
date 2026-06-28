@@ -11,7 +11,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AggregateService {
-    private final ImdbEntryRepository imdbEntryRepository;
+    private final ImdbCatalog imdbCatalog;
     private final StreamInfoService streamInfoService;
 
     /** Flatrate ("included") + paid offerings of a service, resolved from a single getAll(). */
@@ -39,7 +39,7 @@ public class AggregateService {
         return queryResults.stream()
                 .flatMap(Collection::stream)
                 .filter(k -> serviceName.equals(k.streamingServiceName()) && k.flatrate())
-                .map(e -> imdbEntryRepository.findByImdb(e.imdbId()).get())
+                .map(e -> imdbCatalog.findByImdb(e.imdbId()).get())
                 .toList();
     }
 
@@ -51,7 +51,7 @@ public class AggregateService {
     }
 
     public List<List<QueryResult>> getAll() {
-        final var allImdbEntries = imdbEntryRepository.findAll();
+        final var allImdbEntries = imdbCatalog.findAll();
         // One batched lookup for the whole catalogue instead of one query per entry.
         final var resolved = streamInfoService.resolveAll(
                 allImdbEntries.stream().map(ImdbEntry::imdbId).toList());

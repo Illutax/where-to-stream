@@ -24,7 +24,7 @@ class PreCacheServiceTest {
     @Mock
     private StreamInfoService streamInfoService;
     @Mock
-    private ImdbEntryRepository imdbEntryRepository;
+    private ImdbCatalog imdbCatalog;
     @Mock
     private QueryMetaRepository queryMetaRepository;
     @InjectMocks
@@ -37,7 +37,7 @@ class PreCacheServiceTest {
 
     @Test
     void cacheAllResolvesEveryEntryAndReturnsCount() {
-        when(imdbEntryRepository.findAll()).thenReturn(List.of(entry("tt1"), entry("tt2"), entry("tt3")));
+        when(imdbCatalog.findAll()).thenReturn(List.of(entry("tt1"), entry("tt2"), entry("tt3")));
 
         final int count = preCacheService.cacheAll();
 
@@ -51,7 +51,7 @@ class PreCacheServiceTest {
     void findUncachedReturnsEntriesWithoutCachedResult() {
         final var cached = entry("tt1");
         final var uncached = entry("tt2");
-        when(imdbEntryRepository.findAll()).thenReturn(List.of(cached, uncached));
+        when(imdbCatalog.findAll()).thenReturn(List.of(cached, uncached));
         when(queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt1"))
                 .thenReturn(Optional.of(QueryMeta.of("tt1", Instant.now(), List.of())));
         when(queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt2"))

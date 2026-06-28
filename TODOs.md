@@ -312,10 +312,11 @@ Das Paket `entities/` enthielt reine Domänen-Records (keine JPA-Entities); die 
   (`ImdbEntry`, `QueryResult`, `SearchResult` + die `@Embeddable`-Werte `Availability`,
   `Price`, Enum `AvailabilityType`). JPA-`@Entity`-Klassen bleiben in `persistence/`.
 
-### 🟠 TODO-31 — `ImdbEntryRepository` ist kein Repository
+### ✅ TODO-31 — `ImdbEntryRepository` ist kein Repository
 Stateful In-Memory-Katalog, benannt wie ein Spring-Data-Repository und in `services/`.
 - **Akzeptanzkriterium:** In `ImdbCatalog`/`WatchlistStore` umbenennen, klar von den
   Spring-Data-Repos in `persistence/` abgrenzen.
+- **Erledigt:** Klasse → `ImdbCatalog` (Felder/Variablen/Bean-Methode `imdbCatalog`).
 
 ### 🟠 TODO-32 — Nahezu identische Provider-Handler in `DataAggregateController`
 `getDisney`/`getNetflix`/`getWow` (und `getAmazon`/`getGoogle`) unterscheiden sich nur durch

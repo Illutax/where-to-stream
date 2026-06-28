@@ -13,7 +13,7 @@ import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.services.CommonAttributeService;
 import tech.dobler.werstreamt.services.ExportReader;
 import tech.dobler.werstreamt.services.FileUtils;
-import tech.dobler.werstreamt.services.ImdbEntryRepository;
+import tech.dobler.werstreamt.services.ImdbCatalog;
 import tech.dobler.werstreamt.services.PreCacheService;
 
 import java.util.List;
@@ -24,7 +24,7 @@ import java.util.List;
 @Slf4j
 public class ChangeListController {
 
-    private final ImdbEntryRepository imdbEntryRepository;
+    private final ImdbCatalog imdbCatalog;
     private final ExportReader exportReader;
     private final PreCacheService preCacheService;
     private final CommonAttributeService commonAttributeService;
@@ -33,7 +33,7 @@ public class ChangeListController {
     @GetMapping("/list")
     public String get(Model model)
     {
-        model.addAttribute("current", imdbEntryRepository.getNameOfList());
+        model.addAttribute("current", imdbCatalog.getNameOfList());
         model.addAttribute("availableLists", fileUtils.availableLists());
         commonAttributeService.add(model);
         return "change-list";
@@ -49,11 +49,11 @@ public class ChangeListController {
         }
 
         log.info("Clearing imdbRepository...");
-        imdbEntryRepository.clear();
+        imdbCatalog.clear();
         log.info("Reading new list {}", listName);
         List<ImdbEntry> entries = exportReader.parse(listName);
         log.info("Initializing with {} entries", entries.size());
-        imdbEntryRepository.init(entries, listName);
+        imdbCatalog.init(entries, listName);
         preCacheService.cacheAll();
         return "redirect:/list?success";
     }

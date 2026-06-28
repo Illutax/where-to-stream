@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.werstreamt.domain.ImdbEntry;
-import tech.dobler.werstreamt.services.ImdbEntryRepository;
+import tech.dobler.werstreamt.services.ImdbCatalog;
 import tech.dobler.werstreamt.services.StreamInfoService;
 
 import java.util.List;
@@ -20,17 +20,17 @@ import static org.springframework.http.ResponseEntity.ok;
 @Slf4j
 public class RefreshController {
 
-    private final ImdbEntryRepository imdbEntryRepository;
+    private final ImdbCatalog imdbCatalog;
     private final StreamInfoService streamInfoService;
 
     @GetMapping("seen")
     public ResponseEntity<String> refreshSeen() {
-        return refreshEntries(imdbEntryRepository.findAllSeen());
+        return refreshEntries(imdbCatalog.findAllSeen());
     }
 
     @GetMapping("all")
     public ResponseEntity<String> refreshAll() {
-        return refreshEntries(imdbEntryRepository.findAll());
+        return refreshEntries(imdbCatalog.findAll());
     }
 
     private ResponseEntity<String> refreshEntries(List<ImdbEntry> entries) {

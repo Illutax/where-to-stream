@@ -13,21 +13,21 @@ import static org.mockito.Mockito.when;
 class CommonAttributeServiceTest {
 
     @Mock
-    private ImdbEntryRepository imdbEntryRepositoryMock;
+    private ImdbCatalog imdbCatalogMock;
 
     @Mock
     private Model modelMock;
 
     @Test
     void add() {
-        final var unitUnderTest = new CommonAttributeService(imdbEntryRepositoryMock);
+        final var unitUnderTest = new CommonAttributeService(imdbCatalogMock);
         final var nameOfList = "some list name";
-        when(imdbEntryRepositoryMock.getNameOfList()).thenReturn(nameOfList);
+        when(imdbCatalogMock.getNameOfList()).thenReturn(nameOfList);
 
         unitUnderTest.add(modelMock);
 
 
-        verify(imdbEntryRepositoryMock).getNameOfList();
+        verify(imdbCatalogMock).getNameOfList();
         verify(modelMock).addAttribute("selectedList", nameOfList);
     }
 }

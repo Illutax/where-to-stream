@@ -34,7 +34,7 @@ class StreamInfoServiceTest {
     @Mock
     private WerStreamtEsApiClient werStreamtEsApiClient;
     @Mock
-    private ImdbEntryRepository imdbEntryRepository;
+    private ImdbCatalog imdbCatalog;
     @Mock
     private QueryMetaRepository queryMetaRepository;
 
@@ -42,7 +42,7 @@ class StreamInfoServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new StreamInfoService(werStreamtEsApiClient, imdbEntryRepository, queryMetaRepository, PROPS);
+        service = new StreamInfoService(werStreamtEsApiClient, imdbCatalog, queryMetaRepository, PROPS);
     }
 
     private static ImdbEntry entry(String imdbId) {
@@ -73,7 +73,7 @@ class StreamInfoServiceTest {
     @Test
     void resolveFetchesAndCachesOnMiss() {
         stubFindFirst("tt2", Optional.empty());
-        when(imdbEntryRepository.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
+        when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
         final var fetched = new QueryResult("tt2", "Prime Video", false, List.of());
         when(werStreamtEsApiClient.query("tt2")).thenReturn(List.of(fetched));
 
@@ -87,7 +87,7 @@ class StreamInfoServiceTest {
     @Test
     void resolveRefetchesWhenCacheExpired() {
         stubFindFirst("tt3", Optional.of(meta("tt3", Instant.now().minus(40, ChronoUnit.DAYS), "Stale")));
-        when(imdbEntryRepository.findByImdb("tt3")).thenReturn(Optional.of(entry("tt3")));
+        when(imdbCatalog.findByImdb("tt3")).thenReturn(Optional.of(entry("tt3")));
         when(werStreamtEsApiClient.query("tt3")).thenReturn(List.of(new QueryResult("tt3", "Fresh", false, List.of())));
 
         final var result = service.resolve("tt3");
@@ -99,7 +99,7 @@ class StreamInfoServiceTest {
     @Test
     void resolveForceRefreshAlwaysFetches() {
         stubFindFirst("tt4", Optional.of(meta("tt4", Instant.now(), "Cached")));
-        when(imdbEntryRepository.findByImdb("tt4")).thenReturn(Optional.of(entry("tt4")));
+        when(imdbCatalog.findByImdb("tt4")).thenReturn(Optional.of(entry("tt4")));
         when(werStreamtEsApiClient.query("tt4")).thenReturn(List.of(new QueryResult("tt4", "Refreshed", false, List.of())));
 
         final var result = service.resolve("tt4", true);
@@ -113,7 +113,7 @@ class StreamInfoServiceTest {
         when(queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(List.of("tt1", "tt2")))
                 .thenReturn(List.of(meta("tt1", Instant.now(), "Netflix")));
         // tt2 is a cache miss -> fetched individually
-        when(imdbEntryRepository.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
+        when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
         when(werStreamtEsApiClient.query("tt2")).thenReturn(List.of(new QueryResult("tt2", "Prime Video", false, List.of())));
 
         final var result = service.resolveAll(List.of("tt1", "tt2"));

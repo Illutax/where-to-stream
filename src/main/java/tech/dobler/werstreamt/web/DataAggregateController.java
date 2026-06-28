@@ -11,7 +11,7 @@ import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.services.AggregateService;
 import tech.dobler.werstreamt.services.CommonAttributeService;
-import tech.dobler.werstreamt.services.ImdbEntryRepository;
+import tech.dobler.werstreamt.services.ImdbCatalog;
 import tech.dobler.werstreamt.services.StreamInfoService;
 
 import java.util.Comparator;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DataAggregateController {
     private final AggregateService service;
-    private final ImdbEntryRepository imdbEntryRepository;
+    private final ImdbCatalog imdbCatalog;
     private final CommonAttributeService commonAttributeService;
     private final StreamInfoService streamInfoService;
 
@@ -32,7 +32,7 @@ public class DataAggregateController {
 
     @GetMapping(path = {"", "/"})
     public String index(Model model) {
-        final var entries = imdbEntryRepository.findAll();
+        final var entries = imdbCatalog.findAll();
         // Resolve all entries in a single batch instead of one query per entry (avoids N+1).
         final var resolved = streamInfoService.resolveAll(entries.stream().map(ImdbEntry::imdbId).toList());
         final var included = entries.stream()
@@ -56,7 +56,7 @@ public class DataAggregateController {
                 .sorted(Comparator.comparing(ImdbEntry::added))
                 .toList();
         final var paid = content.paid().stream()
-                .map((it -> PaidDto.from(it, imdbEntryRepository.findByImdb(it.imdbId()).orElseThrow())))
+                .map((it -> PaidDto.from(it, imdbCatalog.findByImdb(it.imdbId()).orElseThrow())))
                 .sorted(Comparator.comparing(PaidDto::added))
                 .toList();
         model.addAttribute("primeIncluded", included);
@@ -98,7 +98,7 @@ public class DataAggregateController {
     @GetMapping(path = "google")
     public String getGoogle(Model model) {
         final var included = service.paid("Google Play").stream()
-                .map((it -> PaidDto.from(it, imdbEntryRepository.findByImdb(it.imdbId()).orElseThrow())))
+                .map((it -> PaidDto.from(it, imdbCatalog.findByImdb(it.imdbId()).orElseThrow())))
                 .sorted(Comparator.comparing(PaidDto::added))
                 .toList();
         model.addAttribute("entries", included);

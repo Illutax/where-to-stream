@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class PreCacheService {
     private final StreamInfoService streamInfoService;
-    private final ImdbEntryRepository imdbEntryRepository;
+    private final ImdbCatalog imdbCatalog;
     private final QueryMetaRepository queryMetaRepository;
 
     /**
@@ -28,7 +28,7 @@ public class PreCacheService {
      * entries were processed.
      */
     public int cacheAll() {
-        final var all = imdbEntryRepository.findAll();
+        final var all = imdbCatalog.findAll();
         final var counter = new AtomicInteger(0);
         all.parallelStream()
                 .forEach(e -> {
@@ -45,7 +45,7 @@ public class PreCacheService {
      * one as a warning.
      */
     public List<ImdbEntry> findUncached() {
-        final var uncached = imdbEntryRepository.findAll().parallelStream()
+        final var uncached = imdbCatalog.findAll().parallelStream()
                 .filter(e -> queryMetaRepository
                         .findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(e.imdbId())
                         .isEmpty())

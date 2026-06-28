@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.services.WerStreamtEsApiClient;
-import tech.dobler.werstreamt.services.ImdbEntryRepository;
+import tech.dobler.werstreamt.services.ImdbCatalog;
 import tech.dobler.werstreamt.services.StreamInfoService;
 
 import java.util.List;
@@ -21,7 +21,7 @@ import static org.springframework.http.ResponseEntity.ok;
 @RestController
 @RequiredArgsConstructor
 public class QueryController {
-    private final ImdbEntryRepository entryRepository;
+    private final ImdbCatalog entryRepository;
     private final WerStreamtEsApiClient werStreamtEsApiClient;
     private final StreamInfoService streamInfoService;
 

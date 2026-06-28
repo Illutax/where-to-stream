@@ -8,9 +8,9 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ImdbEntryRepositoryTest {
+class ImdbCatalogTest {
 
-    private final ImdbEntryRepository repo = new ImdbEntryRepository();
+    private final ImdbCatalog repo = new ImdbCatalog();
 
     private static ImdbEntry entry(int id, String name, String imdbId, boolean rated) {
         return new ImdbEntry(id, name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),

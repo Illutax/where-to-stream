@@ -7,9 +7,9 @@ import org.springframework.ui.Model;
 @Service
 @RequiredArgsConstructor
 public class CommonAttributeService {
-    private final ImdbEntryRepository imdbEntryRepository;
+    private final ImdbCatalog imdbCatalog;
     public void add(Model model)
     {
-        model.addAttribute("selectedList", imdbEntryRepository.getNameOfList());
+        model.addAttribute("selectedList", imdbCatalog.getNameOfList());
     }
 }

@@ -17,7 +17,7 @@ import java.util.function.Predicate;
  * map.
  */
 @Slf4j
-public class ImdbEntryRepository {
+public class ImdbCatalog {
 
     private record State(Map<Integer, ImdbEntry> byId, Map<String, ImdbEntry> byImdbId, String nameOfList) {
         private static final State EMPTY = new State(Map.of(), Map.of(), null);
@@ -25,7 +25,7 @@ public class ImdbEntryRepository {
 
     private final AtomicReference<State> state = new AtomicReference<>(State.EMPTY);
 
-    public ImdbEntryRepository() {
+    public ImdbCatalog() {
     }
 
     public void init(Collection<ImdbEntry> entries, String listName) {
