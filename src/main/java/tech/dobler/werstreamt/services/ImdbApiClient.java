@@ -3,7 +3,7 @@ package tech.dobler.werstreamt.services;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.HttpStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
-import tech.dobler.werstreamt.domainvalues.SearchResult;
+import tech.dobler.werstreamt.domain.SearchResult;
 
 import java.io.IOException;
 import java.net.URI;

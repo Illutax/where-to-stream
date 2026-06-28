@@ -1,8 +1,8 @@
-package tech.dobler.werstreamt.entities;
+package tech.dobler.werstreamt.domain;
 
 import jakarta.persistence.*;
-import tech.dobler.werstreamt.domainvalues.AvailabilityType;
-import tech.dobler.werstreamt.domainvalues.Price;
+import tech.dobler.werstreamt.domain.AvailabilityType;
+import tech.dobler.werstreamt.domain.Price;
 
 @Embeddable
 public record Availability(

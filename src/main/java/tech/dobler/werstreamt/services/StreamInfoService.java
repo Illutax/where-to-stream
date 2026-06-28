@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
-import tech.dobler.werstreamt.entities.QueryResult;
+import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryMeta;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
 import tech.dobler.werstreamt.services.mappers.QueryResultMapper;

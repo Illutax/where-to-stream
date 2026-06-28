@@ -7,7 +7,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
-import tech.dobler.werstreamt.entities.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbEntry;
 
 import java.io.IOException;
 import java.net.URI;

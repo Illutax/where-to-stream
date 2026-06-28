@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import tech.dobler.werstreamt.entities.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.services.CommonAttributeService;
 import tech.dobler.werstreamt.services.ExportReader;
 import tech.dobler.werstreamt.services.FileUtils;

@@ -3,7 +3,7 @@ package tech.dobler.werstreamt.configurations;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import tech.dobler.werstreamt.entities.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.services.ExportReader;
 import tech.dobler.werstreamt.services.FileUtils;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;

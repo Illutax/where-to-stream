@@ -1,7 +1,7 @@
 package tech.dobler.werstreamt.services;
 
 import org.junit.jupiter.api.Test;
-import tech.dobler.werstreamt.entities.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbEntry;
 
 import java.net.URI;
 import java.util.List;

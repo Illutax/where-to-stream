@@ -2,7 +2,7 @@ package tech.dobler.werstreamt.persistence;
 
 import jakarta.persistence.*;
 import lombok.*;
-import tech.dobler.werstreamt.entities.Availability;
+import tech.dobler.werstreamt.domain.Availability;
 
 import java.util.ArrayList;
 import java.util.List;

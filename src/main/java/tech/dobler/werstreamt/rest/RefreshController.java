@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import tech.dobler.werstreamt.entities.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.services.ImdbEntryRepository;
 import tech.dobler.werstreamt.services.StreamInfoService;
 

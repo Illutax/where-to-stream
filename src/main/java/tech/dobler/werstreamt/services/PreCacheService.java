@@ -3,7 +3,7 @@ package tech.dobler.werstreamt.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import tech.dobler.werstreamt.entities.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
 
 import java.util.List;

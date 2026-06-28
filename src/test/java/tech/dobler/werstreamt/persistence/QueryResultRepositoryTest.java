@@ -7,9 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.transaction.annotation.Transactional;
-import tech.dobler.werstreamt.domainvalues.AvailabilityType;
-import tech.dobler.werstreamt.domainvalues.Price;
-import tech.dobler.werstreamt.entities.Availability;
+import tech.dobler.werstreamt.domain.AvailabilityType;
+import tech.dobler.werstreamt.domain.Price;
+import tech.dobler.werstreamt.domain.Availability;
 
 import java.util.List;
 import java.util.Objects;

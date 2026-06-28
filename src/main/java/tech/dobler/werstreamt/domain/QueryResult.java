@@ -1,4 +1,4 @@
-package tech.dobler.werstreamt.entities;
+package tech.dobler.werstreamt.domain;
 
 import java.util.List;
 

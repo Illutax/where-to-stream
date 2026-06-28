@@ -2,8 +2,8 @@ package tech.dobler.werstreamt.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import tech.dobler.werstreamt.entities.ImdbEntry;
-import tech.dobler.werstreamt.entities.QueryResult;
+import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.QueryResult;
 
 import java.util.Collection;
 import java.util.List;

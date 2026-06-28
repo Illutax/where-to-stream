@@ -7,11 +7,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
-import tech.dobler.werstreamt.domainvalues.AvailabilityType;
-import tech.dobler.werstreamt.domainvalues.Price;
-import tech.dobler.werstreamt.entities.Availability;
-import tech.dobler.werstreamt.entities.QueryResult;
-import tech.dobler.werstreamt.domainvalues.SearchResult;
+import tech.dobler.werstreamt.domain.AvailabilityType;
+import tech.dobler.werstreamt.domain.Price;
+import tech.dobler.werstreamt.domain.Availability;
+import tech.dobler.werstreamt.domain.QueryResult;
+import tech.dobler.werstreamt.domain.SearchResult;
 
 import java.io.IOException;
 import java.net.URI;

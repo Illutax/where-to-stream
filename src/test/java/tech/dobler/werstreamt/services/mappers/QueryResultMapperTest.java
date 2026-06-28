@@ -1,10 +1,10 @@
 package tech.dobler.werstreamt.services.mappers;
 
 import org.junit.jupiter.api.Test;
-import tech.dobler.werstreamt.domainvalues.AvailabilityType;
-import tech.dobler.werstreamt.domainvalues.Price;
-import tech.dobler.werstreamt.entities.Availability;
-import tech.dobler.werstreamt.entities.QueryResult;
+import tech.dobler.werstreamt.domain.AvailabilityType;
+import tech.dobler.werstreamt.domain.Price;
+import tech.dobler.werstreamt.domain.Availability;
+import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryResultDB;
 
 import java.util.List;

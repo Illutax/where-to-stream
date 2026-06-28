@@ -1,7 +1,7 @@
 package tech.dobler.werstreamt.services;
 
 import lombok.extern.slf4j.Slf4j;
-import tech.dobler.werstreamt.entities.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbEntry;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;

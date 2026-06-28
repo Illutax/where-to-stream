@@ -303,11 +303,14 @@ Das Schema wurde von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-
 Vollständige Analyse: [`docs/ARCHITECTURE_REVIEW.md`](docs/ARCHITECTURE_REVIEW.md).
 Die konkreten, umsetzbaren Punkte daraus:
 
-### 🟠 TODO-30 — `entities/` ist irreführend benannt
-Das Paket `entities/` enthält reine Domänen-Records (keine JPA-Entities); die echten
+### ✅ TODO-30 — `entities/` ist irreführend benannt
+Das Paket `entities/` enthielt reine Domänen-Records (keine JPA-Entities); die echten
 `@Entity`-Klassen liegen in `persistence/`.
 - **Akzeptanzkriterium:** `entities/` → `domain/` umbenennen (ggf. `domainvalues/`
   hineinziehen); JPA-Entities bleiben in `persistence/`.
+- **Erledigt:** `entities/` und `domainvalues/` zu `domain/` zusammengeführt
+  (`ImdbEntry`, `QueryResult`, `SearchResult` + die `@Embeddable`-Werte `Availability`,
+  `Price`, Enum `AvailabilityType`). JPA-`@Entity`-Klassen bleiben in `persistence/`.
 
 ### 🟠 TODO-31 — `ImdbEntryRepository` ist kein Repository
 Stateful In-Memory-Katalog, benannt wie ein Spring-Data-Repository und in `services/`.
