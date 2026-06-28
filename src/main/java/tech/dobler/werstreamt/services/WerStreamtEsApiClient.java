@@ -95,6 +95,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
             final var columns = provider.select(".columns.small-4");
             if (columns.size() != 3 && columns.size() != 6) {
                 log.error("Unexpected column count {} for id {} provider '{}'", columns.size(), imdbId, name);
+                log.error("Columns: {}", columns);
                 return List.of();
             }
             final var first = new QueryResult(imdbId, columns.size() == 3 ? name : name + "(1)",
