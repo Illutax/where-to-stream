@@ -14,14 +14,15 @@ services:
       - logging.level.org.springframework.web.servlet.DispatcherServlet=TRACE
       - server.servlet.context-path=/w2s
     depends_on:
-      - mariadb
+      - db
     networks:
       - webserver
+      - db
     restart: always
 
-  mariadb:
-    container_name: w2s-mariadb
-    image: mariadb:11
+  db:
+    container_name: db
+    image: mariadb:lts-ubi
     environment:
       - MARIADB_DATABASE=w2s
       - MARIADB_USER=w2s
@@ -30,11 +31,12 @@ services:
     volumes:
       - ./mariadb-data:/var/lib/mysql:Z
     networks:
-      - webserver
+      - db
     restart: always
 
 networks:
   webserver:
     name: webserver
     external: true
+  db:
 
