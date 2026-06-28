@@ -22,6 +22,8 @@
         <bootstrap.version>5.3.8</bootstrap.version>
         <fontawesome.version>7.1.0</fontawesome.version>
         <testcontainers.version>1.21.3</testcontainers.version>
+        <!-- JUnit tags excluded from the default test run; cleared by the 'testcontainers' profile. -->
+        <test.excluded.groups>testcontainers</test.excluded.groups>
     </properties>
 
     <dependencyManagement>
@@ -174,6 +176,15 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- Testcontainers (MariaDB) tests need a container runtime + image pull;
+                         excluded by default, enabled via the 'testcontainers' profile. -->
+                    <excludedGroups>${test.excluded.groups}</excludedGroups>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
             </plugin>
@@ -199,5 +210,15 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Run the Testcontainers (MariaDB) tests too: mvn -Ptestcontainers test -->
+        <profile>
+            <id>testcontainers</id>
+            <properties>
+                <test.excluded.groups></test.excluded.groups>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>

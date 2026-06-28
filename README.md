@@ -10,7 +10,7 @@ caches the results in an embedded H2 database, and presents them as per-provider
 ## Tech stack
 
 - Java 25, Spring Boot 4.1 (Spring MVC + Thymeleaf)
-- Spring Data JPA on H2 (file-based), schema managed by **Liquibase**
+- Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
 - jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
 - MapStruct (entity ↔ persistence mapping), Lombok
 - Build: Maven
@@ -67,14 +67,37 @@ Key properties (`src/main/resources/application.properties`):
 | `wer-streamt.path` | `assets` | Directory holding the IMDb CSV export(s) |
 | `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is refetched |
 | `wer-streamt.rate-limit.requests-per-second` | `2` | Outbound throttle for werstreamt.es (`<= 0` disables) |
-| `spring.jpa.hibernate.ddl-auto` | `validate` | Schema is owned by Liquibase; Hibernate only validates |
+| `spring.jpa.hibernate.ddl-auto` | `none` | Schema is owned by Liquibase (single source of truth) |
 
 ### Database & schema
 
-The H2 database (`./db/demo`) holds only **cached scrape results**. The schema is created
-and versioned by Liquibase (`src/main/resources/db/changelog/`). The baseline assumes a
-fresh database — for an existing deployment, remove the old `./db` before the first
-Liquibase run; the cache repopulates via `/pre-cache`.
+The database holds only **cached scrape results**. The schema is created and versioned by
+**Liquibase** as portable XML changelogs (`src/main/resources/db/changelog/`), so the same
+changelog provisions both H2 and MariaDB. Hibernate neither creates nor validates the schema
+(`ddl-auto=none`); correctness is covered by the repository tests, which run on H2 and (via
+Testcontainers) on a real MariaDB. The baseline assumes a fresh database — for an existing
+deployment, drop the old data before the first Liquibase run; the cache repopulates via
+`/pre-cache`.
+
+**H2 (default):** file-based at `./db/demo`, used for local dev and in-memory tests.
+
+**MariaDB (first-class):** activate the `mariadb` Spring profile and point it at your server:
+
+```bash
+SPRING_PROFILES_ACTIVE=mariadb \
+  MARIADB_URL=jdbc:mariadb://localhost:3306/w2s MARIADB_USER=w2s MARIADB_PASSWORD=… \
+  mvn spring-boot:run
+```
+
+`compose.yml` already wires the `w2s` service to a bundled `mariadb` service via this profile.
+
+**Testcontainers MariaDB tests:** the repository suite also runs against a real MariaDB. These
+are tagged `testcontainers` and excluded from the normal build (they need a container runtime
+and image-pull access); run them with:
+
+```bash
+mvn -Ptestcontainers test
+```
 
 ## Endpoints
 
