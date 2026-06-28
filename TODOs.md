@@ -233,11 +233,13 @@ Exportformat ändert.
 keine Typsicherheit für die Aufrufer/Tests.
 - **Akzeptanzkriterium:** Konkrete Rückgabetypen (`ResponseEntity<List<QueryResult>>` o. ä.).
 
-### 🟢 TODO-24 — Tests für neue/ungetestete Service-Logik fehlen
-Nach den Refactorings sind `PreCacheService`, `StreamInfoService.resolveAll(...)`
+### ✅ TODO-24 — Tests für neue/ungetestete Service-Logik fehlen
+Nach den Refactorings waren `PreCacheService`, `StreamInfoService.resolveAll(...)`
 (Caching/Threshold/Batch-Miss-Fetch) und das atomare Reload-Verhalten von
 `ImdbEntryRepository` nicht durch Unit-Tests abgedeckt.
 - **Akzeptanzkriterium:** Gezielte Unit-Tests ergänzen (Mockito für die Repos/Clients).
+- **Erledigt:** `ImdbEntryRepositoryTest`, `PreCacheServiceTest`, `StreamInfoServiceTest`
+  (Cache-Hit/Miss/Expiry/forceRefresh/Batch). Beim Schreiben fiel TODO-28 auf.
 
 ### ✅ TODO-25 — Aggregat-Seiten berechnen bei jedem Request alles neu
 `web/DataAggregateController` + `services/AggregateService`: jede Anbieter-Seite ruft
