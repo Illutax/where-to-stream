@@ -51,10 +51,11 @@ public class DataAggregateController {
 
     @GetMapping(path = {"amazon", "prime"})
     public String getAmazon(Model model) {
-        final var included = service.included("Prime Video").stream()
+        final var content = service.contentFor("Prime Video");
+        final var included = content.included().stream()
                 .sorted(Comparator.comparing(ImdbEntry::added))
                 .toList();
-        final var paid = service.paid("Prime Video").stream()
+        final var paid = content.paid().stream()
                 .map((it -> PaidDto.from(it, imdbEntryRepository.findByImdb(it.imdbId()).orElseThrow())))
                 .sorted(Comparator.comparing(PaidDto::added))
                 .toList();

@@ -127,12 +127,14 @@ Korrektheit; wurde aber bewusst zurückgestellt.)
 
 ## Performance
 
-### 🟠 TODO-11 — Mehrfache Voll-Auflösung pro Seitenaufruf
+### ✅ TODO-11 — Mehrfache Voll-Auflösung pro Seitenaufruf
 `services/AggregateService.java`: `getAll()` löst alle Einträge sequenziell auf.
-Die Amazon-Seite (`web/DataAggregateController.getAmazon`) ruft `included()` **und**
-`paid()` auf → `getAll()` läuft **zweimal** pro Request.
+Die Amazon-Seite (`web/DataAggregateController.getAmazon`) rief `included()` **und**
+`paid()` auf → `getAll()` lief **zweimal** pro Request.
 - **Akzeptanzkriterium:** `getAll()` einmal aufrufen und beide Filter auf das Ergebnis
   anwenden.
+- **Erledigt:** `AggregateService.contentFor(serviceName)` löst einmal auf und liefert
+  `included` + `paid` (Record `ServiceContent`); die Amazon-Seite nutzt das.
 
 ### 🟢 TODO-12 — Durchgängiges `FetchType.EAGER`
 `persistence/QueryMeta.java` (`@OneToMany`) und `QueryResultDB.java` (`@ElementCollection`)
