@@ -349,7 +349,9 @@ Kein Interface über „Stream-Verfügbarkeits-Provider"; fest an jsoup/werstrea
   von `WerStreamtEsApiClient` implementiert; `StreamInfoService` und `QueryController`
   hängen jetzt am Interface (Test mockt das Interface).
 
-### 🟢 TODO-37 — `AggregateService.getAll()` liefert `List<List<QueryResult>>`
+### ✅ TODO-37 — `AggregateService.getAll()` liefert `List<List<QueryResult>>`
 Verschachtelte Form, die Aufrufer sofort flachklopfen.
 - **Akzeptanzkriterium:** Flaches `List<QueryResult>` bzw. `Map` (wie `resolveAll`)
   zurückgeben; `included`/`paid` als ein Filter mit Prädikat.
+- **Erledigt:** `getAll()` liefert flaches `List<QueryResult>`; `included`/`paid` teilen das
+  Prädikat `on(serviceName)` (kombiniert mit `flatrate` bzw. dessen Negation).

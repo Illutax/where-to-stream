@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.QueryResult;
 
-import java.util.Collection;
 import java.util.List;
+import java.util.function.Predicate;
 
 @Service
 @RequiredArgsConstructor
@@ -35,28 +35,28 @@ public class AggregateService {
         return new ServiceContent(includedFrom(all, serviceName), paidFrom(all, serviceName));
     }
 
-    private List<ImdbEntry> includedFrom(List<List<QueryResult>> queryResults, String serviceName) {
-        return queryResults.stream()
-                .flatMap(Collection::stream)
-                .filter(k -> serviceName.equals(k.streamingServiceName()) && k.flatrate())
+    private List<ImdbEntry> includedFrom(List<QueryResult> all, String serviceName) {
+        return all.stream()
+                .filter(on(serviceName).and(QueryResult::flatrate))
                 .map(e -> imdbCatalog.findByImdb(e.imdbId()).get())
                 .toList();
     }
 
-    private List<QueryResult> paidFrom(List<List<QueryResult>> queryResults, String serviceName) {
-        return queryResults.stream()
-                .flatMap(Collection::stream)
-                .filter(k -> serviceName.equals(k.streamingServiceName()) && !k.flatrate())
+    private List<QueryResult> paidFrom(List<QueryResult> all, String serviceName) {
+        return all.stream()
+                .filter(on(serviceName).and(Predicate.not(QueryResult::flatrate)))
                 .toList();
     }
 
-    public List<List<QueryResult>> getAll() {
-        final var allImdbEntries = imdbCatalog.findAll();
-        // One batched lookup for the whole catalogue instead of one query per entry.
-        final var resolved = streamInfoService.resolveAll(
-                allImdbEntries.stream().map(ImdbEntry::imdbId).toList());
-        return allImdbEntries.stream()
-                .map(e -> resolved.getOrDefault(e.imdbId(), List.of()))
+    private static Predicate<QueryResult> on(String serviceName) {
+        return result -> serviceName.equals(result.streamingServiceName());
+    }
+
+    /** All resolved query results across the catalogue (one batched lookup). */
+    public List<QueryResult> getAll() {
+        final var imdbIds = imdbCatalog.findAll().stream().map(ImdbEntry::imdbId).toList();
+        return streamInfoService.resolveAll(imdbIds).values().stream()
+                .flatMap(List::stream)
                 .toList();
     }
 }
