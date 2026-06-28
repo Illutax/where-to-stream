@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Dialect-specific column types so the same changelog provisions H2 and MariaDB. -->
+    <property name="uuid.type" value="uuid" dbms="h2"/>
+    <property name="uuid.type" value="uuid" dbms="mariadb"/>
+    <property name="timestamp.type" value="timestamp(6) with time zone" dbms="h2"/>
+    <property name="timestamp.type" value="datetime(6)" dbms="mariadb"/>
+
+    <changeSet id="001-baseline-schema" author="vdobler">
+        <comment>Baseline schema for the where-to-stream cache (query metadata + scraped results).</comment>
+
+        <createTable tableName="query_meta">
+            <column name="id" type="${uuid.type}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="imdb_id" type="varchar(255)"/>
+            <column name="creation_time" type="${timestamp.type}"/>
+            <column name="invalidated" type="boolean"/>
+        </createTable>
+
+        <createTable tableName="query_result">
+            <column name="id" type="${uuid.type}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="query_meta_id" type="${uuid.type}"/>
+            <column name="imdb_id" type="varchar(255)"/>
+            <column name="title" type="varchar(255)"/>
+            <column name="flatrate" type="boolean"/>
+        </createTable>
+
+        <createTable tableName="query_result_availabilities">
+            <column name="query_result_id" type="${uuid.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="enum('BUY','RENT')"/>
+            <column name="sd" type="varchar(255)"/>
+            <column name="hd" type="varchar(255)"/>
+            <column name="fourk" type="varchar(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint constraintName="fk_query_result_query_meta"
+                                 baseTableName="query_result" baseColumnNames="query_meta_id"
+                                 referencedTableName="query_meta" referencedColumnNames="id"/>
+        <addForeignKeyConstraint constraintName="fk_availabilities_query_result"
+                                 baseTableName="query_result_availabilities" baseColumnNames="query_result_id"
+                                 referencedTableName="query_result" referencedColumnNames="id"/>
+    </changeSet>
+</databaseChangeLog>

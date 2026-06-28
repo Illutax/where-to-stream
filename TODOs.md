@@ -38,6 +38,9 @@ TODO-Tickets:
   Provider-Handler, Tx-Grenzen, `StreamAvailabilityProvider`, flaches `getAll`).
 - ✅ **TODO-35/38/39** — `invalidated`-Flag aktiviert: Einträge invalidieren + nur
   invalidierte/fehlende scrapen (`/manage`-UI).
+- ✅ **TODO-40** — Liquibase-Changesets auf XML umgestellt (portables Schema, `ddl-auto=none`).
+- ✅ **TODO-41** — MariaDB als First-Class-DB (Profil `mariadb`, Treiber, compose-Service);
+  Repository-Tests laufen zusätzlich gegen eine Testcontainers-MariaDB.
 
 ---
 
@@ -424,3 +427,26 @@ mit `Unexpected column count 9` der **ganze Anbieter** fallen gelassen.
   ein einzelnes Listing bleibt ohne Suffix. Neues Feld `QueryResult.languages` +
   Spalte `query_result.languages` (Liquibase `002`). `included()` dedupliziert nach `imdbId`.
   Integrationstest gegen eine bereinigte echte Detailseite (`priest-tt0822847.html`).
+
+---
+
+## DB / Portierbarkeit
+
+### ✅ TODO-40 — Liquibase-Changesets von SQL auf XML
+Die Changesets waren H2-spezifisches Roh-SQL (`uuid`, `enum('BUY','RENT')`,
+`timestamp(6) with time zone`) und damit nicht portabel.
+- **Akzeptanzkriterium:** Changesets als XML mit dialekt-portablen Change-Types; Schema läuft
+  auf H2 **und** MariaDB.
+- **Erledigt:** `001-baseline-schema.xml` / `002-add-query-result-languages.xml`
+  (`createTable`/`addColumn`/`addForeignKeyConstraint`); dialektabhängige Typen via
+  `${uuid.type}`/`${timestamp.type}`-Properties. `ddl-auto=none` (Liquibase ist alleinige
+  Schema-Quelle; Korrektheit über die Repository-Tests auf H2 + MariaDB).
+
+### ✅ TODO-41 — MariaDB als First-Class-DB + Testcontainers
+- **Akzeptanzkriterium:** MariaDB als unterstützte DB; Repository-Test-Suite läuft gegen eine
+  Testcontainers-MariaDB.
+- **Erledigt:** MariaDB-Treiber, Profil `mariadb` (`application-mariadb.properties`),
+  `mariadb`-Service in `compose.yml`. Repo-Tests in abstrakte Basen ausgelagert; je eine H2-
+  und eine MariaDB-Variante (`@ServiceConnection MariaDBContainer`,
+  `@Testcontainers(disabledWithoutDocker = true)` → ohne Container-Runtime übersprungen, nicht
+  rot). H2 bleibt Default für Dev & In-Memory-Tests.

@@ -1,7 +1,7 @@
 databaseChangeLog:
   - include:
-      file: changes/001-baseline-schema.sql
+      file: changes/001-baseline-schema.xml
       relativeToChangelogFile: true
   - include:
-      file: changes/002-add-query-result-languages.sql
+      file: changes/002-add-query-result-languages.xml
       relativeToChangelogFile: true
