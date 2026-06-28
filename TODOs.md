@@ -295,3 +295,54 @@ Das Schema wurde von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-
   `src/main/resources/db/changelog/` (`db.changelog-master.yaml` → `changes/001-baseline-schema.sql`),
   generiert aus dem Hibernate-Schema (inkl. der TODO-2/TODO-3-Namen); `ddl-auto=validate`
   in Haupt- und Test-Konfiguration. Tests laufen grün gegen das von Liquibase erzeugte Schema.
+
+---
+
+## Architektur-Review (2026-06-28)
+
+Vollständige Analyse: [`docs/ARCHITECTURE_REVIEW.md`](docs/ARCHITECTURE_REVIEW.md).
+Die konkreten, umsetzbaren Punkte daraus:
+
+### 🟠 TODO-30 — `entities/` ist irreführend benannt
+Das Paket `entities/` enthält reine Domänen-Records (keine JPA-Entities); die echten
+`@Entity`-Klassen liegen in `persistence/`.
+- **Akzeptanzkriterium:** `entities/` → `domain/` umbenennen (ggf. `domainvalues/`
+  hineinziehen); JPA-Entities bleiben in `persistence/`.
+
+### 🟠 TODO-31 — `ImdbEntryRepository` ist kein Repository
+Stateful In-Memory-Katalog, benannt wie ein Spring-Data-Repository und in `services/`.
+- **Akzeptanzkriterium:** In `ImdbCatalog`/`WatchlistStore` umbenennen, klar von den
+  Spring-Data-Repos in `persistence/` abgrenzen.
+
+### 🟠 TODO-32 — Nahezu identische Provider-Handler in `DataAggregateController`
+`getDisney`/`getNetflix`/`getWow` (und `getAmazon`/`getGoogle`) unterscheiden sich nur durch
+Service-/View-Namen.
+- **Akzeptanzkriterium:** Datengetrieben zusammenfassen (Enum/Map aus Pfad → Service+View),
+  ~4 Methoden auf eine reduzieren.
+
+### 🟢 TODO-33 — Transaktionsgrenze auf einem Controller
+`DataAggregateController` ist `@Transactional(readOnly = true)` auf Klassenebene.
+- **Akzeptanzkriterium:** Transaktionsgrenzen in die Service-Schicht verschieben; Controller
+  nicht transaktional.
+
+### 🟢 TODO-34 — View-Model-Aufbau im Controller
+`IndexDto`, `PaidDto` und `prettyPrint(...)` stecken im `DataAggregateController`.
+- **Akzeptanzkriterium:** In einen Assembler/Formatter (oder DTO-Factory-Methoden)
+  auslagern; Controller ruft nur noch den Assembler.
+
+### 🟢 TODO-35 — `invalidated`-Flag ist faktisch tot
+`QueryMeta.invalidated` wird nie auf `true` gesetzt, aber überall mitgefiltert.
+- **Akzeptanzkriterium:** Invalidierung tatsächlich umsetzen (z. B. beim Refresh alte Zeilen
+  invalidieren) **oder** Flag + Query-Suffix entfernen.
+
+### 🟢 TODO-36 — Provider-Abstraktion fürs Scraping
+Kein Interface über „Stream-Verfügbarkeits-Provider"; fest an jsoup/werstreamt.es gekoppelt
+(`ImdbApiClient` ist tot, siehe TODO-1).
+- **Akzeptanzkriterium:** Interface `StreamAvailabilityProvider` (z. B.
+  `List<QueryResult> query(String imdbId)`), implementiert von `WerStreamtEsApiClient`;
+  Verbindungs-/User-Agent-/Rate-Limit-Belange dahinter bündeln.
+
+### 🟢 TODO-37 — `AggregateService.getAll()` liefert `List<List<QueryResult>>`
+Verschachtelte Form, die Aufrufer sofort flachklopfen.
+- **Akzeptanzkriterium:** Flaches `List<QueryResult>` bzw. `Map` (wie `resolveAll`)
+  zurückgeben; `included`/`paid` als ein Filter mit Prädikat.
