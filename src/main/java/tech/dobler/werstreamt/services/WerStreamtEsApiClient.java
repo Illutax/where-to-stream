@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WerStreamtEsApiClient {
+public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
     private final URI baseUrl = URI.create("https://www.werstreamt.es/filme/");
     private final RateLimiter rateLimiter;
 
@@ -59,6 +59,7 @@ public class WerStreamtEsApiClient {
         return Optional.of(new SearchResult(name, URI.create("https://www.werstreamt.es/" + url)));
     }
 
+    @Override
     public List<QueryResult> query(String imdbId) {
         log.info("Query with id: {}", imdbId);
 

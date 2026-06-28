@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class StreamInfoService {
-    private final WerStreamtEsApiClient werStreamtEsApiClient;
+    private final StreamAvailabilityProvider streamProvider;
     private final ImdbCatalog imdbCatalog;
     private final QueryMetaRepository queryMetaRepository;
     private final WerStreamtProperties properties;
@@ -104,7 +104,7 @@ public class StreamInfoService {
     private List<QueryResult> fetch(String imdbId) {
         log.info("Fetching imdb entries for imdbId {}", imdbId);
         final var queryResults = imdbCatalog.findByImdb(imdbId)
-                .map(entry -> werStreamtEsApiClient.query(entry.imdbId()))
+                .map(entry -> streamProvider.query(entry.imdbId()))
                 .orElse(List.of());
         final var list = queryResults.stream().map(QueryResultMapper.INSTANCE::entityToDto).toList();
         queryMetaRepository.save(QueryMeta.of(imdbId, Instant.now(), list));

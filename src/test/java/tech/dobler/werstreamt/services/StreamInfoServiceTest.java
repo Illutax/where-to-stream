@@ -32,7 +32,7 @@ class StreamInfoServiceTest {
             "assets", new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0));
 
     @Mock
-    private WerStreamtEsApiClient werStreamtEsApiClient;
+    private StreamAvailabilityProvider streamProvider;
     @Mock
     private ImdbCatalog imdbCatalog;
     @Mock
@@ -42,7 +42,7 @@ class StreamInfoServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new StreamInfoService(werStreamtEsApiClient, imdbCatalog, queryMetaRepository, PROPS);
+        service = new StreamInfoService(streamProvider, imdbCatalog, queryMetaRepository, PROPS);
     }
 
     private static ImdbEntry entry(String imdbId) {
@@ -66,7 +66,7 @@ class StreamInfoServiceTest {
         final var result = service.resolve("tt1");
 
         assertThat(result).extracting(QueryResult::streamingServiceName).containsExactly("Netflix");
-        verifyNoInteractions(werStreamtEsApiClient);
+        verifyNoInteractions(streamProvider);
         verify(queryMetaRepository, never()).save(any());
     }
 
@@ -75,12 +75,12 @@ class StreamInfoServiceTest {
         stubFindFirst("tt2", Optional.empty());
         when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
         final var fetched = new QueryResult("tt2", "Prime Video", false, List.of());
-        when(werStreamtEsApiClient.query("tt2")).thenReturn(List.of(fetched));
+        when(streamProvider.query("tt2")).thenReturn(List.of(fetched));
 
         final var result = service.resolve("tt2");
 
         assertThat(result).containsExactly(fetched);
-        verify(werStreamtEsApiClient).query("tt2");
+        verify(streamProvider).query("tt2");
         verify(queryMetaRepository).save(any(QueryMeta.class));
     }
 
@@ -88,24 +88,24 @@ class StreamInfoServiceTest {
     void resolveRefetchesWhenCacheExpired() {
         stubFindFirst("tt3", Optional.of(meta("tt3", Instant.now().minus(40, ChronoUnit.DAYS), "Stale")));
         when(imdbCatalog.findByImdb("tt3")).thenReturn(Optional.of(entry("tt3")));
-        when(werStreamtEsApiClient.query("tt3")).thenReturn(List.of(new QueryResult("tt3", "Fresh", false, List.of())));
+        when(streamProvider.query("tt3")).thenReturn(List.of(new QueryResult("tt3", "Fresh", false, List.of())));
 
         final var result = service.resolve("tt3");
 
         assertThat(result).extracting(QueryResult::streamingServiceName).containsExactly("Fresh");
-        verify(werStreamtEsApiClient).query("tt3");
+        verify(streamProvider).query("tt3");
     }
 
     @Test
     void resolveForceRefreshAlwaysFetches() {
         stubFindFirst("tt4", Optional.of(meta("tt4", Instant.now(), "Cached")));
         when(imdbCatalog.findByImdb("tt4")).thenReturn(Optional.of(entry("tt4")));
-        when(werStreamtEsApiClient.query("tt4")).thenReturn(List.of(new QueryResult("tt4", "Refreshed", false, List.of())));
+        when(streamProvider.query("tt4")).thenReturn(List.of(new QueryResult("tt4", "Refreshed", false, List.of())));
 
         final var result = service.resolve("tt4", true);
 
         assertThat(result).extracting(QueryResult::streamingServiceName).containsExactly("Refreshed");
-        verify(werStreamtEsApiClient).query("tt4");
+        verify(streamProvider).query("tt4");
     }
 
     @Test
@@ -114,14 +114,14 @@ class StreamInfoServiceTest {
                 .thenReturn(List.of(meta("tt1", Instant.now(), "Netflix")));
         // tt2 is a cache miss -> fetched individually
         when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
-        when(werStreamtEsApiClient.query("tt2")).thenReturn(List.of(new QueryResult("tt2", "Prime Video", false, List.of())));
+        when(streamProvider.query("tt2")).thenReturn(List.of(new QueryResult("tt2", "Prime Video", false, List.of())));
 
         final var result = service.resolveAll(List.of("tt1", "tt2"));
 
         assertThat(result.get("tt1")).extracting(QueryResult::streamingServiceName).containsExactly("Netflix");
         assertThat(result.get("tt2")).extracting(QueryResult::streamingServiceName).containsExactly("Prime Video");
         verify(queryMetaRepository).findByImdbIdInAndInvalidatedIsFalse(List.of("tt1", "tt2"));
-        verify(werStreamtEsApiClient).query("tt2");
-        verify(werStreamtEsApiClient, never()).query("tt1");
+        verify(streamProvider).query("tt2");
+        verify(streamProvider, never()).query("tt1");
     }
 }

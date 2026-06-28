@@ -339,12 +339,15 @@ Service-/View-Namen.
 - **Akzeptanzkriterium:** Invalidierung tatsächlich umsetzen (z. B. beim Refresh alte Zeilen
   invalidieren) **oder** Flag + Query-Suffix entfernen.
 
-### 🟢 TODO-36 — Provider-Abstraktion fürs Scraping
+### ✅ TODO-36 — Provider-Abstraktion fürs Scraping
 Kein Interface über „Stream-Verfügbarkeits-Provider"; fest an jsoup/werstreamt.es gekoppelt
 (`ImdbApiClient` ist tot, siehe TODO-1).
 - **Akzeptanzkriterium:** Interface `StreamAvailabilityProvider` (z. B.
   `List<QueryResult> query(String imdbId)`), implementiert von `WerStreamtEsApiClient`;
   Verbindungs-/User-Agent-/Rate-Limit-Belange dahinter bündeln.
+- **Erledigt:** Interface `StreamAvailabilityProvider.query(imdbId)` eingeführt,
+  von `WerStreamtEsApiClient` implementiert; `StreamInfoService` und `QueryController`
+  hängen jetzt am Interface (Test mockt das Interface).
 
 ### 🟢 TODO-37 — `AggregateService.getAll()` liefert `List<List<QueryResult>>`
 Verschachtelte Form, die Aufrufer sofort flachklopfen.
