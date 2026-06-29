@@ -22,5 +22,5 @@ class QueryMetaRepositoryMariaDbTest extends AbstractQueryMetaRepositoryTests {
 
     @Container
     @ServiceConnection
-    static MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11");
+    static MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:lts-ubi");
 }
