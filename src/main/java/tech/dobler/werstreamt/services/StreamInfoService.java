@@ -9,6 +9,7 @@ import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryMeta;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
 import tech.dobler.werstreamt.services.mappers.QueryResultMapper;
+import tech.dobler.werstreamt.time.TimeService;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -28,6 +29,7 @@ public class StreamInfoService {
     private final ImdbCatalog imdbCatalog;
     private final QueryMetaRepository queryMetaRepository;
     private final WerStreamtProperties properties;
+    private final TimeService timeService;
 
     // NOTE: both public resolve(...) overloads are annotated on purpose. resolve(imdbId)
     // delegates to resolve(imdbId, false) via self-invocation, which bypasses the Spring
@@ -39,7 +41,7 @@ public class StreamInfoService {
     @Transactional
     public List<QueryResult> resolve(String imdbId, boolean forceRefresh) {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
-        final var now = Instant.now();
+        final var now = timeService.now();
         return result
                 // forceRefresh must drop the cached entry so it is refetched (not keep it).
                 .filter(queryMeta -> !forceRefresh && isFresh(queryMeta, now))
@@ -60,7 +62,7 @@ public class StreamInfoService {
      */
     @Transactional
     public Map<String, List<QueryResult>> resolveAll(Collection<String> imdbIds) {
-        final var now = Instant.now();
+        final var now = timeService.now();
         final var latestFreshByImdbId = queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(imdbIds).stream()
                 .collect(Collectors.groupingBy(QueryMeta::getImdbId));
 
@@ -107,7 +109,7 @@ public class StreamInfoService {
                 .map(entry -> streamProvider.query(entry.imdbId()))
                 .orElse(List.of());
         final var list = queryResults.stream().map(QueryResultMapper.INSTANCE::entityToDto).toList();
-        queryMetaRepository.save(QueryMeta.of(imdbId, Instant.now(), list));
+        queryMetaRepository.save(QueryMeta.of(imdbId, timeService.now(), list));
         return queryResults;
     }
 }

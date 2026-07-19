@@ -11,6 +11,7 @@ import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryMeta;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
 import tech.dobler.werstreamt.persistence.QueryResultDB;
+import tech.dobler.werstreamt.time.TimeService;
 
 import java.net.URI;
 import java.time.Instant;
@@ -30,6 +31,9 @@ class StreamInfoServiceTest {
 
     private static final WerStreamtProperties PROPS = new WerStreamtProperties(
             "assets", new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0));
+    // Fixed "now" injected through the TimeService facade — cache-freshness assertions are exact
+    // and repeatable instead of relative to the wall clock.
+    private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
     @Mock
     private StreamAvailabilityProvider streamProvider;
@@ -37,12 +41,15 @@ class StreamInfoServiceTest {
     private ImdbCatalog imdbCatalog;
     @Mock
     private QueryMetaRepository queryMetaRepository;
+    @Mock
+    private TimeService timeService;
 
     private StreamInfoService service;
 
     @BeforeEach
     void setUp() {
-        service = new StreamInfoService(streamProvider, imdbCatalog, queryMetaRepository, PROPS);
+        when(timeService.now()).thenReturn(NOW);
+        service = new StreamInfoService(streamProvider, imdbCatalog, queryMetaRepository, PROPS, timeService);
     }
 
     private static ImdbEntry entry(String imdbId) {
@@ -61,7 +68,7 @@ class StreamInfoServiceTest {
 
     @Test
     void resolveReturnsCachedResultWhenFresh() {
-        stubFindFirst("tt1", Optional.of(meta("tt1", Instant.now(), "Netflix")));
+        stubFindFirst("tt1", Optional.of(meta("tt1", NOW, "Netflix")));
 
         final var result = service.resolve("tt1");
 
@@ -86,7 +93,7 @@ class StreamInfoServiceTest {
 
     @Test
     void resolveRefetchesWhenCacheExpired() {
-        stubFindFirst("tt3", Optional.of(meta("tt3", Instant.now().minus(40, ChronoUnit.DAYS), "Stale")));
+        stubFindFirst("tt3", Optional.of(meta("tt3", NOW.minus(40, ChronoUnit.DAYS), "Stale")));
         when(imdbCatalog.findByImdb("tt3")).thenReturn(Optional.of(entry("tt3")));
         when(streamProvider.query("tt3")).thenReturn(List.of(new QueryResult("tt3", "Fresh", false, List.of(), null)));
 
@@ -98,7 +105,7 @@ class StreamInfoServiceTest {
 
     @Test
     void resolveForceRefreshAlwaysFetches() {
-        stubFindFirst("tt4", Optional.of(meta("tt4", Instant.now(), "Cached")));
+        stubFindFirst("tt4", Optional.of(meta("tt4", NOW, "Cached")));
         when(imdbCatalog.findByImdb("tt4")).thenReturn(Optional.of(entry("tt4")));
         when(streamProvider.query("tt4")).thenReturn(List.of(new QueryResult("tt4", "Refreshed", false, List.of(), null)));
 
@@ -111,7 +118,7 @@ class StreamInfoServiceTest {
     @Test
     void resolveAllReadsCacheInOneQueryAndFetchesOnlyMisses() {
         when(queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(List.of("tt1", "tt2")))
-                .thenReturn(List.of(meta("tt1", Instant.now(), "Netflix")));
+                .thenReturn(List.of(meta("tt1", NOW, "Netflix")));
         // tt2 is a cache miss -> fetched individually
         when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
         when(streamProvider.query("tt2")).thenReturn(List.of(new QueryResult("tt2", "Prime Video", false, List.of(), null)));
