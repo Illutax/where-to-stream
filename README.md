@@ -67,6 +67,14 @@ mvn spring-boot:run -Dskip.frontend=true            # backend on :8001
 cd src/main/frontend && npm start                   # ng serve on :4200, proxies /api -> :8001
 ```
 
+Frontend unit tests run on **vitest** (via `@angular/build:unit-test`):
+
+```bash
+cd src/main/frontend
+npm test         # watch mode
+npm run test:ci  # single run (CI)
+```
+
 ## Running with Docker
 
 The image builds the jar and runs it (see `Dockerfile` / `compose.yml`). `compose.yml`
