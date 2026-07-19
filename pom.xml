@@ -27,6 +27,8 @@
         <!-- Angular client build. Set -Dskip.frontend=true for a backend-only build. -->
         <frontend.dir>${project.basedir}/src/main/frontend</frontend.dir>
         <skip.frontend>false</skip.frontend>
+        <!-- npm executable; overridden to npm.cmd on Windows by the 'windows' profile below. -->
+        <npm.executable>npm</npm.executable>
     </properties>
 
     <dependencyManagement>
@@ -185,29 +187,47 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
-            <!-- Build the Angular client (src/main/frontend) and fold its bundle into the jar so
-                 everything still ships as a single runnable fat jar. Uses the system node/npm;
-                 the Docker builder stage installs them. Skip with -Dskip.frontend=true. -->
+            <!-- 'npm ci' (which wipes and reinstalls node_modules, ~300 MB) only when the installed
+                 dependencies are stale: it is skipped when node_modules/.package-lock.json (written
+                 by npm after an install) is up to date w.r.t. package-lock.json. The Ant 'unless:set'
+                 guard keeps this out of the Maven property space (no noisy exportAntProperties).
+                 Honors -Dskip.frontend=true via the execution-level <skip>. -->
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.6.3</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>npm-ci</id>
                         <phase>generate-resources</phase>
                         <goals>
-                            <goal>exec</goal>
+                            <goal>run</goal>
                         </goals>
                         <configuration>
-                            <executable>npm</executable>
-                            <workingDirectory>${frontend.dir}</workingDirectory>
-                            <arguments>
-                                <argument>ci</argument>
-                            </arguments>
                             <skip>${skip.frontend}</skip>
+                            <target xmlns:unless="ant:unless">
+                                <uptodate property="npm.deps.uptodate"
+                                          targetfile="${frontend.dir}/node_modules/.package-lock.json">
+                                    <srcfiles dir="${frontend.dir}" includes="package-lock.json"/>
+                                </uptodate>
+                                <exec executable="${npm.executable}" dir="${frontend.dir}" failonerror="true"
+                                      unless:set="npm.deps.uptodate">
+                                    <arg value="ci"/>
+                                </exec>
+                            </target>
                         </configuration>
                     </execution>
+                </executions>
+            </plugin>
+
+            <!-- Build the Angular client (src/main/frontend) and fold its bundle into the jar so
+                 everything still ships as a single runnable fat jar. Uses the system node/npm
+                 (pinned via package.json "engines"/.nvmrc; the Docker builder stage copies a fixed
+                 Node). Skip the whole frontend with -Dskip.frontend=true. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
                     <execution>
                         <id>npm-build</id>
                         <phase>generate-resources</phase>
@@ -215,7 +235,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
-                            <executable>npm</executable>
+                            <executable>${npm.executable}</executable>
                             <workingDirectory>${frontend.dir}</workingDirectory>
                             <arguments>
                                 <argument>run</argument>
@@ -293,6 +313,18 @@
             <id>testcontainers</id>
             <properties>
                 <test.excluded.groups></test.excluded.groups>
+            </properties>
+        </profile>
+        <!-- On Windows the npm launcher is npm.cmd, not npm. Auto-activated by OS. -->
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <npm.executable>npm.cmd</npm.executable>
             </properties>
         </profile>
     </profiles>
