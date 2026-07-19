@@ -72,9 +72,22 @@ Frontend unit tests run on **vitest** (via `@angular/build:unit-test`):
 
 ```bash
 cd src/main/frontend
-npm test         # watch mode
-npm run test:ci  # single run (CI)
+npm test            # watch mode
+npm run test:ci     # single run (CI)
+npm run test:coverage  # single run + v8 coverage report
 ```
+
+## Test coverage
+
+- **Backend** — JaCoCo (method & branch), report at `target/site/jacoco/` after `mvn test`
+  (the network-only `ImdbApiClientTest` is excluded by default).
+- **Angular** — Vitest v8 (`npm run test:coverage` in `src/main/frontend`).
+
+The reads of "now" go through a `TimeService` facade (backend and frontend) instead of
+`Instant.now()` / `Date.now()`, so time-dependent tests use a fixed clock — see
+[`docs/adr/0003`](docs/adr/0003-zeit-ueber-timeservice-facade.md). Testing conventions are
+recorded in [`docs/adr/0004`](docs/adr/0004-vitest-als-angular-test-runner.md) (Vitest) and
+[`docs/adr/0005`](docs/adr/0005-assertj-und-mockito-im-backend.md) (AssertJ + Mockito).
 
 ## Running with Docker
 

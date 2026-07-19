@@ -9,5 +9,8 @@ zum `adr`-Skill der Team-Doku.
 | --- | --- | --- |
 | [0001](0001-hash-routing-fuer-den-angular-client.md) | Hash-Routing für den Angular-Client | Accepted |
 | [0002](0002-frontend-build-via-exec-maven-plugin.md) | Frontend-Build über exec-maven-plugin (System-Node) | Accepted |
+| [0003](0003-zeit-ueber-timeservice-facade.md) | Zeit über eine TimeService-Facade statt statischer now()-Aufrufe | Accepted |
+| [0004](0004-vitest-als-angular-test-runner.md) | Vitest als Test-Runner für den Angular-Client | Accepted |
+| [0005](0005-assertj-und-mockito-im-backend.md) | AssertJ (mit Mockito) für Backend-Tests | Accepted |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.
