@@ -10,6 +10,8 @@ caches the results in an embedded H2 database, and presents them as per-provider
 ## Tech stack
 
 - Java 25, Spring Boot 4.1 (Spring MVC + Thymeleaf)
+- **Angular 22** SPA (standalone, zoneless, signals) served under `/app`, sharing the same
+  server logic as the Thymeleaf UI via a JSON API under `/api`
 - Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
 - jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
 - MapStruct (entity ↔ persistence mapping), Lombok
@@ -41,6 +43,29 @@ mvn test
 
 Put at least one IMDb CSV export in `assets/` before starting, otherwise startup fails
 (there is no list to load).
+
+`mvn spring-boot:run` (and `mvn package`) also builds the Angular client and folds it into the
+same jar, so once the app is up the SPA is available at `http://localhost:8001/app/` and the
+Thymeleaf UI at `http://localhost:8001/`. Pass `-Dskip.frontend=true` for a backend-only build
+(skips the `npm` steps).
+
+### Architecture
+
+Controllers hold no business logic: it lives in view-agnostic **application services**
+(`tech.dobler.werstreamt.application`) that return DTOs. Both UIs call the same services — the
+Thymeleaf `@Controller`s render them into templates, and the `@RestController`s under
+`tech.dobler.werstreamt.api` expose them as JSON under `/api` for the Angular client. The
+Angular app (`src/main/frontend`) follows a smart/dumb split: container components under
+`features/` own all data loading; presentational components under `shared/` only render inputs.
+
+### Frontend development
+
+For a fast edit/reload loop, run the backend and the Angular dev server separately:
+
+```bash
+mvn spring-boot:run -Dskip.frontend=true            # backend on :8001
+cd src/main/frontend && npm start                   # ng serve on :4200, proxies /api -> :8001
+```
 
 ## Running with Docker
 
@@ -144,6 +169,25 @@ mvn -Ptestcontainers test
 ```
 
 ## Endpoints
+
+**Angular SPA:**
+
+| Path | Description |
+| --- | --- |
+| `/app/` | Single-page client (hash-routed: `/app/#/`, `/app/#/provider/netflix`, `/app/#/manage`, …) |
+
+**JSON API (`/api`, consumed by the SPA):**
+
+| Method & Path | Description |
+| --- | --- |
+| `GET /api/catalog` | All entries with their available services |
+| `GET /api/providers/{amazon\|disney\|netflix\|wow\|google}` | Per-provider included + paid titles |
+| `GET /api/lists` · `PUT /api/lists/selection` | View / switch the active list |
+| `GET /api/manage` · `POST /api/manage/invalidate` · `POST /api/manage/scrape` | Cache management |
+| `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached |
+| `POST /api/refresh?scope=seen\|all` | Force-refresh cached results |
+| `GET /api/search?imdbId=…` or `?id=…` | Resolve availability for a title |
+| `GET /api/status` | Version & server start time |
 
 **Pages (Thymeleaf):**
 

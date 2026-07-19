@@ -22,6 +22,12 @@ ENV DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG
 #    apt install tree -y
 
 WORKDIR /opt/app
+
+# The build also compiles the Angular client (src/main/frontend) via npm, so the builder needs
+# Node.js/npm. registry.npmjs.org must be reachable during the image build (set NPM_CONFIG_REGISTRY
+# to a mirror if it is not). Pass -Dskip.frontend=true to build the backend only.
+RUN apk add --no-cache nodejs npm
+
 COPY --from=dependencies pom.xml .
 COPY --from=dependencies /root/.m2 /root/.m2
 COPY src/ ./src/

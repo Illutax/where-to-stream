@@ -24,6 +24,9 @@
         <testcontainers.version>1.21.3</testcontainers.version>
         <!-- JUnit tags excluded from the default test run; cleared by the 'testcontainers' profile. -->
         <test.excluded.groups>testcontainers</test.excluded.groups>
+        <!-- Angular client build. Set -Dskip.frontend=true for a backend-only build. -->
+        <frontend.dir>${project.basedir}/src/main/frontend</frontend.dir>
+        <skip.frontend>false</skip.frontend>
     </properties>
 
     <dependencyManagement>
@@ -180,6 +183,73 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Build the Angular client (src/main/frontend) and fold its bundle into the jar so
+                 everything still ships as a single runnable fat jar. Uses the system node/npm;
+                 the Docker builder stage installs them. Skip with -Dskip.frontend=true. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>npm-ci</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <workingDirectory>${frontend.dir}</workingDirectory>
+                            <arguments>
+                                <argument>ci</argument>
+                            </arguments>
+                            <skip>${skip.frontend}</skip>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <workingDirectory>${frontend.dir}</workingDirectory>
+                            <arguments>
+                                <argument>run</argument>
+                                <argument>build</argument>
+                            </arguments>
+                            <skip>${skip.frontend}</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Copy the built Angular bundle onto the classpath under static/app so Spring Boot
+                 serves it at /app/ (see SpaController). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-frontend</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static/app</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${frontend.dir}/dist/w2s-ui/browser</directory>
+                                </resource>
+                            </resources>
+                            <skip>${skip.frontend}</skip>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
