@@ -85,7 +85,10 @@ npm run test:coverage  # single run + v8 coverage report
 
 The reads of "now" go through a `TimeService` facade (backend and frontend) instead of
 `Instant.now()` / `Date.now()`, so time-dependent tests use a fixed clock — see
-[`docs/adr/0003`](docs/adr/0003-zeit-ueber-timeservice-facade.md). Testing conventions are
+[`docs/adr/0003`](docs/adr/0003-zeit-ueber-timeservice-facade.md). This is **enforced**: the
+backend `ArchitectureTest` (ArchUnit) checks both the layering and the no-`now()` rule during
+`mvn test`; the Angular client enforces the no-`now()` rule via ESLint (`cd src/main/frontend &&
+npm run lint`). Known architecture exceptions are tracked in [`TODOs.md`](./TODOs.md) (ARCH-1). Testing conventions are
 recorded in [`docs/adr/0004`](docs/adr/0004-vitest-als-angular-test-runner.md) (Vitest) and
 [`docs/adr/0005`](docs/adr/0005-assertj-und-mockito-im-backend.md) (AssertJ + Mockito).
 

@@ -450,3 +450,27 @@ Die Changesets waren H2-spezifisches Roh-SQL (`uuid`, `enum('BUY','RENT')`,
   und eine MariaDB-Variante (`@ServiceConnection MariaDBContainer`,
   `@Testcontainers(disabledWithoutDocker = true)` → ohne Container-Runtime übersprungen, nicht
   rot). H2 bleibt Default für Dev & In-Memory-Tests.
+
+---
+
+## Architektur-Enforcement (2026-07-20)
+
+Die Schichtenarchitektur (Presentation → Application → Services → Persistence, über dem
+Domain-Leaf) und die „keine statischen `now()`-Aufrufe"-Regel ([ADR-0003](docs/adr/0003-zeit-ueber-timeservice-facade.md))
+werden per **ArchUnit** erzwungen (`ArchitectureTest`); im Frontend prüft ESLint die
+`now()`-Regel. Bekannte Verstöße sind als Ausnahmen eingetragen und hier zur Auflösung notiert.
+
+### 🟠 ARCH-1 — `CommonAttributeService` liegt in der Services-Schicht, gehört aber zur Präsentation
+`tech.dobler.werstreamt.services.CommonAttributeService` schreibt das `selectedList`-Attribut in
+das Thymeleaf-`Model` und wird ausschließlich von den `web`-Controllern genutzt. Damit greift die
+Präsentationsschicht direkt auf die Services-Schicht zu — der einzige Verstoß gegen die Regel
+„Presentation hängt nur von Application (+ Domain) ab".
+- **Aktueller Zustand:** In `ArchitectureTest.layers_are_respected` als `ignoreDependency`
+  (`..web..` → `CommonAttributeService`) explizit ausgenommen, damit die Regel sonst greift.
+- **Mögliche Auflösung (zu besprechen):**
+  1. `CommonAttributeService` nach `web` (Präsentationsschicht) verschieben — es ist reine
+     Thymeleaf-Model-Befüllung. Danach die `ignoreDependency` entfernen. **(Favorit)**
+  2. Alternativ die Aufgabe über einen `@ControllerAdvice`/`@ModelAttribute` lösen und den
+     Service ganz auflösen.
+- **Hinweis:** Für den Angular-Client gibt es kein Äquivalent (die aktive Liste kommt dort über
+  `GET /api/lists`), d. h. der Service ist rein Thymeleaf-spezifisch.

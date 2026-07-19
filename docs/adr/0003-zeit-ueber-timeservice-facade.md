@@ -41,13 +41,15 @@ In Tests wird eine feste Uhr eingesetzt: im Backend per Mockito
   Cache-Frische gegen eine feste `NOW`, `StatusServiceTest` zeigt exakt, dass die Startzeit einmal
   bei Konstruktion gelesen wird (`verify(timeService, times(1)).now()`).
 - Einheitliches Muster über Backend und Frontend; die Regel „keine statischen now()-Aufrufe"
-  lässt sich später per ArchUnit (Backend) bzw. Lint-Regel (Frontend) erzwingen.
+  **wird automatisch erzwungen**: im Backend per **ArchUnit** (`ArchitectureTest`, Ausnahme nur
+  `SystemTimeService`), im Frontend per **ESLint** (`no-restricted-syntax` gegen `Date.now()` /
+  `new Date()`, Ausnahme nur `core/time-service.ts` und Specs).
 
 **Schwieriger / Nachteile:**
 
 - Eine zusätzliche Indirektion und ein injizierter Kollaborator mehr.
-- Die Regel ist bislang eine Konvention, noch nicht durch einen Test erzwungen — neue
-  `Instant.now()` / `Date.now()`-Aufrufe müssten im Review auffallen.
+- `Instant.now(Clock)` / `new Date(arg)` bleiben erlaubt (deterministisch bzw. Parsen) — die
+  Regeln zielen bewusst nur auf die argumentlosen „jetzt"-Aufrufe.
 
 ## Alternatives Considered
 

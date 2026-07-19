@@ -22,7 +22,7 @@ import { Loading } from '../../shared/loading/loading';
         [current]="s.current"
         [available]="s.available"
         [disabled]="changing()"
-        (change)="onChange($event)" />
+        (listChange)="onChange($event)" />
       @if (changing()) {
         <p class="text-muted">Switching list and pre-caching… this can take a while.</p>
       }

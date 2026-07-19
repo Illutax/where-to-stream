@@ -23,7 +23,7 @@ describe('ListPicker', () => {
 
   it('emits the current list when submitted without changing the selection', () => {
     let chosen: string | undefined;
-    component.change.subscribe((name) => (chosen = name));
+    component.listChange.subscribe((name) => (chosen = name));
 
     form().dispatchEvent(new Event('submit'));
 
@@ -32,7 +32,7 @@ describe('ListPicker', () => {
 
   it('emits the newly picked list', () => {
     let chosen: string | undefined;
-    component.change.subscribe((name) => (chosen = name));
+    component.listChange.subscribe((name) => (chosen = name));
 
     select().value = 'c.csv';
     select().dispatchEvent(new Event('change'));

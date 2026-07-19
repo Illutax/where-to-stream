@@ -41,7 +41,7 @@ describe('ChangeListPage', () => {
   it('PUTs the chosen list, updates the store and reloads', () => {
     flushInitialLoad();
 
-    picker().change.emit('b.csv');
+    picker().listChange.emit('b.csv');
 
     const put = httpMock.expectOne((r) => r.url.endsWith('/api/lists/selection') && r.method === 'PUT');
     expect(put.request.body).toEqual({ name: 'b.csv' });
@@ -56,7 +56,7 @@ describe('ChangeListPage', () => {
   it('surfaces the ProblemDetail message when switching fails', () => {
     flushInitialLoad();
 
-    picker().change.emit('bad.csv');
+    picker().listChange.emit('bad.csv');
 
     httpMock
       .expectOne((r) => r.url.endsWith('/api/lists/selection'))

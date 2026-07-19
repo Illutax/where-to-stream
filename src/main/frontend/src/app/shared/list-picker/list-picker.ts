@@ -32,13 +32,13 @@ export class ListPicker {
   readonly available = input.required<string[]>();
   readonly disabled = input<boolean>(false);
 
-  readonly change = output<string>();
+  readonly listChange = output<string>();
 
   protected readonly picked = signal<string | null>(null);
 
   protected onSubmit(event: Event): void {
     event.preventDefault();
     const chosen = this.picked() ?? this.current();
-    this.change.emit(chosen);
+    this.listChange.emit(chosen);
   }
 }
