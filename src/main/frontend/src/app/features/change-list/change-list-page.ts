@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ListsApi } from '../../core/api/lists-api';
 import { ListSelectionStore } from '../../core/list-selection-store';
 import { ListSelection } from '../../core/models';
@@ -12,10 +13,7 @@ import { Loading } from '../../shared/loading/loading';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ListPicker, Loading, ErrorAlert],
   template: `
-    <h1 class="h3 mb-3">Change list</h1>
-    @if (notice(); as n) {
-      <div class="alert alert-success" role="alert">{{ n }}</div>
-    }
+    <h1>Change list</h1>
     <app-error-alert [message]="error()" />
     @if (loading()) {
       <app-loading />
@@ -26,7 +24,7 @@ import { Loading } from '../../shared/loading/loading';
         [disabled]="changing()"
         (change)="onChange($event)" />
       @if (changing()) {
-        <p class="text-secondary mt-2">Switching list and pre-caching… this can take a while.</p>
+        <p class="text-muted">Switching list and pre-caching… this can take a while.</p>
       }
     }
   `,
@@ -34,12 +32,12 @@ import { Loading } from '../../shared/loading/loading';
 export class ChangeListPage {
   private readonly api = inject(ListsApi);
   private readonly store = inject(ListSelectionStore);
+  private readonly snackBar = inject(MatSnackBar);
 
   protected readonly selection = signal<ListSelection | null>(null);
   protected readonly loading = signal(true);
   protected readonly changing = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly notice = signal<string | null>(null);
 
   constructor() {
     this.reload();
@@ -62,11 +60,12 @@ export class ChangeListPage {
   protected onChange(name: string): void {
     this.changing.set(true);
     this.error.set(null);
-    this.notice.set(null);
     this.api.changeList(name).subscribe({
       next: (result) => {
         this.changing.set(false);
-        this.notice.set(`Switched to "${result.selected}" (${result.cached} titles cached).`);
+        this.snackBar.open(`Switched to "${result.selected}" (${result.cached} titles cached).`, 'OK', {
+          duration: 4000,
+        });
         this.store.set(result.selected);
         this.reload();
       },

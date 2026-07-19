@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ManageApi } from '../../core/api/manage-api';
 import { ManagePage as ManagePageDto } from '../../core/models';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
@@ -11,10 +12,7 @@ import { ManageTable } from '../../shared/manage-table/manage-table';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ManageTable, Loading, ErrorAlert],
   template: `
-    <h1 class="h3 mb-3">Manage cache</h1>
-    @if (notice(); as n) {
-      <div class="alert alert-success" role="alert">{{ n }}</div>
-    }
+    <h1>Manage cache</h1>
     @if (loading()) {
       <app-loading />
     } @else if (error()) {
@@ -30,11 +28,11 @@ import { ManageTable } from '../../shared/manage-table/manage-table';
 })
 export class ManagePage {
   private readonly api = inject(ManageApi);
+  private readonly snackBar = inject(MatSnackBar);
 
   protected readonly page = signal<ManagePageDto | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
-  protected readonly notice = signal<string | null>(null);
 
   constructor() {
     this.reload();
@@ -58,7 +56,7 @@ export class ManagePage {
   protected onInvalidate(imdbIds: string[]): void {
     this.api.invalidate(imdbIds).subscribe({
       next: (result) => {
-        this.notice.set(`Invalidated ${result.invalidated} cache row(s).`);
+        this.snackBar.open(`Invalidated ${result.invalidated} cache row(s).`, 'OK', { duration: 4000 });
         this.reload();
       },
       error: () => this.error.set('Invalidation failed.'),
@@ -68,7 +66,7 @@ export class ManagePage {
   protected onScrape(): void {
     this.api.scrape().subscribe({
       next: (result) => {
-        this.notice.set(`(Re-)scraped ${result.scraped} title(s).`);
+        this.snackBar.open(`(Re-)scraped ${result.scraped} title(s).`, 'OK', { duration: 4000 });
         this.reload();
       },
       error: () => this.error.set('Scraping failed.'),

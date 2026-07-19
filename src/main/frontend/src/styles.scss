@@ -1,0 +1,104 @@
+@use '@angular/material' as mat;
+
+// Angular Material 3 theme. Roboto is self-hosted via @fontsource (wired in angular.json),
+// so there are no external font/CDN requests at runtime — the app stays fully offline-capable
+// inside the fat jar.
+html {
+  color-scheme: light dark;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+}
+
+a {
+  color: var(--mat-sys-primary);
+}
+
+// Centered page container (replaces Bootstrap's .container).
+.app-container {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+// Typographic scale for page headings (replaces Bootstrap's .h3/.h5).
+h1 {
+  font: var(--mat-sys-headline-small);
+  margin: 0 0 1rem;
+}
+
+h2 {
+  font: var(--mat-sys-title-medium);
+  margin: 1.5rem 0 0.5rem;
+}
+
+.text-muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// App toolbar in the primary color (the previous Bootstrap navbar was bg-primary).
+.app-toolbar {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  gap: 0.25rem;
+  flex-wrap: wrap;
+
+  a {
+    color: inherit;
+  }
+
+  .app-toolbar__spacer {
+    flex: 1 1 auto;
+  }
+
+  .active-link {
+    font-weight: 700;
+  }
+}
+
+// Persistent, inline error callout (errors must stay visible — success uses a snackbar).
+.error-alert {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-small);
+}
+
+// Small status pills in the manage table (replace Bootstrap badges).
+.status-pill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--mat-sys-corner-small);
+  font: var(--mat-sys-label-small);
+}
+
+.status-pill--needs-scrape {
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.status-pill--cached {
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}

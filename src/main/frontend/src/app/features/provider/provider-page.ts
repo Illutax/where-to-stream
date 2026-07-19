@@ -18,22 +18,22 @@ import { PaidTable } from '../../shared/paid-table/paid-table';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FlatrateTable, PaidTable, Loading, ErrorAlert],
   template: `
-    <h1 class="h3 mb-3">{{ label() }}</h1>
+    <h1>{{ label() }}</h1>
     @if (loading()) {
       <app-loading />
     } @else if (error()) {
       <app-error-alert [message]="error()" />
     } @else if (page(); as p) {
       @if (p.included.length > 0) {
-        <h2 class="h5">Included</h2>
+        <h2>Included</h2>
         <app-flatrate-table [entries]="p.included" />
       }
       @if (p.paid.length > 0) {
-        <h2 class="h5">Buy / Rent</h2>
+        <h2>Buy / Rent</h2>
         <app-paid-table [entries]="p.paid" />
       }
       @if (p.included.length === 0 && p.paid.length === 0) {
-        <p class="text-secondary">Nothing available for this provider yet.</p>
+        <p class="text-muted">Nothing available for this provider yet.</p>
       }
     }
   `,

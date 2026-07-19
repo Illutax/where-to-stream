@@ -43,7 +43,7 @@ describe('OverviewPage', () => {
       .flush('boom', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
-    const alert = fixture.nativeElement.querySelector('.alert-danger');
+    const alert = fixture.nativeElement.querySelector('.error-alert');
     expect(alert).not.toBeNull();
     expect(alert.textContent).toContain('Failed to load the catalogue');
   });

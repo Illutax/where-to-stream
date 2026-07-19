@@ -1,4 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTableModule } from '@angular/material/table';
 import { ManageRow } from '../../core/models';
 
 /**
@@ -8,54 +11,70 @@ import { ManageRow } from '../../core/models';
 @Component({
   selector: 'app-manage-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [MatTableModule, MatCheckboxModule, MatButtonModule],
   template: `
-    <form (submit)="onScrape($event)" class="mb-3">
+    <form (submit)="onScrape($event)" class="scrape-form">
       <p>
         <span>{{ needsScrapeCount() }}</span> title(s) currently need scraping
         (never cached or invalidated).
       </p>
-      <button type="submit" class="btn btn-primary">Scrape invalidated / missing</button>
+      <button matButton="filled" type="submit">Scrape invalidated / missing</button>
     </form>
 
-    <hr />
-
-    <h2 class="h5">Invalidate selected titles</h2>
+    <h2>Invalidate selected titles</h2>
     <form (submit)="onInvalidate($event)">
-      <table class="table table-sm align-middle">
-        <thead>
-          <tr>
-            <th scope="col"></th>
-            <th scope="col">Title</th>
-            <th scope="col">IMDb id</th>
-            <th scope="col">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of rows(); track row.imdbId) {
-            <tr>
-              <td>
-                <input type="checkbox" [checked]="selected().has(row.imdbId)"
-                       (change)="toggle(row.imdbId)" [attr.aria-label]="'select ' + row.name" />
-              </td>
-              <td>{{ row.name }}</td>
-              <td>{{ row.imdbId }}</td>
-              <td>
-                @if (row.needsScrape) {
-                  <span class="badge bg-warning text-dark">needs scrape</span>
-                } @else {
-                  <span class="badge bg-success">cached</span>
-                }
-              </td>
-            </tr>
-          } @empty {
-            <tr><td colspan="4" class="text-secondary">No titles.</td></tr>
-          }
-        </tbody>
+      <table mat-table [dataSource]="rows()" [trackBy]="trackByImdbId">
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            <mat-checkbox [checked]="selected().has(row.imdbId)" (change)="toggle(row.imdbId)"
+                          [aria-label]="'select ' + row.name" />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef>Title</th>
+          <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="imdbId">
+          <th mat-header-cell *matHeaderCellDef>IMDb id</th>
+          <td mat-cell *matCellDef="let row">{{ row.imdbId }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let row">
+            @if (row.needsScrape) {
+              <span class="status-pill status-pill--needs-scrape">needs scrape</span>
+            } @else {
+              <span class="status-pill status-pill--cached">cached</span>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">No titles.</td>
+        </tr>
       </table>
-      <button type="submit" class="btn btn-danger" [disabled]="selected().size === 0">
+
+      <button matButton="filled" type="submit" class="invalidate-button" [disabled]="selected().size === 0">
         Invalidate selected
       </button>
     </form>
+  `,
+  styles: `
+    .scrape-form {
+      margin-bottom: 1rem;
+    }
+    .invalidate-button {
+      margin-top: 1rem;
+    }
+    table {
+      width: 100%;
+    }
   `,
 })
 export class ManageTable {
@@ -65,6 +84,8 @@ export class ManageTable {
   readonly invalidate = output<string[]>();
   readonly scrape = output<void>();
 
+  protected readonly displayedColumns = ['select', 'title', 'imdbId', 'status'];
+  protected readonly trackByImdbId = (_: number, row: ManageRow) => row.imdbId;
   protected readonly selected = signal<ReadonlySet<string>>(new Set());
 
   protected toggle(imdbId: string): void {

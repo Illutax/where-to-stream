@@ -11,7 +11,7 @@ import { Loading } from '../../shared/loading/loading';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CatalogTable, Loading, ErrorAlert],
   template: `
-    <h1 class="h3 mb-3">Where 2 Stream</h1>
+    <h1>Where 2 Stream</h1>
     @if (loading()) {
       <app-loading />
     } @else if (error()) {

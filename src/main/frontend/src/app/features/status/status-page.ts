@@ -11,7 +11,7 @@ import { StatusCard } from '../../shared/status-card/status-card';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [StatusCard, Loading, ErrorAlert],
   template: `
-    <h1 class="h3 mb-3">Status</h1>
+    <h1>Status</h1>
     @if (loading()) {
       <app-loading />
     } @else if (error()) {

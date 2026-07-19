@@ -1,19 +1,29 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 
-/** Presentational list selector. Emits the chosen list name; performs no data loading. */
+/**
+ * Presentational list selector. Emits the chosen list name; performs no data loading. Uses a
+ * native `<select matNativeControl>` inside a Material form field (no CDK overlay).
+ */
 @Component({
   selector: 'app-list-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [MatFormFieldModule, MatInputModule, MatButtonModule],
   template: `
     <form (submit)="onSubmit($event)">
-      <label for="list" class="form-label">Choose a list:</label>
-      <select id="list" class="form-select mb-2" [value]="current()"
-              (change)="picked.set($any($event.target).value)">
-        @for (name of available(); track name) {
-          <option [value]="name" [selected]="name === current()">{{ name }}</option>
-        }
-      </select>
-      <button type="submit" class="btn btn-primary" [disabled]="disabled()">Submit</button>
+      <mat-form-field appearance="outline">
+        <mat-label>Choose a list</mat-label>
+        <select matNativeControl [value]="current()" (change)="picked.set($any($event.target).value)">
+          @for (name of available(); track name) {
+            <option [value]="name" [selected]="name === current()">{{ name }}</option>
+          }
+        </select>
+      </mat-form-field>
+      <div>
+        <button matButton="filled" type="submit" [disabled]="disabled()">Submit</button>
+      </div>
     </form>
   `,
 })

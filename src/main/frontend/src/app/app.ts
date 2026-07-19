@@ -9,7 +9,7 @@ import { Navbar } from './shared/navbar/navbar';
   imports: [RouterOutlet, Navbar],
   template: `
     <app-navbar [currentList]="store.current()" />
-    <main class="container my-4">
+    <main class="app-container">
       <router-outlet />
     </main>
   `,

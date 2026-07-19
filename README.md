@@ -10,8 +10,9 @@ caches the results in an embedded H2 database, and presents them as per-provider
 ## Tech stack
 
 - Java 25, Spring Boot 4.1 (Spring MVC + Thymeleaf)
-- **Angular 22** SPA (standalone, zoneless, signals) served under `/app`, sharing the same
-  server logic as the Thymeleaf UI via a JSON API under `/api`
+- **Angular 22** SPA (standalone, zoneless, signals; **Angular Material** M3 UI with
+  self-hosted Roboto) served under `/app`, sharing the same server logic as the Thymeleaf UI
+  via a JSON API under `/api`
 - Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
 - jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
 - MapStruct (entity ↔ persistence mapping), Lombok
