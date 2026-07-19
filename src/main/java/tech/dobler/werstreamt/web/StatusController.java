@@ -1,23 +1,24 @@
 package tech.dobler.werstreamt.web;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-
-import java.time.Instant;
+import tech.dobler.werstreamt.application.StatusService;
 
 @Controller
+@RequiredArgsConstructor
 public class StatusController
 {
-    private static final Instant SERVER_START_TIME = Instant.now();
+    private final StatusService statusService;
 
     @GetMapping("/public/status")
     public String status(Model model)
     {
-        model.addAttribute("version", getClass().getPackage().getImplementationVersion());
-        model.addAttribute("serverStart", SERVER_START_TIME);
+        final var status = statusService.status();
+        model.addAttribute("version", status.version());
+        model.addAttribute("serverStart", status.serverStart());
 
         return "statusView";
     }
 }
-

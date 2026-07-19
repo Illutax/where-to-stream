@@ -11,8 +11,8 @@
         <a th:text="${entry.name}" th:href="@{'https://www.imdb.com/title/' + ${entry.imdbId}}"></a>
         (<span th:text="${entry.year}"></span>)
         Hinzuzgefügt: <span th:text="${entry.added}"></span>
-        <span th:if="${entry.availableStreamingServices.isPresent()}" th:text="${entry.availableStreamingServices.get()}"></span>
-        <em th:if="${entry.availableStreamingServices.isEmpty()}">N/A</em>
+        <span th:if="${entry.services}" th:text="${entry.services}"></span>
+        <em th:unless="${entry.services}">N/A</em>
     </li>
 </ul>
 </body>

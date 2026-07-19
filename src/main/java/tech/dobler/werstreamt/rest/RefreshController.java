@@ -1,43 +1,32 @@
 package tech.dobler.werstreamt.rest;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import tech.dobler.werstreamt.domain.ImdbEntry;
-import tech.dobler.werstreamt.services.ImdbCatalog;
-import tech.dobler.werstreamt.services.StreamInfoService;
-
-import java.util.List;
+import tech.dobler.werstreamt.application.RefreshService;
 
 import static org.springframework.http.ResponseEntity.ok;
 
+/**
+ * Legacy force-refresh endpoints. Kept for backwards compatibility; new clients should use
+ * {@code POST /api/refresh?scope=…}.
+ */
 @RestController
 @RequestMapping("/refresh")
 @RequiredArgsConstructor
-@Slf4j
 public class RefreshController {
 
-    private final ImdbCatalog imdbCatalog;
-    private final StreamInfoService streamInfoService;
+    private final RefreshService refreshService;
 
     @GetMapping("seen")
     public ResponseEntity<String> refreshSeen() {
-        return refreshEntries(imdbCatalog.findAllSeen());
+        return ok("Refreshed %s".formatted(refreshService.refreshSeen().refreshed()));
     }
 
     @GetMapping("all")
     public ResponseEntity<String> refreshAll() {
-        return refreshEntries(imdbCatalog.findAll());
-    }
-
-    private ResponseEntity<String> refreshEntries(List<ImdbEntry> entries) {
-        log.info("Refreshing {} entries", entries.size());
-        final var refreshed = entries.parallelStream()
-                .map(entry -> streamInfoService.resolve(entry.imdbId(), true))
-                .toList();
-        return ok("Refreshed %s".formatted(refreshed.size()));
+        return ok("Refreshed %s".formatted(refreshService.refreshAll().refreshed()));
     }
 }

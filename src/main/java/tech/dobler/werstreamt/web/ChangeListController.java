@@ -1,38 +1,29 @@
 package tech.dobler.werstreamt.web;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.application.ListSelectionService;
+import tech.dobler.werstreamt.application.UnknownListException;
 import tech.dobler.werstreamt.services.CommonAttributeService;
-import tech.dobler.werstreamt.services.ExportReader;
-import tech.dobler.werstreamt.services.FileUtils;
-import tech.dobler.werstreamt.services.ImdbCatalog;
-import tech.dobler.werstreamt.services.PreCacheService;
-
-import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
-@Slf4j
 public class ChangeListController {
 
-    private final ImdbCatalog imdbCatalog;
-    private final ExportReader exportReader;
-    private final PreCacheService preCacheService;
+    private final ListSelectionService listSelectionService;
     private final CommonAttributeService commonAttributeService;
-    private final FileUtils fileUtils;
 
     @GetMapping("/list")
     public String get(Model model)
     {
-        model.addAttribute("current", imdbCatalog.getNameOfList());
-        model.addAttribute("availableLists", fileUtils.availableLists());
+        final var selection = listSelectionService.selection();
+        model.addAttribute("current", selection.current());
+        model.addAttribute("availableLists", selection.available());
         commonAttributeService.add(model);
         return "change-list";
     }
@@ -40,19 +31,12 @@ public class ChangeListController {
     @PostMapping("/list-change")
     public String post(@RequestParam("list") String listName, RedirectAttributes attributes)
     {
-        if (!fileUtils.availableLists().contains(listName))
-        {
-            attributes.addAttribute("unknownEntry", listName);
+        try {
+            listSelectionService.changeTo(listName);
+        } catch (UnknownListException e) {
+            attributes.addAttribute("unknownEntry", e.listName());
             return "redirect:/list?error";
         }
-
-        log.info("Clearing imdbRepository...");
-        imdbCatalog.clear();
-        log.info("Reading new list {}", listName);
-        List<ImdbEntry> entries = exportReader.parse(listName);
-        log.info("Initializing with {} entries", entries.size());
-        imdbCatalog.init(entries, listName);
-        preCacheService.cacheAll();
         return "redirect:/list?success";
     }
 }

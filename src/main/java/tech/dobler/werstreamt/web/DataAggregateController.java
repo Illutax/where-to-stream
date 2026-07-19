@@ -4,130 +4,65 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import tech.dobler.werstreamt.domain.AvailabilityType;
-import tech.dobler.werstreamt.domain.Availability;
-import tech.dobler.werstreamt.domain.ImdbEntry;
-import tech.dobler.werstreamt.domain.QueryResult;
-import tech.dobler.werstreamt.services.AggregateService;
+import tech.dobler.werstreamt.application.CatalogOverviewService;
+import tech.dobler.werstreamt.application.ProviderPageService;
+import tech.dobler.werstreamt.application.StreamingProvider;
 import tech.dobler.werstreamt.services.CommonAttributeService;
-import tech.dobler.werstreamt.services.ImdbCatalog;
-import tech.dobler.werstreamt.services.StreamInfoService;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
+/**
+ * Thymeleaf pages for the catalogue overview and the per-provider pages. All data shaping lives
+ * in {@link CatalogOverviewService} / {@link ProviderPageService}; this controller only maps
+ * the DTOs onto the model attributes the templates expect and picks the view.
+ */
 @Controller
 @RequiredArgsConstructor
 public class DataAggregateController {
-    private final AggregateService service;
-    private final ImdbCatalog imdbCatalog;
+    private final CatalogOverviewService catalogOverviewService;
+    private final ProviderPageService providerPageService;
     private final CommonAttributeService commonAttributeService;
-    private final StreamInfoService streamInfoService;
-
-    public record IndexDto(boolean isRated, String name, String imdbId, int year, String added, Optional<String> availableStreamingServices) {}
 
     @GetMapping(path = {"", "/"})
     public String index(Model model) {
-        final var entries = imdbCatalog.findAll();
-        // Resolve all entries in a single batch instead of one query per entry (avoids N+1).
-        final var resolved = streamInfoService.resolveAll(entries.stream().map(ImdbEntry::imdbId).toList());
-        final var included = entries.stream()
-                .map(entry -> new IndexDto(entry.isRated(),
-                        entry.name(),
-                        entry.imdbId(),
-                        entry.year(),
-                        entry.added(),
-                        StreamInfoService.toAvailableServiceNames(resolved.getOrDefault(entry.imdbId(), List.of()))))
-                .sorted(Comparator.comparing(IndexDto::name))
-                .toList();
-        model.addAttribute("entries", included);
+        model.addAttribute("entries", catalogOverviewService.overview());
         commonAttributeService.add(model);
         return "index";
     }
 
     @GetMapping(path = {"amazon", "prime"})
     public String getAmazon(Model model) {
-        final var content = service.contentFor("Prime Video");
-        model.addAttribute("primeIncluded", sortedByAdded(content.included()));
-        model.addAttribute("primeOthers", paidDtos(content.paid()));
+        final var page = providerPageService.pageFor(StreamingProvider.AMAZON);
+        model.addAttribute("primeIncluded", page.included());
+        model.addAttribute("primeOthers", page.paid());
         commonAttributeService.add(model);
         return "amazon";
     }
 
     @GetMapping(path = "disney")
     public String getDisney(Model model) {
-        return flatratePage("Disney+", "disney", model);
+        return flatratePage(StreamingProvider.DISNEY, "disney", model);
     }
 
     @GetMapping(path = "netflix")
     public String getNetflix(Model model) {
-        return flatratePage("Netflix", "netflix", model);
+        return flatratePage(StreamingProvider.NETFLIX, "netflix", model);
     }
 
     @GetMapping(path = "wow")
     public String getWow(Model model) {
-        return flatratePage("WOW", "wow", model);
+        return flatratePage(StreamingProvider.WOW, "wow", model);
     }
 
     @GetMapping(path = "google")
     public String getGoogle(Model model) {
-        model.addAttribute("entries", paidDtos(service.paid("Google Play")));
+        model.addAttribute("entries", providerPageService.pageFor(StreamingProvider.GOOGLE).paid());
         commonAttributeService.add(model);
         return "google";
     }
 
     /** Renders a single-service "flatrate / included" page (Disney+, Netflix, WOW, …). */
-    private String flatratePage(String serviceName, String view, Model model) {
-        model.addAttribute("entries", sortedByAdded(service.included(serviceName)));
+    private String flatratePage(StreamingProvider provider, String view, Model model) {
+        model.addAttribute("entries", providerPageService.pageFor(provider).included());
         commonAttributeService.add(model);
         return view;
-    }
-
-    private static List<ImdbEntry> sortedByAdded(List<ImdbEntry> entries) {
-        return entries.stream().sorted(Comparator.comparing(ImdbEntry::added)).toList();
-    }
-
-    private List<PaidDto> paidDtos(List<QueryResult> paid) {
-        return paid.stream()
-                .map(it -> PaidDto.from(it, imdbCatalog.findByImdb(it.imdbId()).orElseThrow()))
-                .sorted(Comparator.comparing(PaidDto::added))
-                .toList();
-    }
-
-    public record PaidDto(String name, String imdbId, String price, String added, boolean isRated, String year,
-                          String languages) {
-        static PaidDto from(QueryResult result, ImdbEntry imdbEntry) {
-            String price = prettyPrint(result.availabilities());
-            String year = imdbEntry.year() == 0
-                    ? "Not yet released"
-                    : String.valueOf(imdbEntry.year());
-            return new PaidDto(imdbEntry.name(), imdbEntry.imdbId(), price, imdbEntry.added(), imdbEntry.isRated(),
-                    year, result.languages());
-        }
-    }
-
-    public static String prettyPrint(List<Availability> availabilities) {
-        return availabilities.stream()
-                .map(a -> {
-                    final var sb = new StringBuilder();
-                    if (a.type() == AvailabilityType.RENT) {
-                        sb.append("leihen: ");
-                    } else {
-                        sb.append("kaufen: ");
-                    }
-
-                    if (a.fourK() != null) {
-                        sb.append("4k: ").append(a.fourK().value()).append(" ");
-                    }
-                    if (a.hd() != null) {
-                        sb.append("HD: ").append(a.hd().value()).append(" ");
-                    }
-                    if (a.sd() != null) {
-                        sb.append("SD: ").append(a.sd().value()).append(" ");
-                    }
-                    return sb.toString();
-                }).collect(Collectors.joining(", "));
     }
 }
