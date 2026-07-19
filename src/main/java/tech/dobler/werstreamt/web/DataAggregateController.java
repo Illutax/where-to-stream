@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import tech.dobler.werstreamt.application.CatalogOverviewService;
 import tech.dobler.werstreamt.application.ProviderPageService;
 import tech.dobler.werstreamt.application.StreamingProvider;
-import tech.dobler.werstreamt.services.CommonAttributeService;
 
 /**
  * Thymeleaf pages for the catalogue overview and the per-provider pages. All data shaping lives

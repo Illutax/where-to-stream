@@ -4,15 +4,12 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
-import tech.dobler.werstreamt.services.CommonAttributeService;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
-import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
-import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
@@ -55,10 +52,5 @@ class ArchitectureTest {
             .whereLayer("Services").mayOnlyBeAccessedByLayers("Application")
             .whereLayer("Persistence").mayOnlyBeAccessedByLayers("Services")
             // Domain is a leaf and may be accessed by any layer — no constraint.
-
-            // EXCEPTION (see TODOs.md, ARCH-1): CommonAttributeService is a Thymeleaf model helper
-            // that lives in the services package but is only used by the web controllers. Until it
-            // is moved into the presentation layer, allow web -> CommonAttributeService.
-            .ignoreDependency(resideInAPackage("..web.."), equivalentTo(CommonAttributeService.class))
             .because("presentation should depend only on the application layer (plus the domain)");
 }

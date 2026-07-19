@@ -47,6 +47,14 @@ class ListSelectionServiceTest {
     }
 
     @Test
+    void currentListReturnsJustTheActiveNameWithoutScanningTheDirectory() {
+        when(imdbCatalog.getNameOfList()).thenReturn("active.csv");
+
+        assertThat(service.currentList()).isEqualTo("active.csv");
+        verifyNoInteractions(fileUtils);
+    }
+
+    @Test
     void changeToUnknownListThrowsAndTouchesNothing() {
         when(fileUtils.availableLists()).thenReturn(List.of("known"));
 

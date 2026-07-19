@@ -32,6 +32,11 @@ public class ListSelectionService {
         return new ListSelectionDto(imdbCatalog.getNameOfList(), fileUtils.availableLists());
     }
 
+    /** Just the active list name (no directory scan) — e.g. for the navbar on every render. */
+    public String currentList() {
+        return imdbCatalog.getNameOfList();
+    }
+
     /**
      * Switches the active list to {@code listName}, repopulating the catalogue and cache.
      *

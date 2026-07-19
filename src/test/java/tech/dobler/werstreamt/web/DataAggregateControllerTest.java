@@ -14,7 +14,6 @@ import tech.dobler.werstreamt.application.dto.OverviewEntryDto;
 import tech.dobler.werstreamt.application.dto.PaidEntryDto;
 import tech.dobler.werstreamt.application.dto.ProviderPageDto;
 import tech.dobler.werstreamt.configurations.ThymeleafConfig;
-import tech.dobler.werstreamt.services.CommonAttributeService;
 
 import java.util.List;
 

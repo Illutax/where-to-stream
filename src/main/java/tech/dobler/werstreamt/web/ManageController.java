@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import tech.dobler.werstreamt.application.CacheManagementService;
-import tech.dobler.werstreamt.services.CommonAttributeService;
 
 import java.util.List;
 

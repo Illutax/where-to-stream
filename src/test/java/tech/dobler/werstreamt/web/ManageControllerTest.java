@@ -12,7 +12,6 @@ import tech.dobler.werstreamt.application.dto.ManagePageDto;
 import tech.dobler.werstreamt.application.dto.ManageRowDto;
 import tech.dobler.werstreamt.application.dto.ScrapeResultDto;
 import tech.dobler.werstreamt.configurations.ThymeleafConfig;
-import tech.dobler.werstreamt.services.CommonAttributeService;
 
 import java.util.List;
 

@@ -460,17 +460,15 @@ Domain-Leaf) und die „keine statischen `now()`-Aufrufe"-Regel ([ADR-0003](docs
 werden per **ArchUnit** erzwungen (`ArchitectureTest`); im Frontend prüft ESLint die
 `now()`-Regel. Bekannte Verstöße sind als Ausnahmen eingetragen und hier zur Auflösung notiert.
 
-### 🟠 ARCH-1 — `CommonAttributeService` liegt in der Services-Schicht, gehört aber zur Präsentation
-`tech.dobler.werstreamt.services.CommonAttributeService` schreibt das `selectedList`-Attribut in
-das Thymeleaf-`Model` und wird ausschließlich von den `web`-Controllern genutzt. Damit greift die
-Präsentationsschicht direkt auf die Services-Schicht zu — der einzige Verstoß gegen die Regel
-„Presentation hängt nur von Application (+ Domain) ab".
-- **Aktueller Zustand:** In `ArchitectureTest.layers_are_respected` als `ignoreDependency`
-  (`..web..` → `CommonAttributeService`) explizit ausgenommen, damit die Regel sonst greift.
-- **Mögliche Auflösung (zu besprechen):**
-  1. `CommonAttributeService` nach `web` (Präsentationsschicht) verschieben — es ist reine
-     Thymeleaf-Model-Befüllung. Danach die `ignoreDependency` entfernen. **(Favorit)**
-  2. Alternativ die Aufgabe über einen `@ControllerAdvice`/`@ModelAttribute` lösen und den
-     Service ganz auflösen.
+### ✅ ARCH-1 — `CommonAttributeService` lag in der Services-Schicht, gehörte aber zur Präsentation
+`CommonAttributeService` schreibt das `selectedList`-Attribut ins Thymeleaf-`Model` und wird nur
+von den `web`-Controllern genutzt — lag aber im `services`-Paket, sodass die Präsentationsschicht
+direkt auf die Services-Schicht zugriff (einziger Verstoß gegen „Presentation hängt nur von
+Application (+ Domain) ab").
+- **Erledigt:** Nach `tech.dobler.werstreamt.web` verschoben (jetzt `@Component` der
+  Präsentationsschicht) und die Datenquelle von `ImdbCatalog` (Services) auf
+  `ListSelectionService.currentList()` (Application) umgestellt — damit hängt kein Controller
+  mehr an der Services-Schicht. Die `ignoreDependency`-Ausnahme in `ArchitectureTest` ist
+  entfernt; die Schichtenregel greift jetzt ohne Ausnahme.
 - **Hinweis:** Für den Angular-Client gibt es kein Äquivalent (die aktive Liste kommt dort über
   `GET /api/lists`), d. h. der Service ist rein Thymeleaf-spezifisch.

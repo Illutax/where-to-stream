@@ -11,7 +11,6 @@ import tech.dobler.werstreamt.application.UnknownListException;
 import tech.dobler.werstreamt.application.dto.ChangeListResultDto;
 import tech.dobler.werstreamt.application.dto.ListSelectionDto;
 import tech.dobler.werstreamt.configurations.ThymeleafConfig;
-import tech.dobler.werstreamt.services.CommonAttributeService;
 
 import java.util.List;
 
