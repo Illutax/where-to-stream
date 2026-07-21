@@ -1,0 +1,22 @@
+# Keep host build artifacts and dependencies OUT of the Docker build context. They are
+# platform-specific and must be (re)built inside the image:
+#  - node_modules built on the host (e.g. Ubuntu/glibc) carry the wrong native binaries for the
+#    Alpine/musl builder (e.g. @rollup/rollup-linux-x64-musl is missing) -> `ng build` fails.
+#    Excluding it forces a fresh, platform-correct `npm ci` in the builder stage.
+**/node_modules
+**/dist
+**/.angular
+**/coverage
+
+# Backend build output (the image builds the jar fresh).
+target
+**/target
+
+# VCS / IDE / local runtime noise
+.git
+.gitignore
+.idea
+*.iml
+logs
+db
+*.log

@@ -30,9 +30,33 @@ caches the results in an embedded H2 database, and presents them as per-provider
    requests are rate-limited to stay polite.
 4. Thymeleaf pages render the aggregated availability per streaming service.
 
-## Running locally
+## Prerequisites
 
-Requires JDK 25 and Maven.
+- **JDK 25** and **Maven**.
+- **Node.js 22–24 + npm** (see `src/main/frontend/.nvmrc` / the `engines` field; `.npmrc` has
+  `engine-strict=true`, so a mismatching version fails fast). The Maven build shells out to the
+  system `npm` to build the Angular client. Only needed for a full build — use
+  `-Dskip.frontend=true` for a backend-only build.
+
+Ubuntu's `apt install nodejs npm` ships a Node too old for this project. Install a supported
+version one of these ways:
+
+```bash
+# Option A — nvm (reads .nvmrc):
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+exec "$SHELL"
+cd src/main/frontend && nvm install    # picks up .nvmrc (Node 24); `nvm use` in later sessions
+
+# Option B — NodeSource apt repo (Node 24 system-wide):
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+sudo apt-get install -y nodejs         # includes npm
+
+# verify
+node --version   # v24.x (v22–v24 accepted)
+npm --version
+```
+
+## Running locally
 
 ```bash
 # run the app (defaults to http://localhost:8001)
@@ -93,6 +117,13 @@ recorded in [`docs/adr/0004`](docs/adr/0004-vitest-als-angular-test-runner.md) (
 [`docs/adr/0005`](docs/adr/0005-assertj-und-mockito-im-backend.md) (AssertJ + Mockito).
 
 ## Running with Docker
+
+The image builds everything inside the builder stage — JDK, Maven and a **pinned Node**
+(copied from `node:24-alpine`) — so no host Node is needed for the Docker build. Host build
+artifacts are kept out of the build context via `.dockerignore` (notably
+`src/main/frontend/node_modules`): they are platform-specific and would otherwise break the
+Alpine/musl build (a host `node_modules` from glibc is missing `@rollup/rollup-linux-x64-musl`);
+`npm ci` runs fresh in the image instead.
 
 The image builds the jar and runs it (see `Dockerfile` / `compose.yml`). `compose.yml`
 mounts `./assets` (read-only) and `./logs`, runs on port `8080`, and serves under the context
