@@ -11,8 +11,10 @@ services:
       - MARIADB_URL=jdbc:mariadb://mariadb:3306/w2s
       - MARIADB_USER=w2s
       - MARIADB_PASSWORD=w2s
-      - logging.level.org.springframework.web.servlet.DispatcherServlet=TRACE
+#      - logging.level.org.springframework.web.servlet.DispatcherServlet=TRACE
       - server.servlet.context-path=/w2s
+      - W2S_SECURITY_INITIALADMIN_USER=${W2S_ADMIN_USER}
+      - W2S_SECURITY_INITIALADMIN_PASSWORD=${W2S_ADMIN_PASSWORD}
     depends_on:
       - db
     networks:
