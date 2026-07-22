@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Redeclared for standalone clarity (Liquibase properties are global, but 001 owns them). -->
+    <property name="uuid.type" value="uuid" dbms="h2"/>
+    <property name="uuid.type" value="uuid" dbms="mariadb"/>
+    <property name="timestamp.type" value="timestamp(6) with time zone" dbms="h2"/>
+    <property name="timestamp.type" value="datetime(6)" dbms="mariadb"/>
+
+    <changeSet id="003-security-schema" author="vdobler">
+        <comment>User accounts + roles for authentication/authorization (local + OIDC).</comment>
+
+        <createTable tableName="app_user">
+            <column name="id" type="${uuid.type}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="varchar(255)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_app_user_username"/>
+            </column>
+            <column name="password_hash" type="varchar(255)"/>
+            <column name="email" type="varchar(255)"/>
+            <column name="enabled" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="${timestamp.type}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="app_user_roles">
+            <column name="user_id" type="${uuid.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="app_user_roles" columnNames="user_id, role"
+                       constraintName="pk_app_user_roles"/>
+        <addForeignKeyConstraint constraintName="fk_app_user_roles_user"
+                                 baseTableName="app_user_roles" baseColumnNames="user_id"
+                                 referencedTableName="app_user" referencedColumnNames="id"/>
+    </changeSet>
+</databaseChangeLog>

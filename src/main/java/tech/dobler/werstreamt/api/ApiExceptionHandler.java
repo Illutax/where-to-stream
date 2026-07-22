@@ -5,6 +5,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import tech.dobler.werstreamt.application.UnknownListException;
+import tech.dobler.werstreamt.application.UserManagementException;
 
 /**
  * Translates application exceptions into RFC-7807 {@link ProblemDetail} responses. Scoped to
@@ -21,4 +22,10 @@ public class ApiExceptionHandler {
         problem.setProperty("listName", ex.listName());
         return problem;
     }
+
+    @ExceptionHandler(UserManagementException.class)
+    public ProblemDetail handleUserManagement(UserManagementException ex) {
+        return ProblemDetail.forStatusAndDetail(ex.status(), ex.getMessage());
+    }
 }
+

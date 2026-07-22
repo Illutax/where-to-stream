@@ -50,7 +50,10 @@ class ArchitectureTest {
             .whereLayer("Presentation").mayNotBeAccessedByAnyLayer()
             .whereLayer("Application").mayOnlyBeAccessedByLayers("Presentation")
             .whereLayer("Services").mayOnlyBeAccessedByLayers("Application")
-            .whereLayer("Persistence").mayOnlyBeAccessedByLayers("Services")
+            // Persistence (Spring Data repositories) is the port the use-case layer consumes, so
+            // both Services and the Application layer may access it (e.g. UserAdminService).
+            .whereLayer("Persistence").mayOnlyBeAccessedByLayers("Services", "Application")
             // Domain is a leaf and may be accessed by any layer — no constraint.
-            .because("presentation should depend only on the application layer (plus the domain)");
+            .because("presentation depends only on the application layer; repositories back the "
+                    + "services and application (use-case) layers");
 }

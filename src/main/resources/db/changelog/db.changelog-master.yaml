@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: changes/002-add-query-result-languages.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/003-security-schema.xml
+      relativeToChangelogFile: true

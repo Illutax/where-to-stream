@@ -2,6 +2,7 @@ package tech.dobler.werstreamt.rest;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -16,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Guards the legacy plain-text response contract of the pre-cache maintenance endpoints. */
 @WebMvcTest(PreCacheController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class PreCacheControllerTest {
 
     @Autowired
