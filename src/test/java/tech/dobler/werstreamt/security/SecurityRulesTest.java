@@ -11,6 +11,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,6 +69,18 @@ class SecurityRulesTest {
         mockMvc.perform(post("/api/manage/invalidate").with(user("admin").roles("ADMIN")).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"imdbIds\":[]}"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void formLoginWithRememberMeIssuesAPersistentCookie() throws Exception {
+        // The seeded admin (see test application.properties) with "remember-me" checked gets a
+        // persistent cookie, so the login survives browser close / server restart.
+        mockMvc.perform(post("/login").with(csrf())
+                        .param("username", "admin")
+                        .param("password", "admin-test-pw")
+                        .param("remember-me", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(cookie().exists("remember-me"));
     }
 
     @Test

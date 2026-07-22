@@ -30,7 +30,8 @@ class AdminUserSeederTest {
 
     private AdminUserSeeder seeder(String username, String password) {
         return new AdminUserSeeder(users, passwordEncoder, timeService,
-                new SecurityProperties(new SecurityProperties.InitialAdmin(username, password)));
+                new SecurityProperties(new SecurityProperties.InitialAdmin(username, password),
+                        new SecurityProperties.RememberMe("test-key", 14)));
     }
 
     @Test

@@ -191,6 +191,10 @@ The app requires a login. Users live in the database with `USER` / `ADMIN` roles
 administration need `ADMIN`. Details and rationale: [ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md).
 
 - **Login:** form login and HTTP Basic (e.g. `curl -u admin:… http://localhost:8001/check-pre-cache`).
+- **Staying signed in:** sessions time out after `server.servlet.session.timeout` (default 30m) and
+  are in-memory, so a redeploy/restart logs everyone out. Tick **"Stay signed in"** for a persistent
+  login, and set a stable `w2s.security.remember-me.key` (env `W2S_SECURITY_REMEMBER_ME_KEY`) so that
+  remember-me survives restarts (otherwise a transient key is generated per start and logged).
 - **Initial admin:** on an empty user table an `admin` account is seeded. Set its password with
   `w2s.security.initial-admin.password` (env `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`); if unset, a
   strong password is generated and logged once at startup — change it after first login.

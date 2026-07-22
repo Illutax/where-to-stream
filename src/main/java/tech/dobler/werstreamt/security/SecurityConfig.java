@@ -1,5 +1,6 @@
 package tech.dobler.werstreamt.security;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,9 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
+import java.time.Duration;
+import java.util.UUID;
+
 /**
  * Application security: form + HTTP Basic + (optional) Google OIDC login over a database-backed
  * user store, with role-based authorization.
@@ -30,6 +34,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
 
     /** Matches API requests (context-path aware) — used to answer with 401 instead of a redirect. */
@@ -44,7 +49,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    ObjectProvider<ClientRegistrationRepository> clientRegistrations,
-                                                   GoogleOidcUserService oidcUserService) throws Exception {
+                                                   GoogleOidcUserService oidcUserService,
+                                                   SecurityProperties securityProperties) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
                         // Public: login, errors, static assets for the login page, status probe.
@@ -62,6 +68,11 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .formLogin(form -> form.loginPage("/login").permitAll())
                 .httpBasic(Customizer.withDefaults())
+                // Persistent login (survives browser close AND server restarts, given a stable key)
+                // so users are not logged out on each cron-driven redeploy.
+                .rememberMe(rm -> rm
+                        .key(rememberMeKey(securityProperties))
+                        .tokenValiditySeconds((int) Duration.ofDays(securityProperties.rememberMe().validityDays()).toSeconds()))
                 .logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll())
                 .exceptionHandling(ex -> ex
                         .defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), API))
@@ -79,5 +90,20 @@ public class SecurityConfig {
         }
 
         return http.build();
+    }
+
+    /**
+     * The stable remember-me secret. If none is configured, a transient one is generated per
+     * startup (so remember-me resets on each restart) and a warning is logged — set
+     * {@code w2s.security.remember-me.key} to keep users logged in across restarts.
+     */
+    private String rememberMeKey(SecurityProperties securityProperties) {
+        final String key = securityProperties.rememberMe().key();
+        if (key != null && !key.isBlank()) {
+            return key;
+        }
+        log.warn("No w2s.security.remember-me.key configured — generated a transient key; "
+                + "remember-me logins will NOT survive restarts. Set the property for persistent login.");
+        return UUID.randomUUID().toString();
     }
 }
