@@ -8,6 +8,7 @@ import { FlatrateEntry } from '../../core/models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatTableModule],
   template: `
+    <div class="table-scroll">
     <table mat-table [dataSource]="entries()" [trackBy]="trackByImdbId">
       <ng-container matColumnDef="rated">
         <th mat-header-cell *matHeaderCellDef></th>
@@ -37,6 +38,7 @@ import { FlatrateEntry } from '../../core/models';
         <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">Nothing here.</td>
       </tr>
     </table>
+    </div>
   `,
 })
 export class FlatrateTable {

@@ -20,6 +20,7 @@ import { UserCreateForm } from '../../shared/user-create-form/user-create-form';
     @if (loading()) {
       <app-loading />
     } @else {
+      <div class="table-scroll">
       <table mat-table [dataSource]="users()" [trackBy]="trackById">
         <ng-container matColumnDef="username">
           <th mat-header-cell *matHeaderCellDef>Username</th>
@@ -56,6 +57,7 @@ import { UserCreateForm } from '../../shared/user-create-form/user-create-form';
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
       </table>
+      </div>
 
       <h2>Create user</h2>
       <app-user-create-form (create)="create($event)" />

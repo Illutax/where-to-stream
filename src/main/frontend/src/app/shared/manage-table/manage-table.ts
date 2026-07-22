@@ -23,6 +23,7 @@ import { ManageRow } from '../../core/models';
 
     <h2>Invalidate selected titles</h2>
     <form (submit)="onInvalidate($event)">
+      <div class="table-scroll">
       <table mat-table [dataSource]="rows()" [trackBy]="trackByImdbId">
         <ng-container matColumnDef="select">
           <th mat-header-cell *matHeaderCellDef></th>
@@ -59,6 +60,7 @@ import { ManageRow } from '../../core/models';
           <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">No titles.</td>
         </tr>
       </table>
+      </div>
 
       <button matButton="filled" type="submit" class="invalidate-button" [disabled]="selected().size === 0">
         Invalidate selected

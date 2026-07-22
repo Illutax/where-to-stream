@@ -35,11 +35,78 @@ a {
   color: var(--mat-sys-primary);
 }
 
-// Centered page container (replaces Bootstrap's .container).
+// --- App shell (mobile-first): a top bar + a responsive navigation drawer ---
+// The drawer overlays on small screens (toggled by the toolbar menu button) and is a permanent
+// side rail from ~960px up (see App component's breakpoint).
+app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.app-toolbar {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
+  .app-brand {
+    color: inherit;
+    text-decoration: none;
+    font: var(--mat-sys-title-large);
+  }
+}
+
+.app-sidenav-container {
+  flex: 1;
+}
+
+.app-sidenav {
+  width: min(80vw, 250px);
+}
+
+.app-nav {
+  .active-link {
+    font-weight: 700;
+    background: var(--mat-sys-secondary-container);
+  }
+
+  .app-nav__meta {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// Centered page container. Padding tightens on small screens.
 .app-container {
   max-width: 1140px;
   margin: 0 auto;
   padding: 1rem;
+}
+
+@media (max-width: 599px) {
+  .app-container {
+    padding: 0.75rem;
+  }
+}
+
+// Wide data tables scroll horizontally within their own container instead of forcing the whole
+// page to scroll sideways on narrow screens.
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll table,
+table[mat-table] {
+  width: 100%;
 }
 
 // Typographic scale for page headings (replaces Bootstrap's .h3/.h5).
@@ -55,26 +122,6 @@ h2 {
 
 .text-muted {
   color: var(--mat-sys-on-surface-variant);
-}
-
-// App toolbar in the primary color (the previous Bootstrap navbar was bg-primary).
-.app-toolbar {
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  gap: 0.25rem;
-  flex-wrap: wrap;
-
-  a {
-    color: inherit;
-  }
-
-  .app-toolbar__spacer {
-    flex: 1 1 auto;
-  }
-
-  .active-link {
-    font-weight: 700;
-  }
 }
 
 // Persistent, inline error callout (errors must stay visible — success uses a snackbar).

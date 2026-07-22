@@ -8,6 +8,7 @@ import { OverviewEntry } from '../../core/models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatTableModule],
   template: `
+    <div class="table-scroll">
     <table mat-table [dataSource]="entries()" [trackBy]="trackByImdbId">
       <ng-container matColumnDef="rated">
         <th mat-header-cell *matHeaderCellDef></th>
@@ -44,6 +45,7 @@ import { OverviewEntry } from '../../core/models';
         <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">No entries.</td>
       </tr>
     </table>
+    </div>
   `,
 })
 export class CatalogTable {
