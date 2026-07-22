@@ -74,6 +74,37 @@ export interface Status {
   serverStart: string;
 }
 
+/** The current principal (mirrors the server MeDto). */
+export interface Me {
+  authenticated: boolean;
+  username: string | null;
+  roles: string[];
+  admin: boolean;
+}
+
+/** A user account in the administration UI (mirrors the server UserDto). */
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string | null;
+  enabled: boolean;
+  roles: string[];
+  provider: string;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  email: string | null;
+  roles: string[];
+}
+
+export interface UpdateUserRequest {
+  email: string | null;
+  roles: string[];
+  enabled: boolean;
+}
+
 /** Static provider metadata for the navbar and provider page (keys match StreamingProvider). */
 export interface ProviderInfo {
   key: string;

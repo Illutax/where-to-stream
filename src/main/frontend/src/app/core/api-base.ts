@@ -1,17 +1,18 @@
 import { InjectionToken } from '@angular/core';
 
 /**
- * Absolute base URL of the REST API, derived from the document base URI so it is correct in
- * every deployment without rebuilds:
+ * Base path of the REST API as a **relative** URL (`../api/`). It is resolved by the browser
+ * against the document base href, so it stays correct in every deployment without rebuilds:
  *
- *  - dev (ng serve at "/")            -> http://localhost:4200/api/  (proxied to the backend)
- *  - local jar (served at "/app/")    -> http://host:8001/api/
- *  - prod behind context path "/w2s"  -> http://host/w2s/api/
+ *  - dev (ng serve at "/")            -> /api/…            (proxied to the backend)
+ *  - local jar (served at "/app/")    -> /api/…
+ *  - prod behind context path "/w2s"  -> /w2s/api/…
  *
- * The app is always served at "<context>/app/" (base href "./"), and the API lives one level
- * up at "<context>/api/", hence "../api/" relative to document.baseURI.
+ * It is deliberately relative (not absolute): Angular's built-in XSRF interceptor attaches the
+ * X-XSRF-TOKEN header only to relative/same-origin requests, so CSRF-protected mutations from
+ * the SPA work out of the box against Spring's cookie CSRF repository.
  */
 export const API_BASE = new InjectionToken<string>('API_BASE', {
   providedIn: 'root',
-  factory: () => new URL('../api/', document.baseURI).toString(),
+  factory: () => '../api/',
 });
