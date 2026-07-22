@@ -74,6 +74,22 @@ public abstract class AbstractQueryResultRepositoryTests {
 
     @Test
     @Transactional
+    void saveAndLoadALongLanguagesValue() {
+        // Regression: some titles list many language variants; the languages column must hold
+        // more than the original varchar(255) (on MariaDB the old width threw "Data too long").
+        final var imdbId = "tt2194499";
+        final var longLanguages = "Deutsch, Englisch (OV), ".repeat(20).trim(); // ~460 chars
+        final var queryResult = new QueryResultDB(imdbId, "Prime Video", false, List.of(), longLanguages);
+        saveAndFlush(queryResult);
+
+        final var results = sut.findByImdbId(imdbId);
+
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().getLanguages()).isEqualTo(longLanguages);
+    }
+
+    @Test
+    @Transactional
     void saveAndDeleteOne() {
         // Arrange
         final var imdbId = "tt0123755";

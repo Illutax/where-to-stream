@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="004-widen-query-result-languages" author="vdobler">
+        <comment>
+            Some titles list many language variants; varchar(255) overflowed on MariaDB
+            ("Data too long for column 'languages'"). Widen it (the scraper also caps the value).
+        </comment>
+        <modifyDataType tableName="query_result" columnName="languages" newDataType="varchar(1024)"/>
+    </changeSet>
+</databaseChangeLog>

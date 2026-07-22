@@ -148,6 +148,9 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
                 extractLanguages(offering));
     }
 
+    /** Upper bound for a stored languages string; matches the query_result.languages column width. */
+    static final int MAX_LANGUAGES_LENGTH = 1024;
+
     /** Language list from a listing's title block ("87 Min. | Deutsch, Englisch (OV)"), or null. */
     private static String extractLanguages(Element offering) {
         final var titleCol = offering.selectFirst(".columns.large-5");
@@ -162,7 +165,15 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
                 .findFirst()
                 .map(text -> text.substring(text.indexOf('|') + 1).trim())
                 .filter(languages -> !languages.isBlank())
+                .map(WerStreamtEsApiClient::capLanguages)
                 .orElse(null);
+    }
+
+    /** Guards against a pathologically long parse so the insert can never overflow the column. */
+    static String capLanguages(String languages) {
+        return languages.length() <= MAX_LANGUAGES_LENGTH
+                ? languages
+                : languages.substring(0, MAX_LANGUAGES_LENGTH);
     }
 
     private static boolean hasCheck(Element column) {

@@ -160,4 +160,14 @@ class WerStreamtEsApiClientTest {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No %s availability in %s".formatted(type, result.streamingServiceName())));
     }
+
+    @Test
+    void capsLanguagesToTheColumnWidth() {
+        final var normal = "Deutsch, Englisch (OV)";
+        assertThat(WerStreamtEsApiClient.capLanguages(normal)).isEqualTo(normal);
+
+        final var tooLong = "x".repeat(WerStreamtEsApiClient.MAX_LANGUAGES_LENGTH + 50);
+        assertThat(WerStreamtEsApiClient.capLanguages(tooLong))
+                .hasSize(WerStreamtEsApiClient.MAX_LANGUAGES_LENGTH);
+    }
 }
