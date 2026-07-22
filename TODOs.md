@@ -74,11 +74,17 @@ joint tatsächlich auf die UUID-PK von `QueryResultDB`, nicht auf eine IMDb-ID.
 
 ## Sicherheit
 
-### 🔴 TODO-5 — Zustandsändernde Endpunkte als GET ohne Auth
+### 🟠 TODO-5 — Zustandsändernde Endpunkte als GET ohne Auth (teilweise erledigt)
 `/pre-cache`, `/check-pre-cache`, `/refresh/all`, `/refresh/seen` lösen teure
 Remote-Crawls aus, sind per GET erreichbar und damit von Crawlern/Prefetch triggerbar.
 - **Akzeptanzkriterium:** Auf `POST` umstellen; Endpunkte hinter Authentifizierung
   legen (Spring Security ergänzen — die App ist aktuell komplett offen).
+- **Erledigt (Auth):** Spring Security ergänzt ([ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md));
+  alle diese Endpunkte erfordern jetzt Login **und** Rolle `ADMIN`. Die neue REST-API nutzt
+  bereits korrekte Verben (`POST /api/refresh`, `POST /api/cache`, …).
+- **Rest (offen):** Die **Legacy**-Endpunkte bleiben aus Kompatibilität GET-mit-Nebenwirkung
+  (jetzt ADMIN-geschützt). Wenn die Legacy-Routen wegfallen dürfen, ganz auf die POST-`/api`-Verben
+  umstellen und die GET-Varianten entfernen.
 
 ---
 

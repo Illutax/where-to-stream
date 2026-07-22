@@ -10,6 +10,8 @@ caches the results in an embedded H2 database, and presents them as per-provider
 ## Tech stack
 
 - Java 25, Spring Boot 4.1 (Spring MVC + Thymeleaf)
+- **Spring Security**: form + HTTP Basic + optional Google OIDC login, DB-backed users with
+  `USER`/`ADMIN` roles (see [Authentication & users](#authentication--users))
 - **Angular 22** SPA (standalone, zoneless, signals; **Angular Material** M3 UI with
   self-hosted Roboto) served under `/app`, sharing the same server logic as the Thymeleaf UI
   via a JSON API under `/api`
@@ -181,6 +183,23 @@ recreate the directory.
 The helper scripts `update-and-restart.sh` (pull + rebuild + restart) and
 `upgrade-spring-boot.sh` (bump the Spring Boot parent, test, push) are intended to run on
 the host, driven by `cron.sh`.
+
+## Authentication & users
+
+The app requires a login. Users live in the database with `USER` / `ADMIN` roles; read pages and
+`GET /api/**` need any authenticated user, while state-changing / maintenance endpoints and user
+administration need `ADMIN`. Details and rationale: [ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md).
+
+- **Login:** form login and HTTP Basic (e.g. `curl -u admin:… http://localhost:8001/check-pre-cache`).
+- **Initial admin:** on an empty user table an `admin` account is seeded. Set its password with
+  `w2s.security.initial-admin.password` (env `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`); if unset, a
+  strong password is generated and logged once at startup — change it after first login.
+- **User management:** `ADMIN`s manage users at `/admin/users` (Thymeleaf) or in the Angular UI
+  (`/app/#/admin/users`); both call `/api/admin/users`.
+- **Google login (optional):** start with `SPRING_PROFILES_ACTIVE=google` and provide
+  `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (redirect URI `{baseUrl}/login/oauth2/code/google`).
+  Without the profile, OIDC is off and only local accounts are used. First OIDC login provisions a
+  local `USER` keyed by e-mail.
 
 ## Configuration
 
