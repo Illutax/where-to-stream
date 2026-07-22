@@ -1,0 +1,84 @@
+<html layout:decorate="~{layout/layout}" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+    <title>User administration</title>
+</head>
+<body layout:fragment="content">
+
+<div class="alert alert-success" role="alert" th:if="${message}" th:text="${message}"></div>
+<div class="alert alert-danger" role="alert" th:if="${error}" th:text="${error}"></div>
+
+<h1>User administration</h1>
+
+<table class="table table-sm align-middle">
+    <thead>
+    <tr>
+        <th>Username</th>
+        <th>Provider</th>
+        <th>Roles / enabled</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="u : ${users}">
+        <td>
+            <span th:text="${u.username}"></span>
+            <div class="text-muted small" th:text="${u.email}"></div>
+        </td>
+        <td th:text="${u.provider}"></td>
+        <td>
+            <form th:action="@{'/admin/users/' + ${u.id} + '/update'}" method="post" class="d-flex gap-2 align-items-center flex-wrap">
+                <input type="hidden" name="email" th:value="${u.email}"/>
+                <label th:each="r : ${allRoles}" class="form-check-label me-2">
+                    <input type="checkbox" name="roles" th:value="${r}" th:checked="${u.roles.contains(r.name())}"/>
+                    <span th:text="${r}"></span>
+                </label>
+                <label class="form-check-label">
+                    <input type="checkbox" name="enabled" value="true" th:checked="${u.enabled}"/> enabled
+                </label>
+                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+            </form>
+        </td>
+        <td class="d-flex gap-1">
+            <form th:action="@{'/admin/users/' + ${u.id} + '/password'}" method="post" class="d-flex gap-1">
+                <input type="password" name="newPassword" class="form-control form-control-sm" placeholder="new password"/>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Reset</button>
+            </form>
+            <form th:action="@{'/admin/users/' + ${u.id} + '/delete'}" method="post"
+                  onsubmit="return confirm('Delete this user?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<hr/>
+
+<h2 class="h5">Create user</h2>
+<form th:action="@{/admin/users}" method="post" class="row g-2 align-items-end" style="max-width: 40rem;">
+    <div class="col-md-4">
+        <label class="form-label">Username</label>
+        <input type="text" name="username" class="form-control" required/>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-control" required/>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">E-mail</label>
+        <input type="email" name="email" class="form-control"/>
+    </div>
+    <div class="col-12">
+        <label th:each="r : ${allRoles}" class="form-check-label me-3">
+            <input type="checkbox" name="roles" th:value="${r}" th:checked="${r.name() == 'USER'}"/>
+            <span th:text="${r}"></span>
+        </label>
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Create</button>
+    </div>
+</form>
+
+</body>
+</html>

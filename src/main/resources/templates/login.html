@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <base th:href="@{/}">
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.8/css/bootstrap.min.css}"/>
+    <title>W2S — Login</title>
+</head>
+<body class="bg-light">
+<main class="container" style="max-width: 24rem; margin-top: 8vh;">
+    <h1 class="h4 mb-3 text-center">Where 2 Stream</h1>
+
+    <div class="alert alert-danger" role="alert" th:if="${param.error}">
+        Invalid username or password.
+    </div>
+    <div class="alert alert-success" role="alert" th:if="${param.logout}">
+        You have been logged out.
+    </div>
+
+    <form th:action="@{/login}" method="post" class="card card-body shadow-sm">
+        <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" id="username" name="username" class="form-control" autofocus required/>
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" id="password" name="password" class="form-control" required/>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Sign in</button>
+    </form>
+
+    <div class="text-center mt-3" th:if="${googleEnabled}">
+        <a class="btn btn-outline-secondary w-100" th:href="@{/oauth2/authorization/google}">
+            Sign in with Google
+        </a>
+    </div>
+</main>
+</body>
+</html>
