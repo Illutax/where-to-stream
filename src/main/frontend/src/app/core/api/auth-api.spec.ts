@@ -23,9 +23,9 @@ describe('AuthApi', () => {
 
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/me'));
     expect(req.request.method).toBe('GET');
-    req.flush({ authenticated: true, username: 'alice', roles: ['ADMIN'], admin: true });
+    req.flush({ authenticated: true, username: 'alice', roles: ['ADMIN'], admin: true, theme: 'SYSTEM' });
 
-    expect(result).toEqual({ authenticated: true, username: 'alice', roles: ['ADMIN'], admin: true });
+    expect(result).toEqual({ authenticated: true, username: 'alice', roles: ['ADMIN'], admin: true, theme: 'SYSTEM' });
   });
 
   it('POSTs to the form-logout endpoint', () => {

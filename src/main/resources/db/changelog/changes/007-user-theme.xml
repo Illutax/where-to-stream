@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="007-user-theme" author="vdobler">
+        <comment>
+            Per-user UI colour-scheme preference (SYSTEM/LIGHT/DARK). Existing rows default to
+            SYSTEM (follow the OS).
+        </comment>
+        <addColumn tableName="app_user">
+            <column name="theme" type="varchar(16)" defaultValue="SYSTEM">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

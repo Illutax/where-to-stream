@@ -26,7 +26,7 @@ describe('adminGuard', () => {
     let result: boolean | UrlTree | undefined;
     run().subscribe((r) => (result = r));
     httpMock.expectOne((r) => r.url.endsWith('/api/me'))
-      .flush({ authenticated: true, username: 'a', roles: ['ADMIN'], admin: true });
+      .flush({ authenticated: true, username: 'a', roles: ['ADMIN'], admin: true, theme: 'SYSTEM' });
     expect(result).toBe(true);
   });
 
@@ -34,7 +34,7 @@ describe('adminGuard', () => {
     let result: boolean | UrlTree | undefined;
     run().subscribe((r) => (result = r));
     httpMock.expectOne((r) => r.url.endsWith('/api/me'))
-      .flush({ authenticated: true, username: 'u', roles: ['USER'], admin: false });
+      .flush({ authenticated: true, username: 'u', roles: ['USER'], admin: false, theme: 'SYSTEM' });
     expect(result).toBeInstanceOf(UrlTree);
   });
 });

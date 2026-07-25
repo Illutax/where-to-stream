@@ -27,7 +27,7 @@ describe('AuthStore', () => {
     store.load();
     httpMock
       .expectOne((r) => r.url.endsWith('/api/me'))
-      .flush({ authenticated: true, username: 'alice', roles: ['ADMIN', 'USER'], admin: true });
+      .flush({ authenticated: true, username: 'alice', roles: ['ADMIN', 'USER'], admin: true, theme: 'DARK' });
 
     expect(store.username()).toBe('alice');
     expect(store.isAdmin()).toBe(true);

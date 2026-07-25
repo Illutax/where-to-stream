@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import tech.dobler.werstreamt.domain.AuthProvider;
 import tech.dobler.werstreamt.domain.Role;
+import tech.dobler.werstreamt.domain.Theme;
 
 import java.time.Instant;
 import java.util.EnumSet;
@@ -50,6 +51,11 @@ public class AppUser {
     @Column(name = "provider", nullable = false)
     private AuthProvider provider = AuthProvider.LOCAL;
 
+    /** The user's UI colour-scheme preference (defaults to following the OS). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme", nullable = false)
+    private Theme theme = Theme.SYSTEM;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -88,5 +94,9 @@ public class AppUser {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public void changeTheme(Theme newTheme) {
+        this.theme = newTheme;
     }
 }

@@ -1,25 +1,36 @@
 package tech.dobler.werstreamt.api;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+import tech.dobler.werstreamt.application.UserPreferencesService;
 import tech.dobler.werstreamt.application.dto.MeDto;
+import tech.dobler.werstreamt.domain.Theme;
 
 import java.util.List;
 
-/** Exposes the current principal (username + roles) for the Angular client. */
+/** The current principal (username, roles, theme) and updates to the user's own preferences. */
 @RestController
 @RequestMapping("/api/me")
+@RequiredArgsConstructor
 public class MeApiController {
+
+    private final UserPreferencesService userPreferencesService;
 
     @GetMapping
     public MeDto me(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            return new MeDto(false, null, List.of(), false);
+            return new MeDto(false, null, List.of(), false, Theme.SYSTEM);
         }
         final List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -27,6 +38,17 @@ public class MeApiController {
                 .map(a -> a.substring("ROLE_".length()))
                 .sorted()
                 .toList();
-        return new MeDto(true, authentication.getName(), roles, roles.contains("ADMIN"));
+        final var theme = userPreferencesService.themeFor(authentication.getName());
+        return new MeDto(true, authentication.getName(), roles, roles.contains("ADMIN"), theme);
+    }
+
+    /** Updates the current user's own theme preference. */
+    @PutMapping("/theme")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateTheme(Authentication authentication, @RequestBody ThemeUpdateRequest request) {
+        if (request == null || request.theme() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A theme is required.");
+        }
+        userPreferencesService.updateTheme(authentication.getName(), request.theme());
     }
 }

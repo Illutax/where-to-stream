@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -7,6 +7,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 import { AuthStore } from './core/auth-store';
+import { ThemeStore } from './core/theme-store';
 import { WatchlistStore } from './core/watchlist-store';
 import { Navbar } from './shared/navbar/navbar';
 
@@ -30,7 +31,9 @@ import { Navbar } from './shared/navbar/navbar';
           [watchlistCount]="watchlistStore.count()"
           [username]="auth.username()"
           [isAdmin]="auth.isAdmin()"
+          [theme]="themeStore.theme()"
           (logout)="auth.logout()"
+          (themeChange)="themeStore.set($event)"
           (navigate)="handset() && drawer.close()" />
       </mat-sidenav>
       <mat-sidenav-content>
@@ -45,6 +48,7 @@ export class App {
   private readonly breakpoints = inject(BreakpointObserver);
   protected readonly watchlistStore = inject(WatchlistStore);
   protected readonly auth = inject(AuthStore);
+  protected readonly themeStore = inject(ThemeStore);
 
   /** True on phone/narrow viewports: the drawer overlays and closes after navigation. */
   protected readonly handset = toSignal(
@@ -55,5 +59,12 @@ export class App {
   constructor() {
     this.watchlistStore.load();
     this.auth.load();
+    // Adopt the theme once the principal (with its saved preference) has loaded.
+    effect(() => {
+      const me = this.auth.me();
+      if (me) {
+        this.themeStore.init(me.theme);
+      }
+    });
   }
 }

@@ -82,6 +82,16 @@ app-root {
     font: var(--mat-sys-label-large);
     color: var(--mat-sys-on-surface-variant);
   }
+
+  .app-nav__theme {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .app-nav__theme-label {
+    font: var(--mat-sys-label-medium);
+  }
 }
 
 // Centered page container. Padding tightens on small screens.

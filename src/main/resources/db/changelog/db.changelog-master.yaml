@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       file: changes/006-watchlist-entry-schema.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/007-user-theme.xml
+      relativeToChangelogFile: true

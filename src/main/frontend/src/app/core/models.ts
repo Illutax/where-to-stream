@@ -79,12 +79,16 @@ export interface Status {
   serverStart: string;
 }
 
+/** UI colour-scheme preference (mirrors the server Theme enum). */
+export type Theme = 'SYSTEM' | 'LIGHT' | 'DARK';
+
 /** The current principal (mirrors the server MeDto). */
 export interface Me {
   authenticated: boolean;
   username: string | null;
   roles: string[];
   admin: boolean;
+  theme: Theme;
 }
 
 /** A user account in the administration UI (mirrors the server UserDto). */

@@ -4,10 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,7 +32,9 @@ class MeApiControllerTest {
                 .andExpect(jsonPath("$.admin").value(true))
                 .andExpect(jsonPath("$.roles.length()").value(2))
                 .andExpect(jsonPath("$.roles[0]").value("ADMIN"))
-                .andExpect(jsonPath("$.roles[1]").value("USER"));
+                .andExpect(jsonPath("$.roles[1]").value("USER"))
+                // Unknown user (mock principal not in the DB) falls back to the SYSTEM theme.
+                .andExpect(jsonPath("$.theme").value("SYSTEM"));
     }
 
     @Test
@@ -38,5 +43,27 @@ class MeApiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("bob"))
                 .andExpect(jsonPath("$.admin").value(false));
+    }
+
+    @Test
+    void updatingTheThemePersistsForTheCurrentUser() throws Exception {
+        // "admin" is the seeded account (see test application.properties), so it exists in the DB.
+        try {
+            mockMvc.perform(put("/api/me/theme").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"theme\":\"DARK\"}"))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/me").with(user("admin").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.theme").value("DARK"));
+
+            mockMvc.perform(put("/api/me/theme").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"theme\":\"NONSENSE\"}"))
+                    .andExpect(status().isBadRequest());
+        } finally {
+            // Reset so the shared context's seeded admin is left as-is for other tests.
+            mockMvc.perform(put("/api/me/theme").with(user("admin").roles("ADMIN")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"theme\":\"SYSTEM\"}"));
+        }
     }
 }
