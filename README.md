@@ -13,8 +13,9 @@ per-provider web pages (Netflix, Prime Video, Disney+, WOW, Google Play).
 - **Spring Security**: form + HTTP Basic + optional Google OIDC login, DB-backed users with
   `USER`/`ADMIN` roles (see [Authentication & users](#authentication--users))
 - **Angular 22** SPA (standalone, zoneless, signals; **Angular Material** M3 UI with
-  self-hosted Roboto) served under `/app` — the only UI — talking to a JSON API under `/api`.
-  The one server-rendered page left is the login page (the OIDC-ready auth entry).
+  self-hosted Roboto, per-user light/dark theme) served under `/app` — the only UI — talking to a
+  JSON API under `/api`. The one server-rendered page left is the login page (the OIDC-ready auth
+  entry).
 - Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
 - jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
 - MapStruct (entity ↔ persistence mapping), Lombok
@@ -84,7 +85,13 @@ Controllers hold no business logic: it lives in view-agnostic **application serv
 (`tech.dobler.werstreamt.application`) that return DTOs. The `@RestController`s under
 `tech.dobler.werstreamt.api` expose them as JSON under `/api`, which the Angular SPA consumes.
 The Angular app (`src/main/frontend`) follows a smart/dumb split: container components under
-`features/` own all data loading; presentational components under `shared/` only render inputs.
+`features/` own all data loading; presentational components under `shared/` only render inputs
+(the availability tables are sortable by name / year / added date).
+
+Domain concepts are modelled as **value objects** rather than bare primitives (`ImdbId`,
+`ReleaseYear`, `WatchlistDate`; see [ADR 0009](docs/adr/0009-domainvalues-statt-primitiven.md)):
+the backend keeps the JSON/DB contracts unchanged via Jackson `@JsonValue` + JPA `@Converter`, and
+the Angular client mirrors them as branded types.
 
 ### Frontend development
 
@@ -205,6 +212,8 @@ Deployment config (docker compose) is documented in [`.env.example`](.env.exampl
   strong password is generated and logged once at startup — change it after first login.
 - **User management:** `ADMIN`s manage users in the Angular UI (`/app/#/admin/users`), which
   calls `/api/admin/users`.
+- **Per-user theme:** each account stores a UI colour-scheme preference (`SYSTEM`/`LIGHT`/`DARK`,
+  default `SYSTEM` = follow the OS), chosen in the navbar and persisted via `PUT /api/me/theme`.
 - **Google login (optional):** start with `SPRING_PROFILES_ACTIVE=google` and provide
   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (redirect URI `{baseUrl}/login/oauth2/code/google`).
   Without the profile, OIDC is off and only local accounts are used. First OIDC login provisions a
@@ -271,7 +280,8 @@ mvn -Ptestcontainers test
 | `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached (ADMIN) |
 | `POST /api/refresh?scope=seen\|all` | Force-refresh cached results (ADMIN) |
 | `GET /api/search?imdbId=…` | Resolve availability for a title |
-| `GET /api/me` | The current principal (username, roles, admin flag) |
+| `GET /api/me` | The current principal (username, roles, admin flag, theme) |
+| `PUT /api/me/theme` | Set the current user's theme (`SYSTEM`/`LIGHT`/`DARK`) |
 | `GET /api/admin/users` · `POST` · `PUT`/`DELETE …/{id}` | User administration (ADMIN) |
 | `GET /api/status` | Version & server start time (authenticated) |
 
