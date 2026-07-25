@@ -29,6 +29,9 @@ Größere Umbauten (nach dem Review):
   Anwendungsseiten + Controller, die Legacy-GET-Wartungsendpunkte und die Thymeleaf-Dialekte
   wurden entfernt (nur die Login-Seite bleibt als OIDC-fertiger Auth-Einstieg). `SecurityConfig`
   entsprechend eingedampft. Siehe [ADR 0008](docs/adr/0008-thymeleaf-client-entfernen.md).
+- ✅ **Domain-Values statt Primitiver** — `ImdbId`, `ReleaseYear`, `WatchlistDate` als Value
+  Objects im Backend (Jackson `@JsonValue` + JPA-`@Converter`, JSON/DB-Verträge unverändert) und
+  als Branded Types im Angular-Client. Siehe [ADR 0009](docs/adr/0009-domainvalues-statt-primitiven.md).
 
 TODO-Tickets:
 
