@@ -14,9 +14,10 @@ export const routes: Routes = [
     title: 'Provider — W2S',
   },
   {
-    path: 'list',
-    loadComponent: () => import('./features/change-list/change-list-page').then((m) => m.ChangeListPage),
-    title: 'Change List — W2S',
+    path: 'watchlist',
+    loadComponent: () =>
+      import('./features/watchlist-import/watchlist-import-page').then((m) => m.WatchlistImportPage),
+    title: 'My Watchlist — W2S',
   },
   {
     path: 'manage',

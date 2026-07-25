@@ -1,38 +1,38 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ListSelectionStore } from './list-selection-store';
+import { WatchlistStore } from './watchlist-store';
 
-describe('ListSelectionStore', () => {
-  let store: ListSelectionStore;
+describe('WatchlistStore', () => {
+  let store: WatchlistStore;
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(withFetch()), provideHttpClientTesting()],
     });
-    store = TestBed.inject(ListSelectionStore);
+    store = TestBed.inject(WatchlistStore);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => httpMock.verify());
 
   it('is empty before loading', () => {
-    expect(store.current()).toBeNull();
+    expect(store.count()).toBeNull();
   });
 
-  it('loads the current list from /api/lists', () => {
+  it('loads the count from /api/watchlist', () => {
     store.load();
     httpMock
-      .expectOne((r) => r.url.endsWith('/api/lists'))
-      .flush({ current: 'my-list.csv', available: ['my-list.csv'] });
+      .expectOne((r) => r.url.endsWith('/api/watchlist'))
+      .flush({ count: 12, lastImportedAt: null });
 
-    expect(store.current()).toBe('my-list.csv');
+    expect(store.count()).toBe(12);
   });
 
-  it('set() updates the current list without a request', () => {
-    store.set('other.csv');
-    expect(store.current()).toBe('other.csv');
+  it('set() updates the count without a request', () => {
+    store.set(3);
+    expect(store.count()).toBe(3);
     httpMock.expectNone(() => true);
   });
 });

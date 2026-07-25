@@ -14,7 +14,6 @@ describe('Navbar', () => {
   });
 
   it('renders a link for every streaming provider', () => {
-    fixture.componentRef.setInput('currentList', 'my-list.csv');
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
@@ -23,16 +22,26 @@ describe('Navbar', () => {
     }
   });
 
-  it('shows the current list name', () => {
-    fixture.componentRef.setInput('currentList', 'my-list.csv');
+  it('shows the watchlist size once known', () => {
+    fixture.componentRef.setInput('watchlistCount', 42);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('my-list.csv');
+    expect(fixture.nativeElement.textContent).toContain('42');
   });
 
-  it('shows a placeholder until the current list is known', () => {
-    fixture.componentRef.setInput('currentList', null);
+  it('omits the watchlist size until it is known', () => {
+    fixture.componentRef.setInput('watchlistCount', null);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('…');
+    expect(fixture.nativeElement.textContent).not.toContain('My list:');
+  });
+
+  it('shows the My Watchlist link only to authenticated users', () => {
+    fixture.componentRef.setInput('username', null);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('My Watchlist');
+
+    fixture.componentRef.setInput('username', 'alice');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('My Watchlist');
   });
 
   it('hides admin links and the logout for an anonymous/non-admin navbar', () => {

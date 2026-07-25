@@ -7,8 +7,8 @@ import { PROVIDERS } from '../../core/models';
 
 /**
  * Presentational navigation drawer (Material nav-list). Renders the provider links, the current
- * list and user, admin-only links, and emits a logout request. Emits {@code navigate} on every
- * link tap so the shell can close the drawer on small screens. Holds no data-loading logic.
+ * user's watchlist size, admin-only links, and emits a logout request. Emits {@code navigate} on
+ * every link tap so the shell can close the drawer on small screens. Holds no data-loading logic.
  */
 @Component({
   selector: 'app-navbar',
@@ -25,10 +25,13 @@ import { PROVIDERS } from '../../core/models';
       <a mat-list-item routerLink="/status" routerLinkActive="active-link"
          (click)="navigate.emit()">Status</a>
 
+      @if (username()) {
+        <a mat-list-item routerLink="/watchlist" routerLinkActive="active-link"
+           (click)="navigate.emit()">My Watchlist</a>
+      }
+
       @if (isAdmin()) {
         <mat-divider />
-        <a mat-list-item routerLink="/list" routerLinkActive="active-link"
-           (click)="navigate.emit()">Change List</a>
         <a mat-list-item routerLink="/manage" routerLinkActive="active-link"
            (click)="navigate.emit()">Manage Cache</a>
         <a mat-list-item routerLink="/admin/users" routerLinkActive="active-link"
@@ -37,7 +40,9 @@ import { PROVIDERS } from '../../core/models';
 
       <mat-divider />
       <div class="app-nav__meta">
-        <div>Selected list: {{ currentList() ?? '…' }}</div>
+        @if (watchlistCount() !== null) {
+          <div>My list: {{ watchlistCount() }} titles</div>
+        }
         @if (username()) {
           <div>Signed in as {{ username() }}</div>
           <button matButton="outlined" (click)="logout.emit()">Logout</button>
@@ -47,7 +52,7 @@ import { PROVIDERS } from '../../core/models';
   `,
 })
 export class Navbar {
-  readonly currentList = input<string | null>(null);
+  readonly watchlistCount = input<number | null>(null);
   readonly username = input<string | null>(null);
   readonly isAdmin = input<boolean>(false);
   readonly logout = output<void>();

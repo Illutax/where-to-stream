@@ -7,7 +7,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 import { AuthStore } from './core/auth-store';
-import { ListSelectionStore } from './core/list-selection-store';
+import { WatchlistStore } from './core/watchlist-store';
 import { Navbar } from './shared/navbar/navbar';
 
 @Component({
@@ -27,7 +27,7 @@ import { Navbar } from './shared/navbar/navbar';
         [mode]="handset() ? 'over' : 'side'"
         [opened]="!handset()">
         <app-navbar
-          [currentList]="listStore.current()"
+          [watchlistCount]="watchlistStore.count()"
           [username]="auth.username()"
           [isAdmin]="auth.isAdmin()"
           (logout)="auth.logout()"
@@ -43,7 +43,7 @@ import { Navbar } from './shared/navbar/navbar';
 })
 export class App {
   private readonly breakpoints = inject(BreakpointObserver);
-  protected readonly listStore = inject(ListSelectionStore);
+  protected readonly watchlistStore = inject(WatchlistStore);
   protected readonly auth = inject(AuthStore);
 
   /** True on phone/narrow viewports: the drawer overlays and closes after navigation. */
@@ -53,7 +53,7 @@ export class App {
   );
 
   constructor() {
-    this.listStore.load();
+    this.watchlistStore.load();
     this.auth.load();
   }
 }

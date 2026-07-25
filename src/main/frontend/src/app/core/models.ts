@@ -51,14 +51,19 @@ export interface ManagePage {
   needsScrapeCount: number;
 }
 
-export interface ListSelection {
-  current: string;
-  available: string[];
+/** Status of the current user's watchlist (mirrors the server WatchlistDto). */
+export interface WatchlistStatus {
+  count: number;
+  /** ISO timestamp of the most recent import, or null when the watchlist is empty. */
+  lastImportedAt: string | null;
 }
 
-export interface ChangeListResult {
-  selected: string;
-  cached: number;
+/** Outcome of a CSV import full-sync (mirrors the server WatchlistImportResultDto). */
+export interface WatchlistImportResult {
+  added: number;
+  updated: number;
+  removed: number;
+  total: number;
 }
 
 export interface InvalidateResult {
