@@ -2,6 +2,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { CatalogApi } from './catalog-api';
+import { imdbId, releaseYear, watchlistDate } from '../domain';
 import { OverviewEntry } from '../models';
 
 describe('CatalogApi', () => {
@@ -20,7 +21,7 @@ describe('CatalogApi', () => {
 
   it('requests the catalogue from the "../api/"-derived base and returns the body', () => {
     const payload: OverviewEntry[] = [
-      { isRated: true, name: 'Movie', imdbId: 'tt1', year: 2020, added: '2020-01-01', services: 'Netflix' },
+      { isRated: true, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
     ];
 
     let received: OverviewEntry[] | undefined;

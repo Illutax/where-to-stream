@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ManagePage } from './manage-page';
 import { ManageTable } from '../../shared/manage-table/manage-table';
+import { imdbId } from '../../core/domain';
 import { ManagePage as ManagePageDto } from '../../core/models';
 
 describe('ManagePage', () => {
@@ -11,7 +12,7 @@ describe('ManagePage', () => {
   let httpMock: HttpTestingController;
 
   const dto = (needsScrapeCount = 1): ManagePageDto => ({
-    rows: [{ imdbId: 'tt1', name: 'Alpha', isRated: true, needsScrape: true }],
+    rows: [{ imdbId: imdbId('tt1'), name: 'Alpha', isRated: true, needsScrape: true }],
     needsScrapeCount,
   });
 
@@ -41,7 +42,7 @@ describe('ManagePage', () => {
   it('posts the selected ids on invalidate and then reloads', () => {
     flushInitialLoad();
 
-    table().invalidate.emit(['tt1', 'tt2']);
+    table().invalidate.emit([imdbId('tt1'), imdbId('tt2')]);
 
     const post = httpMock.expectOne((r) => r.url.endsWith('/api/manage/invalidate') && r.method === 'POST');
     expect(post.request.body).toEqual({ imdbIds: ['tt1', 'tt2'] });

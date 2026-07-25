@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { ProviderPage } from './provider-page';
+import { imdbId, releaseYear, watchlistDate } from '../../core/domain';
 import { ProviderPage as ProviderPageDto } from '../../core/models';
 
 describe('ProviderPage', () => {
@@ -38,7 +39,7 @@ describe('ProviderPage', () => {
     setup('netflix');
     httpMock
       .expectOne((r) => r.url.endsWith('/api/providers/netflix'))
-      .flush(page({ included: [{ isRated: false, name: 'Nolan Film', imdbId: 'tt9', year: 2020, added: '2020-01-01' }] }));
+      .flush(page({ included: [{ isRated: false, name: 'Nolan Film', imdbId: imdbId('tt9'), year: releaseYear(2020), added: watchlistDate('2020-01-01') }] }));
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Netflix');
@@ -55,7 +56,7 @@ describe('ProviderPage', () => {
     httpMock
       .expectOne((r) => r.url.endsWith('/api/providers/google'))
       .flush(page({ provider: 'google', paid: [
-        { name: 'Buyable', imdbId: 'tt5', price: 'kaufen: HD: 9,99 ', added: '2021-01-01', isRated: false, year: '2021', languages: null },
+        { name: 'Buyable', imdbId: imdbId('tt5'), price: 'kaufen: HD: 9,99 ', added: watchlistDate('2021-01-01'), isRated: false, year: '2021', languages: null },
       ] }));
     fixture.detectChanges();
 

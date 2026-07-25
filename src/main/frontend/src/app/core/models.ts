@@ -1,14 +1,18 @@
 /**
  * TypeScript mirrors of the server-side DTOs (tech.dobler.werstreamt.application.dto).
- * Kept 1:1 with the JSON shape returned by the /api endpoints — no client-side reshaping.
+ * Kept 1:1 with the JSON shape returned by the /api endpoints — no client-side reshaping. The
+ * imdbId/year/added fields carry the branded domain value types (see core/domain.ts); at runtime
+ * they are the same string/number the JSON already holds.
  */
+
+import { ImdbId, ReleaseYear, WatchlistDate } from './domain';
 
 export interface OverviewEntry {
   isRated: boolean;
   name: string;
-  imdbId: string;
-  year: number;
-  added: string;
+  imdbId: ImdbId;
+  year: ReleaseYear;
+  added: WatchlistDate;
   /** Comma-separated available services, or null when unavailable. */
   services: string | null;
 }
@@ -16,19 +20,19 @@ export interface OverviewEntry {
 export interface FlatrateEntry {
   isRated: boolean;
   name: string;
-  imdbId: string;
-  year: number;
-  added: string;
+  imdbId: ImdbId;
+  year: ReleaseYear;
+  added: WatchlistDate;
 }
 
 export interface PaidEntry {
   name: string;
-  imdbId: string;
+  imdbId: ImdbId;
   /** Pre-formatted German price string (formatted on the server). */
   price: string;
-  added: string;
+  added: WatchlistDate;
   isRated: boolean;
-  /** Year as text; "Not yet released" for unreleased titles. */
+  /** Year as text; "Not yet released" for unreleased titles (formatted on the server). */
   year: string;
   languages: string | null;
 }
@@ -40,7 +44,7 @@ export interface ProviderPage {
 }
 
 export interface ManageRow {
-  imdbId: string;
+  imdbId: ImdbId;
   name: string;
   isRated: boolean;
   needsScrape: boolean;

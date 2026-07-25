@@ -2,6 +2,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { OverviewPage } from './overview-page';
+import { imdbId, releaseYear, watchlistDate } from '../../core/domain';
 import { OverviewEntry } from '../../core/models';
 
 describe('OverviewPage', () => {
@@ -27,7 +28,7 @@ describe('OverviewPage', () => {
 
   it('renders the catalogue table on success', () => {
     const payload: OverviewEntry[] = [
-      { isRated: true, name: 'Movie', imdbId: 'tt1', year: 2020, added: '2020-01-01', services: 'Netflix' },
+      { isRated: true, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
     ];
     httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
     fixture.detectChanges();

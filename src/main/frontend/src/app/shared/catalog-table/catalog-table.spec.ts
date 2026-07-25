@@ -2,6 +2,7 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatSortHarness } from '@angular/material/sort/testing';
 import { CatalogTable } from './catalog-table';
+import { imdbId, releaseYear, watchlistDate } from '../../core/domain';
 import { OverviewEntry } from '../../core/models';
 
 describe('CatalogTable', () => {
@@ -10,9 +11,9 @@ describe('CatalogTable', () => {
   const entry = (over: Partial<OverviewEntry>): OverviewEntry => ({
     isRated: false,
     name: 'Movie',
-    imdbId: 'tt1',
-    year: 2020,
-    added: '2020-01-01',
+    imdbId: imdbId('tt1'),
+    year: releaseYear(2020),
+    added: watchlistDate('2020-01-01'),
     services: null,
     ...over,
   });
@@ -27,7 +28,7 @@ describe('CatalogTable', () => {
   }
 
   it('renders one row per entry with an IMDb link', () => {
-    fixture.componentRef.setInput('entries', [entry({ name: 'Alpha', imdbId: 'tt10' }), entry({ name: 'Beta' })]);
+    fixture.componentRef.setInput('entries', [entry({ name: 'Alpha', imdbId: imdbId('tt10') }), entry({ name: 'Beta' })]);
     fixture.detectChanges();
 
     expect(rows()).toHaveLength(2);
@@ -38,8 +39,8 @@ describe('CatalogTable', () => {
 
   it('shows the services when present and "N/A" when null', () => {
     fixture.componentRef.setInput('entries', [
-      entry({ imdbId: 'tt1', services: 'Netflix, Disney+' }),
-      entry({ imdbId: 'tt2', services: null }),
+      entry({ imdbId: imdbId('tt1'), services: 'Netflix, Disney+' }),
+      entry({ imdbId: imdbId('tt2'), services: null }),
     ]);
     fixture.detectChanges();
 
@@ -59,8 +60,8 @@ describe('CatalogTable', () => {
 
   it('sorts by title ascending then descending as the header is clicked', async () => {
     fixture.componentRef.setInput('entries', [
-      entry({ name: 'Beta', imdbId: 'tt2' }),
-      entry({ name: 'Alpha', imdbId: 'tt1' }),
+      entry({ name: 'Beta', imdbId: imdbId('tt2') }),
+      entry({ name: 'Alpha', imdbId: imdbId('tt1') }),
     ]);
     fixture.detectChanges();
 
@@ -78,8 +79,8 @@ describe('CatalogTable', () => {
 
   it('sorts by year when the Year header is clicked', async () => {
     fixture.componentRef.setInput('entries', [
-      entry({ name: 'Newer', imdbId: 'tt2', year: 2010 }),
-      entry({ name: 'Older', imdbId: 'tt1', year: 1999 }),
+      entry({ name: 'Newer', imdbId: imdbId('tt2'), year: releaseYear(2010) }),
+      entry({ name: 'Older', imdbId: imdbId('tt1'), year: releaseYear(1999) }),
     ]);
     fixture.detectChanges();
 

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output, signal } from '@angu
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
+import { ImdbId } from '../../core/domain';
 import { ManageRow } from '../../core/models';
 
 /**
@@ -83,14 +84,14 @@ export class ManageTable {
   readonly rows = input.required<ManageRow[]>();
   readonly needsScrapeCount = input.required<number>();
 
-  readonly invalidate = output<string[]>();
+  readonly invalidate = output<ImdbId[]>();
   readonly scrape = output<void>();
 
   protected readonly displayedColumns = ['select', 'title', 'imdbId', 'status'];
   protected readonly trackByImdbId = (_: number, row: ManageRow) => row.imdbId;
-  protected readonly selected = signal<ReadonlySet<string>>(new Set());
+  protected readonly selected = signal<ReadonlySet<ImdbId>>(new Set());
 
-  protected toggle(imdbId: string): void {
+  protected toggle(imdbId: ImdbId): void {
     const next = new Set(this.selected());
     if (next.has(imdbId)) {
       next.delete(imdbId);

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
+import { imdbUrl, releaseYearDisplay } from '../../core/domain';
 import { FlatrateEntry } from '../../core/models';
 import { sortRows } from '../sort/table-sort';
 
@@ -21,13 +22,13 @@ import { sortRows } from '../sort/table-sort';
       <ng-container matColumnDef="title">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
         <td mat-cell *matCellDef="let entry">
-          <a [href]="'https://www.imdb.com/title/' + entry.imdbId" target="_blank" rel="noopener">{{ entry.name }}</a>
+          <a [href]="imdbUrl(entry.imdbId)" target="_blank" rel="noopener">{{ entry.name }}</a>
         </td>
       </ng-container>
 
       <ng-container matColumnDef="year">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Year</th>
-        <td mat-cell *matCellDef="let entry">{{ entry.year }}</td>
+        <td mat-cell *matCellDef="let entry">{{ releaseYearDisplay(entry.year) }}</td>
       </ng-container>
 
       <ng-container matColumnDef="added">
@@ -50,4 +51,6 @@ export class FlatrateTable {
   protected readonly sorted = computed(() => sortRows(this.entries(), this.sort()));
   protected readonly displayedColumns = ['rated', 'title', 'year', 'added'];
   protected readonly trackByImdbId = (_: number, entry: FlatrateEntry) => entry.imdbId;
+  protected readonly imdbUrl = imdbUrl;
+  protected readonly releaseYearDisplay = releaseYearDisplay;
 }

@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../api-base';
+import { ImdbId } from '../domain';
 import { InvalidateResult, ManagePage, ScrapeResult } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -13,7 +14,7 @@ export class ManageApi {
     return this.http.get<ManagePage>(`${this.base}manage`);
   }
 
-  invalidate(imdbIds: string[]): Observable<InvalidateResult> {
+  invalidate(imdbIds: ImdbId[]): Observable<InvalidateResult> {
     return this.http.post<InvalidateResult>(`${this.base}manage/invalidate`, { imdbIds });
   }
 

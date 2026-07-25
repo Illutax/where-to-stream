@@ -3,6 +3,7 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatCheckboxHarness } from '@angular/material/checkbox/testing';
 import { ManageTable } from './manage-table';
+import { imdbId } from '../../core/domain';
 import { ManageRow } from '../../core/models';
 
 describe('ManageTable', () => {
@@ -11,8 +12,8 @@ describe('ManageTable', () => {
   let loader: HarnessLoader;
 
   const rows: ManageRow[] = [
-    { imdbId: 'tt1', name: 'Alpha', isRated: true, needsScrape: true },
-    { imdbId: 'tt2', name: 'Beta', isRated: false, needsScrape: false },
+    { imdbId: imdbId('tt1'), name: 'Alpha', isRated: true, needsScrape: true },
+    { imdbId: imdbId('tt2'), name: 'Beta', isRated: false, needsScrape: false },
   ];
 
   beforeEach(() => {

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ManageApi } from '../../core/api/manage-api';
+import { ImdbId } from '../../core/domain';
 import { ManagePage as ManagePageDto } from '../../core/models';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { Loading } from '../../shared/loading/loading';
@@ -53,7 +54,7 @@ export class ManagePage {
     });
   }
 
-  protected onInvalidate(imdbIds: string[]): void {
+  protected onInvalidate(imdbIds: ImdbId[]): void {
     this.api.invalidate(imdbIds).subscribe({
       next: (result) => {
         this.snackBar.open(`Invalidated ${result.invalidated} cache row(s).`, 'OK', { duration: 4000 });

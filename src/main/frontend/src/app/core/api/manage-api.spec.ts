@@ -2,6 +2,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ManageApi } from './manage-api';
+import { imdbId } from '../domain';
 
 describe('ManageApi', () => {
   let api: ManageApi;
@@ -25,7 +26,7 @@ describe('ManageApi', () => {
   });
 
   it('POSTs the ids to invalidate', () => {
-    api.invalidate(['tt1', 'tt2']).subscribe();
+    api.invalidate([imdbId('tt1'), imdbId('tt2')]).subscribe();
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/manage/invalidate'));
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ imdbIds: ['tt1', 'tt2'] });
