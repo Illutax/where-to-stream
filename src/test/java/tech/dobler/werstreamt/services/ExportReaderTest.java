@@ -79,6 +79,22 @@ class ExportReaderTest {
     }
 
     @Test
+    void storesTheCanonicalImdbUrlNotTheRawCsvValue() {
+        // The raw URL carries a javascript: payload but still contains a valid IMDb id substring.
+        // The imdbId is extracted and the stored URL is rebuilt from it — the payload is dropped.
+        final var csv = """
+                Position,Const,Created,Modified,Description,Title,Original Title,URL,Title Type,IMDb Rating,Runtime (mins),Year,Genres,Num Votes,Release Date,Directors,Your Rating,Date Rated
+                1,tt0000001,2012-06-22,2012-06-22,,"Evil","Evil",javascript:alert(1)//https://www.imdb.com/title/tt1337/,Movie,8.5,130,2006,"Drama",1,2006-10-20,"Dir",10,2012-06-22
+                """;
+        final var in = new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8));
+
+        final ImdbEntry entry = exportReader.parse(in).getFirst();
+
+        assertThat(entry.imdbId()).isEqualTo("tt1337");
+        assertThat(entry.url()).isEqualTo(URI.create("https://www.imdb.com/title/tt1337/"));
+    }
+
+    @Test
     void skipsMalformedRows() {
         final var csv = """
                 Position,Const,Created,Modified,Description,Title,Original Title,URL,Title Type,IMDb Rating,Runtime (mins),Year,Genres,Num Votes,Release Date,Directors,Your Rating,Date Rated

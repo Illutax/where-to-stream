@@ -72,17 +72,23 @@ public class ExportReader {
     private ImdbEntry toEntry(CSVRecord record) {
         final var created = record.get("Created");
         final var name = record.get("Title");
-        final var url = record.get("URL");
         final var yearString = record.get("Year");
         final var year = yearString.isBlank() ? 0 : Integer.parseInt(yearString);
         final var isRated = !record.get("Your Rating").isBlank();
-        final var imdbId = extractImdbId(url);
-        return new ImdbEntry(name, URI.create(url), created, isRated, year, imdbId);
+        final var imdbId = extractImdbId(record.get("URL"));
+        // Build the stored URL from the validated imdbId (tt\w+) rather than keeping the raw CSV
+        // field: the raw value is attacker-controlled and unused by the API/UI, so canonicalising
+        // it here removes any chance of persisting a non-IMDb payload (e.g. a javascript: URL).
+        return new ImdbEntry(name, canonicalUrl(imdbId), created, isRated, year, imdbId);
     }
 
     private static String extractImdbId(String url) {
         final var matcher = PATTERN.matcher(url);
         if (!matcher.find()) throw new IllegalArgumentException("Couldn't find imdbId for url %s".formatted(url));
         return matcher.group(1);
+    }
+
+    private static URI canonicalUrl(String imdbId) {
+        return URI.create("https://www.imdb.com/title/" + imdbId + "/");
     }
 }
