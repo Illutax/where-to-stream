@@ -2,6 +2,16 @@
 
 - **Date**: 2026-07-19
 - **Status**: Accepted
+- **Update (2026-07-25):** Die Thymeleaf-UI wurde entfernt ([ADR 0008](0008-thymeleaf-client-entfernen.md));
+  die SPA ist die einzige UI. Damit sind Teile des Kontexts unten historisch: die aufgezählten
+  Thymeleaf-Pfade (`/`, `/amazon`, `/list`, `/manage`, …) existieren nicht mehr, und das Argument
+  „null Kollisionsrisiko mit den Thymeleaf-Routen" ist gegenstandslos. Die **Entscheidung bleibt**:
+  Hash-Routing wurde bewusst beibehalten — tragend sind jetzt die Umgebungs-Portabilität (ein Build
+  für Dev/JAR/PROD-Context-Path) und der `document.baseURI` → `../api/`-Trick. `/` liefert keine
+  Seite mehr, sondern leitet auf `/app/` um. Der unten genannte Trigger „Thymeleaf-UI wird abgelöst"
+  ist damit **eingetreten, aber ohne Umstieg** — der eigentliche Anlass, Path-Routing neu zu prüfen,
+  bleibt ein SPA-Redirect-OIDC-Login (Keycloak, siehe [ADR 0008](0008-thymeleaf-client-entfernen.md))
+  oder ein Öffentlich-Werden der App.
 
 ## Context
 
