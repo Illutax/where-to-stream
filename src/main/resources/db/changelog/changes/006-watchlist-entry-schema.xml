@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <property name="uuid.type" value="uuid" dbms="h2"/>
+    <property name="uuid.type" value="uuid" dbms="mariadb"/>
+    <property name="timestamp.type" value="timestamp(6) with time zone" dbms="h2"/>
+    <property name="timestamp.type" value="datetime(6)" dbms="mariadb"/>
+
+    <changeSet id="006-watchlist-entry-schema" author="vdobler">
+        <comment>Per-user watchlist entries (replaces the single global in-memory IMDb list).</comment>
+
+        <createTable tableName="watchlist_entry">
+            <column name="id" type="${uuid.type}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="${uuid.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="imdb_id" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="url" type="varchar(255)"/>
+            <column name="added" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_rated" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="release_year" type="integer"/>
+            <column name="created_at" type="${timestamp.type}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="watchlist_entry" columnNames="user_id, imdb_id"
+                             constraintName="uq_watchlist_entry_user_imdb"/>
+        <createIndex tableName="watchlist_entry" indexName="ix_watchlist_entry_user">
+            <column name="user_id"/>
+        </createIndex>
+        <addForeignKeyConstraint constraintName="fk_watchlist_entry_user"
+                                 baseTableName="watchlist_entry" baseColumnNames="user_id"
+                                 referencedTableName="app_user" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>
