@@ -7,14 +7,21 @@ services:
       - ./logs:/opt/app/logs:Z
     environment:
       - SERVER_PORT=8080
-      - SPRING_PROFILES_ACTIVE=mariadb
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-mariadb}
       - MARIADB_URL=jdbc:mariadb://db:3306/w2s
       - MARIADB_USER=w2s
-      - MARIADB_PASSWORD=w2s
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD:-w2s}
 #      - logging.level.org.springframework.web.servlet.DispatcherServlet=TRACE
       - server.servlet.context-path=/w2s
-      - W2S_SECURITY_INITIALADMIN_USER=${W2S_ADMIN_USER}
+      - SERVER_SERVLET_SESSION_TIMEOUT=${W2S_SESSION_TIMEOUT:-30m}
+      # NOTE: property is initial-admin.USERNAME -> env must be ...INITIALADMIN_USERNAME.
+      - W2S_SECURITY_INITIALADMIN_USERNAME=${W2S_ADMIN_USER:-admin}
       - W2S_SECURITY_INITIALADMIN_PASSWORD=${W2S_ADMIN_PASSWORD}
+      # Stable secret so remember-me / persistent login survives restarts (see .env.example).
+      - W2S_SECURITY_REMEMBERME_KEY=${W2S_REMEMBER_ME_KEY}
+      # Only used when the 'google' profile is active; harmless (ignored) otherwise.
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
     depends_on:
       - db
     networks:
@@ -28,8 +35,8 @@ services:
     environment:
       - MARIADB_DATABASE=w2s
       - MARIADB_USER=w2s
-      - MARIADB_PASSWORD=w2s
-      - MARIADB_ROOT_PASSWORD=change-me
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD:-w2s}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD:-change-me}
     volumes:
       # Named volume (not a bind mount): the engine initialises it with the image's
       # mysql:mysql ownership and handles the rootless-Podman uid mapping, avoiding the

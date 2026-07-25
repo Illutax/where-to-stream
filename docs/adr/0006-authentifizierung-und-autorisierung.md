@@ -30,12 +30,12 @@ Spring Security 7 (Boot 4) mit einem **datenbankgestützten Benutzerstore**:
   XSRF-Interceptor das `X-XSRF-TOKEN`-Header setzt.
 - **API vs. Seiten:** `/api/**` antwortet unauthentifiziert mit **401** (die SPA leitet dann zur
   Login-Seite), Seiten-Requests im Browser werden auf `/login` **weitergeleitet**.
-- **Sessions:** In-Memory-HTTP-Sessions, Idle-Timeout `server.servlet.session.timeout` (Default
+- **Sessions:** **In der DB persistiert** (Spring Session JDBC, `spring-boot-session-jdbc`;
+  Schema via Liquibase 005, `initialize-schema=never`) → Sessions **überleben Neustarts** (das
+  Deployment baut/startet per cron neu). Idle-Timeout `server.servlet.session.timeout` (Default
   30 min). Zusätzlich **Remember-Me** ("Stay signed in") mit stabilem Key
-  (`w2s.security.remember-me.key`): überlebt Browser-Schließen **und** Server-Neustarts — wichtig,
-  weil das Deployment per cron neu baut/startet und In-Memory-Sessions dabei verloren gehen. Ohne
-  gesetzten Key wird ein transienter generiert (Warnung im Log; Remember-Me übersteht dann keinen
-  Neustart).
+  (`w2s.security.remember-me.key`) für persistenten Login über Browser-Schließen hinaus; ohne
+  gesetzten Key wird ein transienter generiert (Warnung im Log).
 - **Benutzerverwaltung** in **beiden** Clients: Thymeleaf (`/admin/users`) und Angular
   (`/admin/users`, Route-Guard), beide über dieselbe `UserAdminService`/`/api/admin/users`.
 

@@ -65,6 +65,17 @@
             <groupId>org.thymeleaf.extras</groupId>
             <artifactId>thymeleaf-extras-springsecurity6</artifactId>
         </dependency>
+        <!-- Persist HTTP sessions in the DB so logins survive restarts (schema via Liquibase).
+             In Boot 4 the JDBC-session auto-configuration lives in the separate spring-boot-session-jdbc
+             module (not pulled transitively by the spring-session-jdbc library). -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-session-jdbc</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>jquery</artifactId>
