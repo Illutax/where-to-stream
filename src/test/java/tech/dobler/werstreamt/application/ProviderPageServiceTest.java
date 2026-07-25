@@ -10,6 +10,8 @@ import tech.dobler.werstreamt.application.dto.PaidEntryDto;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.services.AggregateService;
 import tech.dobler.werstreamt.services.WatchlistCatalog;
@@ -41,7 +43,7 @@ class ProviderPageServiceTest {
 
     private static ImdbEntry entry(String imdbId, String name, String added, int year) {
         return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                added, false, year, id(imdbId));
+                WatchlistDate.of(added), false, ReleaseYear.of(year), id(imdbId));
     }
 
     private static QueryResult paid(String imdbId, String serviceName) {
@@ -61,7 +63,7 @@ class ProviderPageServiceTest {
 
         assertThat(page.provider()).isEqualTo("amazon");
         assertThat(page.included()).extracting(FlatrateEntryDto::added)
-                .containsExactly("2020-01-01", "2021-05-05");
+                .containsExactly(WatchlistDate.of("2020-01-01"), WatchlistDate.of("2021-05-05"));
         assertThat(page.paid()).extracting(PaidEntryDto::name).containsExactly("Paid");
     }
 
@@ -86,7 +88,7 @@ class ProviderPageServiceTest {
         final var page = service.pageFor(StreamingProvider.GOOGLE, USER);
 
         assertThat(page.included()).isEmpty();
-        assertThat(page.paid()).extracting(PaidEntryDto::added).containsExactly("2020-01-01", "2021-05-05");
+        assertThat(page.paid()).extracting(PaidEntryDto::added).containsExactly(WatchlistDate.of("2020-01-01"), WatchlistDate.of("2021-05-05"));
         // year 0 becomes the "Not yet released" placeholder
         assertThat(page.paid().get(0).year()).isEqualTo("Not yet released");
     }

@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 import tech.dobler.werstreamt.domain.Role;
 
 import java.net.URI;
@@ -47,7 +49,7 @@ public abstract class AbstractWatchlistEntryRepositoryTests {
 
     private WatchlistEntry entry(UUID userId, String imdbId, boolean rated) {
         return WatchlistEntry.of(userId, ImdbId.of(imdbId), "Title " + imdbId,
-                URI.create("https://www.imdb.com/title/" + imdbId + "/"), "2020-01-01", rated, 2020, NOW);
+                URI.create("https://www.imdb.com/title/" + imdbId + "/"), WatchlistDate.of("2020-01-01"), rated, ReleaseYear.of(2020), NOW);
     }
 
     private static ImdbId id(String imdbId) {

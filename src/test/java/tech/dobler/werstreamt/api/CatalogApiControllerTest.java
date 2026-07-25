@@ -11,6 +11,8 @@ import tech.dobler.werstreamt.application.CatalogOverviewService;
 import tech.dobler.werstreamt.application.CurrentUserService;
 import tech.dobler.werstreamt.application.dto.OverviewEntryDto;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 
 import java.util.List;
 import java.util.UUID;
@@ -38,8 +40,8 @@ class CatalogApiControllerTest {
     void catalogReturnsJsonArray() throws Exception {
         when(currentUserService.resolveId("alice")).thenReturn(USER);
         when(catalogOverviewService.overview(eq(USER))).thenReturn(List.of(
-                new OverviewEntryDto(true, "Movie", ImdbId.of("tt1"), 2020, "2020-01-01", "Netflix"),
-                new OverviewEntryDto(false, "Other", ImdbId.of("tt2"), 2021, "2021-01-01", null)));
+                new OverviewEntryDto(true, "Movie", ImdbId.of("tt1"), ReleaseYear.of(2020), WatchlistDate.of("2020-01-01"), "Netflix"),
+                new OverviewEntryDto(false, "Other", ImdbId.of("tt2"), ReleaseYear.of(2021), WatchlistDate.of("2021-01-01"), null)));
 
         mockMvc.perform(get("/api/catalog").principal(new UsernamePasswordAuthenticationToken("alice", "pw")))
                 .andExpect(status().isOk())

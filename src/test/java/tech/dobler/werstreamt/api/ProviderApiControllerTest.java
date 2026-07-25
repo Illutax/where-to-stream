@@ -14,6 +14,8 @@ import tech.dobler.werstreamt.application.dto.FlatrateEntryDto;
 import tech.dobler.werstreamt.application.dto.PaidEntryDto;
 import tech.dobler.werstreamt.application.dto.ProviderPageDto;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 
 import java.util.List;
 import java.util.UUID;
@@ -46,8 +48,8 @@ class ProviderApiControllerTest {
         when(currentUserService.resolveId("alice")).thenReturn(USER);
         when(providerPageService.pageFor(eq(StreamingProvider.AMAZON), eq(USER))).thenReturn(new ProviderPageDto(
                 "amazon",
-                List.of(new FlatrateEntryDto(true, "Incl", ImdbId.of("tt1"), 2020, "2020-01-01")),
-                List.of(new PaidEntryDto("Paid", ImdbId.of("tt2"), "kaufen: HD: 9,99 ", "2021-01-01", false, "2021", "Deutsch"))));
+                List.of(new FlatrateEntryDto(true, "Incl", ImdbId.of("tt1"), ReleaseYear.of(2020), WatchlistDate.of("2020-01-01"))),
+                List.of(new PaidEntryDto("Paid", ImdbId.of("tt2"), "kaufen: HD: 9,99 ", WatchlistDate.of("2021-01-01"), false, "2021", "Deutsch"))));
 
         mockMvc.perform(get("/api/providers/amazon").principal(alice()))
                 .andExpect(status().isOk())

@@ -8,9 +8,9 @@ import java.util.Comparator;
 public record ImdbEntry(
         String name,
         URI url,
-        String added,
+        WatchlistDate added,
         boolean isRated,
-        int year,
+        ReleaseYear year,
         ImdbId imdbId
 ) implements Comparable<ImdbEntry> {
     @Override

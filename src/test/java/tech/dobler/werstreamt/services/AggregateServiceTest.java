@@ -8,6 +8,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 import tech.dobler.werstreamt.domain.QueryResult;
 
 import java.net.URI;
@@ -37,7 +39,7 @@ class AggregateServiceTest {
 
     private static ImdbEntry entry(String imdbId, String name) {
         return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                "2020-01-01", false, 2020, id(imdbId));
+                WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(2020), id(imdbId));
     }
 
     private static QueryResult flatrate(String imdbId, String serviceName, String languages) {

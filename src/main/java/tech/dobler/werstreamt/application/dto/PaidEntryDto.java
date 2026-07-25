@@ -4,26 +4,24 @@ import tech.dobler.werstreamt.application.AvailabilityFormatter;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 
 /**
- * A title that is (only) purchasable / rentable on a streaming service. The "Not yet released"
- * year rule is preserved for the Google Play / Amazon views.
+ * A title that is (only) purchasable / rentable on a streaming service. The year is rendered for
+ * display (the "Not yet released" placeholder comes from {@code ReleaseYear.display()}).
  */
 public record PaidEntryDto(
         String name,
         ImdbId imdbId,
         String price,
-        String added,
+        WatchlistDate added,
         boolean isRated,
         String year,
         String languages
 ) {
     public static PaidEntryDto from(QueryResult result, ImdbEntry imdbEntry) {
         final var price = AvailabilityFormatter.prettyPrint(result.availabilities());
-        final var year = imdbEntry.year() == 0
-                ? "Not yet released"
-                : String.valueOf(imdbEntry.year());
         return new PaidEntryDto(imdbEntry.name(), imdbEntry.imdbId(), price, imdbEntry.added(), imdbEntry.isRated(),
-                year, result.languages());
+                imdbEntry.year().display(), result.languages());
     }
 }

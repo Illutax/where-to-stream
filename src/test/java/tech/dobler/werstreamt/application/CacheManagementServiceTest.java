@@ -7,6 +7,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.application.dto.ManageRowDto;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 import tech.dobler.werstreamt.persistence.WatchlistEntry;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.PreCacheService;
@@ -39,7 +41,7 @@ class CacheManagementServiceTest {
 
     private static WatchlistEntry entry(String imdbId, String name, boolean rated) {
         return WatchlistEntry.of(USER, id(imdbId), name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                "2020-01-01", rated, 2020, CREATED);
+                WatchlistDate.of("2020-01-01"), rated, ReleaseYear.of(2020), CREATED);
     }
 
     @Test

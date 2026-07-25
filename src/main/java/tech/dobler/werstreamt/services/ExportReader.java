@@ -7,6 +7,8 @@ import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -71,10 +73,10 @@ public class ExportReader {
     }
 
     private ImdbEntry toEntry(CSVRecord record) {
-        final var created = record.get("Created");
+        final var created = WatchlistDate.of(record.get("Created"));
         final var name = record.get("Title");
         final var yearString = record.get("Year");
-        final var year = yearString.isBlank() ? 0 : Integer.parseInt(yearString);
+        final var year = ReleaseYear.of(yearString.isBlank() ? 0 : Integer.parseInt(yearString));
         final var isRated = !record.get("Your Rating").isBlank();
         final var imdbId = extractImdbId(record.get("URL"));
         // Build the stored URL from the validated imdbId (tt\w+) rather than keeping the raw CSV

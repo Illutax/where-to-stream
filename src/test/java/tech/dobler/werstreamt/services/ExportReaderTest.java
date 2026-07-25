@@ -3,6 +3,8 @@ package tech.dobler.werstreamt.services;
 import org.junit.jupiter.api.Test;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -39,8 +41,8 @@ class ExportReaderTest {
                 "The Prestige",
                 ImdbId.of("tt0482571"),
                 URI.create("https://www.imdb.com/title/tt0482571/"),
-                "2012-06-22",
-                2006,
+                WatchlistDate.of("2012-06-22"),
+                ReleaseYear.of(2006),
                 true);
         assertThat(first)
                 .extracting(

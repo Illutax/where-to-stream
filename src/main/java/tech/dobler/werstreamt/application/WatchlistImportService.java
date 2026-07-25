@@ -101,7 +101,7 @@ public class WatchlistImportService {
 
     private static boolean differs(WatchlistEntry current, ImdbEntry incoming) {
         return current.isRated() != incoming.isRated()
-                || current.getYear() != incoming.year()
+                || !Objects.equals(current.getYear(), incoming.year())
                 || !Objects.equals(current.getName(), incoming.name())
                 || !Objects.equals(current.getAdded(), incoming.added())
                 || !Objects.equals(current.getUrl(), incoming.url() == null ? null : incoming.url().toString());

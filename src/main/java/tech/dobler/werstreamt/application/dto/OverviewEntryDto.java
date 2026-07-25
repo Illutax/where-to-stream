@@ -1,6 +1,8 @@
 package tech.dobler.werstreamt.application.dto;
 
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 
 /**
  * One row of the catalogue overview page, exposed by the {@code /api/catalog} JSON endpoint.
@@ -12,8 +14,8 @@ public record OverviewEntryDto(
         boolean isRated,
         String name,
         ImdbId imdbId,
-        int year,
-        String added,
+        ReleaseYear year,
+        WatchlistDate added,
         String services
 ) {
 }

@@ -8,6 +8,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 import tech.dobler.werstreamt.persistence.WatchlistEntry;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.ExportReader;
@@ -58,12 +60,12 @@ class WatchlistImportServiceTest {
 
     private static ImdbEntry incoming(String imdbId, String name, boolean rated) {
         return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                "2020-01-01", rated, 2020, id(imdbId));
+                WatchlistDate.of("2020-01-01"), rated, ReleaseYear.of(2020), id(imdbId));
     }
 
     private static WatchlistEntry stored(String imdbId, String name, boolean rated) {
         return WatchlistEntry.of(USER, id(imdbId), name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                "2020-01-01", rated, 2020, NOW);
+                WatchlistDate.of("2020-01-01"), rated, ReleaseYear.of(2020), NOW);
     }
 
     @Test

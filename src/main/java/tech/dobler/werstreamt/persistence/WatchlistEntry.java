@@ -5,6 +5,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 
 import java.net.URI;
 import java.time.Instant;
@@ -38,19 +40,19 @@ public class WatchlistEntry {
     private String url;
 
     @Column(name = "added", nullable = false)
-    private String added;
+    private WatchlistDate added;
 
     @Column(name = "is_rated", nullable = false)
     private boolean rated;
 
     @Column(name = "release_year")
-    private int year;
+    private ReleaseYear year;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    private WatchlistEntry(UUID userId, ImdbId imdbId, String name, URI url, String added,
-                           boolean rated, int year, Instant createdAt) {
+    private WatchlistEntry(UUID userId, ImdbId imdbId, String name, URI url, WatchlistDate added,
+                           boolean rated, ReleaseYear year, Instant createdAt) {
         this.userId = userId;
         this.imdbId = imdbId;
         this.name = name;
@@ -61,13 +63,13 @@ public class WatchlistEntry {
         this.createdAt = createdAt;
     }
 
-    public static WatchlistEntry of(UUID userId, ImdbId imdbId, String name, URI url, String added,
-                                    boolean rated, int year, Instant createdAt) {
+    public static WatchlistEntry of(UUID userId, ImdbId imdbId, String name, URI url, WatchlistDate added,
+                                    boolean rated, ReleaseYear year, Instant createdAt) {
         return new WatchlistEntry(userId, imdbId, name, url, added, rated, year, createdAt);
     }
 
     /** Refresh the mutable fields from a re-import (keeps id/userId/imdbId/createdAt). */
-    public void update(String name, URI url, String added, boolean rated, int year) {
+    public void update(String name, URI url, WatchlistDate added, boolean rated, ReleaseYear year) {
         this.name = name;
         this.url = url == null ? null : url.toString();
         this.added = added;
