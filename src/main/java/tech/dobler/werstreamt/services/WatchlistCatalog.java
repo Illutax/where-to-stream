@@ -3,6 +3,7 @@ package tech.dobler.werstreamt.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.persistence.WatchlistEntry;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 
@@ -29,7 +30,7 @@ public class WatchlistCatalog {
         return repository.findByUserIdAndRatedTrue(userId).stream().map(WatchlistCatalog::toEntry).toList();
     }
 
-    public Optional<ImdbEntry> findByImdb(UUID userId, String imdbId) {
+    public Optional<ImdbEntry> findByImdb(UUID userId, ImdbId imdbId) {
         return repository.findByUserIdAndImdbId(userId, imdbId).map(WatchlistCatalog::toEntry);
     }
 

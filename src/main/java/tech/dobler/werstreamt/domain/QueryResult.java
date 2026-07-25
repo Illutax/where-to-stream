@@ -3,7 +3,7 @@ package tech.dobler.werstreamt.domain;
 import java.util.List;
 
 public record QueryResult(
-        String imdbId,
+        ImdbId imdbId,
         String streamingServiceName,
         boolean flatrate,
         List<Availability> availabilities,

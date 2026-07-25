@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.application.dto.WatchlistDto;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.persistence.WatchlistEntry;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.ExportReader;
@@ -59,10 +60,10 @@ public class WatchlistImportService {
             throw new InvalidImportException("No valid entries found in the uploaded file.");
         }
         // De-duplicate the upload by imdbId (last row wins), preserving order.
-        final Map<String, ImdbEntry> incoming = new LinkedHashMap<>();
+        final Map<ImdbId, ImdbEntry> incoming = new LinkedHashMap<>();
         parsed.forEach(e -> incoming.put(e.imdbId(), e));
 
-        final Map<String, WatchlistEntry> existing = repository.findByUserId(userId).stream()
+        final Map<ImdbId, WatchlistEntry> existing = repository.findByUserId(userId).stream()
                 .collect(Collectors.toMap(WatchlistEntry::getImdbId, Function.identity()));
 
         final Instant now = timeService.now();

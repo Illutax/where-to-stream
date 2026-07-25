@@ -2,6 +2,7 @@ package tech.dobler.werstreamt.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.services.StreamInfoService;
 
@@ -19,7 +20,7 @@ public class SearchService {
     private final StreamInfoService streamInfoService;
 
     /** Cached resolve for an IMDb id. Empty if nothing is available. */
-    public Optional<List<QueryResult>> resolveByImdbId(String imdbId) {
+    public Optional<List<QueryResult>> resolveByImdbId(ImdbId imdbId) {
         final var searchResult = streamInfoService.resolve(imdbId);
         return searchResult.isEmpty() ? Optional.empty() : Optional.of(searchResult);
     }

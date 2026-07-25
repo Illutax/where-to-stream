@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.persistence.WatchlistEntry;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.ExportReader;
@@ -51,13 +52,17 @@ class WatchlistImportServiceTest {
         return new ByteArrayInputStream("csv".getBytes(StandardCharsets.UTF_8));
     }
 
+    private static ImdbId id(String imdbId) {
+        return ImdbId.of(imdbId);
+    }
+
     private static ImdbEntry incoming(String imdbId, String name, boolean rated) {
         return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                "2020-01-01", rated, 2020, imdbId);
+                "2020-01-01", rated, 2020, id(imdbId));
     }
 
     private static WatchlistEntry stored(String imdbId, String name, boolean rated) {
-        return WatchlistEntry.of(USER, imdbId, name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
+        return WatchlistEntry.of(USER, id(imdbId), name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
                 "2020-01-01", rated, 2020, NOW);
     }
 
@@ -85,10 +90,10 @@ class WatchlistImportServiceTest {
         final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
         verify(repository, org.mockito.Mockito.times(2)).save(saved.capture());
         assertThat(saved.getAllValues()).extracting(WatchlistEntry::getImdbId)
-                .containsExactlyInAnyOrder("tt2", "tt4");
+                .containsExactlyInAnyOrder(id("tt2"), id("tt4"));
         final ArgumentCaptor<WatchlistEntry> deleted = ArgumentCaptor.captor();
         verify(repository).delete(deleted.capture());
-        assertThat(deleted.getValue().getImdbId()).isEqualTo("tt3");
+        assertThat(deleted.getValue().getImdbId()).isEqualTo(id("tt3"));
     }
 
     @Test

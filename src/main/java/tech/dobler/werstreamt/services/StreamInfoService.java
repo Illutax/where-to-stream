@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryMeta;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
@@ -38,7 +39,7 @@ public class StreamInfoService {
     // thread, instead of relying on a controller-level @Transactional that does not span
     // ForkJoinPool worker threads.
     @Transactional
-    public List<QueryResult> resolve(String imdbId, boolean forceRefresh) {
+    public List<QueryResult> resolve(ImdbId imdbId, boolean forceRefresh) {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
         final var now = timeService.now();
         return result
@@ -49,7 +50,7 @@ public class StreamInfoService {
     }
 
     @Transactional
-    public List<QueryResult> resolve(String imdbId) {
+    public List<QueryResult> resolve(ImdbId imdbId) {
         return resolve(imdbId, false);
     }
 
@@ -60,13 +61,13 @@ public class StreamInfoService {
      * iteration order of {@code imdbIds}.
      */
     @Transactional
-    public Map<String, List<QueryResult>> resolveAll(Collection<String> imdbIds) {
+    public Map<ImdbId, List<QueryResult>> resolveAll(Collection<ImdbId> imdbIds) {
         final var now = timeService.now();
         final var latestFreshByImdbId = queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(imdbIds).stream()
                 .collect(Collectors.groupingBy(QueryMeta::getImdbId));
 
-        final var resolved = new LinkedHashMap<String, List<QueryResult>>();
-        for (String imdbId : imdbIds) {
+        final var resolved = new LinkedHashMap<ImdbId, List<QueryResult>>();
+        for (ImdbId imdbId : imdbIds) {
             final var cached = latestFreshByImdbId.getOrDefault(imdbId, List.of()).stream()
                     .max(Comparator.comparing(QueryMeta::getCreationTime))
                     .filter(queryMeta -> isFresh(queryMeta, now))
@@ -76,7 +77,7 @@ public class StreamInfoService {
         return resolved;
     }
 
-    public Optional<String> listAllAvailableServiceNames(String imdbId) {
+    public Optional<String> listAllAvailableServiceNames(ImdbId imdbId) {
         return toAvailableServiceNames(resolve(imdbId));
     }
 
@@ -102,7 +103,7 @@ public class StreamInfoService {
                 .toList();
     }
 
-    private List<QueryResult> fetch(String imdbId) {
+    private List<QueryResult> fetch(ImdbId imdbId) {
         log.info("Fetching imdb entries for imdbId {}", imdbId);
         // The werstreamt.es cache is global (per imdbId), so scrape directly — no watchlist gate.
         final var queryResults = streamProvider.query(imdbId);

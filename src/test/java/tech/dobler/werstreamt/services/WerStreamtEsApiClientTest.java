@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.domain.AvailabilityType;
 import tech.dobler.werstreamt.domain.Availability;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 
 import java.util.List;
@@ -14,7 +15,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 class WerStreamtEsApiClientTest {
 
-    private static final String IMDB_ID = "tt0482571";
+    private static final ImdbId IMDB_ID = ImdbId.of("tt0482571");
     private static final String MINUS = "<i class=\"fi-minus-circle\"></i>";
     private static final String CHECK = "<i class=\"fi-check\"></i>";
 

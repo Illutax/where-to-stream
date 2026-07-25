@@ -2,6 +2,7 @@ package tech.dobler.werstreamt.persistence;
 
 import jakarta.persistence.*;
 import lombok.*;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,7 +22,7 @@ public class QueryMeta {
     @EqualsAndHashCode.Include
     private final UUID id;
     @Column(name = "imdbId")
-    private final String imdbId;
+    private final ImdbId imdbId;
     @Column(name = "creationTime")
     private final Instant creationTime;
     @Column(name = "invalidated")
@@ -30,7 +31,7 @@ public class QueryMeta {
     @JoinColumn(name = "query_meta_id")
     private final List<QueryResultDB> queries;
 
-    public static QueryMeta of(String imdbId, Instant creationTime, List<QueryResultDB> queries) {
+    public static QueryMeta of(ImdbId imdbId, Instant creationTime, List<QueryResultDB> queries) {
         return new QueryMeta(null, imdbId, creationTime, false, queries);
     }
 }

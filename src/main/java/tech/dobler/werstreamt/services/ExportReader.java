@@ -6,6 +6,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,13 +83,13 @@ public class ExportReader {
         return new ImdbEntry(name, canonicalUrl(imdbId), created, isRated, year, imdbId);
     }
 
-    private static String extractImdbId(String url) {
+    private static ImdbId extractImdbId(String url) {
         final var matcher = PATTERN.matcher(url);
         if (!matcher.find()) throw new IllegalArgumentException("Couldn't find imdbId for url %s".formatted(url));
-        return matcher.group(1);
+        return ImdbId.of(matcher.group(1));
     }
 
-    private static URI canonicalUrl(String imdbId) {
-        return URI.create("https://www.imdb.com/title/" + imdbId + "/");
+    private static URI canonicalUrl(ImdbId imdbId) {
+        return URI.create("https://www.imdb.com/title/" + imdbId.value() + "/");
     }
 }

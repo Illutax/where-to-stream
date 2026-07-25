@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.Role;
 import tech.dobler.werstreamt.persistence.AppUser;
 import tech.dobler.werstreamt.persistence.AppUserRepository;
@@ -85,8 +86,8 @@ class WatchlistIsolationIntegrationTest {
         importService.importCsv(bob, csv(row("tt3", "Gamma", true)));
 
         assertThat(catalog.findAll(alice)).extracting(ImdbEntry::imdbId)
-                .containsExactlyInAnyOrder("tt1", "tt2");
-        assertThat(catalog.findAll(bob)).extracting(ImdbEntry::imdbId).containsExactly("tt3");
+                .containsExactlyInAnyOrder(ImdbId.of("tt1"), ImdbId.of("tt2"));
+        assertThat(catalog.findAll(bob)).extracting(ImdbEntry::imdbId).containsExactly(ImdbId.of("tt3"));
         assertThat(importService.status(alice).count()).isEqualTo(2);
         assertThat(importService.status(bob).count()).isEqualTo(1);
     }
@@ -97,8 +98,8 @@ class WatchlistIsolationIntegrationTest {
         importService.importCsv(alice, csv(row("tt1", "Shared", true)));
         importService.importCsv(bob, csv(row("tt1", "Shared", false)));
 
-        assertThat(catalog.findByImdb(alice, "tt1")).get().extracting(ImdbEntry::isRated).isEqualTo(true);
-        assertThat(catalog.findByImdb(bob, "tt1")).get().extracting(ImdbEntry::isRated).isEqualTo(false);
+        assertThat(catalog.findByImdb(alice, ImdbId.of("tt1"))).get().extracting(ImdbEntry::isRated).isEqualTo(true);
+        assertThat(catalog.findByImdb(bob, ImdbId.of("tt1"))).get().extracting(ImdbEntry::isRated).isEqualTo(false);
         assertThat(catalog.count(alice)).isEqualTo(1);
         assertThat(catalog.count(bob)).isEqualTo(1);
     }
@@ -111,7 +112,7 @@ class WatchlistIsolationIntegrationTest {
         importService.clear(alice);
 
         assertThat(catalog.count(alice)).isZero();
-        assertThat(catalog.findAll(bob)).extracting(ImdbEntry::imdbId).containsExactly("tt3");
+        assertThat(catalog.findAll(bob)).extracting(ImdbEntry::imdbId).containsExactly(ImdbId.of("tt3"));
     }
 
     @Test
@@ -125,9 +126,9 @@ class WatchlistIsolationIntegrationTest {
         assertThat(result.added()).isEqualTo(1);
         assertThat(result.removed()).isEqualTo(1);
         assertThat(catalog.findAll(alice)).extracting(ImdbEntry::imdbId)
-                .containsExactlyInAnyOrder("tt2", "tt4");
+                .containsExactlyInAnyOrder(ImdbId.of("tt2"), ImdbId.of("tt4"));
         // Bob still has both his titles — alice removing tt1 did not remove bob's tt1.
         assertThat(catalog.findAll(bob)).extracting(ImdbEntry::imdbId)
-                .containsExactlyInAnyOrder("tt1", "tt3");
+                .containsExactlyInAnyOrder(ImdbId.of("tt1"), ImdbId.of("tt3"));
     }
 }

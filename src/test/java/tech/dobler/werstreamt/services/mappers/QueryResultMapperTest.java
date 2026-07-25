@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import tech.dobler.werstreamt.domain.AvailabilityType;
 import tech.dobler.werstreamt.domain.Price;
 import tech.dobler.werstreamt.domain.Availability;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryResultDB;
 
@@ -17,7 +18,7 @@ class QueryResultMapperTest {
     void name() {
         // Arrange
         final var availability = new Availability(AvailabilityType.RENT, new Price("1.99 €"), null, new Price("9.99 €"));
-        final var pojo = new QueryResult("tt0123755", "Cube", true, List.of(availability), "Deutsch, Englisch (OV)");
+        final var pojo = new QueryResult(ImdbId.of("tt0123755"), "Cube", true, List.of(availability), "Deutsch, Englisch (OV)");
 
         // Act
         final var dto = QueryResultMapper.INSTANCE.entityToDto(pojo);

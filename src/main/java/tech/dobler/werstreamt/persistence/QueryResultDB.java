@@ -3,6 +3,7 @@ package tech.dobler.werstreamt.persistence;
 import jakarta.persistence.*;
 import lombok.*;
 import tech.dobler.werstreamt.domain.Availability;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +23,7 @@ public final class QueryResultDB {
     @EqualsAndHashCode.Include
     private final UUID id;
     @Column(name = "imdbId")
-    private final String imdbId;
+    private final ImdbId imdbId;
     @Column(name = "title")
     private final String streamingServiceName;
     @Column(name = "flatrate")
@@ -40,7 +41,7 @@ public final class QueryResultDB {
     })
     private final List<Availability> availabilities = new ArrayList<>();
 
-    public QueryResultDB(String imdbId, String streamingServiceName, boolean flatrate, List<Availability> availabilities, String languages) {
+    public QueryResultDB(ImdbId imdbId, String streamingServiceName, boolean flatrate, List<Availability> availabilities, String languages) {
         this.id = null;
         this.imdbId = imdbId;
         this.streamingServiceName = streamingServiceName;

@@ -6,6 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.application.dto.ManageRowDto;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.persistence.WatchlistEntry;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.PreCacheService;
@@ -32,8 +33,12 @@ class CacheManagementServiceTest {
     @InjectMocks
     private CacheManagementService service;
 
+    private static ImdbId id(String imdbId) {
+        return ImdbId.of(imdbId);
+    }
+
     private static WatchlistEntry entry(String imdbId, String name, boolean rated) {
-        return WatchlistEntry.of(USER, imdbId, name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
+        return WatchlistEntry.of(USER, id(imdbId), name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
                 "2020-01-01", rated, 2020, CREATED);
     }
 
@@ -42,7 +47,7 @@ class CacheManagementServiceTest {
         final var zebra = entry("tt2", "Zebra", false);
         final var apple = entry("tt1", "Apple", false);
         when(watchlistEntryRepository.findAll()).thenReturn(List.of(zebra, apple));
-        when(preCacheService.findUncachedImdbIds()).thenReturn(List.of("tt2"));
+        when(preCacheService.findUncachedImdbIds()).thenReturn(List.of(id("tt2")));
 
         final var page = service.managePage();
 
@@ -66,8 +71,8 @@ class CacheManagementServiceTest {
 
     @Test
     void invalidateDelegatesToPreCache() {
-        when(preCacheService.invalidate(List.of("tt1"))).thenReturn(3);
-        assertThat(service.invalidate(List.of("tt1")).invalidated()).isEqualTo(3);
+        when(preCacheService.invalidate(List.of(id("tt1")))).thenReturn(3);
+        assertThat(service.invalidate(List.of(id("tt1"))).invalidated()).isEqualTo(3);
     }
 
     @Test
@@ -91,7 +96,7 @@ class CacheManagementServiceTest {
 
     @Test
     void uncachedCountReflectsFindUncachedSize() {
-        when(preCacheService.findUncachedImdbIds()).thenReturn(List.of("tt1", "tt2"));
+        when(preCacheService.findUncachedImdbIds()).thenReturn(List.of(id("tt1"), id("tt2")));
         assertThat(service.uncachedCount().uncached()).isEqualTo(2);
     }
 }

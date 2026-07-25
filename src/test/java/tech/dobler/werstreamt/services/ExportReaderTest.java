@@ -2,6 +2,7 @@ package tech.dobler.werstreamt.services;
 
 import org.junit.jupiter.api.Test;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -36,7 +37,7 @@ class ExportReaderTest {
 
         final var expected = List.of(
                 "The Prestige",
-                "tt0482571",
+                ImdbId.of("tt0482571"),
                 URI.create("https://www.imdb.com/title/tt0482571/"),
                 "2012-06-22",
                 2006,
@@ -58,7 +59,7 @@ class ExportReaderTest {
 
         assertThat(entries)
                 .extracting(ImdbEntry::imdbId)
-                .allMatch(id -> id.startsWith("tt"));
+                .allMatch(id -> id.value().startsWith("tt"));
     }
 
     @Test
@@ -90,7 +91,7 @@ class ExportReaderTest {
 
         final ImdbEntry entry = exportReader.parse(in).getFirst();
 
-        assertThat(entry.imdbId()).isEqualTo("tt1337");
+        assertThat(entry.imdbId()).isEqualTo(ImdbId.of("tt1337"));
         assertThat(entry.url()).isEqualTo(URI.create("https://www.imdb.com/title/tt1337/"));
     }
 
@@ -111,7 +112,7 @@ class ExportReaderTest {
         assertThat(entries)
                 .extracting(ImdbEntry::name, ImdbEntry::imdbId)
                 .containsExactly(
-                        tuple("Good One", "tt0000001"),
-                        tuple("Good Two", "tt0000004"));
+                        tuple("Good One", ImdbId.of("tt0000001")),
+                        tuple("Good Two", ImdbId.of("tt0000004")));
     }
 }

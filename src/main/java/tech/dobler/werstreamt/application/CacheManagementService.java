@@ -8,6 +8,7 @@ import tech.dobler.werstreamt.application.dto.ManagePageDto;
 import tech.dobler.werstreamt.application.dto.ManageRowDto;
 import tech.dobler.werstreamt.application.dto.ScrapeResultDto;
 import tech.dobler.werstreamt.application.dto.UncachedCountDto;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.persistence.WatchlistEntry;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.PreCacheService;
@@ -39,10 +40,10 @@ public class CacheManagementService {
     }
 
     public ManagePageDto managePage() {
-        final Set<String> needsScrape = Set.copyOf(preCacheService.findUncachedImdbIds());
+        final Set<ImdbId> needsScrape = Set.copyOf(preCacheService.findUncachedImdbIds());
 
         // Distinct titles across all users, merging "rated" (rated by anyone).
-        final Map<String, TitleAgg> byImdbId = new LinkedHashMap<>();
+        final Map<ImdbId, TitleAgg> byImdbId = new LinkedHashMap<>();
         for (WatchlistEntry w : watchlistEntryRepository.findAll()) {
             byImdbId.merge(w.getImdbId(), new TitleAgg(w.getName(), w.isRated()),
                     (a, b) -> new TitleAgg(a.name(), a.rated() || b.rated()));
@@ -56,8 +57,8 @@ public class CacheManagementService {
         return new ManagePageDto(rows, needsScrape.size());
     }
 
-    public InvalidateResultDto invalidate(List<String> imdbIds) {
-        final var ids = imdbIds == null ? List.<String>of() : imdbIds;
+    public InvalidateResultDto invalidate(List<ImdbId> imdbIds) {
+        final var ids = imdbIds == null ? List.<ImdbId>of() : imdbIds;
         return new InvalidateResultDto(preCacheService.invalidate(ids));
     }
 

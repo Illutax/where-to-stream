@@ -9,6 +9,7 @@ import org.jsoup.nodes.TextNode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.werstreamt.domain.AvailabilityType;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.Price;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.QueryResult;
@@ -64,10 +65,10 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
     }
 
     @Override
-    public List<QueryResult> query(String imdbId) {
+    public List<QueryResult> query(ImdbId imdbId) {
         log.info("Query with id: {}", imdbId);
 
-        final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", imdbId).queryParam("action_results", "suchen").build();
+        final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", imdbId.value()).queryParam("action_results", "suchen").build();
         final var connect = ApiClientUtils.getConnectionWithUserAgent(query).followRedirects(true);
         try {
             rateLimiter.acquire();
@@ -82,7 +83,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
     }
 
     // Package-private so the (network-free) HTML parsing can be unit tested with a fixture.
-    List<QueryResult> parse(Document document, String imdbId) {
+    List<QueryResult> parse(Document document, ImdbId imdbId) {
         return document.select("#avalibility > .provider").stream()
                 .flatMap(provider -> parseProvider(provider, imdbId).stream())
                 .toList();
@@ -100,7 +101,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
      * a single listing keeps {@code languages == null} (no differentiator needed). Malformed
      * markup is logged and skipped so one bad provider never aborts the whole parse.
      */
-    private List<QueryResult> parseProvider(Element provider, String imdbId) {
+    private List<QueryResult> parseProvider(Element provider, ImdbId imdbId) {
         final var name = provider.attr("data-ext-provider-name");
         try {
             final var offerings = parseOfferings(provider);

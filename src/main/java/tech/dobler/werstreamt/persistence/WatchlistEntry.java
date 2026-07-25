@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.net.URI;
 import java.time.Instant;
@@ -28,7 +29,7 @@ public class WatchlistEntry {
     private UUID userId;
 
     @Column(name = "imdb_id", nullable = false)
-    private String imdbId;
+    private ImdbId imdbId;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -48,7 +49,7 @@ public class WatchlistEntry {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    private WatchlistEntry(UUID userId, String imdbId, String name, URI url, String added,
+    private WatchlistEntry(UUID userId, ImdbId imdbId, String name, URI url, String added,
                            boolean rated, int year, Instant createdAt) {
         this.userId = userId;
         this.imdbId = imdbId;
@@ -60,7 +61,7 @@ public class WatchlistEntry {
         this.createdAt = createdAt;
     }
 
-    public static WatchlistEntry of(UUID userId, String imdbId, String name, URI url, String added,
+    public static WatchlistEntry of(UUID userId, ImdbId imdbId, String name, URI url, String added,
                                     boolean rated, int year, Instant createdAt) {
         return new WatchlistEntry(userId, imdbId, name, url, added, rated, year, createdAt);
     }

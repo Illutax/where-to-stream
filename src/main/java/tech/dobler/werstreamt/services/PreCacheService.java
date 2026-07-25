@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 
@@ -30,7 +31,7 @@ public class PreCacheService {
     }
 
     /** Resolves the given titles (populating the cache) and returns how many were processed. */
-    public int cache(Collection<String> imdbIds) {
+    public int cache(Collection<ImdbId> imdbIds) {
         final var counter = new AtomicInteger(0);
         imdbIds.parallelStream()
                 .forEach(imdbId -> {
@@ -54,7 +55,7 @@ public class PreCacheService {
      * next resolve / {@link #cacheUncached()} run. Returns the number of cache rows affected.
      */
     @Transactional
-    public int invalidate(Collection<String> imdbIds) {
+    public int invalidate(Collection<ImdbId> imdbIds) {
         if (imdbIds.isEmpty()) {
             return 0;
         }
@@ -64,7 +65,7 @@ public class PreCacheService {
     }
 
     /** The distinct titles (across all users) that currently have no valid cached query result. */
-    public List<String> findUncachedImdbIds() {
+    public List<ImdbId> findUncachedImdbIds() {
         return watchlistEntryRepository.findDistinctImdbIds().parallelStream()
                 .filter(imdbId -> queryMetaRepository
                         .findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId)

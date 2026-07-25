@@ -12,6 +12,7 @@ import tech.dobler.werstreamt.application.dto.InvalidateResultDto;
 import tech.dobler.werstreamt.application.dto.ManagePageDto;
 import tech.dobler.werstreamt.application.dto.ManageRowDto;
 import tech.dobler.werstreamt.application.dto.ScrapeResultDto;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.util.List;
 
@@ -33,7 +34,7 @@ class ManageApiControllerTest {
     @Test
     void managePageReturnsRows() throws Exception {
         when(cacheManagementService.managePage()).thenReturn(new ManagePageDto(
-                List.of(new ManageRowDto("tt1", "Movie", true, false)), 0));
+                List.of(new ManageRowDto(ImdbId.of("tt1"), "Movie", true, false)), 0));
 
         mockMvc.perform(get("/api/manage"))
                 .andExpect(status().isOk())
@@ -43,7 +44,7 @@ class ManageApiControllerTest {
 
     @Test
     void invalidateReturnsCount() throws Exception {
-        when(cacheManagementService.invalidate(List.of("tt1", "tt2"))).thenReturn(new InvalidateResultDto(2));
+        when(cacheManagementService.invalidate(List.of(ImdbId.of("tt1"), ImdbId.of("tt2")))).thenReturn(new InvalidateResultDto(2));
 
         mockMvc.perform(post("/api/manage/invalidate")
                         .contentType(MediaType.APPLICATION_JSON)

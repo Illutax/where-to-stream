@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.transaction.annotation.Transactional;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.time.Instant;
 import java.util.List;
@@ -33,7 +34,7 @@ public abstract class AbstractQueryMetaRepositoryTests {
     void saveAndLoadOne() {
         // Arrange
 //        final var timestamp = Instant.parse("2024-06-17T10:00:00Z");
-        final var imdbId = "tt0123755";
+        final var imdbId = ImdbId.of("tt0123755");
         final var timestamp = Instant.now();
         final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
 
@@ -51,7 +52,7 @@ public abstract class AbstractQueryMetaRepositoryTests {
     @Transactional
     void findByImdbId() {
         // Arrange
-        final var imdbId = "tt0123755";
+        final var imdbId = ImdbId.of("tt0123755");
         final var timestamp = Instant.now();
         final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
 
@@ -69,7 +70,7 @@ public abstract class AbstractQueryMetaRepositoryTests {
     @Transactional
     void findByImdbId_saveThree_returnNewest() {
         // Arrange
-        final var imdbId = "tt0123755";
+        final var imdbId = ImdbId.of("tt0123755");
         final var timestamp = Instant.parse("2024-06-15T10:15:30Z");
         final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
         final var entry2 = new QueryMeta(null, imdbId, timestamp.plusSeconds(15), false, List.of());
@@ -90,7 +91,7 @@ public abstract class AbstractQueryMetaRepositoryTests {
     @Transactional
     void findByImdbId_doesntFindInvalidated() {
         // Arrange
-        final var imdbId = "tt0123755";
+        final var imdbId = ImdbId.of("tt0123755");
         final var timestamp = Instant.now();
         final var entry = new QueryMeta(null, imdbId, timestamp, true, List.of());
 
@@ -107,19 +108,19 @@ public abstract class AbstractQueryMetaRepositoryTests {
     void invalidateByImdbIds_marksRowsAndHidesThem() {
         // Arrange
         final var timestamp = Instant.now();
-        sut.save(new QueryMeta(null, "tt1", timestamp, false, List.of()));
-        sut.save(new QueryMeta(null, "tt2", timestamp, false, List.of()));
+        sut.save(new QueryMeta(null, ImdbId.of("tt1"), timestamp, false, List.of()));
+        sut.save(new QueryMeta(null, ImdbId.of("tt2"), timestamp, false, List.of()));
         entityManager.flush();
         entityManager.clear();
 
         // Act
-        final int affected = sut.invalidateByImdbIds(List.of("tt1"));
+        final int affected = sut.invalidateByImdbIds(List.of(ImdbId.of("tt1")));
         entityManager.flush();
         entityManager.clear();
 
         // Assert
         assertThat(affected).isEqualTo(1);
-        assertThat(sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt1")).isEmpty();
-        assertThat(sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc("tt2")).isPresent();
+        assertThat(sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(ImdbId.of("tt1"))).isEmpty();
+        assertThat(sut.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(ImdbId.of("tt2"))).isPresent();
     }
 }

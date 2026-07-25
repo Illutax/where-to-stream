@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.domain.AvailabilityType;
 import tech.dobler.werstreamt.domain.Price;
 import tech.dobler.werstreamt.domain.Availability;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.util.List;
 import java.util.Objects;
@@ -37,7 +38,7 @@ public abstract class AbstractQueryResultRepositoryTests {
     @Transactional
     void saveAndLoadOneWithoutAvailabilities() {
         // Arrange
-        final var imdbId = "tt0123755";
+        final var imdbId = ImdbId.of("tt0123755");
         final var queryResult = new QueryResultDB(imdbId, "Cube", false, List.of(), null);
         saveAndFlush(queryResult);
 
@@ -55,7 +56,7 @@ public abstract class AbstractQueryResultRepositoryTests {
     @Transactional
     void saveAndLoadOneWithAvailabilities() {
         // Arrange
-        final var imdbId = "tt0123755";
+        final var imdbId = ImdbId.of("tt0123755");
         final var availabilities = List.of(new Availability(AvailabilityType.RENT, null, null, new Price("15.00 €")));
         final var queryResult = new QueryResultDB(imdbId, "Cube", false, availabilities, "Deutsch");
         saveAndFlush(queryResult);
@@ -77,7 +78,7 @@ public abstract class AbstractQueryResultRepositoryTests {
     void saveAndLoadALongLanguagesValue() {
         // Regression: some titles list many language variants; the languages column must hold
         // more than the original varchar(255) (on MariaDB the old width threw "Data too long").
-        final var imdbId = "tt2194499";
+        final var imdbId = ImdbId.of("tt2194499");
         final var longLanguages = "Deutsch, Englisch (OV), ".repeat(20).trim(); // ~460 chars
         final var queryResult = new QueryResultDB(imdbId, "Prime Video", false, List.of(), longLanguages);
         saveAndFlush(queryResult);
@@ -92,7 +93,7 @@ public abstract class AbstractQueryResultRepositoryTests {
     @Transactional
     void saveAndDeleteOne() {
         // Arrange
-        final var imdbId = "tt0123755";
+        final var imdbId = ImdbId.of("tt0123755");
         final var queryResult = new QueryResultDB(imdbId, "Cube", false, List.of(new Availability(AvailabilityType.RENT, null, null, new Price("15.00 €"))), null);
         log.info("Created query result: {}", queryResult);
         saveAndFlush(queryResult);

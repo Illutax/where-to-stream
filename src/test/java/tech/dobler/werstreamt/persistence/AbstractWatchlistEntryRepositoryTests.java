@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.transaction.annotation.Transactional;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.Role;
 
 import java.net.URI;
@@ -45,8 +46,12 @@ public abstract class AbstractWatchlistEntryRepositoryTests {
     }
 
     private WatchlistEntry entry(UUID userId, String imdbId, boolean rated) {
-        return WatchlistEntry.of(userId, imdbId, "Title " + imdbId,
+        return WatchlistEntry.of(userId, ImdbId.of(imdbId), "Title " + imdbId,
                 URI.create("https://www.imdb.com/title/" + imdbId + "/"), "2020-01-01", rated, 2020, NOW);
+    }
+
+    private static ImdbId id(String imdbId) {
+        return ImdbId.of(imdbId);
     }
 
     private void flushAndClear() {
@@ -62,8 +67,8 @@ public abstract class AbstractWatchlistEntryRepositoryTests {
         flushAndClear();
 
         assertThat(sut.findByUserId(alice)).extracting(WatchlistEntry::getImdbId)
-                .containsExactlyInAnyOrder("tt1", "tt2");
-        assertThat(sut.findByUserId(bob)).extracting(WatchlistEntry::getImdbId).containsExactly("tt3");
+                .containsExactlyInAnyOrder(id("tt1"), id("tt2"));
+        assertThat(sut.findByUserId(bob)).extracting(WatchlistEntry::getImdbId).containsExactly(id("tt3"));
         assertThat(sut.countByUserId(alice)).isEqualTo(2);
     }
 
@@ -73,9 +78,9 @@ public abstract class AbstractWatchlistEntryRepositoryTests {
         sut.save(entry(alice, "tt2", false));
         flushAndClear();
 
-        assertThat(sut.findByUserIdAndRatedTrue(alice)).extracting(WatchlistEntry::getImdbId).containsExactly("tt1");
-        assertThat(sut.findByUserIdAndImdbId(alice, "tt2")).isPresent();
-        assertThat(sut.findByUserIdAndImdbId(bob, "tt1")).isEmpty();
+        assertThat(sut.findByUserIdAndRatedTrue(alice)).extracting(WatchlistEntry::getImdbId).containsExactly(id("tt1"));
+        assertThat(sut.findByUserIdAndImdbId(alice, id("tt2"))).isPresent();
+        assertThat(sut.findByUserIdAndImdbId(bob, id("tt1"))).isEmpty();
     }
 
     @Test
@@ -85,8 +90,8 @@ public abstract class AbstractWatchlistEntryRepositoryTests {
         sut.save(entry(bob, "tt9", true));
         flushAndClear();
 
-        assertThat(sut.findDistinctImdbIds()).containsExactlyInAnyOrder("tt1", "tt9");
-        assertThat(sut.findDistinctImdbIdsRated()).containsExactlyInAnyOrder("tt1", "tt9");
+        assertThat(sut.findDistinctImdbIds()).containsExactlyInAnyOrder(id("tt1"), id("tt9"));
+        assertThat(sut.findDistinctImdbIdsRated()).containsExactlyInAnyOrder(id("tt1"), id("tt9"));
     }
 
     @Test

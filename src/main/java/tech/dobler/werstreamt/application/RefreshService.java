@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.application.dto.RefreshResultDto;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.StreamInfoService;
 
@@ -33,7 +34,7 @@ public class RefreshService {
         return refresh(watchlistEntryRepository.findDistinctImdbIds());
     }
 
-    private RefreshResultDto refresh(List<String> imdbIds) {
+    private RefreshResultDto refresh(List<ImdbId> imdbIds) {
         log.info("Refreshing {} titles", imdbIds.size());
         final var refreshed = imdbIds.parallelStream()
                 .map(imdbId -> streamInfoService.resolve(imdbId, true))

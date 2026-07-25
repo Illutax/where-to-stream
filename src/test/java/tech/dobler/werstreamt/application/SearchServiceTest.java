@@ -6,6 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.domain.Availability;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.services.StreamInfoService;
 
@@ -22,22 +23,26 @@ class SearchServiceTest {
     @InjectMocks
     private SearchService service;
 
+    private static ImdbId id(String imdbId) {
+        return ImdbId.of(imdbId);
+    }
+
     private static QueryResult result(String imdbId) {
-        return new QueryResult(imdbId, "Netflix", true, List.<Availability>of(), null);
+        return new QueryResult(id(imdbId), "Netflix", true, List.<Availability>of(), null);
     }
 
     @Test
     void resolveByImdbIdReturnsCachedResultsWhenPresent() {
-        when(streamInfoService.resolve("tt1")).thenReturn(List.of(result("tt1")));
+        when(streamInfoService.resolve(id("tt1"))).thenReturn(List.of(result("tt1")));
 
-        assertThat(service.resolveByImdbId("tt1")).hasValueSatisfying(list ->
+        assertThat(service.resolveByImdbId(id("tt1"))).hasValueSatisfying(list ->
                 assertThat(list).hasSize(1));
     }
 
     @Test
     void resolveByImdbIdIsEmptyWhenNothingAvailable() {
-        when(streamInfoService.resolve("tt1")).thenReturn(List.of());
+        when(streamInfoService.resolve(id("tt1"))).thenReturn(List.of());
 
-        assertThat(service.resolveByImdbId("tt1")).isEmpty();
+        assertThat(service.resolveByImdbId(id("tt1"))).isEmpty();
     }
 }

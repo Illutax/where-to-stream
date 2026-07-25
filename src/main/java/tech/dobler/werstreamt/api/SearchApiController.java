@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import tech.dobler.werstreamt.application.SearchService;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 
 import java.util.List;
@@ -24,7 +25,7 @@ public class SearchApiController {
     private final SearchService searchService;
 
     @GetMapping
-    public List<QueryResult> search(@RequestParam("imdbId") String imdbId) {
+    public List<QueryResult> search(@RequestParam("imdbId") ImdbId imdbId) {
         return searchService.resolveByImdbId(imdbId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No availability found"));
     }

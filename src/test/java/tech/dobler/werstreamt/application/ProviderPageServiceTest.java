@@ -9,6 +9,7 @@ import tech.dobler.werstreamt.application.dto.FlatrateEntryDto;
 import tech.dobler.werstreamt.application.dto.PaidEntryDto;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.services.AggregateService;
 import tech.dobler.werstreamt.services.WatchlistCatalog;
@@ -34,13 +35,17 @@ class ProviderPageServiceTest {
     @InjectMocks
     private ProviderPageService service;
 
+    private static ImdbId id(String imdbId) {
+        return ImdbId.of(imdbId);
+    }
+
     private static ImdbEntry entry(String imdbId, String name, String added, int year) {
         return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                added, false, year, imdbId);
+                added, false, year, id(imdbId));
     }
 
     private static QueryResult paid(String imdbId, String serviceName) {
-        return new QueryResult(imdbId, serviceName, false, List.<Availability>of(), "Deutsch");
+        return new QueryResult(id(imdbId), serviceName, false, List.<Availability>of(), "Deutsch");
     }
 
     @Test
@@ -50,7 +55,7 @@ class ProviderPageServiceTest {
         final var paidEntry = entry("tt3", "Paid", "2022-02-02", 2022);
         when(aggregateService.contentFor("Prime Video", USER)).thenReturn(
                 new AggregateService.ServiceContent(List.of(later, earlier), List.of(paid("tt3", "Prime Video"))));
-        when(watchlistCatalog.findByImdb(USER, "tt3")).thenReturn(Optional.of(paidEntry));
+        when(watchlistCatalog.findByImdb(USER, id("tt3"))).thenReturn(Optional.of(paidEntry));
 
         final var page = service.pageFor(StreamingProvider.AMAZON, USER);
 
@@ -75,8 +80,8 @@ class ProviderPageServiceTest {
         final var e1 = entry("tt1", "Alpha", "2021-05-05", 2021);
         final var e2 = entry("tt2", "Beta", "2020-01-01", 0);
         when(aggregateService.paid("Google Play", USER)).thenReturn(List.of(paid("tt1", "Google Play"), paid("tt2", "Google Play")));
-        when(watchlistCatalog.findByImdb(USER, "tt1")).thenReturn(Optional.of(e1));
-        when(watchlistCatalog.findByImdb(USER, "tt2")).thenReturn(Optional.of(e2));
+        when(watchlistCatalog.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(e1));
+        when(watchlistCatalog.findByImdb(USER, id("tt2"))).thenReturn(Optional.of(e2));
 
         final var page = service.pageFor(StreamingProvider.GOOGLE, USER);
 

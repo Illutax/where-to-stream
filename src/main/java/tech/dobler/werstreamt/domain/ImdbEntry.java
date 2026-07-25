@@ -11,7 +11,7 @@ public record ImdbEntry(
         String added,
         boolean isRated,
         int year,
-        String imdbId
+        ImdbId imdbId
 ) implements Comparable<ImdbEntry> {
     @Override
     public int compareTo(@NonNull ImdbEntry o) {

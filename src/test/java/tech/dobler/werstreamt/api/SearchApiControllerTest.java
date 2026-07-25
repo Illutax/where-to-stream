@@ -4,10 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.werstreamt.application.SearchService;
+import tech.dobler.werstreamt.configurations.StringToImdbIdConverter;
 import tech.dobler.werstreamt.domain.Availability;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 
 import java.util.List;
@@ -18,8 +21,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Import the String->ImdbId converter so @RequestParam("imdbId") ImdbId binds in the slice.
 @WebMvcTest(SearchApiController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(StringToImdbIdConverter.class)
 class SearchApiControllerTest {
 
     @Autowired
@@ -28,12 +33,12 @@ class SearchApiControllerTest {
     private SearchService searchService;
 
     private static QueryResult result(String imdbId) {
-        return new QueryResult(imdbId, "Netflix", true, List.<Availability>of(), null);
+        return new QueryResult(ImdbId.of(imdbId), "Netflix", true, List.<Availability>of(), null);
     }
 
     @Test
     void searchByImdbIdReturnsResults() throws Exception {
-        when(searchService.resolveByImdbId("tt1")).thenReturn(Optional.of(List.of(result("tt1"))));
+        when(searchService.resolveByImdbId(ImdbId.of("tt1"))).thenReturn(Optional.of(List.of(result("tt1"))));
 
         mockMvc.perform(get("/api/search").param("imdbId", "tt1"))
                 .andExpect(status().isOk())
@@ -43,7 +48,7 @@ class SearchApiControllerTest {
 
     @Test
     void missReturns404() throws Exception {
-        when(searchService.resolveByImdbId("tt404")).thenReturn(Optional.empty());
+        when(searchService.resolveByImdbId(ImdbId.of("tt404"))).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/search").param("imdbId", "tt404"))
                 .andExpect(status().isNotFound());

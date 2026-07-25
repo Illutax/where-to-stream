@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.AvailabilityType;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 
 import java.io.InputStream;
@@ -19,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class WerStreamtEsApiClientIntegrationTest {
 
-    private static final String IMDB_ID = "tt0822847";
+    private static final ImdbId IMDB_ID = ImdbId.of("tt0822847");
 
     private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(new RateLimiter(
             new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0))));

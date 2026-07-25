@@ -1,5 +1,6 @@
 package tech.dobler.werstreamt.services;
 
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 
 import java.util.List;
@@ -11,5 +12,5 @@ import java.util.List;
  */
 public interface StreamAvailabilityProvider {
 
-    List<QueryResult> query(String imdbId);
+    List<QueryResult> query(ImdbId imdbId);
 }

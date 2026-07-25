@@ -2,17 +2,16 @@ package tech.dobler.werstreamt.application.dto;
 
 import tech.dobler.werstreamt.application.AvailabilityFormatter;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 
 /**
- * A title that is (only) purchasable / rentable on a streaming service. Field names and the
- * "Not yet released" year rule are preserved from the former
- * {@code DataAggregateController.PaidDto} so the Google Play / Amazon templates render it
- * unchanged.
+ * A title that is (only) purchasable / rentable on a streaming service. The "Not yet released"
+ * year rule is preserved for the Google Play / Amazon views.
  */
 public record PaidEntryDto(
         String name,
-        String imdbId,
+        ImdbId imdbId,
         String price,
         String added,
         boolean isRated,

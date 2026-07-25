@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.application.dto.OverviewEntryDto;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.services.StreamInfoService;
 import tech.dobler.werstreamt.services.WatchlistCatalog;
@@ -36,13 +37,17 @@ class CatalogOverviewServiceTest {
     @InjectMocks
     private CatalogOverviewService service;
 
+    private static ImdbId id(String imdbId) {
+        return ImdbId.of(imdbId);
+    }
+
     private static ImdbEntry entry(String imdbId, String name) {
         return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                "2020-01-01", true, 2020, imdbId);
+                "2020-01-01", true, 2020, id(imdbId));
     }
 
     private static QueryResult flatrate(String imdbId, String serviceName) {
-        return new QueryResult(imdbId, serviceName, true, List.<Availability>of(), null);
+        return new QueryResult(id(imdbId), serviceName, true, List.<Availability>of(), null);
     }
 
     @Test
@@ -50,9 +55,9 @@ class CatalogOverviewServiceTest {
         final var zebra = entry("tt2", "Zebra");
         final var apple = entry("tt1", "Apple");
         when(watchlistCatalog.findAll(USER)).thenReturn(List.of(zebra, apple));
-        when(streamInfoService.resolveAll(List.of("tt2", "tt1"))).thenReturn(Map.of(
-                "tt1", List.of(flatrate("tt1", "Netflix")),
-                "tt2", List.<QueryResult>of()));
+        when(streamInfoService.resolveAll(List.of(id("tt2"), id("tt1")))).thenReturn(Map.of(
+                id("tt1"), List.of(flatrate("tt1", "Netflix")),
+                id("tt2"), List.<QueryResult>of()));
 
         final List<OverviewEntryDto> overview = service.overview(USER);
 
@@ -63,18 +68,18 @@ class CatalogOverviewServiceTest {
         assertThat(overview.get(1).services()).isNull();
 
         // single batched lookup (no N+1)
-        final ArgumentCaptor<Collection<String>> captor = ArgumentCaptor.captor();
+        final ArgumentCaptor<Collection<ImdbId>> captor = ArgumentCaptor.captor();
         verify(streamInfoService, times(1)).resolveAll(captor.capture());
-        assertThat(captor.getValue()).containsExactly("tt2", "tt1");
+        assertThat(captor.getValue()).containsExactly(id("tt2"), id("tt1"));
     }
 
     @Test
     void overviewJoinsMultipleServiceLabelsWithLanguages() {
         final var e = entry("tt1", "Movie");
         when(watchlistCatalog.findAll(USER)).thenReturn(List.of(e));
-        when(streamInfoService.resolveAll(List.of("tt1"))).thenReturn(Map.of("tt1", List.of(
-                new QueryResult("tt1", "Netflix", true, List.of(), null),
-                new QueryResult("tt1", "Prime Video", true, List.of(), "Deutsch"))));
+        when(streamInfoService.resolveAll(List.of(id("tt1")))).thenReturn(Map.of(id("tt1"), List.of(
+                new QueryResult(id("tt1"), "Netflix", true, List.of(), null),
+                new QueryResult(id("tt1"), "Prime Video", true, List.of(), "Deutsch"))));
 
         assertThat(service.overview(USER).get(0).services()).isEqualTo("Netflix, Prime Video (Deutsch)");
     }
