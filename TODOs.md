@@ -16,6 +16,16 @@ Review-Punkte (eigene Nummerierung des Reviews, nicht TODO-N):
 - ✅ **#15** — Tests für CSV-Import und werstreamt.es-Parsing ergänzt (`8e20cdf`);
   Assertions konsolidiert (`8498adf`).
 
+Größere Umbauten (nach dem Review):
+
+- ✅ **Watchlist pro Benutzer** — die globale, dateibasierte Liste (`ImdbCatalog` +
+  `ListSelectionService`, `assets/`-Verzeichnis) ist durch eine **DB-gestützte Watchlist pro
+  Benutzer** ersetzt: neue Tabelle `watchlist_entry`, `WatchlistCatalog`/`WatchlistImportService`,
+  CSV-Upload statt Datei-Ablage, Full-Sync-Import. `CurrentUserService` überbrückt
+  `username → userId`; der werstreamt.es-Cache bleibt global. Beide Clients (Thymeleaf + Angular)
+  bekamen eine `/watchlist`-Seite; die Listen-Auswahl-Artefakte wurden entfernt. Siehe
+  [ADR 0007](docs/adr/0007-watchlist-pro-benutzer.md).
+
 TODO-Tickets:
 
 - ✅ **TODO-2** — Tabellen-/Spalten-Tippfehler (`QueryMeta`, `query_result_availabilities`).

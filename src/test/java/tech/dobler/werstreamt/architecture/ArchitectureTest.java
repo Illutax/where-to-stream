@@ -35,6 +35,20 @@ class ArchitectureTest {
             .because("time must be read through TimeService, not static now() calls (ADR-0003)");
 
     /**
+     * The authenticated user is resolved in the presentation layer (from the {@code Authentication})
+     * and passed down as a username / userId; the layers below never read the Spring Security
+     * {@code SecurityContext} (ADR-0007). This keeps the watchlist queries testable with a plain
+     * {@code UUID} and the lower layers free of Spring Security.
+     */
+    @ArchTest
+    static final ArchRule security_context_is_only_read_in_the_presentation_layer = noClasses()
+            .that().resideInAnyPackage("..application..", "..services..", "..persistence..", "..domain..")
+            .should().dependOnClassesThat()
+            .haveFullyQualifiedName("org.springframework.security.core.context.SecurityContextHolder")
+            .because("lower layers receive the username/userId from the presentation layer instead "
+                    + "of reading the SecurityContext (ADR-0007)");
+
+    /**
      * Layering: presentation (web/rest/api) → application → services → persistence, over the
      * domain leaf. {@code configurations} and {@code time} are cross-cutting and intentionally
      * not modelled ({@code consideringOnlyDependenciesInLayers}).

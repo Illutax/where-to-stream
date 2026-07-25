@@ -3,7 +3,8 @@ services:
     container_name: w2s
     image: "w2s:${DOCKER_IMAGE_TAG}"
     volumes:
-      - ./assets:/opt/app/assets:ro,Z
+      # Watchlists are per-user now and imported through the UI (uploaded and stored in the DB),
+      # so there is no longer an assets/ directory to mount.
       - ./logs:/opt/app/logs:Z
     environment:
       - SERVER_PORT=8080

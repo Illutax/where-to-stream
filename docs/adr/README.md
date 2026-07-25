@@ -13,5 +13,6 @@ zum `adr`-Skill der Team-Doku.
 | [0004](0004-vitest-als-angular-test-runner.md) | Vitest als Test-Runner für den Angular-Client | Accepted |
 | [0005](0005-assertj-und-mockito-im-backend.md) | AssertJ (mit Mockito) für Backend-Tests | Accepted |
 | [0006](0006-authentifizierung-und-autorisierung.md) | Authentifizierung & Autorisierung (Spring Security) | Accepted |
+| [0007](0007-watchlist-pro-benutzer.md) | Watchlist pro Benutzer (DB-gestützt statt globaler Dateiliste) | Accepted |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.

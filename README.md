@@ -2,10 +2,10 @@
 
 Manage lists of movies to watch and find **where to stream them**.
 
-w2s takes an [IMDb](https://www.imdb.com/) watchlist CSV export, scrapes
-[werstreamt.es](https://www.werstreamt.es/) for each title's streaming availability,
-caches the results in an embedded H2 database, and presents them as per-provider web pages
-(Netflix, Prime Video, Disney+, WOW, Google Play).
+Each signed-in user imports their own [IMDb](https://www.imdb.com/) watchlist CSV export;
+w2s scrapes [werstreamt.es](https://www.werstreamt.es/) for each title's streaming availability,
+caches the results in the database (shared across users), and presents each user's list as
+per-provider web pages (Netflix, Prime Video, Disney+, WOW, Google Play).
 
 ## Tech stack
 
@@ -22,15 +22,18 @@ caches the results in an embedded H2 database, and presents them as per-provider
 
 ## How it works
 
-1. Export your watchlist from IMDb as CSV and drop it into the `assets/` directory
-   (e.g. `assets/2025-01-01_My-List.csv`). On startup the **lexicographically last** file
-   in `assets/` is loaded; you can switch lists at runtime under `/list`.
-2. `ExportReader` parses the CSV into in-memory `ImdbEntry` records (malformed rows are
-   skipped and logged).
-3. `WerStreamtEsApiClient` scrapes werstreamt.es per title. Lookups are cached in H2
-   (`StreamInfoService`) and considered stale after a configurable number of days. Outbound
-   requests are rate-limited to stay polite.
-4. Thymeleaf pages render the aggregated availability per streaming service.
+1. Sign in, open **My Watchlist** (`/watchlist`, or `/app/#/watchlist` in the SPA) and upload
+   your IMDb watchlist CSV export. The import is a full sync of *your* list: new titles are
+   added, changed titles updated, and titles missing from the upload removed.
+2. `ExportReader` parses the uploaded CSV stream into `ImdbEntry` records (malformed rows are
+   skipped and logged); `WatchlistImportService` persists them to the `watchlist_entry` table,
+   scoped to your user id.
+3. `WerStreamtEsApiClient` scrapes werstreamt.es per title. Lookups are cached in the database
+   (`StreamInfoService`) and considered stale after a configurable number of days. The cache is
+   **global** (keyed by IMDb id, shared across users); outbound requests are rate-limited to stay
+   polite.
+4. Thymeleaf pages (and the Angular SPA) render each user's aggregated availability per
+   streaming service.
 
 ## Prerequisites
 
@@ -68,8 +71,8 @@ mvn spring-boot:run
 mvn test
 ```
 
-Put at least one IMDb CSV export in `assets/` before starting, otherwise startup fails
-(there is no list to load).
+On first start the database is empty; sign in and upload an IMDb CSV export under
+**My Watchlist** (`/watchlist`) to populate your list.
 
 `mvn spring-boot:run` (and `mvn package`) also builds the Angular client and folds it into the
 same jar, so once the app is up the SPA is available at `http://localhost:8001/app/` and the
@@ -128,7 +131,7 @@ Alpine/musl build (a host `node_modules` from glibc is missing `@rollup/rollup-l
 `npm ci` runs fresh in the image instead.
 
 The image builds the jar and runs it (see `Dockerfile` / `compose.yml`). `compose.yml`
-mounts `./assets` (read-only) and `./logs`, runs on port `8080`, and serves under the context
+mounts `./logs`, runs on port `8080`, and serves under the context
 path `/w2s` on an external `webserver` network. It also starts a bundled `mariadb` service
 (activated via the `mariadb` Spring profile) whose data lives in the `mariadb-data` **named
 volume** — a named volume (not a host bind mount) so the database directory gets the right
@@ -216,16 +219,16 @@ Key properties (`src/main/resources/application.properties`):
 | Property | Default | Description |
 | --- | --- | --- |
 | `server.port` | `8001` | HTTP port (Docker overrides to `8080`) |
-| `wer-streamt.path` | `assets` | Directory holding the IMDb CSV export(s) |
 | `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is refetched |
 | `wer-streamt.rate-limit.requests-per-second` | `2` | Outbound throttle for werstreamt.es (`<= 0` disables) |
 | `spring.jpa.hibernate.ddl-auto` | `none` | Schema is owned by Liquibase (single source of truth) |
 
 ### Database & schema
 
-The database holds only **cached scrape results**. The schema is created and versioned by
-**Liquibase** as portable XML changelogs (`src/main/resources/db/changelog/`), so the same
-changelog provisions both H2 and MariaDB. Hibernate neither creates nor validates the schema
+The database holds the user accounts, their per-user watchlists, persistent HTTP sessions, and
+the **global cached scrape results**. The schema is created and versioned by **Liquibase** as
+portable XML changelogs (`src/main/resources/db/changelog/`), so the same changelog provisions
+both H2 and MariaDB. Hibernate neither creates nor validates the schema
 (`ddl-auto=none`); correctness is covered by the repository tests, which run on H2 and (via
 Testcontainers) on a real MariaDB. The baseline assumes a fresh database — for an existing
 deployment, drop the old data before the first Liquibase run; the cache repopulates via
@@ -265,11 +268,11 @@ mvn -Ptestcontainers test
 | --- | --- |
 | `GET /api/catalog` | All entries with their available services |
 | `GET /api/providers/{amazon\|disney\|netflix\|wow\|google}` | Per-provider included + paid titles |
-| `GET /api/lists` · `PUT /api/lists/selection` | View / switch the active list |
-| `GET /api/manage` · `POST /api/manage/invalidate` · `POST /api/manage/scrape` | Cache management |
-| `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached |
-| `POST /api/refresh?scope=seen\|all` | Force-refresh cached results |
-| `GET /api/search?imdbId=…` or `?id=…` | Resolve availability for a title |
+| `GET /api/watchlist` · `POST /api/watchlist/import` · `DELETE /api/watchlist` | Your watchlist: status / CSV import / clear |
+| `GET /api/manage` · `POST /api/manage/invalidate` · `POST /api/manage/scrape` | Cache management (ADMIN) |
+| `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached (ADMIN) |
+| `POST /api/refresh?scope=seen\|all` | Force-refresh cached results (ADMIN) |
+| `GET /api/search?imdbId=…` | Resolve availability for a title |
 | `GET /api/status` | Version & server start time |
 
 **Pages (Thymeleaf):**
@@ -280,17 +283,15 @@ mvn -Ptestcontainers test
 | `/amazon` (`/prime`) | Prime Video: included + paid |
 | `/disney`, `/netflix`, `/wow` | Flatrate titles for that service |
 | `/google` | Google Play (paid) titles |
-| `/list` (GET) / `/list-change` (POST) | View / switch the active list |
+| `/watchlist` (GET) / `/watchlist/import` (POST) / `/watchlist/clear` (POST) | Your watchlist: view / import a CSV / clear |
 | `/public/status` | Version & server start time |
 
 **REST / maintenance:**
 
 | Path | Description |
 | --- | --- |
-| `/search?imdbId=…` or `?id=…` | Resolve availability for a title |
-| `/query?id=…` | Live werstreamt.es query for a title |
-| `/pre-cache` | Resolve & cache every entry |
-| `/check-pre-cache` | List entries without a cached result |
+| `/pre-cache` | Resolve & cache every title (across all users' watchlists) |
+| `/check-pre-cache` | List titles without a cached result |
 | `/refresh/all`, `/refresh/seen` | Force-refresh cached results |
 
 > Note: the maintenance endpoints are currently unauthenticated `GET`s with side effects —
