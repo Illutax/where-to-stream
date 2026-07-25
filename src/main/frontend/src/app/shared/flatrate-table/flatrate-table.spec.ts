@@ -1,4 +1,6 @@
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatSortHarness } from '@angular/material/sort/testing';
 import { FlatrateTable } from './flatrate-table';
 import { FlatrateEntry } from '../../core/models';
 
@@ -36,5 +38,22 @@ describe('FlatrateTable', () => {
 
     expect(rows()).toHaveLength(1);
     expect(rows()[0].textContent).toContain('Nothing here');
+  });
+
+  it('sorts by the "Added" date when its header is clicked', async () => {
+    fixture.componentRef.setInput('entries', [
+      entry({ name: 'Later', imdbId: 'tt2', added: '2021-05-05' }),
+      entry({ name: 'Earlier', imdbId: 'tt1', added: '2020-01-01' }),
+    ]);
+    fixture.detectChanges();
+
+    const sort = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSortHarness);
+    const [addedHeader] = await sort.getSortHeaders({ label: 'Added' });
+
+    await addedHeader.click();
+    fixture.detectChanges();
+
+    const titles = rows().map((r) => r.querySelector('a')?.textContent?.trim());
+    expect(titles).toEqual(['Earlier', 'Later']);
   });
 });

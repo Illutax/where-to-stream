@@ -1,4 +1,6 @@
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatSortHarness } from '@angular/material/sort/testing';
 import { CatalogTable } from './catalog-table';
 import { OverviewEntry } from '../../core/models';
 
@@ -51,5 +53,41 @@ describe('CatalogTable', () => {
 
     expect(rows()).toHaveLength(1);
     expect(rows()[0].textContent).toContain('No entries');
+  });
+
+  const titles = () => rows().map((r) => r.querySelector('a')?.textContent?.trim());
+
+  it('sorts by title ascending then descending as the header is clicked', async () => {
+    fixture.componentRef.setInput('entries', [
+      entry({ name: 'Beta', imdbId: 'tt2' }),
+      entry({ name: 'Alpha', imdbId: 'tt1' }),
+    ]);
+    fixture.detectChanges();
+
+    const sort = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSortHarness);
+    const [titleHeader] = await sort.getSortHeaders({ label: 'Title' });
+
+    await titleHeader.click();
+    fixture.detectChanges();
+    expect(titles()).toEqual(['Alpha', 'Beta']);
+
+    await titleHeader.click();
+    fixture.detectChanges();
+    expect(titles()).toEqual(['Beta', 'Alpha']);
+  });
+
+  it('sorts by year when the Year header is clicked', async () => {
+    fixture.componentRef.setInput('entries', [
+      entry({ name: 'Newer', imdbId: 'tt2', year: 2010 }),
+      entry({ name: 'Older', imdbId: 'tt1', year: 1999 }),
+    ]);
+    fixture.detectChanges();
+
+    const sort = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSortHarness);
+    const [yearHeader] = await sort.getSortHeaders({ label: 'Year' });
+
+    await yearHeader.click();
+    fixture.detectChanges();
+    expect(titles()).toEqual(['Older', 'Newer']);
   });
 });
