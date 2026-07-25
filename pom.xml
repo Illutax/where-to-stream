@@ -20,7 +20,6 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.40</lombok.version>
         <bootstrap.version>5.3.8</bootstrap.version>
-        <fontawesome.version>7.1.0</fontawesome.version>
         <testcontainers.version>1.21.3</testcontainers.version>
         <!-- JUnit tags excluded from the default test run; cleared by the 'testcontainers' profile. -->
         <test.excluded.groups>testcontainers</test.excluded.groups>
@@ -60,11 +59,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
-        <!-- Thymeleaf sec:authorize / #authentication in server-side templates. -->
-        <dependency>
-            <groupId>org.thymeleaf.extras</groupId>
-            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
-        </dependency>
         <!-- Persist HTTP sessions in the DB so logins survive restarts (schema via Liquibase).
              In Boot 4 the JDBC-session auto-configuration lives in the separate spring-boot-session-jdbc
              module (not pulled transitively by the spring-session-jdbc library). -->
@@ -76,30 +70,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-session-jdbc</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>jquery</artifactId>
-            <version>3.7.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>popper.js</artifactId>
-            <version>2.11.7</version>
-        </dependency>
+        <!-- Bootstrap CSS for the (only remaining) server-rendered page, the login page. -->
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>bootstrap</artifactId>
             <version>${bootstrap.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>font-awesome</artifactId>
-            <version>${fontawesome.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>nz.net.ultraq.thymeleaf</groupId>
-            <artifactId>thymeleaf-layout-dialect</artifactId>
-            <version>3.3.0</version>
         </dependency>
 
         <dependency>

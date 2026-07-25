@@ -2,9 +2,8 @@ import { inject, Injectable, signal } from '@angular/core';
 import { WatchlistApi } from './api/watchlist-api';
 
 /**
- * Holds the current user's watchlist size for the navbar — the Angular equivalent of the server's
- * CommonAttributeService (which injected "watchlistCount" into every Thymeleaf model). Loaded once
- * on app start and refreshed after an import or clear.
+ * Holds the current user's watchlist size for the navbar. Loaded once on app start (GET
+ * /api/watchlist) and refreshed after an import or clear.
  */
 @Injectable({ providedIn: 'root' })
 export class WatchlistStore {

@@ -26,10 +26,12 @@ import java.util.UUID;
  * Application security: form + HTTP Basic + (optional) Google OIDC login over a database-backed
  * user store, with role-based authorization.
  *
- * <p>Everything requires authentication; state-changing / maintenance endpoints and the user
- * administration require {@code ADMIN}. CSRF uses a cookie repository so the Angular SPA (session
- * cookie) and the Thymeleaf forms are both protected; {@code /api/**} returns 401 instead of a
- * login redirect so the SPA can react.
+ * <p>The only UI is the Angular SPA at {@code /app/**}; the sole server-rendered page is the login
+ * page (the OIDC-ready auth entry). Everything requires authentication except the login page and
+ * the public status probe; the user administration and the cache-management / refresh API require
+ * {@code ADMIN}. CSRF uses a cookie repository so the SPA (session cookie) is protected;
+ * {@code /api/**} returns 401 instead of a login redirect so the SPA can react, while other
+ * (browser) requests are redirected to {@code /login}.
  */
 @Configuration
 @EnableWebSecurity
@@ -53,18 +55,15 @@ public class SecurityConfig {
                                                    SecurityProperties securityProperties) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // Public: login, errors, static assets for the login page, status probe.
+                        // Public: login page + its Bootstrap CSS (webjars), errors, status probe.
                         .requestMatchers("/login", "/error", "/favicon.ico").permitAll()
-                        .requestMatchers("/public/**", "/webjars/**", "/css/**", "/js/**").permitAll()
-                        // ADMIN: user administration.
-                        .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
-                        // ADMIN: state-changing / maintenance endpoints (legacy + API) — fixes TODO-5.
-                        .requestMatchers("/pre-cache", "/check-pre-cache", "/refresh/**",
-                                "/invalidate", "/scrape-invalidated", "/manage").hasRole("ADMIN")
+                        .requestMatchers("/public/**", "/webjars/**").permitAll()
+                        // ADMIN: user administration and cache-management / refresh API — fixes TODO-5.
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/manage/**", "/api/cache/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/refresh").hasRole("ADMIN")
-                        // Everything else — read pages, GET /api/**, /watchlist (import my own list),
-                        // /api/watchlist/**, the SPA at /app/** — just needs a login.
+                        // Everything else — GET /api/**, /api/watchlist/**, the SPA at /app/** and the
+                        // root redirect — just needs a login.
                         .anyRequest().authenticated())
                 .formLogin(form -> form.loginPage("/login").permitAll())
                 .httpBasic(Customizer.withDefaults())

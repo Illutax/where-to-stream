@@ -33,9 +33,10 @@ class SecurityRulesTest {
     }
 
     @Test
-    void anonymousPageRequestRedirectsToLogin() throws Exception {
-        // A browser (Accept: text/html) is redirected to the login page; non-HTML clients get 401.
-        mockMvc.perform(get("/").accept(MediaType.TEXT_HTML))
+    void anonymousSpaRequestRedirectsToLogin() throws Exception {
+        // A browser (Accept: text/html) hitting the SPA shell is redirected to the login page;
+        // /api/** clients get 401 instead (see anonymousApiRequestGets401).
+        mockMvc.perform(get("/app/").accept(MediaType.TEXT_HTML))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login"));
     }
