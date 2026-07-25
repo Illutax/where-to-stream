@@ -8,7 +8,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import tech.dobler.werstreamt.application.CurrentUserService;
 import tech.dobler.werstreamt.application.UserAdminService;
 import tech.dobler.werstreamt.application.UserManagementException;
 import tech.dobler.werstreamt.application.dto.CreateUserRequest;
@@ -26,12 +28,13 @@ public class AdminUserController {
 
     private final UserAdminService userAdminService;
     private final CommonAttributeService commonAttributeService;
+    private final CurrentUserService currentUserService;
 
     @GetMapping
-    public String list(Model model) {
+    public String list(Model model, Authentication authentication) {
         model.addAttribute("users", userAdminService.list());
         model.addAttribute("allRoles", Role.values());
-        commonAttributeService.add(model);
+        commonAttributeService.add(model, currentUserService.resolveId(authentication.getName()));
         return "admin/users";
     }
 

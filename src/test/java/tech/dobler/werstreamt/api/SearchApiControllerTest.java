@@ -42,15 +42,6 @@ class SearchApiControllerTest {
     }
 
     @Test
-    void searchByCatalogIdReturnsResults() throws Exception {
-        when(searchService.resolveByCatalogId(5)).thenReturn(Optional.of(List.of(result("tt5"))));
-
-        mockMvc.perform(get("/api/search").param("id", "5"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].imdbId").value("tt5"));
-    }
-
-    @Test
     void missReturns404() throws Exception {
         when(searchService.resolveByImdbId("tt404")).thenReturn(Optional.empty());
 
@@ -59,7 +50,7 @@ class SearchApiControllerTest {
     }
 
     @Test
-    void missingBothParamsReturns400() throws Exception {
+    void missingImdbIdParamReturns400() throws Exception {
         mockMvc.perform(get("/api/search"))
                 .andExpect(status().isBadRequest());
     }

@@ -52,5 +52,17 @@
     <button type="submit" class="btn btn-danger">Invalidate selected</button>
 </form>
 
+<hr/>
+
+<h2 class="h5">Force refresh (all users' titles)</h2>
+<div class="d-flex gap-2">
+    <form method="get" th:action="@{/refresh/seen}">
+        <button type="submit" class="btn btn-outline-secondary">Refresh seen</button>
+    </form>
+    <form method="get" th:action="@{/refresh/all}">
+        <button type="submit" class="btn btn-outline-secondary">Refresh all</button>
+    </form>
+</div>
+
 </body>
 </html>

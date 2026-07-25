@@ -1,14 +1,12 @@
 package tech.dobler.werstreamt.services;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,32 +14,27 @@ import static org.assertj.core.api.Assertions.tuple;
 
 class ExportReaderTest {
 
-    private static final String LIST_NAME = "2024-12-25_Test.csv";
+    private final ExportReader exportReader = new ExportReader();
 
-    private ExportReader exportReader;
-
-    @BeforeEach
-    void setUp() {
-        final var properties = new WerStreamtProperties(
-                "src/test/resources/test-assets",
-                new WerStreamtProperties.Invalidate(28),
-                new WerStreamtProperties.RateLimit(0));
-        exportReader = new ExportReader(properties);
+    /** The sample IMDb export, opened as a classpath resource (uploads arrive as a stream). */
+    private static InputStream sampleExport() {
+        final var in = ExportReaderTest.class.getResourceAsStream("/test-assets/2024-12-25_Test.csv");
+        assertThat(in).as("sample export fixture present").isNotNull();
+        return in;
     }
 
     @Test
     void parsesAllRows() {
-        final List<ImdbEntry> entries = exportReader.parse(LIST_NAME);
+        final List<ImdbEntry> entries = exportReader.parse(sampleExport());
 
         assertThat(entries).hasSize(35);
     }
 
     @Test
     void mapsColumnsOfFirstEntry() {
-        final ImdbEntry first = exportReader.parse(LIST_NAME).getFirst();
+        final ImdbEntry first = exportReader.parse(sampleExport()).getFirst();
 
         final var expected = List.of(
-                1,
                 "The Prestige",
                 "tt0482571",
                 URI.create("https://www.imdb.com/title/tt0482571/"),
@@ -50,7 +43,6 @@ class ExportReaderTest {
                 true);
         assertThat(first)
                 .extracting(
-                        ImdbEntry::id,
                         ImdbEntry::name,
                         ImdbEntry::imdbId,
                         ImdbEntry::url,
@@ -62,7 +54,7 @@ class ExportReaderTest {
 
     @Test
     void extractsImdbIdFromUrl() {
-        final List<ImdbEntry> entries = exportReader.parse(LIST_NAME);
+        final List<ImdbEntry> entries = exportReader.parse(sampleExport());
 
         assertThat(entries)
                 .extracting(ImdbEntry::imdbId)
@@ -71,7 +63,7 @@ class ExportReaderTest {
 
     @Test
     void handlesQuotedTitlesWithApostrophes() {
-        final List<ImdbEntry> entries = exportReader.parse(LIST_NAME);
+        final List<ImdbEntry> entries = exportReader.parse(sampleExport());
 
         assertThat(entries)
                 .extracting(ImdbEntry::name)
@@ -80,14 +72,14 @@ class ExportReaderTest {
 
     @Test
     void marksEntriesWithYourRatingAsRated() {
-        final List<ImdbEntry> entries = exportReader.parse(LIST_NAME);
+        final List<ImdbEntry> entries = exportReader.parse(sampleExport());
 
         // Every row in the fixture has a "Your Rating" value, so all entries are rated.
         assertThat(entries).allMatch(ImdbEntry::isRated);
     }
 
     @Test
-    void skipsMalformedRowsAndKeepsIdsContiguous(@TempDir Path dir) throws Exception {
+    void skipsMalformedRows() {
         final var csv = """
                 Position,Const,Created,Modified,Description,Title,Original Title,URL,Title Type,IMDb Rating,Runtime (mins),Year,Genres,Num Votes,Release Date,Directors,Your Rating,Date Rated
                 1,tt0000001,2012-06-22,2012-06-22,,"Good One","Good One",https://www.imdb.com/title/tt0000001/,Movie,8.5,130,2006,"Drama",1,2006-10-20,"Dir",10,2012-06-22
@@ -95,17 +87,15 @@ class ExportReaderTest {
                 3,tt0000003,2012-06-22,2012-06-22,,"Bad Url","Bad Url",not-an-imdb-url,Movie,8.5,130,2010,"Drama",1,2006-10-20,"Dir",10,2012-06-22
                 4,tt0000004,2012-06-22,2012-06-22,,"Good Two","Good Two",https://www.imdb.com/title/tt0000004/,Movie,8.5,130,2011,"Drama",1,2006-10-20,"Dir",10,2012-06-22
                 """;
-        Files.writeString(dir.resolve("list.csv"), csv);
-        final var reader = new ExportReader(new WerStreamtProperties(
-                dir.toString(), new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)));
+        final var in = new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8));
 
-        final List<ImdbEntry> entries = reader.parse("list.csv");
+        final List<ImdbEntry> entries = exportReader.parse(in);
 
-        // Bad-year and bad-url rows are skipped; surviving entries keep contiguous ids.
+        // Bad-year and bad-url rows are skipped; the two well-formed rows survive.
         assertThat(entries)
-                .extracting(ImdbEntry::name, ImdbEntry::imdbId, ImdbEntry::id)
+                .extracting(ImdbEntry::name, ImdbEntry::imdbId)
                 .containsExactly(
-                        tuple("Good One", "tt0000001", 1),
-                        tuple("Good Two", "tt0000004", 2));
+                        tuple("Good One", "tt0000001"),
+                        tuple("Good Two", "tt0000004"));
     }
 }

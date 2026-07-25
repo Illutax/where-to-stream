@@ -6,7 +6,6 @@ import java.net.URI;
 import java.util.Comparator;
 
 public record ImdbEntry(
-        int id,
         String name,
         URI url,
         String added,

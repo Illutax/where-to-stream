@@ -4,52 +4,48 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
+import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Pre-resolves stream availability for every known IMDb entry so later page views hit the
- * cache. Lives in the service layer so both {@code PreCacheController} and
- * {@code ChangeListController} can trigger it without a controller depending on another
- * controller.
+ * Pre-resolves stream availability so later page views hit the cache. Operates on the union of
+ * every user's watchlist titles (distinct imdbIds), since the werstreamt.es cache is global — the
+ * global (ADMIN) cache maintenance and the per-import targeted pre-cache both use this service.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PreCacheService {
     private final StreamInfoService streamInfoService;
-    private final ImdbCatalog imdbCatalog;
+    private final WatchlistEntryRepository watchlistEntryRepository;
     private final QueryMetaRepository queryMetaRepository;
 
-    /**
-     * Resolves every entry (populating the cache as a side effect) and returns how many
-     * entries were processed.
-     */
+    /** Resolves every known title (across all users) and returns how many were processed. */
     public int cacheAll() {
-        final var all = imdbCatalog.findAll();
+        return cache(watchlistEntryRepository.findDistinctImdbIds());
+    }
+
+    /** Resolves the given titles (populating the cache) and returns how many were processed. */
+    public int cache(Collection<String> imdbIds) {
         final var counter = new AtomicInteger(0);
-        all.parallelStream()
-                .forEach(e -> {
-                    streamInfoService.resolve(e.imdbId());
+        imdbIds.parallelStream()
+                .forEach(imdbId -> {
+                    streamInfoService.resolve(imdbId);
                     if (counter.incrementAndGet() % 10 == 0) {
-                        log.info("got {} imdb entries", counter.get());
+                        log.info("resolved {} titles", counter.get());
                     }
                 });
         return counter.get();
     }
 
-    /**
-     * Resolves only the entries that currently have no valid cached result — i.e. never-cached
-     * titles and ones that were invalidated (see {@link #invalidate}). Returns how many were
-     * (re)scraped.
-     */
+    /** Resolves only the titles with no valid cached result (never cached or invalidated). */
     public int cacheUncached() {
-        final var uncached = findUncached();
-        uncached.parallelStream().forEach(e -> streamInfoService.resolve(e.imdbId()));
+        final var uncached = findUncachedImdbIds();
+        uncached.parallelStream().forEach(streamInfoService::resolve);
         return uncached.size();
     }
 
@@ -67,14 +63,11 @@ public class PreCacheService {
         return affected;
     }
 
-    /**
-     * Returns the entries that currently have no valid cached query result (never cached or
-     * invalidated).
-     */
-    public List<ImdbEntry> findUncached() {
-        return imdbCatalog.findAll().parallelStream()
-                .filter(e -> queryMetaRepository
-                        .findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(e.imdbId())
+    /** The distinct titles (across all users) that currently have no valid cached query result. */
+    public List<String> findUncachedImdbIds() {
+        return watchlistEntryRepository.findDistinctImdbIds().parallelStream()
+                .filter(imdbId -> queryMetaRepository
+                        .findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId)
                         .isEmpty())
                 .toList();
     }

@@ -22,7 +22,7 @@ class WerStreamtEsApiClientIntegrationTest {
     private static final String IMDB_ID = "tt0822847";
 
     private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(new RateLimiter(
-            new WerStreamtProperties(null, new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0))));
+            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0))));
 
     private List<QueryResult> parseFixture() throws Exception {
         try (InputStream in = getClass().getResourceAsStream("/werstreamt/priest-tt0822847.html")) {

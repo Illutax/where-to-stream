@@ -5,8 +5,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tech.dobler.werstreamt.application.CurrentUserService;
 import tech.dobler.werstreamt.application.UserAdminService;
 import tech.dobler.werstreamt.application.UserManagementException;
 import tech.dobler.werstreamt.application.dto.UserDto;
@@ -37,13 +39,18 @@ class AdminUserControllerTest {
     private UserAdminService userAdminService;
     @MockitoBean
     private CommonAttributeService commonAttributeService;
+    @MockitoBean
+    private CurrentUserService currentUserService;
 
     @Test
     void listRendersTheUsers() throws Exception {
+        when(currentUserService.resolveId("admin"))
+                .thenReturn(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         when(userAdminService.list()).thenReturn(List.of(
                 new UserDto("1", "admin", "a@x", true, List.of("ADMIN", "USER"), "LOCAL")));
 
-        final var html = mockMvc.perform(get("/admin/users"))
+        final var html = mockMvc.perform(get("/admin/users")
+                        .principal(new UsernamePasswordAuthenticationToken("admin", "pw")))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 

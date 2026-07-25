@@ -6,14 +6,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
-import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.persistence.QueryMeta;
 import tech.dobler.werstreamt.persistence.QueryMetaRepository;
 import tech.dobler.werstreamt.persistence.QueryResultDB;
 import tech.dobler.werstreamt.time.TimeService;
 
-import java.net.URI;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -30,15 +28,13 @@ import static org.mockito.Mockito.when;
 class StreamInfoServiceTest {
 
     private static final WerStreamtProperties PROPS = new WerStreamtProperties(
-            "assets", new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0));
+            new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0));
     // Fixed "now" injected through the TimeService facade — cache-freshness assertions are exact
     // and repeatable instead of relative to the wall clock.
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
     @Mock
     private StreamAvailabilityProvider streamProvider;
-    @Mock
-    private ImdbCatalog imdbCatalog;
     @Mock
     private QueryMetaRepository queryMetaRepository;
     @Mock
@@ -49,12 +45,7 @@ class StreamInfoServiceTest {
     @BeforeEach
     void setUp() {
         when(timeService.now()).thenReturn(NOW);
-        service = new StreamInfoService(streamProvider, imdbCatalog, queryMetaRepository, PROPS, timeService);
-    }
-
-    private static ImdbEntry entry(String imdbId) {
-        return new ImdbEntry(1, "movie", URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                "2020-01-01", false, 2020, imdbId);
+        service = new StreamInfoService(streamProvider, queryMetaRepository, PROPS, timeService);
     }
 
     private static QueryMeta meta(String imdbId, Instant creationTime, String serviceName) {
@@ -80,7 +71,6 @@ class StreamInfoServiceTest {
     @Test
     void resolveFetchesAndCachesOnMiss() {
         stubFindFirst("tt2", Optional.empty());
-        when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
         final var fetched = new QueryResult("tt2", "Prime Video", false, List.of(), null);
         when(streamProvider.query("tt2")).thenReturn(List.of(fetched));
 
@@ -94,7 +84,6 @@ class StreamInfoServiceTest {
     @Test
     void resolveRefetchesWhenCacheExpired() {
         stubFindFirst("tt3", Optional.of(meta("tt3", NOW.minus(40, ChronoUnit.DAYS), "Stale")));
-        when(imdbCatalog.findByImdb("tt3")).thenReturn(Optional.of(entry("tt3")));
         when(streamProvider.query("tt3")).thenReturn(List.of(new QueryResult("tt3", "Fresh", false, List.of(), null)));
 
         final var result = service.resolve("tt3");
@@ -106,7 +95,6 @@ class StreamInfoServiceTest {
     @Test
     void resolveForceRefreshAlwaysFetches() {
         stubFindFirst("tt4", Optional.of(meta("tt4", NOW, "Cached")));
-        when(imdbCatalog.findByImdb("tt4")).thenReturn(Optional.of(entry("tt4")));
         when(streamProvider.query("tt4")).thenReturn(List.of(new QueryResult("tt4", "Refreshed", false, List.of(), null)));
 
         final var result = service.resolve("tt4", true);
@@ -120,7 +108,6 @@ class StreamInfoServiceTest {
         when(queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(List.of("tt1", "tt2")))
                 .thenReturn(List.of(meta("tt1", NOW, "Netflix")));
         // tt2 is a cache miss -> fetched individually
-        when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(entry("tt2")));
         when(streamProvider.query("tt2")).thenReturn(List.of(new QueryResult("tt2", "Prime Video", false, List.of(), null)));
 
         final var result = service.resolveAll(List.of("tt1", "tt2"));

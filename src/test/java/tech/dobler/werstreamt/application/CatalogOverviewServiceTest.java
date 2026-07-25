@@ -10,13 +10,14 @@ import tech.dobler.werstreamt.application.dto.OverviewEntryDto;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.QueryResult;
-import tech.dobler.werstreamt.services.ImdbCatalog;
 import tech.dobler.werstreamt.services.StreamInfoService;
+import tech.dobler.werstreamt.services.WatchlistCatalog;
 
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
@@ -26,15 +27,17 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CatalogOverviewServiceTest {
 
+    private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     @Mock
-    private ImdbCatalog imdbCatalog;
+    private WatchlistCatalog watchlistCatalog;
     @Mock
     private StreamInfoService streamInfoService;
     @InjectMocks
     private CatalogOverviewService service;
 
     private static ImdbEntry entry(String imdbId, String name) {
-        return new ImdbEntry(1, name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
+        return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
                 "2020-01-01", true, 2020, imdbId);
     }
 
@@ -46,12 +49,12 @@ class CatalogOverviewServiceTest {
     void overviewBatchResolvesAllEntriesOnceAndSortsByName() {
         final var zebra = entry("tt2", "Zebra");
         final var apple = entry("tt1", "Apple");
-        when(imdbCatalog.findAll()).thenReturn(List.of(zebra, apple));
+        when(watchlistCatalog.findAll(USER)).thenReturn(List.of(zebra, apple));
         when(streamInfoService.resolveAll(List.of("tt2", "tt1"))).thenReturn(Map.of(
                 "tt1", List.of(flatrate("tt1", "Netflix")),
                 "tt2", List.<QueryResult>of()));
 
-        final List<OverviewEntryDto> overview = service.overview();
+        final List<OverviewEntryDto> overview = service.overview(USER);
 
         // sorted by name: Apple before Zebra
         assertThat(overview).extracting(OverviewEntryDto::name).containsExactly("Apple", "Zebra");
@@ -68,11 +71,11 @@ class CatalogOverviewServiceTest {
     @Test
     void overviewJoinsMultipleServiceLabelsWithLanguages() {
         final var e = entry("tt1", "Movie");
-        when(imdbCatalog.findAll()).thenReturn(List.of(e));
+        when(watchlistCatalog.findAll(USER)).thenReturn(List.of(e));
         when(streamInfoService.resolveAll(List.of("tt1"))).thenReturn(Map.of("tt1", List.of(
                 new QueryResult("tt1", "Netflix", true, List.of(), null),
                 new QueryResult("tt1", "Prime Video", true, List.of(), "Deutsch"))));
 
-        assertThat(service.overview().get(0).services()).isEqualTo("Netflix, Prime Video (Deutsch)");
+        assertThat(service.overview(USER).get(0).services()).isEqualTo("Netflix, Prime Video (Deutsch)");
     }
 }

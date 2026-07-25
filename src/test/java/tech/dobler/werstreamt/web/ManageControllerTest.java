@@ -5,9 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.werstreamt.application.CacheManagementService;
+import tech.dobler.werstreamt.application.CurrentUserService;
 import tech.dobler.werstreamt.application.dto.InvalidateResultDto;
 import tech.dobler.werstreamt.application.dto.ManagePageDto;
 import tech.dobler.werstreamt.application.dto.ManageRowDto;
@@ -15,6 +17,7 @@ import tech.dobler.werstreamt.application.dto.ScrapeResultDto;
 import tech.dobler.werstreamt.configurations.ThymeleafConfig;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -36,14 +39,19 @@ class ManageControllerTest {
     private CacheManagementService cacheManagementService;
     @MockitoBean
     private CommonAttributeService commonAttributeService;
+    @MockitoBean
+    private CurrentUserService currentUserService;
 
     @Test
     void manageRendersTheRows() throws Exception {
+        when(currentUserService.resolveId("admin"))
+                .thenReturn(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         when(cacheManagementService.managePage()).thenReturn(new ManagePageDto(
                 List.of(new ManageRowDto("tt1", "Alpha", true, true),
                         new ManageRowDto("tt2", "Beta", false, false)), 1));
 
-        final var html = mockMvc.perform(get("/manage"))
+        final var html = mockMvc.perform(get("/manage")
+                        .principal(new UsernamePasswordAuthenticationToken("admin", "pw")))
                 .andExpect(status().isOk())
                 .andExpect(view().name("manage"))
                 .andReturn().getResponse().getContentAsString();

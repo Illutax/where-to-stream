@@ -59,6 +59,15 @@ class SecurityRulesTest {
     }
 
     @Test
+    void anyAuthenticatedUserCanReadTheirOwnWatchlist() throws Exception {
+        // The watchlist is per-user (not ADMIN-gated). The principal name must match a real
+        // account (the seeded "admin") since the endpoint resolves the username to a user id,
+        // but a plain USER role is enough — proving the endpoint is not behind the ADMIN gate.
+        mockMvc.perform(get("/api/watchlist").with(user("admin").roles("USER")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void adminCanListUsers() throws Exception {
         mockMvc.perform(get("/api/admin/users").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk());

@@ -1,6 +1,7 @@
 package tech.dobler.werstreamt.web;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -8,12 +9,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import tech.dobler.werstreamt.application.CacheManagementService;
+import tech.dobler.werstreamt.application.CurrentUserService;
 
 import java.util.List;
 
 /**
- * Cache-management UI: invalidate selected titles, and (re-)scrape only the titles whose
- * cache is missing or invalidated. All logic lives in {@link CacheManagementService}.
+ * Global (ADMIN) cache-management UI: invalidate selected titles, and (re-)scrape only the titles
+ * whose cache is missing or invalidated. All logic lives in {@link CacheManagementService}.
  */
 @Controller
 @RequiredArgsConstructor
@@ -21,13 +23,14 @@ public class ManageController {
 
     private final CacheManagementService cacheManagementService;
     private final CommonAttributeService commonAttributeService;
+    private final CurrentUserService currentUserService;
 
     @GetMapping("/manage")
-    public String manage(Model model) {
+    public String manage(Model model, Authentication authentication) {
         final var page = cacheManagementService.managePage();
         model.addAttribute("rows", page.rows());
         model.addAttribute("needsScrapeCount", page.needsScrapeCount());
-        commonAttributeService.add(model);
+        commonAttributeService.add(model, currentUserService.resolveId(authentication.getName()));
         return "manage";
     }
 

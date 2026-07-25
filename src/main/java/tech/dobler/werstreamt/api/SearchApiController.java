@@ -13,8 +13,8 @@ import tech.dobler.werstreamt.domain.QueryResult;
 import java.util.List;
 
 /**
- * Resolve stream availability for a single title, by IMDb id ({@code ?imdbId=tt…}) or by
- * catalogue id ({@code ?id=…}). 404 when the title is unknown or nothing is available.
+ * Resolve stream availability for a single title by IMDb id ({@code ?imdbId=tt…}) from the shared
+ * cache. 404 when nothing is available.
  */
 @RestController
 @RequestMapping("/api/search")
@@ -24,14 +24,8 @@ public class SearchApiController {
     private final SearchService searchService;
 
     @GetMapping
-    public List<QueryResult> search(@RequestParam(name = "imdbId", required = false) String imdbId,
-                                    @RequestParam(name = "id", required = false) Integer id) {
-        if (imdbId == null && id == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide either imdbId or id");
-        }
-        final var result = id == null
-                ? searchService.resolveByImdbId(imdbId)
-                : searchService.resolveByCatalogId(id);
-        return result.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No availability found"));
+    public List<QueryResult> search(@RequestParam("imdbId") String imdbId) {
+        return searchService.resolveByImdbId(imdbId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No availability found"));
     }
 }

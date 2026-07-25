@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StreamInfoService {
     private final StreamAvailabilityProvider streamProvider;
-    private final ImdbCatalog imdbCatalog;
     private final QueryMetaRepository queryMetaRepository;
     private final WerStreamtProperties properties;
     private final TimeService timeService;
@@ -105,9 +104,8 @@ public class StreamInfoService {
 
     private List<QueryResult> fetch(String imdbId) {
         log.info("Fetching imdb entries for imdbId {}", imdbId);
-        final var queryResults = imdbCatalog.findByImdb(imdbId)
-                .map(entry -> streamProvider.query(entry.imdbId()))
-                .orElse(List.of());
+        // The werstreamt.es cache is global (per imdbId), so scrape directly — no watchlist gate.
+        final var queryResults = streamProvider.query(imdbId);
         final var list = queryResults.stream().map(QueryResultMapper.INSTANCE::entityToDto).toList();
         queryMetaRepository.save(QueryMeta.of(imdbId, timeService.now(), list));
         return queryResults;

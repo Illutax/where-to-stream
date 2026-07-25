@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,4 +28,7 @@ public interface WatchlistEntryRepository extends ListCrudRepository<WatchlistEn
 
     @Query("select distinct w.imdbId from WatchlistEntry w where w.rated = true")
     List<String> findDistinctImdbIdsRated();
+
+    @Query("select max(w.createdAt) from WatchlistEntry w where w.userId = :userId")
+    Optional<Instant> findLastImportedAt(UUID userId);
 }

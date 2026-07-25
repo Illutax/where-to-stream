@@ -1,0 +1,108 @@
+package tech.dobler.werstreamt.application;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tech.dobler.werstreamt.application.dto.WatchlistDto;
+import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
+import tech.dobler.werstreamt.domain.ImdbEntry;
+import tech.dobler.werstreamt.persistence.WatchlistEntry;
+import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
+import tech.dobler.werstreamt.services.ExportReader;
+import tech.dobler.werstreamt.time.TimeService;
+
+import java.io.InputStream;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Manages a user's own watchlist: imports an IMDb CSV export (a full sync — add/update/remove),
+ * reports status, and clears it. Replaces the former global {@code ListSelectionService}.
+ *
+ * <p>Titles are resolved lazily against the shared cache on first page view, so the import stays a
+ * fast, DB-only operation (no scraping while holding the transaction).
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class WatchlistImportService {
+
+    private final WatchlistEntryRepository repository;
+    private final ExportReader exportReader;
+    private final CurrentUserService currentUserService;
+    private final TimeService timeService;
+
+    public WatchlistDto status(UUID userId) {
+        return new WatchlistDto(repository.countByUserId(userId),
+                repository.findLastImportedAt(userId).orElse(null));
+    }
+
+    /** Cheap count for the navbar (avoids loading rows). */
+    public long count(UUID userId) {
+        return repository.countByUserId(userId);
+    }
+
+    public UUID resolveUserId(String username) {
+        return currentUserService.resolveId(username);
+    }
+
+    @Transactional
+    public WatchlistImportResultDto importCsv(UUID userId, InputStream csv) {
+        final var parsed = exportReader.parse(csv);
+        if (parsed.isEmpty()) {
+            throw new InvalidImportException("No valid entries found in the uploaded file.");
+        }
+        // De-duplicate the upload by imdbId (last row wins), preserving order.
+        final Map<String, ImdbEntry> incoming = new LinkedHashMap<>();
+        parsed.forEach(e -> incoming.put(e.imdbId(), e));
+
+        final Map<String, WatchlistEntry> existing = repository.findByUserId(userId).stream()
+                .collect(Collectors.toMap(WatchlistEntry::getImdbId, Function.identity()));
+
+        final Instant now = timeService.now();
+        int added = 0;
+        int updated = 0;
+        int removed = 0;
+
+        for (ImdbEntry e : incoming.values()) {
+            final WatchlistEntry current = existing.get(e.imdbId());
+            if (current == null) {
+                repository.save(WatchlistEntry.of(userId, e.imdbId(), e.name(), e.url(), e.added(),
+                        e.isRated(), e.year(), now));
+                added++;
+            } else if (differs(current, e)) {
+                current.update(e.name(), e.url(), e.added(), e.isRated(), e.year());
+                repository.save(current);
+                updated++;
+            }
+        }
+        for (WatchlistEntry current : existing.values()) {
+            if (!incoming.containsKey(current.getImdbId())) {
+                repository.delete(current);
+                removed++;
+            }
+        }
+
+        log.info("Watchlist import for {}: +{} ~{} -{} ({} total)", userId, added, updated, removed, incoming.size());
+        return new WatchlistImportResultDto(added, updated, removed, incoming.size());
+    }
+
+    @Transactional
+    public void clear(UUID userId) {
+        repository.deleteByUserId(userId);
+    }
+
+    private static boolean differs(WatchlistEntry current, ImdbEntry incoming) {
+        return current.isRated() != incoming.isRated()
+                || current.getYear() != incoming.year()
+                || !Objects.equals(current.getName(), incoming.name())
+                || !Objects.equals(current.getAdded(), incoming.added())
+                || !Objects.equals(current.getUrl(), incoming.url() == null ? null : incoming.url().toString());
+    }
+}

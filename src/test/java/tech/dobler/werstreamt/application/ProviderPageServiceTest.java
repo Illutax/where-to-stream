@@ -11,11 +11,12 @@ import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.QueryResult;
 import tech.dobler.werstreamt.services.AggregateService;
-import tech.dobler.werstreamt.services.ImdbCatalog;
+import tech.dobler.werstreamt.services.WatchlistCatalog;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -24,15 +25,17 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ProviderPageServiceTest {
 
+    private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     @Mock
     private AggregateService aggregateService;
     @Mock
-    private ImdbCatalog imdbCatalog;
+    private WatchlistCatalog watchlistCatalog;
     @InjectMocks
     private ProviderPageService service;
 
     private static ImdbEntry entry(String imdbId, String name, String added, int year) {
-        return new ImdbEntry(1, name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
+        return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
                 added, false, year, imdbId);
     }
 
@@ -45,11 +48,11 @@ class ProviderPageServiceTest {
         final var later = entry("tt1", "Later", "2021-05-05", 2021);
         final var earlier = entry("tt2", "Earlier", "2020-01-01", 2020);
         final var paidEntry = entry("tt3", "Paid", "2022-02-02", 2022);
-        when(aggregateService.contentFor("Prime Video")).thenReturn(
+        when(aggregateService.contentFor("Prime Video", USER)).thenReturn(
                 new AggregateService.ServiceContent(List.of(later, earlier), List.of(paid("tt3", "Prime Video"))));
-        when(imdbCatalog.findByImdb("tt3")).thenReturn(Optional.of(paidEntry));
+        when(watchlistCatalog.findByImdb(USER, "tt3")).thenReturn(Optional.of(paidEntry));
 
-        final var page = service.pageFor(StreamingProvider.AMAZON);
+        final var page = service.pageFor(StreamingProvider.AMAZON, USER);
 
         assertThat(page.provider()).isEqualTo("amazon");
         assertThat(page.included()).extracting(FlatrateEntryDto::added)
@@ -59,9 +62,9 @@ class ProviderPageServiceTest {
 
     @Test
     void flatrateOnlyProviderHasNoPaidAndNeverQueriesPaid() {
-        when(aggregateService.included("Disney+")).thenReturn(List.of(entry("tt1", "Movie", "2020-01-01", 2020)));
+        when(aggregateService.included("Disney+", USER)).thenReturn(List.of(entry("tt1", "Movie", "2020-01-01", 2020)));
 
-        final var page = service.pageFor(StreamingProvider.DISNEY);
+        final var page = service.pageFor(StreamingProvider.DISNEY, USER);
 
         assertThat(page.included()).hasSize(1);
         assertThat(page.paid()).isEmpty();
@@ -71,11 +74,11 @@ class ProviderPageServiceTest {
     void googlePageHasOnlyPaidSortedByAdded() {
         final var e1 = entry("tt1", "Alpha", "2021-05-05", 2021);
         final var e2 = entry("tt2", "Beta", "2020-01-01", 0);
-        when(aggregateService.paid("Google Play")).thenReturn(List.of(paid("tt1", "Google Play"), paid("tt2", "Google Play")));
-        when(imdbCatalog.findByImdb("tt1")).thenReturn(Optional.of(e1));
-        when(imdbCatalog.findByImdb("tt2")).thenReturn(Optional.of(e2));
+        when(aggregateService.paid("Google Play", USER)).thenReturn(List.of(paid("tt1", "Google Play"), paid("tt2", "Google Play")));
+        when(watchlistCatalog.findByImdb(USER, "tt1")).thenReturn(Optional.of(e1));
+        when(watchlistCatalog.findByImdb(USER, "tt2")).thenReturn(Optional.of(e2));
 
-        final var page = service.pageFor(StreamingProvider.GOOGLE);
+        final var page = service.pageFor(StreamingProvider.GOOGLE, USER);
 
         assertThat(page.included()).isEmpty();
         assertThat(page.paid()).extracting(PaidEntryDto::added).containsExactly("2020-01-01", "2021-05-05");
@@ -85,9 +88,9 @@ class ProviderPageServiceTest {
 
     @Test
     void googleNeverResolvesFlatrate() {
-        when(aggregateService.paid("Google Play")).thenReturn(List.of());
-        final var page = service.pageFor(StreamingProvider.GOOGLE);
+        when(aggregateService.paid("Google Play", USER)).thenReturn(List.of());
+        final var page = service.pageFor(StreamingProvider.GOOGLE, USER);
         assertThat(page.included()).isEmpty();
-        verifyNoInteractions(imdbCatalog);
+        verifyNoInteractions(watchlistCatalog);
     }
 }

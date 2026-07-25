@@ -13,6 +13,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -20,15 +21,17 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AggregateServiceTest {
 
+    private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     @Mock
-    private ImdbCatalog imdbCatalog;
+    private WatchlistCatalog watchlistCatalog;
     @Mock
     private StreamInfoService streamInfoService;
     @InjectMocks
     private AggregateService service;
 
     private static ImdbEntry entry(String imdbId, String name) {
-        return new ImdbEntry(1, name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
+        return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
                 "2020-01-01", false, 2020, imdbId);
     }
 
@@ -42,7 +45,7 @@ class AggregateServiceTest {
 
     /** Catalogue of tt1 (Netflix flatrate, two language variants), tt2 (Netflix paid), tt3 (Disney+ flatrate). */
     private void givenCatalogue() {
-        when(imdbCatalog.findAll()).thenReturn(List.of(entry("tt1", "A"), entry("tt2", "B"), entry("tt3", "C")));
+        when(watchlistCatalog.findAll(USER)).thenReturn(List.of(entry("tt1", "A"), entry("tt2", "B"), entry("tt3", "C")));
         when(streamInfoService.resolveAll(List.of("tt1", "tt2", "tt3"))).thenReturn(Map.of(
                 "tt1", List.of(flatrate("tt1", "Netflix", "Deutsch"), flatrate("tt1", "Netflix", "English")),
                 "tt2", List.of(paid("tt2", "Netflix")),
@@ -52,25 +55,25 @@ class AggregateServiceTest {
     @Test
     void includedReturnsFlatrateTitlesForTheServiceDeduplicatedAcrossLanguageVariants() {
         givenCatalogue();
-        when(imdbCatalog.findByImdb("tt1")).thenReturn(Optional.of(entry("tt1", "A")));
+        when(watchlistCatalog.findByImdb(USER, "tt1")).thenReturn(Optional.of(entry("tt1", "A")));
 
         // tt1 is on Netflix flatrate in two languages -> distinct() collapses it to one entry.
-        assertThat(service.included("Netflix")).extracting(ImdbEntry::imdbId).containsExactly("tt1");
+        assertThat(service.included("Netflix", USER)).extracting(ImdbEntry::imdbId).containsExactly("tt1");
     }
 
     @Test
     void paidReturnsOnlyNonFlatrateTitlesForTheService() {
         givenCatalogue();
 
-        assertThat(service.paid("Netflix")).extracting(QueryResult::imdbId).containsExactly("tt2");
+        assertThat(service.paid("Netflix", USER)).extracting(QueryResult::imdbId).containsExactly("tt2");
     }
 
     @Test
     void contentForDerivesBothListsFromASingleResolve() {
         givenCatalogue();
-        when(imdbCatalog.findByImdb("tt1")).thenReturn(Optional.of(entry("tt1", "A")));
+        when(watchlistCatalog.findByImdb(USER, "tt1")).thenReturn(Optional.of(entry("tt1", "A")));
 
-        final var content = service.contentFor("Netflix");
+        final var content = service.contentFor("Netflix", USER);
 
         assertThat(content.included()).extracting(ImdbEntry::imdbId).containsExactly("tt1");
         assertThat(content.paid()).extracting(QueryResult::imdbId).containsExactly("tt2");
@@ -80,13 +83,13 @@ class AggregateServiceTest {
     void getAllFlattensEveryResolvedResult() {
         givenCatalogue();
 
-        assertThat(service.getAll()).hasSize(4); // 2x tt1 + 1x tt2 + 1x tt3
+        assertThat(service.getAll(USER)).hasSize(4); // 2x tt1 + 1x tt2 + 1x tt3
     }
 
     @Test
     void includedIsEmptyForAServiceWithNoFlatrateTitles() {
         givenCatalogue();
 
-        assertThat(service.included("Prime Video")).isEmpty();
+        assertThat(service.included("Prime Video", USER)).isEmpty();
     }
 }

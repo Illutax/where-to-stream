@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import tech.dobler.werstreamt.application.UnknownListException;
+import tech.dobler.werstreamt.application.InvalidImportException;
 import tech.dobler.werstreamt.application.UserManagementException;
 
 /**
@@ -15,11 +15,10 @@ import tech.dobler.werstreamt.application.UserManagementException;
 @RestControllerAdvice(basePackages = "tech.dobler.werstreamt.api")
 public class ApiExceptionHandler {
 
-    @ExceptionHandler(UnknownListException.class)
-    public ProblemDetail handleUnknownList(UnknownListException ex) {
+    @ExceptionHandler(InvalidImportException.class)
+    public ProblemDetail handleInvalidImport(InvalidImportException ex) {
         final var problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-        problem.setTitle("Unknown list");
-        problem.setProperty("listName", ex.listName());
+        problem.setTitle("Invalid import");
         return problem;
     }
 

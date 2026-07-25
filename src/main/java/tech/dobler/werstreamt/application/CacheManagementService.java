@@ -8,40 +8,50 @@ import tech.dobler.werstreamt.application.dto.ManagePageDto;
 import tech.dobler.werstreamt.application.dto.ManageRowDto;
 import tech.dobler.werstreamt.application.dto.ScrapeResultDto;
 import tech.dobler.werstreamt.application.dto.UncachedCountDto;
-import tech.dobler.werstreamt.domain.ImdbEntry;
-import tech.dobler.werstreamt.services.ImdbCatalog;
+import tech.dobler.werstreamt.persistence.WatchlistEntry;
+import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.PreCacheService;
 
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
- * Cache-management use cases (view the manage table, invalidate titles, (re-)scrape missing
- * ones, pre-cache all, count uncached). Shapes the manage table and delegates the actual work
- * to {@link PreCacheService}, so the Thymeleaf {@code /manage} UI and the {@code /api/manage}
- * endpoints behave identically.
+ * Global (ADMIN) cache-management use cases: view the manage table, invalidate titles, (re-)scrape
+ * missing ones, pre-cache all, count uncached. The manage table lists the distinct titles across
+ * ALL users' watchlists (the werstreamt.es cache is global); a title counts as "rated" if any user
+ * rated it.
  *
- * <p>Deliberately not {@code @Transactional}: {@link PreCacheService#cacheAll()} /
- * {@code cacheUncached()} fan out over a {@code parallelStream} and rely on each worker thread
- * opening its own transaction via the proxied {@code StreamInfoService} (see the NOTE in
- * {@code StreamInfoService}); wrapping them here would not span those threads anyway.
+ * <p>Deliberately not {@code @Transactional}: {@link PreCacheService} fans out over a
+ * {@code parallelStream} relying on per-thread transactions from the proxied
+ * {@code StreamInfoService}.
  */
 @Service
 @RequiredArgsConstructor
 public class CacheManagementService {
 
-    private final ImdbCatalog imdbCatalog;
+    private final WatchlistEntryRepository watchlistEntryRepository;
     private final PreCacheService preCacheService;
 
+    private record TitleAgg(String name, boolean rated) {
+    }
+
     public ManagePageDto managePage() {
-        final Set<String> needsScrape = preCacheService.findUncached().stream()
-                .map(ImdbEntry::imdbId)
-                .collect(Collectors.toSet());
-        final List<ManageRowDto> rows = imdbCatalog.findAll().stream()
-                .sorted(Comparator.comparing(ImdbEntry::name))
-                .map(e -> new ManageRowDto(e.imdbId(), e.name(), e.isRated(), needsScrape.contains(e.imdbId())))
+        final Set<String> needsScrape = Set.copyOf(preCacheService.findUncachedImdbIds());
+
+        // Distinct titles across all users, merging "rated" (rated by anyone).
+        final Map<String, TitleAgg> byImdbId = new LinkedHashMap<>();
+        for (WatchlistEntry w : watchlistEntryRepository.findAll()) {
+            byImdbId.merge(w.getImdbId(), new TitleAgg(w.getName(), w.isRated()),
+                    (a, b) -> new TitleAgg(a.name(), a.rated() || b.rated()));
+        }
+
+        final List<ManageRowDto> rows = byImdbId.entrySet().stream()
+                .map(e -> new ManageRowDto(e.getKey(), e.getValue().name(), e.getValue().rated(),
+                        needsScrape.contains(e.getKey())))
+                .sorted(Comparator.comparing(ManageRowDto::name))
                 .toList();
         return new ManagePageDto(rows, needsScrape.size());
     }
@@ -60,6 +70,6 @@ public class CacheManagementService {
     }
 
     public UncachedCountDto uncachedCount() {
-        return new UncachedCountDto(preCacheService.findUncached().size());
+        return new UncachedCountDto(preCacheService.findUncachedImdbIds().size());
     }
 }

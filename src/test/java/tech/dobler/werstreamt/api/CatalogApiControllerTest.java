@@ -4,13 +4,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.werstreamt.application.CatalogOverviewService;
+import tech.dobler.werstreamt.application.CurrentUserService;
 import tech.dobler.werstreamt.application.dto.OverviewEntryDto;
 
 import java.util.List;
+import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,18 +24,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 class CatalogApiControllerTest {
 
+    private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     @Autowired
     private MockMvc mockMvc;
     @MockitoBean
     private CatalogOverviewService catalogOverviewService;
+    @MockitoBean
+    private CurrentUserService currentUserService;
 
     @Test
     void catalogReturnsJsonArray() throws Exception {
-        when(catalogOverviewService.overview()).thenReturn(List.of(
+        when(currentUserService.resolveId("alice")).thenReturn(USER);
+        when(catalogOverviewService.overview(eq(USER))).thenReturn(List.of(
                 new OverviewEntryDto(true, "Movie", "tt1", 2020, "2020-01-01", "Netflix"),
                 new OverviewEntryDto(false, "Other", "tt2", 2021, "2021-01-01", null)));
 
-        mockMvc.perform(get("/api/catalog"))
+        mockMvc.perform(get("/api/catalog").principal(new UsernamePasswordAuthenticationToken("alice", "pw")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].name").value("Movie"))

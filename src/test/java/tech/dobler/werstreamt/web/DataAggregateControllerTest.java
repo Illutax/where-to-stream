@@ -1,13 +1,16 @@
 package tech.dobler.werstreamt.web;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.werstreamt.application.CatalogOverviewService;
+import tech.dobler.werstreamt.application.CurrentUserService;
 import tech.dobler.werstreamt.application.ProviderPageService;
 import tech.dobler.werstreamt.application.StreamingProvider;
 import tech.dobler.werstreamt.application.dto.FlatrateEntryDto;
@@ -17,8 +20,10 @@ import tech.dobler.werstreamt.application.dto.ProviderPageDto;
 import tech.dobler.werstreamt.configurations.ThymeleafConfig;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,6 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(ThymeleafConfig.class)
 class DataAggregateControllerTest {
 
+    private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     @Autowired
     private MockMvc mockMvc;
     @MockitoBean
@@ -43,14 +50,23 @@ class DataAggregateControllerTest {
     private ProviderPageService providerPageService;
     @MockitoBean
     private CommonAttributeService commonAttributeService;
+    @MockitoBean
+    private CurrentUserService currentUserService;
+
+    private final UsernamePasswordAuthenticationToken alice = new UsernamePasswordAuthenticationToken("alice", "pw");
+
+    @BeforeEach
+    void resolveCurrentUser() {
+        when(currentUserService.resolveId("alice")).thenReturn(USER);
+    }
 
     @Test
     void indexRendersTheOverviewEntries() throws Exception {
-        when(catalogOverviewService.overview()).thenReturn(List.of(
+        when(catalogOverviewService.overview(eq(USER))).thenReturn(List.of(
                 new OverviewEntryDto(true, "Cast Away", "tt0162222", 2000, "2020-01-01", "Netflix"),
                 new OverviewEntryDto(false, "Unavailable", "tt0000001", 2021, "2021-01-01", null)));
 
-        final var html = mockMvc.perform(get("/"))
+        final var html = mockMvc.perform(get("/").principal(alice))
                 .andExpect(status().isOk())
                 .andExpect(view().name("index"))
                 .andReturn().getResponse().getContentAsString();
@@ -62,12 +78,12 @@ class DataAggregateControllerTest {
 
     @Test
     void amazonRendersIncludedAndPaidLists() throws Exception {
-        when(providerPageService.pageFor(StreamingProvider.AMAZON)).thenReturn(new ProviderPageDto(
+        when(providerPageService.pageFor(eq(StreamingProvider.AMAZON), eq(USER))).thenReturn(new ProviderPageDto(
                 "amazon",
                 List.of(new FlatrateEntryDto(true, "Included Film", "tt1", 2019, "2019-01-01")),
                 List.of(new PaidEntryDto("Paid Film", "tt2", "kaufen: HD: 9,99 ", "2020-01-01", false, "2020", "Deutsch"))));
 
-        final var html = mockMvc.perform(get("/amazon"))
+        final var html = mockMvc.perform(get("/amazon").principal(alice))
                 .andExpect(status().isOk())
                 .andExpect(view().name("amazon"))
                 .andReturn().getResponse().getContentAsString();
@@ -78,12 +94,12 @@ class DataAggregateControllerTest {
 
     @Test
     void googleRendersPaidTitles() throws Exception {
-        when(providerPageService.pageFor(StreamingProvider.GOOGLE)).thenReturn(new ProviderPageDto(
+        when(providerPageService.pageFor(eq(StreamingProvider.GOOGLE), eq(USER))).thenReturn(new ProviderPageDto(
                 "google",
                 List.of(),
                 List.of(new PaidEntryDto("Buyable", "tt3", "kaufen: SD: 4,99 ", "2020-01-01", false, "Not yet released", null))));
 
-        final var html = mockMvc.perform(get("/google"))
+        final var html = mockMvc.perform(get("/google").principal(alice))
                 .andExpect(status().isOk())
                 .andExpect(view().name("google"))
                 .andReturn().getResponse().getContentAsString();
@@ -93,12 +109,12 @@ class DataAggregateControllerTest {
 
     @Test
     void netflixRendersTheFlatrateList() throws Exception {
-        when(providerPageService.pageFor(StreamingProvider.NETFLIX)).thenReturn(new ProviderPageDto(
+        when(providerPageService.pageFor(eq(StreamingProvider.NETFLIX), eq(USER))).thenReturn(new ProviderPageDto(
                 "netflix",
                 List.of(new FlatrateEntryDto(false, "Nolan Film", "tt4", 2020, "2020-02-02")),
                 List.of()));
 
-        mockMvc.perform(get("/netflix"))
+        mockMvc.perform(get("/netflix").principal(alice))
                 .andExpect(status().isOk())
                 .andExpect(view().name("netflix"));
     }

@@ -60,11 +60,11 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
                         // ADMIN: state-changing / maintenance endpoints (legacy + API) — fixes TODO-5.
                         .requestMatchers("/pre-cache", "/check-pre-cache", "/refresh/**",
-                                "/invalidate", "/scrape-invalidated", "/list", "/list-change", "/manage").hasRole("ADMIN")
+                                "/invalidate", "/scrape-invalidated", "/manage").hasRole("ADMIN")
                         .requestMatchers("/api/manage/**", "/api/cache/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/refresh").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/lists/selection").hasRole("ADMIN")
-                        // Everything else (read pages, GET /api/**, the SPA at /app/**) needs a login.
+                        // Everything else — read pages, GET /api/**, /watchlist (import my own list),
+                        // /api/watchlist/**, the SPA at /app/** — just needs a login.
                         .anyRequest().authenticated())
                 .formLogin(form -> form.loginPage("/login").permitAll())
                 .httpBasic(Customizer.withDefaults())
