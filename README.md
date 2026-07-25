@@ -9,12 +9,12 @@ per-provider web pages (Netflix, Prime Video, Disney+, WOW, Google Play).
 
 ## Tech stack
 
-- Java 25, Spring Boot 4.1 (Spring MVC + Thymeleaf)
+- Java 25, Spring Boot 4.1 (Spring MVC, JSON API)
 - **Spring Security**: form + HTTP Basic + optional Google OIDC login, DB-backed users with
   `USER`/`ADMIN` roles (see [Authentication & users](#authentication--users))
 - **Angular 22** SPA (standalone, zoneless, signals; **Angular Material** M3 UI with
-  self-hosted Roboto) served under `/app`, sharing the same server logic as the Thymeleaf UI
-  via a JSON API under `/api`
+  self-hosted Roboto) served under `/app` — the only UI — talking to a JSON API under `/api`.
+  The one server-rendered page left is the login page (the OIDC-ready auth entry).
 - Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
 - jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
 - MapStruct (entity ↔ persistence mapping), Lombok
@@ -22,9 +22,9 @@ per-provider web pages (Netflix, Prime Video, Disney+, WOW, Google Play).
 
 ## How it works
 
-1. Sign in, open **My Watchlist** (`/watchlist`, or `/app/#/watchlist` in the SPA) and upload
-   your IMDb watchlist CSV export. The import is a full sync of *your* list: new titles are
-   added, changed titles updated, and titles missing from the upload removed.
+1. Sign in, open **My Watchlist** (`/app/#/watchlist`) and upload your IMDb watchlist CSV
+   export. The import is a full sync of *your* list: new titles are added, changed titles
+   updated, and titles missing from the upload removed.
 2. `ExportReader` parses the uploaded CSV stream into `ImdbEntry` records (malformed rows are
    skipped and logged); `WatchlistImportService` persists them to the `watchlist_entry` table,
    scoped to your user id.
@@ -32,8 +32,7 @@ per-provider web pages (Netflix, Prime Video, Disney+, WOW, Google Play).
    (`StreamInfoService`) and considered stale after a configurable number of days. The cache is
    **global** (keyed by IMDb id, shared across users); outbound requests are rate-limited to stay
    polite.
-4. Thymeleaf pages (and the Angular SPA) render each user's aggregated availability per
-   streaming service.
+4. The Angular SPA renders each user's aggregated availability per streaming service.
 
 ## Prerequisites
 
@@ -75,17 +74,16 @@ On first start the database is empty; sign in and upload an IMDb CSV export unde
 **My Watchlist** (`/watchlist`) to populate your list.
 
 `mvn spring-boot:run` (and `mvn package`) also builds the Angular client and folds it into the
-same jar, so once the app is up the SPA is available at `http://localhost:8001/app/` and the
-Thymeleaf UI at `http://localhost:8001/`. Pass `-Dskip.frontend=true` for a backend-only build
-(skips the `npm` steps).
+same jar, so once the app is up the SPA is available at `http://localhost:8001/app/` (the root
+`/` redirects there). Pass `-Dskip.frontend=true` for a backend-only build (skips the `npm`
+steps).
 
 ### Architecture
 
 Controllers hold no business logic: it lives in view-agnostic **application services**
-(`tech.dobler.werstreamt.application`) that return DTOs. Both UIs call the same services — the
-Thymeleaf `@Controller`s render them into templates, and the `@RestController`s under
-`tech.dobler.werstreamt.api` expose them as JSON under `/api` for the Angular client. The
-Angular app (`src/main/frontend`) follows a smart/dumb split: container components under
+(`tech.dobler.werstreamt.application`) that return DTOs. The `@RestController`s under
+`tech.dobler.werstreamt.api` expose them as JSON under `/api`, which the Angular SPA consumes.
+The Angular app (`src/main/frontend`) follows a smart/dumb split: container components under
 `features/` own all data loading; presentational components under `shared/` only render inputs.
 
 ### Frontend development
@@ -205,8 +203,8 @@ Deployment config (docker compose) is documented in [`.env.example`](.env.exampl
 - **Initial admin:** on an empty user table an `admin` account is seeded. Set its password with
   `w2s.security.initial-admin.password` (env `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`); if unset, a
   strong password is generated and logged once at startup — change it after first login.
-- **User management:** `ADMIN`s manage users at `/admin/users` (Thymeleaf) or in the Angular UI
-  (`/app/#/admin/users`); both call `/api/admin/users`.
+- **User management:** `ADMIN`s manage users in the Angular UI (`/app/#/admin/users`), which
+  calls `/api/admin/users`.
 - **Google login (optional):** start with `SPRING_PROFILES_ACTIVE=google` and provide
   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (redirect URI `{baseUrl}/login/oauth2/code/google`).
   Without the profile, OIDC is off and only local accounts are used. First OIDC login provisions a
@@ -273,29 +271,17 @@ mvn -Ptestcontainers test
 | `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached (ADMIN) |
 | `POST /api/refresh?scope=seen\|all` | Force-refresh cached results (ADMIN) |
 | `GET /api/search?imdbId=…` | Resolve availability for a title |
-| `GET /api/status` | Version & server start time |
+| `GET /api/me` | The current principal (username, roles, admin flag) |
+| `GET /api/admin/users` · `POST` · `PUT`/`DELETE …/{id}` | User administration (ADMIN) |
+| `GET /api/status` | Version & server start time (authenticated) |
 
-**Pages (Thymeleaf):**
-
-| Path | Description |
-| --- | --- |
-| `/` | All entries with their available services |
-| `/amazon` (`/prime`) | Prime Video: included + paid |
-| `/disney`, `/netflix`, `/wow` | Flatrate titles for that service |
-| `/google` | Google Play (paid) titles |
-| `/watchlist` (GET) / `/watchlist/import` (POST) / `/watchlist/clear` (POST) | Your watchlist: view / import a CSV / clear |
-| `/public/status` | Version & server start time |
-
-**REST / maintenance:**
+**Server-rendered / public:**
 
 | Path | Description |
 | --- | --- |
-| `/pre-cache` | Resolve & cache every title (across all users' watchlists) |
-| `/check-pre-cache` | List titles without a cached result |
-| `/refresh/all`, `/refresh/seen` | Force-refresh cached results |
-
-> Note: the maintenance endpoints are currently unauthenticated `GET`s with side effects —
-> see `TODOs.md` (TODO-5).
+| `/` | Redirects to `/app/` |
+| `/login` (GET) / `/logout` (POST) | Login page (form + optional Google) and logout |
+| `/public/status` | Version & server start time, as JSON — public health probe |
 
 ## Project status
 

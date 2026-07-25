@@ -25,6 +25,10 @@ Größere Umbauten (nach dem Review):
   `username → userId`; der werstreamt.es-Cache bleibt global. Beide Clients (Thymeleaf + Angular)
   bekamen eine `/watchlist`-Seite; die Listen-Auswahl-Artefakte wurden entfernt. Siehe
   [ADR 0007](docs/adr/0007-watchlist-pro-benutzer.md).
+- ✅ **Thymeleaf-Client entfernt** — die Angular-SPA ist die einzige UI; alle server-gerenderten
+  Anwendungsseiten + Controller, die Legacy-GET-Wartungsendpunkte und die Thymeleaf-Dialekte
+  wurden entfernt (nur die Login-Seite bleibt als OIDC-fertiger Auth-Einstieg). `SecurityConfig`
+  entsprechend eingedampft. Siehe [ADR 0008](docs/adr/0008-thymeleaf-client-entfernen.md).
 
 TODO-Tickets:
 
@@ -84,17 +88,17 @@ joint tatsächlich auf die UUID-PK von `QueryResultDB`, nicht auf eine IMDb-ID.
 
 ## Sicherheit
 
-### 🟠 TODO-5 — Zustandsändernde Endpunkte als GET ohne Auth (teilweise erledigt)
-`/pre-cache`, `/check-pre-cache`, `/refresh/all`, `/refresh/seen` lösen teure
-Remote-Crawls aus, sind per GET erreichbar und damit von Crawlern/Prefetch triggerbar.
+### ✅ TODO-5 — Zustandsändernde Endpunkte als GET ohne Auth
+`/pre-cache`, `/check-pre-cache`, `/refresh/all`, `/refresh/seen` lösten teure
+Remote-Crawls aus, waren per GET erreichbar und damit von Crawlern/Prefetch triggerbar.
 - **Akzeptanzkriterium:** Auf `POST` umstellen; Endpunkte hinter Authentifizierung
-  legen (Spring Security ergänzen — die App ist aktuell komplett offen).
+  legen (Spring Security ergänzen — die App war komplett offen).
 - **Erledigt (Auth):** Spring Security ergänzt ([ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md));
-  alle diese Endpunkte erfordern jetzt Login **und** Rolle `ADMIN`. Die neue REST-API nutzt
-  bereits korrekte Verben (`POST /api/refresh`, `POST /api/cache`, …).
-- **Rest (offen):** Die **Legacy**-Endpunkte bleiben aus Kompatibilität GET-mit-Nebenwirkung
-  (jetzt ADMIN-geschützt). Wenn die Legacy-Routen wegfallen dürfen, ganz auf die POST-`/api`-Verben
-  umstellen und die GET-Varianten entfernen.
+  die neue REST-API nutzt korrekte Verben (`POST /api/refresh`, `POST /api/cache`, …).
+- **Erledigt (Verben):** Mit dem Entfernen des Thymeleaf-Clients
+  ([ADR-0008](docs/adr/0008-thymeleaf-client-entfernen.md)) wurden die Legacy-GET-Endpunkte
+  (`/pre-cache`, `/check-pre-cache`, `/refresh/**`) gelöscht — es gibt keine mutierenden GETs mehr;
+  Wartung läuft ausschließlich über `POST /api/**` (ADMIN).
 
 ---
 

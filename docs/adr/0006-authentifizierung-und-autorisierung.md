@@ -2,6 +2,12 @@
 
 - **Date**: 2026-07-22
 - **Status**: Accepted
+- **Update (2026-07-25):** Der Thymeleaf-Client wurde entfernt ([ADR 0008](0008-thymeleaf-client-entfernen.md)).
+  Damit gelten die hier beschriebenen „beide Clients"-Aspekte (Thymeleaf-Forms, `/admin/users`-Seite,
+  Benutzerverwaltung in beiden Clients) nur noch für die Angular-SPA; die Login-Seite bleibt als
+  einziger server-gerenderter Auth-Einstieg. Die verbliebenen GET-mit-Nebenwirkung-Wartungsendpunkte
+  wurden entfernt (TODO-5 damit vollständig geschlossen), und die `SecurityConfig` auf das
+  SPA-only-Modell vereinfacht.
 
 ## Context
 

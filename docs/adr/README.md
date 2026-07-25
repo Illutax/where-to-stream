@@ -14,5 +14,6 @@ zum `adr`-Skill der Team-Doku.
 | [0005](0005-assertj-und-mockito-im-backend.md) | AssertJ (mit Mockito) für Backend-Tests | Accepted |
 | [0006](0006-authentifizierung-und-autorisierung.md) | Authentifizierung & Autorisierung (Spring Security) | Accepted |
 | [0007](0007-watchlist-pro-benutzer.md) | Watchlist pro Benutzer (DB-gestützt statt globaler Dateiliste) | Accepted |
+| [0008](0008-thymeleaf-client-entfernen.md) | Thymeleaf-Client entfernen — SPA-only UI | Accepted |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.

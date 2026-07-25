@@ -2,6 +2,10 @@
 
 - **Date**: 2026-07-25
 - **Status**: Accepted
+- **Update (2026-07-25):** Der Thymeleaf-Client wurde direkt danach entfernt
+  ([ADR 0008](0008-thymeleaf-client-entfernen.md)); die hier erwähnte Thymeleaf-`/watchlist`-Seite
+  entfällt, der Watchlist-Upload läuft nur noch über die Angular-SPA (`/app/#/watchlist`) bzw.
+  `/api/watchlist`.
 
 ## Context
 
