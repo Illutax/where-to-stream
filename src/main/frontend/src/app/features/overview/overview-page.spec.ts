@@ -1,18 +1,35 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { OverviewPage } from './overview-page';
-import { imdbId, releaseYear, watchlistDate } from '../../core/domain';
+import { ImdbId, imdbId, releaseYear, watchlistDate } from '../../core/domain';
 import { OverviewEntry } from '../../core/models';
+import { SeenStore } from '../../core/seen-store';
+import { CatalogTable } from '../../shared/catalog-table/catalog-table';
 
 describe('OverviewPage', () => {
   let fixture: ComponentFixture<OverviewPage>;
   let httpMock: HttpTestingController;
+  let toggled: { imdbId: string; seen: boolean } | undefined;
 
   beforeEach(() => {
+    toggled = undefined;
+    // Fake store: capture the call and run the optimistic apply immediately (no HTTP/snackbar).
+    const seenStore = {
+      recentlyChanged: () => null,
+      toggle: (id: ImdbId, seen: boolean, apply: (s: boolean) => void) => {
+        toggled = { imdbId: id, seen };
+        apply(seen);
+      },
+    };
     TestBed.configureTestingModule({
       imports: [OverviewPage],
-      providers: [provideHttpClient(withFetch()), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(withFetch()),
+        provideHttpClientTesting(),
+        { provide: SeenStore, useValue: seenStore },
+      ],
     });
     fixture = TestBed.createComponent(OverviewPage); // constructor kicks off the load
     httpMock = TestBed.inject(HttpTestingController);
@@ -36,6 +53,22 @@ describe('OverviewPage', () => {
     expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
     expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(1);
     expect(fixture.nativeElement.textContent).toContain('Movie');
+  });
+
+  it('delegates a seen toggle to the store and updates the row optimistically', () => {
+    const payload: OverviewEntry[] = [
+      { isRated: false, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
+    ];
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
+    fixture.detectChanges();
+
+    const table = fixture.debugElement.query(By.directive(CatalogTable)).componentInstance as CatalogTable;
+    table.seenToggle.emit({ imdbId: imdbId('tt1'), seen: true });
+    fixture.detectChanges();
+
+    expect(toggled).toEqual({ imdbId: 'tt1', seen: true });
+    // optimistic apply flipped the flag -> the toggle now renders ✅
+    expect(fixture.nativeElement.querySelector('tbody .seen-toggle').textContent).toContain('✅');
   });
 
   it('shows an error alert when the request fails', () => {

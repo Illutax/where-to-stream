@@ -77,6 +77,14 @@ public class WatchlistEntry {
         this.year = year;
     }
 
+    /**
+     * Mark this title as seen / not seen (the in-app toggle). Note a later full-sync CSV re-import
+     * is the source of truth and can overwrite this via {@link #update}.
+     */
+    public void markSeen(boolean seen) {
+        this.rated = seen;
+    }
+
     public URI urlAsUri() {
         return url == null ? null : URI.create(url);
     }

@@ -2,6 +2,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { WatchlistApi } from './watchlist-api';
+import { imdbId } from '../domain';
 import { WatchlistImportResult, WatchlistStatus } from '../models';
 
 describe('WatchlistApi', () => {
@@ -53,6 +54,18 @@ describe('WatchlistApi', () => {
 
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/watchlist'));
     expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+
+    expect(completed).toBe(true);
+  });
+
+  it('sets a title\'s seen flag with a PUT to "watchlist/{imdbId}/seen"', () => {
+    let completed = false;
+    api.setSeen(imdbId('tt1'), true).subscribe(() => (completed = true));
+
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/watchlist/tt1/seen'));
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ seen: true });
     req.flush(null);
 
     expect(completed).toBe(true);

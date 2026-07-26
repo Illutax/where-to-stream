@@ -41,6 +41,25 @@ describe('FlatrateTable', () => {
     expect(rows()[0].textContent).toContain('Nothing here');
   });
 
+  it('emits a seen toggle when the ✅/⭕ is clicked', () => {
+    fixture.componentRef.setInput('entries', [entry({ imdbId: imdbId('tt10'), isRated: true })]);
+    fixture.detectChanges();
+
+    let emitted: { imdbId: string; seen: boolean } | undefined;
+    fixture.componentInstance.seenToggle.subscribe((e) => (emitted = e));
+    (fixture.nativeElement.querySelector('tbody .seen-toggle') as HTMLButtonElement).click();
+
+    expect(emitted).toEqual({ imdbId: 'tt10', seen: false });
+  });
+
+  it('highlights only the recently-changed row', () => {
+    fixture.componentRef.setInput('entries', [entry({ imdbId: imdbId('tt1') }), entry({ imdbId: imdbId('tt2') })]);
+    fixture.componentRef.setInput('recentlyChangedId', imdbId('tt2'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('tr.recently-changed')).toHaveLength(1);
+  });
+
   it('sorts by the "Added" date when its header is clicked', async () => {
     fixture.componentRef.setInput('entries', [
       entry({ name: 'Later', imdbId: imdbId('tt2'), added: watchlistDate('2021-05-05') }),

@@ -2,17 +2,29 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
+import { By } from '@angular/platform-browser';
 import { BehaviorSubject } from 'rxjs';
 import { ProviderPage } from './provider-page';
-import { imdbId, releaseYear, watchlistDate } from '../../core/domain';
+import { ImdbId, imdbId, releaseYear, watchlistDate } from '../../core/domain';
 import { ProviderPage as ProviderPageDto } from '../../core/models';
+import { SeenStore } from '../../core/seen-store';
+import { FlatrateTable } from '../../shared/flatrate-table/flatrate-table';
 
 describe('ProviderPage', () => {
   let fixture: ComponentFixture<ProviderPage>;
   let httpMock: HttpTestingController;
   let paramMap: BehaviorSubject<ParamMap>;
+  let toggled: { imdbId: string; seen: boolean } | undefined;
 
   function setup(initialKey: string) {
+    toggled = undefined;
+    const seenStore = {
+      recentlyChanged: () => null,
+      toggle: (id: ImdbId, seen: boolean, apply: (s: boolean) => void) => {
+        toggled = { imdbId: id, seen };
+        apply(seen);
+      },
+    };
     paramMap = new BehaviorSubject<ParamMap>(convertToParamMap({ key: initialKey }));
     TestBed.configureTestingModule({
       imports: [ProviderPage],
@@ -20,6 +32,7 @@ describe('ProviderPage', () => {
         provideHttpClient(withFetch()),
         provideHttpClientTesting(),
         { provide: ActivatedRoute, useValue: { paramMap: paramMap.asObservable() } },
+        { provide: SeenStore, useValue: seenStore },
       ],
     });
     fixture = TestBed.createComponent(ProviderPage);
@@ -62,6 +75,21 @@ describe('ProviderPage', () => {
 
     expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Google Play');
     expect(fixture.nativeElement.querySelector('app-paid-table')).not.toBeNull();
+  });
+
+  it('delegates a seen toggle from the flatrate table to the store and flips the row', () => {
+    setup('netflix');
+    httpMock
+      .expectOne((r) => r.url.endsWith('/api/providers/netflix'))
+      .flush(page({ included: [{ isRated: false, name: 'Nolan Film', imdbId: imdbId('tt9'), year: releaseYear(2020), added: watchlistDate('2020-01-01') }] }));
+    fixture.detectChanges();
+
+    const table = fixture.debugElement.query(By.directive(FlatrateTable)).componentInstance as FlatrateTable;
+    table.seenToggle.emit({ imdbId: imdbId('tt9'), seen: true });
+    fixture.detectChanges();
+
+    expect(toggled).toEqual({ imdbId: 'tt9', seen: true });
+    expect(fixture.nativeElement.querySelector('tbody .seen-toggle').textContent).toContain('✅');
   });
 
   it('shows an empty-state message when nothing is available', () => {

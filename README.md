@@ -276,6 +276,7 @@ mvn -Ptestcontainers test
 | `GET /api/catalog` | All entries with their available services |
 | `GET /api/providers/{amazon\|disney\|netflix\|wow\|google}` | Per-provider included + paid titles |
 | `GET /api/watchlist` · `POST /api/watchlist/import` · `DELETE /api/watchlist` | Your watchlist: status / CSV import / clear |
+| `PUT /api/watchlist/{imdbId}/seen` | Mark one of your titles seen / not seen (`{ "seen": true }`) |
 | `GET /api/manage` · `POST /api/manage/invalidate` · `POST /api/manage/scrape` | Cache management (ADMIN) |
 | `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached (ADMIN) |
 | `POST /api/refresh?scope=seen\|all` | Force-refresh cached results (ADMIN) |

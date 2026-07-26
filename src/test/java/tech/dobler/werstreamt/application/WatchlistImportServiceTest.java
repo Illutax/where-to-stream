@@ -153,4 +153,36 @@ class WatchlistImportServiceTest {
 
         assertThat(newService().resolveUserId("alice")).isEqualTo(USER);
     }
+
+    @Test
+    void markSeenFlipsTheFlagAndSaves() {
+        final var entry = stored("tt1", "The Prestige", false);
+        when(repository.findByUserIdAndImdbId(USER, id("tt1"))).thenReturn(Optional.of(entry));
+
+        newService().markSeen(USER, id("tt1"), true);
+
+        assertThat(entry.isRated()).isTrue();
+        verify(repository).save(entry);
+    }
+
+    @Test
+    void markSeenCanUnsetTheFlag() {
+        final var entry = stored("tt1", "The Prestige", true);
+        when(repository.findByUserIdAndImdbId(USER, id("tt1"))).thenReturn(Optional.of(entry));
+
+        newService().markSeen(USER, id("tt1"), false);
+
+        assertThat(entry.isRated()).isFalse();
+        verify(repository).save(entry);
+    }
+
+    @Test
+    void markSeenThrowsWhenTheTitleIsNotOnTheList() {
+        when(repository.findByUserIdAndImdbId(USER, id("tt9"))).thenReturn(Optional.empty());
+
+        final var service = newService();
+        assertThatThrownBy(() -> service.markSeen(USER, id("tt9"), true))
+                .isInstanceOf(NoSuchWatchlistEntryException.class);
+        verify(repository, never()).save(any());
+    }
 }

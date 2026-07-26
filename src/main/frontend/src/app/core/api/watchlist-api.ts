@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../api-base';
+import { ImdbId } from '../domain';
 import { WatchlistImportResult, WatchlistStatus } from '../models';
 
 /** The current user's own watchlist: status, CSV import (full sync) and clear. */
@@ -22,5 +23,10 @@ export class WatchlistApi {
 
   clear(): Observable<void> {
     return this.http.delete<void>(`${this.base}watchlist`);
+  }
+
+  /** Toggle a single title's "seen" flag for the current user. */
+  setSeen(imdbId: ImdbId, seen: boolean): Observable<void> {
+    return this.http.put<void>(`${this.base}watchlist/${imdbId}/seen`, { seen });
   }
 }

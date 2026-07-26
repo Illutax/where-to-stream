@@ -43,6 +43,25 @@ describe('PaidTable', () => {
     expect(rows()[0].textContent).toContain('Nothing here');
   });
 
+  it('emits a seen toggle when the ✅/⭕ is clicked', () => {
+    fixture.componentRef.setInput('entries', [entry({ imdbId: imdbId('tt10'), isRated: false })]);
+    fixture.detectChanges();
+
+    let emitted: { imdbId: string; seen: boolean } | undefined;
+    fixture.componentInstance.seenToggle.subscribe((e) => (emitted = e));
+    (fixture.nativeElement.querySelector('tbody .seen-toggle') as HTMLButtonElement).click();
+
+    expect(emitted).toEqual({ imdbId: 'tt10', seen: true });
+  });
+
+  it('highlights the recently-changed row', () => {
+    fixture.componentRef.setInput('entries', [entry({ imdbId: imdbId('tt10') })]);
+    fixture.componentRef.setInput('recentlyChangedId', imdbId('tt10'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('tr.recently-changed')).toHaveLength(1);
+  });
+
   it('sorts by year with the "Not yet released" placeholder last (ascending)', async () => {
     fixture.componentRef.setInput('entries', [
       entry({ name: 'Upcoming', imdbId: imdbId('tt2'), year: 'Not yet released' }),

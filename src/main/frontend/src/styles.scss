@@ -159,3 +159,33 @@ h2 {
   background: var(--mat-sys-primary-container);
   color: var(--mat-sys-on-primary-container);
 }
+
+// Lightweight "seen" toggle in the availability tables (✅ = seen, ⭕ = not seen).
+.seen-toggle {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--mat-sys-corner-small);
+}
+
+.seen-toggle:hover {
+  background: var(--mat-sys-surface-variant);
+}
+
+// Briefly flag the row whose "seen" state was just changed, so an accidental toggle is noticeable.
+// A CSS keyframe flash (works without Angular's animations provider) fades a highlight over ~4s.
+.mat-mdc-row.recently-changed > .mat-mdc-cell {
+  animation: seen-flash 4s ease-out;
+}
+
+@keyframes seen-flash {
+  from {
+    background: var(--mat-sys-tertiary-container);
+  }
+  to {
+    background: transparent;
+  }
+}

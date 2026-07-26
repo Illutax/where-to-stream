@@ -56,6 +56,25 @@ describe('CatalogTable', () => {
     expect(rows()[0].textContent).toContain('No entries');
   });
 
+  it('emits a seen toggle to the opposite of the current flag when the ✅/⭕ is clicked', () => {
+    fixture.componentRef.setInput('entries', [entry({ imdbId: imdbId('tt10'), isRated: false })]);
+    fixture.detectChanges();
+
+    let emitted: { imdbId: string; seen: boolean } | undefined;
+    fixture.componentInstance.seenToggle.subscribe((e) => (emitted = e));
+    (fixture.nativeElement.querySelector('tbody .seen-toggle') as HTMLButtonElement).click();
+
+    expect(emitted).toEqual({ imdbId: 'tt10', seen: true });
+  });
+
+  it('highlights only the recently-changed row', () => {
+    fixture.componentRef.setInput('entries', [entry({ imdbId: imdbId('tt1') }), entry({ imdbId: imdbId('tt2') })]);
+    fixture.componentRef.setInput('recentlyChangedId', imdbId('tt1'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('tr.recently-changed')).toHaveLength(1);
+  });
+
   const titles = () => rows().map((r) => r.querySelector('a')?.textContent?.trim());
 
   it('sorts by title ascending then descending as the header is clicked', async () => {

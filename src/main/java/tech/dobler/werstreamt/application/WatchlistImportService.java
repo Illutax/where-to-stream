@@ -53,6 +53,18 @@ public class WatchlistImportService {
         return currentUserService.resolveId(username);
     }
 
+    /**
+     * Toggle a single title's "seen" flag for the user (the lightweight in-app marking). Throws
+     * {@link NoSuchWatchlistEntryException} when the title is not on the user's list.
+     */
+    @Transactional
+    public void markSeen(UUID userId, ImdbId imdbId, boolean seen) {
+        final var entry = repository.findByUserIdAndImdbId(userId, imdbId)
+                .orElseThrow(() -> new NoSuchWatchlistEntryException(imdbId));
+        entry.markSeen(seen);
+        repository.save(entry);
+    }
+
     @Transactional
     public WatchlistImportResultDto importCsv(UUID userId, InputStream csv) {
         final var parsed = exportReader.parse(csv);

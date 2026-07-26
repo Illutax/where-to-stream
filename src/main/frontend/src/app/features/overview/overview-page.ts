@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CatalogApi } from '../../core/api/catalog-api';
+import { ImdbId } from '../../core/domain';
 import { OverviewEntry } from '../../core/models';
+import { SeenStore } from '../../core/seen-store';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { Loading } from '../../shared/loading/loading';
@@ -17,16 +19,28 @@ import { Loading } from '../../shared/loading/loading';
     } @else if (error()) {
       <app-error-alert [message]="error()" />
     } @else {
-      <app-catalog-table [entries]="entries()" />
+      <app-catalog-table
+        [entries]="entries()"
+        [recentlyChangedId]="seenStore.recentlyChanged()"
+        (seenToggle)="onSeenToggle($event)" />
     }
   `,
 })
 export class OverviewPage {
   private readonly api = inject(CatalogApi);
+  protected readonly seenStore = inject(SeenStore);
 
   protected readonly entries = signal<OverviewEntry[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+
+  protected onSeenToggle({ imdbId, seen }: { imdbId: ImdbId; seen: boolean }): void {
+    this.seenStore.toggle(imdbId, seen, (s) =>
+      this.entries.update((list) =>
+        list.map((e) => (e.imdbId === imdbId ? { ...e, isRated: s } : e)),
+      ),
+    );
+  }
 
   constructor() {
     this.api.getCatalog().subscribe({

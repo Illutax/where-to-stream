@@ -4,13 +4,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tech.dobler.werstreamt.application.NoSuchWatchlistEntryException;
 import tech.dobler.werstreamt.application.WatchlistImportService;
 import tech.dobler.werstreamt.application.dto.WatchlistDto;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
+import tech.dobler.werstreamt.configurations.StringToImdbIdConverter;
+import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -19,16 +24,21 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Import the String->ImdbId converter so @PathVariable ImdbId binds in the slice (malformed -> 400).
 @WebMvcTest(WatchlistApiController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(StringToImdbIdConverter.class)
 class WatchlistApiControllerTest {
 
     private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -85,5 +95,45 @@ class WatchlistApiControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(watchlistImportService).clear(USER);
+    }
+
+    @Test
+    void markSeenReturns204AndDelegates() throws Exception {
+        when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
+
+        mockMvc.perform(put("/api/watchlist/tt0482571/seen").principal(alice())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"seen\":true}"))
+                .andExpect(status().isNoContent());
+
+        verify(watchlistImportService).markSeen(USER, ImdbId.of("tt0482571"), true);
+    }
+
+    @Test
+    void markSeenWithoutTheFlagIsRejectedWith400() throws Exception {
+        when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
+
+        mockMvc.perform(put("/api/watchlist/tt0482571/seen").principal(alice())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+
+        verify(watchlistImportService, never()).markSeen(any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+    }
+
+    @Test
+    void markSeenWithAMalformedImdbIdReturns400() throws Exception {
+        mockMvc.perform(put("/api/watchlist/not-an-id/seen").principal(alice())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"seen\":true}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void markSeenForATitleNotOnTheListReturns404() throws Exception {
+        when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
+        doThrow(new NoSuchWatchlistEntryException(ImdbId.of("tt9999999")))
+                .when(watchlistImportService).markSeen(USER, ImdbId.of("tt9999999"), true);
+
+        mockMvc.perform(put("/api/watchlist/tt9999999/seen").principal(alice())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"seen\":true}"))
+                .andExpect(status().isNotFound());
     }
 }

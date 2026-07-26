@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { ProviderApi } from '../../core/api/provider-api';
+import { ImdbId } from '../../core/domain';
 import { PROVIDERS, ProviderPage as ProviderPageDto } from '../../core/models';
+import { SeenStore } from '../../core/seen-store';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { FlatrateTable } from '../../shared/flatrate-table/flatrate-table';
 import { Loading } from '../../shared/loading/loading';
@@ -26,11 +28,17 @@ import { PaidTable } from '../../shared/paid-table/paid-table';
     } @else if (page(); as p) {
       @if (p.included.length > 0) {
         <h2>Included</h2>
-        <app-flatrate-table [entries]="p.included" />
+        <app-flatrate-table
+          [entries]="p.included"
+          [recentlyChangedId]="seenStore.recentlyChanged()"
+          (seenToggle)="onSeenToggle($event)" />
       }
       @if (p.paid.length > 0) {
         <h2>Buy / Rent</h2>
-        <app-paid-table [entries]="p.paid" />
+        <app-paid-table
+          [entries]="p.paid"
+          [recentlyChangedId]="seenStore.recentlyChanged()"
+          (seenToggle)="onSeenToggle($event)" />
       }
       @if (p.included.length === 0 && p.paid.length === 0) {
         <p class="text-muted">Nothing available for this provider yet.</p>
@@ -41,11 +49,28 @@ import { PaidTable } from '../../shared/paid-table/paid-table';
 export class ProviderPage {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ProviderApi);
+  protected readonly seenStore = inject(SeenStore);
 
   protected readonly page = signal<ProviderPageDto | null>(null);
   protected readonly label = signal<string>('');
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+
+  protected onSeenToggle({ imdbId, seen }: { imdbId: ImdbId; seen: boolean }): void {
+    // A title can be in the "included" and/or the "paid" list (and paid may repeat it per language
+    // variant); flip the flag wherever this imdbId appears.
+    this.seenStore.toggle(imdbId, seen, (s) =>
+      this.page.update((p) =>
+        p === null
+          ? p
+          : {
+              ...p,
+              included: p.included.map((e) => (e.imdbId === imdbId ? { ...e, isRated: s } : e)),
+              paid: p.paid.map((e) => (e.imdbId === imdbId ? { ...e, isRated: s } : e)),
+            },
+      ),
+    );
+  }
 
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {

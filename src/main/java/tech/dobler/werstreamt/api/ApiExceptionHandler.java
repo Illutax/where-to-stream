@@ -5,6 +5,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import tech.dobler.werstreamt.application.InvalidImportException;
+import tech.dobler.werstreamt.application.NoSuchWatchlistEntryException;
 import tech.dobler.werstreamt.application.UserManagementException;
 
 /**
@@ -25,6 +26,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(UserManagementException.class)
     public ProblemDetail handleUserManagement(UserManagementException ex) {
         return ProblemDetail.forStatusAndDetail(ex.status(), ex.getMessage());
+    }
+
+    @ExceptionHandler(NoSuchWatchlistEntryException.class)
+    public ProblemDetail handleNoSuchWatchlistEntry(NoSuchWatchlistEntryException ex) {
+        final var problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Not on watchlist");
+        return problem;
     }
 }
 
