@@ -26,6 +26,10 @@ services:
       # Posters come from IMDb by default. Set TMDB_ENABLED=true + a key to use TMDB instead.
       - TMDB_ENABLED=${TMDB_ENABLED:-false}
       - TMDB_API_KEY=${TMDB_API_KEY:-}
+      # Uncomment to log every poster resource fetched (lookup URL + image CDN URL).
+      # Dotted form matches the DispatcherServlet example above; canonical env form is
+      # LOGGING_LEVEL_TECH_DOBLER_WERSTREAMT_SERVICES=DEBUG.
+#      - logging.level.tech.dobler.werstreamt.services=DEBUG
     depends_on:
       - db
     networks:
