@@ -44,6 +44,20 @@ app-root {
   min-height: 100dvh;
 }
 
+// On desktop the drawer is a permanent side rail: cap the shell to the viewport height so the
+// mat-sidenav-content scrolls internally and the sidenav stays fixed while scrolling. On mobile the
+// drawer overlays (over mode), so the page keeps its natural body scroll.
+@media (min-width: 960px) {
+  app-root {
+    height: 100dvh;
+  }
+
+  // Let the flex child shrink below its content so mat-drawer-content scrolls, not the whole page.
+  .app-sidenav-container {
+    min-height: 0;
+  }
+}
+
 .app-toolbar {
   background: var(--mat-sys-primary);
   color: var(--mat-sys-on-primary);
