@@ -40,7 +40,9 @@ public class AggregateService {
     private List<ImdbEntry> includedFrom(List<QueryResult> all, String serviceName, UUID userId) {
         return all.stream()
                 .filter(on(serviceName).and(QueryResult::flatrate))
-                .map(e -> watchlistCatalog.findByImdb(userId, e.imdbId()).get())
+                .map(e -> watchlistCatalog.findByImdb(userId, e.imdbId())
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Catalogue entry missing for " + e.imdbId())))
                 .distinct() // a film is "in the flatrate" once per provider, even with language variants
                 .toList();
     }

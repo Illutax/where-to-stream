@@ -16,6 +16,6 @@ zum `adr`-Skill der Team-Doku.
 | [0007](0007-watchlist-pro-benutzer.md) | Watchlist pro Benutzer (DB-gestützt statt globaler Dateiliste) | Accepted |
 | [0008](0008-thymeleaf-client-entfernen.md) | Thymeleaf-Client entfernen — SPA-only UI | Accepted |
 | [0009](0009-domainvalues-statt-primitiven.md) | Domain-Values statt primitiver Datentypen | Accepted |
-| [0010](0010-optionals-nicht-auf-null-defaulten.md) | Repository-Optionals nicht auf `null` defaulten | Accepted |
+| [0010](0010-optionals-nicht-auf-null-defaulten.md) | Optionals nicht auf `null` defaulten (funktional konsumieren) | Accepted |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.
