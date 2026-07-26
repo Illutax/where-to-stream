@@ -35,6 +35,8 @@ describe('CatalogTable', () => {
     const link = rows()[0].querySelector('a') as HTMLAnchorElement;
     expect(link.textContent?.trim()).toBe('Alpha');
     expect(link.getAttribute('href')).toBe('https://www.imdb.com/title/tt10');
+    // each row shows a poster thumbnail next to the title
+    expect(rows()[0].querySelector('app-poster-thumb')).not.toBeNull();
   });
 
   it('shows the services when present and "N/A" when null', () => {

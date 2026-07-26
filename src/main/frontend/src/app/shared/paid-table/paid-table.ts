@@ -3,13 +3,14 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { ImdbId, imdbUrl } from '../../core/domain';
 import { PaidEntry } from '../../core/models';
+import { PosterThumb } from '../poster-thumb/poster-thumb';
 import { sortRows } from '../sort/table-sort';
 
 /** Presentational table of purchasable/rentable ("kaufbar") titles for a provider. */
 @Component({
   selector: 'app-paid-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatSortModule],
+  imports: [MatTableModule, MatSortModule, PosterThumb],
   template: `
     <div class="table-scroll">
     <table mat-table [dataSource]="sorted()" [trackBy]="trackByRow"
@@ -27,7 +28,10 @@ import { sortRows } from '../sort/table-sort';
       <ng-container matColumnDef="title">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
         <td mat-cell *matCellDef="let entry">
-          <a [href]="imdbUrl(entry.imdbId)" target="_blank" rel="noopener">{{ entry.name }}</a>
+          <div class="title-cell">
+            <app-poster-thumb [imdbId]="entry.imdbId" [name]="entry.name" />
+            <a [href]="imdbUrl(entry.imdbId)" target="_blank" rel="noopener">{{ entry.name }}</a>
+          </div>
         </td>
       </ng-container>
 

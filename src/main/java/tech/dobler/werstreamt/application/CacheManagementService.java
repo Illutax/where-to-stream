@@ -35,6 +35,7 @@ public class CacheManagementService {
 
     private final WatchlistEntryRepository watchlistEntryRepository;
     private final PreCacheService preCacheService;
+    private final PosterService posterService;
 
     private record TitleAgg(String name, boolean rated) {
     }
@@ -67,7 +68,18 @@ public class CacheManagementService {
     }
 
     public CacheResultDto cacheAll() {
-        return new CacheResultDto(preCacheService.cacheAll());
+        final int cached = preCacheService.cacheAll();
+        warmPosterThumbnails();
+        return new CacheResultDto(cached);
+    }
+
+    /**
+     * Warm the poster thumbnail cache for every known title. Each {@code thumb(...)} is a proxied
+     * call on a different bean, so the parallel fan-out gets a per-thread transaction (same reason
+     * {@link PreCacheService} calls {@code StreamInfoService}). A no-op when TMDB is not configured.
+     */
+    private void warmPosterThumbnails() {
+        watchlistEntryRepository.findDistinctImdbIds().parallelStream().forEach(posterService::thumb);
     }
 
     public UncachedCountDto uncachedCount() {

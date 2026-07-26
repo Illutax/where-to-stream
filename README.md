@@ -16,6 +16,8 @@ per-provider web pages (Netflix, Prime Video, Disney+, WOW, Google Play).
   self-hosted Roboto, per-user light/dark theme) served under `/app` — the only UI — talking to a
   JSON API under `/api`. The one server-rendered page left is the login page (the OIDC-ready auth
   entry).
+- Optional **poster thumbnails** (small preview + hi-res on hover) via the **TMDB API**, cached as
+  BLOBs in the DB (see [Poster images](#poster-images))
 - Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
 - jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
 - MapStruct (entity ↔ persistence mapping), Lombok
@@ -219,6 +221,22 @@ Deployment config (docker compose) is documented in [`.env.example`](.env.exampl
   Without the profile, OIDC is off and only local accounts are used. First OIDC login provisions a
   local `USER` keyed by e-mail.
 
+## Poster images
+
+Each title shows a small poster thumbnail next to its name, and a high-resolution poster on hover.
+Images come from **[The Movie Database (TMDB)](https://www.themoviedb.org/)** — the app resolves a
+title's `poster_path` once via TMDB's `find` endpoint and serves the pre-sized images from TMDB's
+image CDN, caching both sizes as BLOBs in the DB (per `imdbId`, shared across users) so TMDB is
+queried at most once per title. The browser then caches each image (long, immutable `Cache-Control`
++ `ETag`).
+
+- **Optional:** set a free TMDB v3 API key (`TMDB_API_KEY`, or `tmdb.api-key`) to enable it. Without
+  a key the feature is simply off — the app runs unchanged and the images are hidden.
+- Thumbnails are cached on first view and can be bulk-warmed via the ADMIN pre-cache (`POST
+  /api/cache`); the hi-res image is fetched on first hover.
+- **Attribution:** the UI shows the TMDB logo and the required notice ("This product uses the TMDB
+  API but is not endorsed or certified by TMDB.").
+
 ## Configuration
 
 Key properties (`src/main/resources/application.properties`):
@@ -228,6 +246,7 @@ Key properties (`src/main/resources/application.properties`):
 | `server.port` | `8001` | HTTP port (Docker overrides to `8080`) |
 | `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is refetched |
 | `wer-streamt.rate-limit.requests-per-second` | `2` | Outbound throttle for werstreamt.es (`<= 0` disables) |
+| `tmdb.api-key` | _(blank)_ | TMDB API key for poster images; blank disables the feature |
 | `spring.jpa.hibernate.ddl-auto` | `none` | Schema is owned by Liquibase (single source of truth) |
 
 ### Database & schema
@@ -277,6 +296,7 @@ mvn -Ptestcontainers test
 | `GET /api/providers/{amazon\|disney\|netflix\|wow\|google}` | Per-provider included + paid titles |
 | `GET /api/watchlist` · `POST /api/watchlist/import` · `DELETE /api/watchlist` | Your watchlist: status / CSV import / clear |
 | `PUT /api/watchlist/{imdbId}/seen` | Mark one of your titles seen / not seen (`{ "seen": true }`) |
+| `GET /api/titles/{imdbId}/poster` · `…/poster/full` | Cached poster thumbnail / hi-res image (404 if none) |
 | `GET /api/manage` · `POST /api/manage/invalidate` · `POST /api/manage/scrape` | Cache management (ADMIN) |
 | `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached (ADMIN) |
 | `POST /api/refresh?scope=seen\|all` | Force-refresh cached results (ADMIN) |

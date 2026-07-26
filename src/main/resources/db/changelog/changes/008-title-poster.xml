@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Dialect-specific types (per-file scope, mirrors 001). -->
+    <property name="uuid.type" value="uuid" dbms="h2"/>
+    <property name="uuid.type" value="uuid" dbms="mariadb"/>
+    <property name="timestamp.type" value="timestamp(6) with time zone" dbms="h2"/>
+    <property name="timestamp.type" value="datetime(6)" dbms="mariadb"/>
+
+    <changeSet id="008-title-poster" author="vdobler">
+        <comment>
+            Global (per-imdbId) cache of TMDB poster images: the poster_path plus the small
+            thumbnail and the larger hover image as BLOBs (both fetched lazily and stored so TMDB is
+            hit at most once per title). A null poster_path is a negative cache entry.
+        </comment>
+        <createTable tableName="title_poster">
+            <column name="id" type="${uuid.type}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="imdb_id" type="varchar(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="poster_path" type="varchar(255)"/>
+            <column name="thumb_bytes" type="blob"/>
+            <column name="thumb_content_type" type="varchar(64)"/>
+            <column name="full_bytes" type="blob"/>
+            <column name="full_content_type" type="varchar(64)"/>
+            <column name="fetched_at" type="${timestamp.type}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

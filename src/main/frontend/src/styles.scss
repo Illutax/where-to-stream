@@ -189,3 +189,49 @@ h2 {
     background: transparent;
   }
 }
+
+// Title cell = small poster thumbnail next to the IMDb link.
+.title-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.poster-thumb {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-surface-variant); // muted placeholder while lazy-loading
+}
+
+// High-resolution poster shown on hover (in a CDK overlay, so it is never clipped by the table).
+.poster-hover {
+  display: block;
+  width: 200px;
+  max-width: 40vw;
+  height: auto;
+  border-radius: var(--mat-sys-corner-medium);
+  box-shadow: var(--mat-sys-level3);
+  background: var(--mat-sys-surface-variant);
+}
+
+// Footer with the required TMDB attribution.
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-small);
+}
+
+.tmdb-logo {
+  height: 14px;
+  width: auto;
+  display: block;
+}

@@ -32,6 +32,8 @@ class CacheManagementServiceTest {
     private WatchlistEntryRepository watchlistEntryRepository;
     @Mock
     private PreCacheService preCacheService;
+    @Mock
+    private PosterService posterService;
     @InjectMocks
     private CacheManagementService service;
 

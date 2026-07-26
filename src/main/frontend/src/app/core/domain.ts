@@ -26,6 +26,16 @@ export function imdbUrl(id: ImdbId): string {
   return `https://www.imdb.com/title/${id}`;
 }
 
+/** Same-origin URL for a title's cached poster thumbnail (relative, like the API base). */
+export function posterUrl(id: ImdbId): string {
+  return `../api/titles/${id}/poster`;
+}
+
+/** Same-origin URL for a title's cached high-resolution poster (hover preview). */
+export function posterFullUrl(id: ImdbId): string {
+  return `../api/titles/${id}/poster/full`;
+}
+
 export function releaseYear(value: number): ReleaseYear {
   return value as ReleaseYear;
 }
