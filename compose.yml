@@ -29,7 +29,7 @@ services:
       # Uncomment to log every poster resource fetched (lookup URL + image CDN URL).
       # Dotted form matches the DispatcherServlet example above; canonical env form is
       # LOGGING_LEVEL_TECH_DOBLER_WERSTREAMT_SERVICES=DEBUG.
-#      - logging.level.tech.dobler.werstreamt.services=DEBUG
+      - logging.level.tech.dobler.werstreamt.services=DEBUG
     depends_on:
       - db
     networks:
