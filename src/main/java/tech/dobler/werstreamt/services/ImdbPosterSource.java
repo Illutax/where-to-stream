@@ -55,6 +55,7 @@ public class ImdbPosterSource implements PosterSource {
                 .pathSegment(imdbId.value(), "") // trailing slash: .../title/tt.../
                 .build();
         try {
+            log.debug("IMDb poster lookup for {}: GET {}", imdbId, query.toUriString());
             acquire();
             return parsePosterUrl(ApiClientUtils.getConnectionWithUserAgent(query).get());
         } catch (HttpStatusException e) {
@@ -72,6 +73,7 @@ public class ImdbPosterSource implements PosterSource {
         }
         final var uri = URI.create(sizedUrl(posterPath, properties.widthFor(size), properties.qualityFor(size)));
         try {
+            log.debug("IMDb {} image download: GET {}", size, uri);
             acquire();
             final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
                     .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofByteArray());

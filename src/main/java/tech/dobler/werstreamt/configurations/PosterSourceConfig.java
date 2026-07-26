@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import tech.dobler.werstreamt.services.ImdbPosterSource;
 import tech.dobler.werstreamt.services.PosterSource;
-import tech.dobler.werstreamt.services.TmdbClient;
+import tech.dobler.werstreamt.services.TmdbPosterSource;
 
 /**
  * Selects the active {@link PosterSource} at startup: TMDB when it is enabled and configured (see
@@ -19,10 +19,11 @@ public class PosterSourceConfig {
 
     @Bean
     @Primary
-    public PosterSource posterSource(TmdbProperties tmdb, TmdbClient tmdbClient, ImdbPosterSource imdbPosterSource) {
+    public PosterSource posterSource(TmdbProperties tmdb, TmdbPosterSource tmdbPosterSource,
+                                     ImdbPosterSource imdbPosterSource) {
         if (tmdb.active()) {
             log.info("Poster source: TMDB");
-            return tmdbClient;
+            return tmdbPosterSource;
         }
         log.info("Poster source: IMDb (scraper)");
         return imdbPosterSource;

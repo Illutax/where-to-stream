@@ -27,14 +27,14 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
-public class TmdbClient implements PosterSource {
+public class TmdbPosterSource implements PosterSource {
 
     private final TmdbProperties properties;
     private final HttpClient httpClient;
     private final long minIntervalNanos;
     private long nextAllowedNanos = System.nanoTime();
 
-    public TmdbClient(TmdbProperties properties) {
+    public TmdbPosterSource(TmdbProperties properties) {
         this.properties = properties;
         this.httpClient = HttpClient.newBuilder()
                 .proxy(ProxySelector.getDefault())
@@ -55,8 +55,9 @@ public class TmdbClient implements PosterSource {
                 .queryParam("api_key", properties.apiKey())
                 .build().toUri();
         try {
+            log.debug("TMDB find for {}: GET {}", imdbId, redactApiKey(uri));
             final var body = getString(uri);
-            return body.flatMap(TmdbClient::parsePosterPath);
+            return body.flatMap(TmdbPosterSource::parsePosterPath);
         } catch (RuntimeException e) {
             log.warn("TMDB find failed for {}: {}", imdbId, e.toString());
             return Optional.empty();
@@ -70,6 +71,7 @@ public class TmdbClient implements PosterSource {
         }
         final var uri = URI.create(properties.imageBaseUrl() + "/" + tmdbSize(size) + posterPath);
         try {
+            log.debug("TMDB {} image download: GET {}", size, uri);
             acquire();
             final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
                     .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofByteArray());
@@ -120,6 +122,11 @@ public class TmdbClient implements PosterSource {
             return Optional.empty();
         }
         return Optional.empty();
+    }
+
+    /** Keeps the api_key out of the logs. */
+    private static String redactApiKey(URI uri) {
+        return uri.toString().replaceAll("(api_key=)[^&]*", "$1***");
     }
 
     private static String tmdbSize(PosterSize size) {
