@@ -1,0 +1,30 @@
+package tech.dobler.werstreamt.configurations;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import tech.dobler.werstreamt.services.ImdbPosterSource;
+import tech.dobler.werstreamt.services.PosterSource;
+import tech.dobler.werstreamt.services.TmdbClient;
+
+/**
+ * Selects the active {@link PosterSource} at startup: TMDB when it is enabled and configured (see
+ * {@link TmdbProperties#active()}), otherwise IMDb (the default). A misconfigured TMDB (flag on, key
+ * missing) falls back to IMDb so posters keep working.
+ */
+@Slf4j
+@Configuration
+public class PosterSourceConfig {
+
+    @Bean
+    @Primary
+    public PosterSource posterSource(TmdbProperties tmdb, TmdbClient tmdbClient, ImdbPosterSource imdbPosterSource) {
+        if (tmdb.active()) {
+            log.info("Poster source: TMDB");
+            return tmdbClient;
+        }
+        log.info("Poster source: IMDb (scraper)");
+        return imdbPosterSource;
+    }
+}

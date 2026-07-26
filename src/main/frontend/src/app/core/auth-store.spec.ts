@@ -25,13 +25,33 @@ describe('AuthStore', () => {
 
   it('load() populates the principal and derived signals', () => {
     store.load();
-    httpMock
-      .expectOne((r) => r.url.endsWith('/api/me'))
-      .flush({ authenticated: true, username: 'alice', roles: ['ADMIN', 'USER'], admin: true, theme: 'DARK' });
+    httpMock.expectOne((r) => r.url.endsWith('/api/me')).flush({
+      authenticated: true,
+      username: 'alice',
+      roles: ['ADMIN', 'USER'],
+      admin: true,
+      theme: 'DARK',
+      tmdbAttribution: true,
+    });
 
     expect(store.username()).toBe('alice');
     expect(store.isAdmin()).toBe(true);
     expect(store.authenticated()).toBe(true);
+    expect(store.tmdbAttribution()).toBe(true);
+  });
+
+  it('tmdbAttribution defaults to false when the source is IMDb (flag absent/false)', () => {
+    store.load();
+    httpMock.expectOne((r) => r.url.endsWith('/api/me')).flush({
+      authenticated: true,
+      username: 'bob',
+      roles: ['USER'],
+      admin: false,
+      theme: 'SYSTEM',
+      tmdbAttribution: false,
+    });
+
+    expect(store.tmdbAttribution()).toBe(false);
   });
 
   it('load() failure leaves the store empty', () => {

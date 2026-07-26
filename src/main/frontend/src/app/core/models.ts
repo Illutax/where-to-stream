@@ -93,6 +93,8 @@ export interface Me {
   roles: string[];
   admin: boolean;
   theme: Theme;
+  /** Whether TMDB is the active poster source (drives the TMDB attribution footer). */
+  tmdbAttribution: boolean;
 }
 
 /** A user account in the administration UI (mirrors the server UserDto). */

@@ -46,7 +46,7 @@ public class TmdbClient implements PosterSource {
 
     @Override
     public Optional<String> findPosterPath(ImdbId imdbId) {
-        if (!properties.enabled()) {
+        if (!properties.active()) {
             return Optional.empty();
         }
         final var uri = UriComponentsBuilder.fromUriString(properties.apiBaseUrl())

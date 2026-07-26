@@ -15,6 +15,8 @@ export class AuthStore {
   readonly username = computed(() => this._me()?.username ?? null);
   readonly isAdmin = computed(() => this._me()?.admin ?? false);
   readonly authenticated = computed(() => this._me()?.authenticated ?? false);
+  /** True when posters come from TMDB, so the SPA shows the required TMDB attribution footer. */
+  readonly tmdbAttribution = computed(() => this._me()?.tmdbAttribution ?? false);
 
   load(): void {
     this.authApi.me().subscribe({

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import tech.dobler.werstreamt.application.UserPreferencesService;
 import tech.dobler.werstreamt.application.dto.MeDto;
+import tech.dobler.werstreamt.configurations.TmdbProperties;
 import tech.dobler.werstreamt.domain.Theme;
 
 import java.util.List;
@@ -25,12 +26,14 @@ import java.util.List;
 public class MeApiController {
 
     private final UserPreferencesService userPreferencesService;
+    private final TmdbProperties tmdbProperties;
 
     @GetMapping
     public MeDto me(Authentication authentication) {
+        final boolean tmdbAttribution = tmdbProperties.active();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            return new MeDto(false, null, List.of(), false, Theme.SYSTEM);
+            return new MeDto(false, null, List.of(), false, Theme.SYSTEM, tmdbAttribution);
         }
         final List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -39,7 +42,7 @@ public class MeApiController {
                 .sorted()
                 .toList();
         final var theme = userPreferencesService.themeFor(authentication.getName());
-        return new MeDto(true, authentication.getName(), roles, roles.contains("ADMIN"), theme);
+        return new MeDto(true, authentication.getName(), roles, roles.contains("ADMIN"), theme, tmdbAttribution);
     }
 
     /** Updates the current user's own theme preference. */

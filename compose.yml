@@ -23,7 +23,8 @@ services:
       # Only used when the 'google' profile is active; harmless (ignored) otherwise.
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-      # Optional TMDB API key for poster images; blank disables the feature.
+      # Posters come from IMDb by default. Set TMDB_ENABLED=true + a key to use TMDB instead.
+      - TMDB_ENABLED=${TMDB_ENABLED:-false}
       - TMDB_API_KEY=${TMDB_API_KEY:-}
     depends_on:
       - db

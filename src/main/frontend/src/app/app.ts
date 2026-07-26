@@ -40,12 +40,14 @@ import { Navbar } from './shared/navbar/navbar';
         <main class="app-container">
           <router-outlet />
         </main>
-        <footer class="app-footer">
-          <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">
-            <img class="tmdb-logo" src="tmdb.svg" alt="The Movie Database (TMDB)" />
-          </a>
-          <span>This product uses the TMDB API but is not endorsed or certified by TMDB.</span>
-        </footer>
+        @if (auth.tmdbAttribution()) {
+          <footer class="app-footer">
+            <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">
+              <img class="tmdb-logo" src="tmdb.svg" alt="The Movie Database (TMDB)" />
+            </a>
+            <span>This product uses the TMDB API but is not endorsed or certified by TMDB.</span>
+          </footer>
+        }
       </mat-sidenav-content>
     </mat-sidenav-container>
   `,

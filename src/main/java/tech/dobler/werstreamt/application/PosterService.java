@@ -3,7 +3,7 @@ package tech.dobler.werstreamt.application;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.dobler.werstreamt.configurations.TmdbProperties;
+import tech.dobler.werstreamt.configurations.PosterProperties;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.PosterSize;
 import tech.dobler.werstreamt.persistence.TitlePoster;
@@ -19,8 +19,8 @@ import java.util.Optional;
  * Resolves a title's poster image, caching it per {@code imdbId} in the DB (global, shared). The
  * thumbnail is fetched on first view and the full image on first hover; both are then stored so
  * TMDB is queried at most once per title. Mirrors the resolve/fetch/save shape of
- * {@code StreamInfoService}. If the poster feature is disabled (no TMDB key), returns empty and
- * touches nothing.
+ * {@code StreamInfoService}. The concrete image source (IMDb by default, or TMDB) is selected at
+ * startup and injected as a {@link PosterSource}; this service is agnostic to which one it is.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,7 +28,7 @@ public class PosterService {
 
     private final TitlePosterRepository repository;
     private final PosterSource posterSource;
-    private final TmdbProperties properties;
+    private final PosterProperties properties;
     private final TimeService timeService;
 
     /** An image ready to serve. */
@@ -46,9 +46,6 @@ public class PosterService {
     }
 
     private Optional<Poster> resolve(ImdbId imdbId, PosterSize size) {
-        if (!properties.enabled()) {
-            return Optional.empty();
-        }
         final Instant now = timeService.now();
         TitlePoster row = repository.findByImdbId(imdbId).orElse(null);
 

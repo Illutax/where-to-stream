@@ -12,9 +12,11 @@
 
     <changeSet id="008-title-poster" author="vdobler">
         <comment>
-            Global (per-imdbId) cache of TMDB poster images: the poster_path plus the small
-            thumbnail and the larger hover image as BLOBs (both fetched lazily and stored so TMDB is
-            hit at most once per title). A null poster_path is a negative cache entry.
+            Global (per-imdbId) cache of poster images: a source-specific poster reference
+            (poster_path — a TMDB path or an IMDb/Amazon image URL, hence the generous width) plus
+            the small thumbnail and the larger hover image as BLOBs (both fetched lazily and stored
+            so the source is hit at most once per title). A null poster_path is a negative cache
+            entry.
         </comment>
         <createTable tableName="title_poster">
             <column name="id" type="${uuid.type}">
@@ -23,7 +25,7 @@
             <column name="imdb_id" type="varchar(255)">
                 <constraints nullable="false" unique="true"/>
             </column>
-            <column name="poster_path" type="varchar(255)"/>
+            <column name="poster_path" type="varchar(1024)"/>
             <column name="thumb_bytes" type="blob"/>
             <column name="thumb_content_type" type="varchar(64)"/>
             <column name="full_bytes" type="blob"/>

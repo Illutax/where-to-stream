@@ -34,7 +34,9 @@ class MeApiControllerTest {
                 .andExpect(jsonPath("$.roles[0]").value("ADMIN"))
                 .andExpect(jsonPath("$.roles[1]").value("USER"))
                 // Unknown user (mock principal not in the DB) falls back to the SYSTEM theme.
-                .andExpect(jsonPath("$.theme").value("SYSTEM"));
+                .andExpect(jsonPath("$.theme").value("SYSTEM"))
+                // TMDB is not enabled in the test config, so posters come from IMDb (no attribution).
+                .andExpect(jsonPath("$.tmdbAttribution").value(false));
     }
 
     @Test

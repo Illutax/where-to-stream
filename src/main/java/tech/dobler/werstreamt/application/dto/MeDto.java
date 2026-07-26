@@ -10,14 +10,16 @@ import java.util.List;
  * @param authenticated whether a user is authenticated
  * @param username      the login name (local username or OIDC e-mail)
  * @param roles         role names without the {@code ROLE_} prefix (e.g. {@code ["ADMIN","USER"]})
- * @param admin         convenience flag: whether {@code roles} contains {@code ADMIN}
- * @param theme         the user's UI colour-scheme preference ({@code SYSTEM} when anonymous)
+ * @param admin           convenience flag: whether {@code roles} contains {@code ADMIN}
+ * @param theme           the user's UI colour-scheme preference ({@code SYSTEM} when anonymous)
+ * @param tmdbAttribution whether TMDB is the active poster source (drives the TMDB footer)
  */
 public record MeDto(
         boolean authenticated,
         String username,
         List<String> roles,
         boolean admin,
-        Theme theme
+        Theme theme,
+        boolean tmdbAttribution
 ) {
 }
