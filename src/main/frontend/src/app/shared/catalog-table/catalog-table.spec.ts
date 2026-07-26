@@ -110,4 +110,19 @@ describe('CatalogTable', () => {
     fixture.detectChanges();
     expect(titles()).toEqual(['Older', 'Newer']);
   });
+
+  it('sorts by the seen flag when the Seen header is clicked', async () => {
+    fixture.componentRef.setInput('entries', [
+      entry({ name: 'Watched', imdbId: imdbId('tt2'), isRated: true }),
+      entry({ name: 'Unwatched', imdbId: imdbId('tt1'), isRated: false }),
+    ]);
+    fixture.detectChanges();
+
+    const sort = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSortHarness);
+    const [seenHeader] = await sort.getSortHeaders({ label: 'Seen' });
+
+    await seenHeader.click();
+    fixture.detectChanges();
+    expect(titles()).toEqual(['Unwatched', 'Watched']); // ascending: not-seen first
+  });
 });

@@ -1,7 +1,8 @@
 import { Sort } from '@angular/material/sort';
 
-/** Row shape the availability tables share for sorting (title/year/added). */
+/** Row shape the availability tables share for sorting (seen/title/year/added). */
 interface SortableRow {
+  isRated: boolean;
   name: string;
   year: number | string;
   added: string;
@@ -9,8 +10,9 @@ interface SortableRow {
 
 /**
  * Returns a new array of `rows` ordered by the active Material sort column and direction. The
- * sortable columns are `title` (by name), `year` and `added`. An empty direction — the third
- * click on a header — restores the original input order. Non-mutating and stable.
+ * sortable columns are `rated` (by the seen flag), `title` (by name), `year` and `added`. An empty
+ * direction — the third click on a header — restores the original input order. Non-mutating and
+ * stable.
  */
 export function sortRows<T extends SortableRow>(rows: readonly T[], sort: Sort): T[] {
   const copy = [...rows];
@@ -23,6 +25,9 @@ export function sortRows<T extends SortableRow>(rows: readonly T[], sort: Sort):
 
 function compare(a: SortableRow, b: SortableRow, column: string): number {
   switch (column) {
+    case 'rated':
+      // Ascending: not-seen (false) before seen (true).
+      return Number(a.isRated) - Number(b.isRated);
     case 'title':
       return a.name.localeCompare(b.name);
     case 'year':

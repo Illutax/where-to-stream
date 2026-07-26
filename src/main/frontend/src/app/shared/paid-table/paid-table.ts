@@ -15,7 +15,7 @@ import { sortRows } from '../sort/table-sort';
     <table mat-table [dataSource]="sorted()" [trackBy]="trackByRow"
            matSort (matSortChange)="sort.set($event)">
       <ng-container matColumnDef="rated">
-        <th mat-header-cell *matHeaderCellDef>Seen</th>
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Seen</th>
         <td mat-cell *matCellDef="let entry">
           <button type="button" class="seen-toggle"
                   (click)="seenToggle.emit({ imdbId: entry.imdbId, seen: !entry.isRated })"
