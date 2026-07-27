@@ -1,5 +1,5 @@
-import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { CdkConnectedOverlay, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { ChangeDetectionStrategy, Component, input, signal, viewChild } from '@angular/core';
 import { ImdbId, posterFullUrl, posterUrl } from '../../core/domain';
 
 /**
@@ -7,6 +7,12 @@ import { ImdbId, posterFullUrl, posterUrl } from '../../core/domain';
  * or the feature is off) hide the image gracefully. On hover it shows the high-resolution poster in
  * a CDK overlay (rendered at the document root, so it is not clipped by the tables' horizontal
  * scroll); the hi-res image is only requested while the overlay is open (fetched on demand).
+ *
+ * CDK positions the overlay as soon as it opens, before the (not-yet-cached) hi-res image has
+ * loaded — at that point it has no intrinsic size, so the position is computed against a
+ * near-empty box. Once the image loads and grows to its real size, we explicitly ask CDK to
+ * recompute the position; otherwise it stays put until the next scroll/resize and can hang off
+ * the edge of the viewport in the meantime.
  */
 @Component({
   selector: 'app-poster-thumb',
@@ -30,7 +36,12 @@ import { ImdbId, posterFullUrl, posterUrl } from '../../core/domain';
         [cdkConnectedOverlayOrigin]="origin"
         [cdkConnectedOverlayOpen]="open()"
         [cdkConnectedOverlayPositions]="positions">
-        <img class="poster-hover" [src]="posterFullUrl(imdbId())" [alt]="name()" (error)="open.set(false)" />
+        <img
+          class="poster-hover"
+          [src]="posterFullUrl(imdbId())"
+          [alt]="name()"
+          (error)="open.set(false)"
+          (load)="repositionOverlay()" />
       </ng-template>
     }
   `,
@@ -43,6 +54,13 @@ export class PosterThumb {
   protected readonly open = signal(false);
   protected readonly posterUrl = posterUrl;
   protected readonly posterFullUrl = posterFullUrl;
+
+  private readonly overlay = viewChild(CdkConnectedOverlay);
+
+  // Re-run CDK's position strategy once the hi-res image has loaded and reached its real size.
+  protected repositionOverlay(): void {
+    this.overlay()?.overlayRef.updatePosition();
+  }
 
   // Prefer the hi-res preview to the right of the thumbnail, falling back to the left; and prefer
   // aligning to the thumbnail's top, falling back to its bottom so a poster hovered near the
