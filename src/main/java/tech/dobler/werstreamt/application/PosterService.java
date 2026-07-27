@@ -124,6 +124,10 @@ public class PosterService {
                 .map(bytes -> {
                     store(row, size, bytes);
                     return new Poster(bytes, "image/jpeg");
+                })
+                .or(() -> {
+                    log.debug("No {} poster bytes for {} (path {})", size, row.getImdbId(), row.getPosterPath());
+                    return Optional.empty();
                 });
     }
 

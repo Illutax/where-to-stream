@@ -76,7 +76,8 @@ public class CacheManagementService {
     /**
      * Warm the poster thumbnail cache for every known title. Each {@code thumb(...)} is a proxied
      * call on a different bean, so the parallel fan-out gets a per-thread transaction (same reason
-     * {@link PreCacheService} calls {@code StreamInfoService}). A no-op when TMDB is not configured.
+     * {@link PreCacheService} calls {@code StreamInfoService}). Uses whichever poster source is
+     * active (IMDb by default, or TMDB).
      */
     private void warmPosterThumbnails() {
         watchlistEntryRepository.findDistinctImdbIds().parallelStream().forEach(posterService::thumb);

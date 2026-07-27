@@ -1,10 +1,8 @@
 package tech.dobler.werstreamt.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.HttpStatusException;
-import org.jsoup.nodes.Document;
+import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.werstreamt.configurations.ImdbPosterProperties;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.PosterSize;
@@ -16,22 +14,32 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
- * IMDb-backed {@link PosterSource} (the default): scrapes a title's poster URL from its IMDb page
- * ({@code og:image}, an Amazon image-CDN URL) and downloads the bytes pre-sized straight from the
- * CDN. Amazon's image server resizes and re-compresses on the fly via URL params (the {@code _V1_}
- * transform), so a small, aggressively-compressed thumbnail and a larger hover image are two
- * different requests against the same base URL — no server-side image processing. All failures
- * degrade to empty (logged). Outbound requests are throttled (default 2 req/s) to avoid a block.
+ * IMDb-backed {@link PosterSource} (the default): resolves a title's poster URL via IMDb's public
+ * GraphQL API ({@code title(id).primaryImage.url}, an {@code m.media-amazon.com} image), then
+ * downloads the bytes pre-sized straight from Amazon's image CDN. The CDN resizes and re-compresses
+ * on the fly via URL params (the {@code _V1_} transform), so a small, aggressively-compressed
+ * thumbnail and a larger hover image are two requests against the same base URL — no server-side
+ * image processing. All failures degrade to empty (logged). Outbound requests are throttled
+ * (default 2 req/s) to stay polite.
+ *
+ * <p>Note: scraping the HTML title page does not work server-side — {@code www.imdb.com} returns an
+ * empty {@code 202} to datacenter IPs (anti-bot) — hence the GraphQL API. The API data is IMDb's,
+ * under their terms (limited non-commercial use).
  */
 @Slf4j
 @Service
 public class ImdbPosterSource implements PosterSource {
 
     private static final String V1 = "_V1_";
+    private static final String USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+    /** Minimal GraphQL query; the id is passed as a variable (never string-interpolated). */
+    private static final String QUERY = "query($id:ID!){title(id:$id){primaryImage{url}}}";
 
     private final ImdbPosterProperties properties;
     private final HttpClient httpClient;
@@ -51,19 +59,35 @@ public class ImdbPosterSource implements PosterSource {
 
     @Override
     public Optional<String> findPosterPath(ImdbId imdbId) {
-        final var query = UriComponentsBuilder.fromUriString(properties.titleBaseUrl())
-                .pathSegment(imdbId.value(), "") // trailing slash: .../title/tt.../
-                .build();
+        final var uri = URI.create(properties.apiUrl());
         try {
-            log.debug("IMDb poster lookup for {}: GET {}", imdbId, query.toUriString());
             acquire();
-            return parsePosterUrl(ApiClientUtils.getConnectionWithUserAgent(query).get());
-        } catch (HttpStatusException e) {
-            log.warn("IMDb poster lookup for {} failed: {}", imdbId, e.getMessage());
-        } catch (IOException | RuntimeException e) {
+            log.debug("Fetching poster metadata for {} from {}", imdbId, uri);
+            final var request = HttpRequest.newBuilder(uri)
+                    .header("Content-Type", "application/json")
+                    .header("User-Agent", USER_AGENT)
+                    .timeout(Duration.ofSeconds(10))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody(imdbId)))
+                    .build();
+            final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            final var body = response.body();
+            log.trace("Poster metadata for {}: HTTP {} ({} bytes)", imdbId, response.statusCode(), body.length());
+            if (response.statusCode() != 200) {
+                log.warn("IMDb poster lookup for {} returned HTTP {}", imdbId, response.statusCode());
+                return Optional.empty();
+            }
+            final var url = parsePosterUrl(body);
+            url.ifPresentOrElse(
+                    resolved -> log.debug("Resolved poster for {}: {}", imdbId, resolved),
+                    () -> log.debug("No poster for {}", imdbId));
+            return url;
+        } catch (IOException | InterruptedException | RuntimeException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             log.warn("IMDb poster lookup for {} failed: {}", imdbId, e.toString());
+            return Optional.empty();
         }
-        return Optional.empty();
     }
 
     @Override
@@ -73,40 +97,50 @@ public class ImdbPosterSource implements PosterSource {
         }
         final var uri = URI.create(sizedUrl(posterPath, properties.widthFor(size), properties.qualityFor(size)));
         try {
-            log.debug("IMDb {} image download: GET {}", size, uri);
             acquire();
+            log.debug("Downloading {} poster image: GET {}", size, uri);
             final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
+                    .header("User-Agent", USER_AGENT)
                     .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() != 200 || response.body().length == 0) {
-                log.warn("IMDb image {} returned {}", uri, response.statusCode());
+                log.warn("IMDb {} image download {} returned HTTP {} ({} bytes)",
+                        size, uri, response.statusCode(), response.body().length);
                 return Optional.empty();
             }
+            log.trace("Downloaded {} poster ({} bytes) from {}", size, response.body().length, uri);
             return Optional.of(response.body());
         } catch (IOException | InterruptedException | RuntimeException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            log.warn("IMDb image download failed for {}: {}", uri, e.toString());
+            log.warn("IMDb {} image download failed for {}: {}", size, uri, e.toString());
             return Optional.empty();
         }
+    }
+
+    private static String requestBody(ImdbId imdbId) {
+        // imdbId is tt\w+-validated, so it needs no JSON escaping; still passed as a GraphQL variable.
+        return "{\"query\":\"" + QUERY + "\",\"variables\":{\"id\":\"" + imdbId.value() + "\"}}";
     }
 
     /**
-     * The poster image URL from a title page's {@code og:image} — an {@code m.media-amazon.com}
-     * poster — or empty when the page has none (a title without a poster). Network-free, so the
-     * parsing is unit-testable with a fixture.
+     * The poster URL from an IMDb GraphQL {@code title.primaryImage.url} response, or empty when the
+     * title has no poster / the response carries {@code errors}. Network-free (unit-testable). Uses
+     * Spring Boot's {@code JsonParser} so it is agnostic to the JSON library on the classpath.
      */
-    static Optional<String> parsePosterUrl(Document document) {
-        final var og = document.selectFirst("meta[property=og:image]");
-        if (og == null) {
+    static Optional<String> parsePosterUrl(String json) {
+        try {
+            final Map<String, Object> root = JsonParserFactory.getJsonParser().parseMap(json);
+            if (root.get("data") instanceof Map<?, ?> data
+                    && data.get("title") instanceof Map<?, ?> title
+                    && title.get("primaryImage") instanceof Map<?, ?> image
+                    && image.get("url") instanceof String url && !url.isBlank()) {
+                return Optional.of(url);
+            }
+        } catch (RuntimeException e) {
             return Optional.empty();
         }
-        final var url = og.attr("content");
-        return isPosterImage(url) ? Optional.of(url) : Optional.empty();
-    }
-
-    private static boolean isPosterImage(String url) {
-        return url != null && url.contains("media-amazon.com/images/M/");
+        return Optional.empty();
     }
 
     /**
@@ -128,8 +162,10 @@ public class ImdbPosterSource implements PosterSource {
         }
         final long now = System.nanoTime();
         if (now < nextAllowedNanos) {
+            final long waitNanos = nextAllowedNanos - now;
+            log.trace("Throttled outbound poster request by {}ms", TimeUnit.NANOSECONDS.toMillis(waitNanos));
             try {
-                TimeUnit.NANOSECONDS.sleep(nextAllowedNanos - now);
+                TimeUnit.NANOSECONDS.sleep(waitNanos);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

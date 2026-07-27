@@ -230,11 +230,14 @@ downloads the two sizes **pre-sized from the source's CDN** (no server-side imag
 caches both as BLOBs in the DB (per `imdbId`, shared across users) so the source is hit at most once
 per title. The browser then caches each image (long, immutable `Cache-Control` + `ETag`).
 
-- **IMDb (default, no key):** the poster URL is read from the title page's `og:image` (an Amazon
-  image-CDN URL); the CDN resizes and re-compresses on the fly via URL params, so the row thumbnail
-  is small and low-quality (`imdb-poster.thumb-width`/`thumb-quality`) and the hover image larger
-  (`imdb-poster.full-*`). Scraping is throttled **conservatively** — `imdb-poster.rate-limit.requests-per-second`
-  (default **2**) — to avoid being blocked.
+- **IMDb (default, no key):** the poster URL is looked up via IMDb's public **GraphQL API**
+  (`title(id).primaryImage.url`, an Amazon image-CDN URL); the CDN resizes and re-compresses on the
+  fly via URL params, so the row thumbnail is small and low-quality
+  (`imdb-poster.thumb-width`/`thumb-quality`) and the hover image larger (`imdb-poster.full-*`).
+  Lookups are throttled **conservatively** — `imdb-poster.rate-limit.requests-per-second` (default
+  **2**). (HTML scraping of the title page does not work server-side: `www.imdb.com` returns an
+  empty `202` to datacenter IPs.) **Note:** the API returns IMDb data under their terms (limited
+  non-commercial use); this covers a personal watchlist, but TMDB below is the unambiguous path.
 - **TMDB (opt-in):** set `TMDB_ENABLED=true` **and** a free v3 API key (`TMDB_API_KEY` / `tmdb.api-key`,
   from https://www.themoviedb.org/settings/api) to source posters from
   [The Movie Database](https://www.themoviedb.org/) instead (via its `find` endpoint + image CDN).

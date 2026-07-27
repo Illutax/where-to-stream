@@ -25,7 +25,7 @@ public class PosterSourceConfig {
             log.info("Poster source: TMDB");
             return tmdbPosterSource;
         }
-        log.info("Poster source: IMDb (scraper)");
+        log.info("Poster source: IMDb (GraphQL API)");
         return imdbPosterSource;
     }
 }

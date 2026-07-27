@@ -55,11 +55,25 @@ public class TmdbPosterSource implements PosterSource {
                 .queryParam("api_key", properties.apiKey())
                 .build().toUri();
         try {
-            log.debug("TMDB find for {}: GET {}", imdbId, redactApiKey(uri));
-            final var body = getString(uri);
-            return body.flatMap(TmdbPosterSource::parsePosterPath);
-        } catch (RuntimeException e) {
-            log.warn("TMDB find failed for {}: {}", imdbId, e.toString());
+            acquire();
+            log.debug("Fetching poster metadata for {} from {}", imdbId, redactApiKey(uri));
+            final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
+                    .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofString());
+            log.trace("Poster metadata for {}: HTTP {} ({} bytes)", imdbId, response.statusCode(), response.body().length());
+            if (response.statusCode() != 200) {
+                log.warn("TMDB find for {} returned HTTP {}", imdbId, response.statusCode());
+                return Optional.empty();
+            }
+            final var path = parsePosterPath(response.body());
+            path.ifPresentOrElse(
+                    resolved -> log.debug("Resolved poster for {}: {}", imdbId, resolved),
+                    () -> log.debug("No poster for {}", imdbId));
+            return path;
+        } catch (IOException | InterruptedException | RuntimeException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            log.warn("TMDB find for {} failed: {}", imdbId, e.toString());
             return Optional.empty();
         }
     }
@@ -71,35 +85,23 @@ public class TmdbPosterSource implements PosterSource {
         }
         final var uri = URI.create(properties.imageBaseUrl() + "/" + tmdbSize(size) + posterPath);
         try {
-            log.debug("TMDB {} image download: GET {}", size, uri);
             acquire();
+            log.debug("Downloading {} poster image: GET {}", size, uri);
             final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
                     .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() != 200 || response.body().length == 0) {
-                log.warn("TMDB image {} returned {}", uri, response.statusCode());
+                log.warn("TMDB {} image download {} returned HTTP {} ({} bytes)",
+                        size, uri, response.statusCode(), response.body().length);
                 return Optional.empty();
             }
+            log.trace("Downloaded {} poster ({} bytes) from {}", size, response.body().length, uri);
             return Optional.of(response.body());
         } catch (IOException | InterruptedException | RuntimeException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            log.warn("TMDB image download failed for {}: {}", uri, e.toString());
+            log.warn("TMDB {} image download failed for {}: {}", size, uri, e.toString());
             return Optional.empty();
-        }
-    }
-
-    private Optional<String> getString(URI uri) {
-        try {
-            acquire();
-            final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
-                    .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofString());
-            return response.statusCode() == 200 ? Optional.of(response.body()) : Optional.empty();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
         }
     }
 
@@ -139,8 +141,10 @@ public class TmdbPosterSource implements PosterSource {
         }
         final long now = System.nanoTime();
         if (now < nextAllowedNanos) {
+            final long waitNanos = nextAllowedNanos - now;
+            log.trace("Throttled outbound poster request by {}ms", TimeUnit.NANOSECONDS.toMillis(waitNanos));
             try {
-                TimeUnit.NANOSECONDS.sleep(nextAllowedNanos - now);
+                TimeUnit.NANOSECONDS.sleep(waitNanos);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

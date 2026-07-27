@@ -1,40 +1,44 @@
 package tech.dobler.werstreamt.services;
 
 import org.junit.jupiter.api.Test;
-import org.jsoup.Jsoup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Network-free tests for the IMDb poster URL parsing and the Amazon-CDN resizing helper. */
+/** Network-free tests for the IMDb GraphQL response parsing and the Amazon-CDN resizing helper. */
 class ImdbPosterSourceTest {
 
     private static final String POSTER =
             "https://m.media-amazon.com/images/M/MV5BMTk4ODQzNDY3Ml5BMl5BanBnXkFtZTcwODA0NTU4Nw@@._V1_.jpg";
 
     @Test
-    void readsThePosterUrlFromOgImage() {
-        final var html = """
-                <html><head>
-                  <meta property="og:image" content="%s"/>
-                </head><body></body></html>""".formatted(POSTER);
+    void readsThePrimaryImageUrl() {
+        final var json = """
+                {"data":{"title":{"primaryImage":{"url":"%s"}}}}""".formatted(POSTER);
 
-        assertThat(ImdbPosterSource.parsePosterUrl(Jsoup.parse(html))).contains(POSTER);
+        assertThat(ImdbPosterSource.parsePosterUrl(json)).contains(POSTER);
     }
 
     @Test
-    void ignoresANonPosterOgImage() {
-        // A title without a poster: og:image points at an IMDb logo, not an /images/M/ poster.
-        final var html = """
-                <html><head>
-                  <meta property="og:image" content="https://m.media-amazon.com/images/G/01/imdb/logo.png"/>
-                </head><body></body></html>""";
-
-        assertThat(ImdbPosterSource.parsePosterUrl(Jsoup.parse(html))).isEmpty();
+    void isEmptyWhenTheTitleHasNoPoster() {
+        assertThat(ImdbPosterSource.parsePosterUrl("""
+                {"data":{"title":{"primaryImage":null}}}""")).isEmpty();
     }
 
     @Test
-    void isEmptyWhenThereIsNoOgImage() {
-        assertThat(ImdbPosterSource.parsePosterUrl(Jsoup.parse("<html><head></head></html>"))).isEmpty();
+    void isEmptyWhenTheTitleIsUnknown() {
+        assertThat(ImdbPosterSource.parsePosterUrl("""
+                {"data":{"title":null}}""")).isEmpty();
+    }
+
+    @Test
+    void isEmptyOnAGraphqlError() {
+        assertThat(ImdbPosterSource.parsePosterUrl("""
+                {"errors":[{"message":"Cannot query field \\"bogus\\" on type \\"Title\\"."}]}""")).isEmpty();
+    }
+
+    @Test
+    void isEmptyForMalformedJson() {
+        assertThat(ImdbPosterSource.parsePosterUrl("not json")).isEmpty();
     }
 
     @Test
