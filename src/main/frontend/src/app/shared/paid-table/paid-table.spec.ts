@@ -1,3 +1,5 @@
+import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatSortHarness } from '@angular/material/sort/testing';
@@ -20,7 +22,7 @@ describe('PaidTable', () => {
   });
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [PaidTable] });
+    TestBed.configureTestingModule({ imports: [PaidTable], providers: [provideHttpClient(withFetch()), provideHttpClientTesting()] });
     fixture = TestBed.createComponent(PaidTable);
   });
 

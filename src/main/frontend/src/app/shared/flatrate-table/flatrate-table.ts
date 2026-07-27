@@ -1,17 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
-import { ImdbId, imdbUrl, releaseYearDisplay } from '../../core/domain';
+import { ImdbId, releaseYearDisplay } from '../../core/domain';
 import { FlatrateEntry } from '../../core/models';
-import { AgeBadge } from '../age-badge/age-badge';
-import { PosterThumb } from '../poster-thumb/poster-thumb';
+import { TitleCell } from '../title-cell/title-cell';
 import { sortRows } from '../sort/table-sort';
 
 /** Presentational table of flatrate ("included") titles for a provider. */
 @Component({
   selector: 'app-flatrate-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatSortModule, PosterThumb, AgeBadge],
+  imports: [MatTableModule, MatSortModule, TitleCell],
   template: `
     <div class="table-scroll">
     <table mat-table [dataSource]="sorted()" [trackBy]="trackByImdbId"
@@ -29,11 +28,7 @@ import { sortRows } from '../sort/table-sort';
       <ng-container matColumnDef="title">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
         <td mat-cell *matCellDef="let entry">
-          <div class="title-cell">
-            <app-poster-thumb [imdbId]="entry.imdbId" [name]="entry.name" />
-            <a [href]="imdbUrl(entry.imdbId)" target="_blank" rel="noopener">{{ entry.name }}</a>
-            <app-age-badge [imdbId]="entry.imdbId" />
-          </div>
+          <app-title-cell [imdbId]="entry.imdbId" [name]="entry.name" />
         </td>
       </ng-container>
 
@@ -65,6 +60,5 @@ export class FlatrateTable {
   protected readonly sorted = computed(() => sortRows(this.entries(), this.sort()));
   protected readonly displayedColumns = ['rated', 'title', 'year', 'added'];
   protected readonly trackByImdbId = (_: number, entry: FlatrateEntry) => entry.imdbId;
-  protected readonly imdbUrl = imdbUrl;
   protected readonly releaseYearDisplay = releaseYearDisplay;
 }

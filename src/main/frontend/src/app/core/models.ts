@@ -115,6 +115,12 @@ export interface AgeRating {
   label: string;
 }
 
+/** Per-title row metadata (mirrors the server MetaDto) — either field may be null. */
+export interface TitleMetaResponse {
+  rating: AgeRating | null;
+  germanTitle: string | null;
+}
+
 /** A user account in the administration UI (mirrors the server UserDto). */
 export interface AdminUser {
   id: string;

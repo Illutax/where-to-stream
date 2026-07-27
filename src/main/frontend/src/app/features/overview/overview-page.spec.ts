@@ -37,7 +37,7 @@ describe('OverviewPage', () => {
 
   afterEach(() => {
     // The per-row age-rating badges fetch independently; drain those before verifying.
-    httpMock.match((r) => r.url.includes('/rating')).forEach((req) => req.flush(null, { status: 404, statusText: 'Not Found' }));
+    httpMock.match((r) => r.url.includes('/meta')).forEach((req) => req.flush(null, { status: 404, statusText: 'Not Found' }));
     httpMock.verify();
   });
 

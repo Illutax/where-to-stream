@@ -79,7 +79,7 @@ class TitleMetaServiceTest {
         // A title with no poster/rating but a German title is still a positive (permanent) result.
         when(repository.findByImdbId(TT)).thenReturn(Optional.of(TitleMeta.of(TT, null, null, null, "Oben", NOW)));
 
-        assertThat(service().germanTitle(TT)).contains("Oben");
+        assertThat(service().get(TT)).get().extracting(ImdbTitleData::germanTitle).isEqualTo("Oben");
         verifyNoInteractions(client);
     }
 
@@ -89,8 +89,10 @@ class TitleMetaServiceTest {
 
         final var service = service();
         assertThat(service.posterPath(TT)).isEmpty();
-        assertThat(service.ageRating(TT)).isEmpty();
-        assertThat(service.germanTitle(TT)).isEmpty();
+        final var data = service.get(TT);
+        assertThat(data).isPresent();
+        assertThat(data.get().rating()).isNull();
+        assertThat(data.get().germanTitle()).isNull();
         verifyNoInteractions(client);
     }
 

@@ -67,16 +67,6 @@ public class TitleMetaService {
         return get(imdbId).flatMap(data -> Optional.ofNullable(data.posterUrl()));
     }
 
-    /** The age rating for a title, from the shared cache. */
-    public Optional<AgeRating> ageRating(ImdbId imdbId) {
-        return get(imdbId).flatMap(data -> Optional.ofNullable(data.rating()));
-    }
-
-    /** The German title for a title, from the shared cache. */
-    public Optional<String> germanTitle(ImdbId imdbId) {
-        return get(imdbId).flatMap(data -> Optional.ofNullable(data.germanTitle()));
-    }
-
     @Transactional(readOnly = true)
     public Cached readCached(ImdbId imdbId) {
         return repository.findByImdbId(imdbId)
