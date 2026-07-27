@@ -8,6 +8,8 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 import { AgeRatingStore } from './core/age-rating-store';
 import { AuthStore } from './core/auth-store';
+import { GermanTitleStore } from './core/german-title-store';
+import { LanguageStore } from './core/language-store';
 import { ThemeStore } from './core/theme-store';
 import { WatchlistStore } from './core/watchlist-store';
 import { Navbar } from './shared/navbar/navbar';
@@ -32,11 +34,7 @@ import { Navbar } from './shared/navbar/navbar';
           [watchlistCount]="watchlistStore.count()"
           [username]="auth.username()"
           [isAdmin]="auth.isAdmin()"
-          [theme]="themeStore.theme()"
-          [showAgeRatings]="ageRatingStore.showAgeRatings()"
           (logout)="auth.logout()"
-          (themeChange)="themeStore.set($event)"
-          (showAgeRatingsChange)="ageRatingStore.set($event)"
           (navigate)="handset() && drawer.close()" />
       </mat-sidenav>
       <mat-sidenav-content>
@@ -61,6 +59,8 @@ export class App {
   protected readonly auth = inject(AuthStore);
   protected readonly themeStore = inject(ThemeStore);
   protected readonly ageRatingStore = inject(AgeRatingStore);
+  private readonly languageStore = inject(LanguageStore);
+  private readonly germanTitleStore = inject(GermanTitleStore);
 
   /** True on phone/narrow viewports: the drawer overlays and closes after navigation. */
   protected readonly handset = toSignal(
@@ -77,6 +77,8 @@ export class App {
       if (me) {
         this.themeStore.init(me.theme);
         this.ageRatingStore.init(me.showAgeRatings);
+        this.languageStore.init(me.language);
+        this.germanTitleStore.init(me.showGermanTitle);
       }
     });
   }

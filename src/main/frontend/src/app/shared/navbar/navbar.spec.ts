@@ -66,42 +66,14 @@ describe('Navbar', () => {
     expect(text).toContain('Logout');
   });
 
-  it('hides the theme selector for an anonymous navbar', () => {
+  it('shows the Settings link only to authenticated users', () => {
     fixture.componentRef.setInput('username', null);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('mat-button-toggle-group')).toBeNull();
-  });
+    expect(fixture.nativeElement.textContent).not.toContain('Settings');
 
-  it('emits the picked theme when a theme toggle is clicked', () => {
     fixture.componentRef.setInput('username', 'alice');
-    fixture.componentRef.setInput('theme', 'DARK');
     fixture.detectChanges();
-
-    let picked: string | undefined;
-    fixture.componentInstance.themeChange.subscribe((t) => (picked = t));
-
-    const lightButton = fixture.nativeElement.querySelector(
-      'button[aria-label="Light theme"]',
-    ) as HTMLButtonElement;
-    lightButton.click();
-    fixture.detectChanges();
-
-    expect(picked).toBe('LIGHT');
-  });
-
-  it('emits the age-rating preference when the toggle is switched off', () => {
-    fixture.componentRef.setInput('username', 'alice');
-    fixture.componentRef.setInput('showAgeRatings', true);
-    fixture.detectChanges();
-
-    let picked: boolean | undefined;
-    fixture.componentInstance.showAgeRatingsChange.subscribe((v) => (picked = v));
-
-    const toggle = fixture.nativeElement.querySelector('.app-nav__age-toggle button') as HTMLButtonElement;
-    toggle.click();
-    fixture.detectChanges();
-
-    expect(picked).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Settings');
   });
 
   it('emits logout when the logout button is clicked', () => {

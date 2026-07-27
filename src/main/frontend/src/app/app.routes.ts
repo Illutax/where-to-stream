@@ -30,6 +30,11 @@ export const routes: Routes = [
     title: 'Status — W2S',
   },
   {
+    path: 'settings',
+    loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
+    title: 'Settings — W2S',
+  },
+  {
     path: 'admin/users',
     canActivate: [adminGuard],
     loadComponent: () => import('./features/admin-users/admin-users-page').then((m) => m.AdminUsersPage),

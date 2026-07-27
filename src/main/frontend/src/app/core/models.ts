@@ -86,6 +86,9 @@ export interface Status {
 /** UI colour-scheme preference (mirrors the server Theme enum). */
 export type Theme = 'SYSTEM' | 'LIGHT' | 'DARK';
 
+/** UI language preference (mirrors the server Language enum). */
+export type Language = 'EN' | 'DE';
+
 /** The current principal (mirrors the server MeDto). */
 export interface Me {
   authenticated: boolean;
@@ -97,6 +100,10 @@ export interface Me {
   tmdbAttribution: boolean;
   /** Whether the user sees the FSK age-rating badges. */
   showAgeRatings: boolean;
+  /** The user's UI language. */
+  language: Language;
+  /** Whether film titles are shown in German where available. */
+  showGermanTitle: boolean;
 }
 
 /** Rating system of an age rating (mirrors the server AgeRating.RatingSystem). */
