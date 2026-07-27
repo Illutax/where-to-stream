@@ -39,6 +39,25 @@ class ImdbTitleClientTest {
     }
 
     @Test
+    void readsTheGermanTitleFromTheDeAka() {
+        final var json = """
+                {"data":{"title":{"primaryImage":{"url":"%s"},
+                 "akas":{"edges":[
+                   {"node":{"text":"Up","country":{"id":"GB"}}},
+                   {"node":{"text":"Oben","country":{"id":"DE"}}}]}}}}""".formatted(POSTER);
+
+        assertThat(ImdbTitleClient.parse(json).germanTitle()).isEqualTo("Oben");
+    }
+
+    @Test
+    void hasNoGermanTitleWhenThereIsNoDeAka() {
+        final var json = """
+                {"data":{"title":{"akas":{"edges":[{"node":{"text":"Up","country":{"id":"GB"}}}]}}}}""";
+
+        assertThat(ImdbTitleClient.parse(json).germanTitle()).isNull();
+    }
+
+    @Test
     void hasNoRatingWhenThereIsNeitherGermanNorPrimary() {
         final var json = """
                 {"data":{"title":{"primaryImage":{"url":"%s"},"certificate":null,"certificates":{"edges":[]}}}}""".formatted(POSTER);

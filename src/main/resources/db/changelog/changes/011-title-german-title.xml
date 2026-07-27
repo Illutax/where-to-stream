@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="011-title-german-title" author="vdobler">
+        <comment>
+            German (DE) alternative title, cached from the same IMDb metadata fetch as the poster and
+            the rating. Null when the title has no German aka (then the English title is shown).
+        </comment>
+        <addColumn tableName="title_meta">
+            <column name="german_title" type="varchar(512)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

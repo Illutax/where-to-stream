@@ -72,6 +72,11 @@ public class TitleMetaService {
         return get(imdbId).flatMap(data -> Optional.ofNullable(data.rating()));
     }
 
+    /** The German title for a title, from the shared cache. */
+    public Optional<String> germanTitle(ImdbId imdbId) {
+        return get(imdbId).flatMap(data -> Optional.ofNullable(data.germanTitle()));
+    }
+
     @Transactional(readOnly = true)
     public Cached readCached(ImdbId imdbId) {
         return repository.findByImdbId(imdbId)
@@ -81,7 +86,7 @@ public class TitleMetaService {
 
     private Cached classify(TitleMeta row) {
         final ImdbTitleData data = toData(row);
-        if (data.posterUrl() != null || data.rating() != null) {
+        if (data.posterUrl() != null || data.rating() != null || data.germanTitle() != null) {
             return Cached.resolved(data); // positive result — permanent
         }
         // A "no data" row is honoured until its TTL passes, then IMDb is asked again.
@@ -95,10 +100,10 @@ public class TitleMetaService {
         final String label = data.rating() != null ? data.rating().label() : null;
         repository.findByImdbId(imdbId).ifPresentOrElse(
                 row -> {
-                    row.refresh(data.posterUrl(), system, label, now);
+                    row.refresh(data.posterUrl(), system, label, data.germanTitle(), now);
                     repository.save(row);
                 },
-                () -> repository.save(TitleMeta.of(imdbId, data.posterUrl(), system, label, now)));
+                () -> repository.save(TitleMeta.of(imdbId, data.posterUrl(), system, label, data.germanTitle(), now)));
     }
 
     private void tryStore(ImdbId imdbId, Runnable write) {
@@ -113,7 +118,7 @@ public class TitleMetaService {
         final AgeRating rating = row.getRatingSystem() != null && row.getRatingLabel() != null
                 ? new AgeRating(row.getRatingSystem(), row.getRatingLabel())
                 : null;
-        return new ImdbTitleData(row.getPosterPath(), rating);
+        return new ImdbTitleData(row.getPosterPath(), rating, row.getGermanTitle());
     }
 
     private boolean isNegativeFresh(TitleMeta row, Instant now) {

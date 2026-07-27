@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import tech.dobler.werstreamt.domain.AuthProvider;
+import tech.dobler.werstreamt.domain.Language;
 import tech.dobler.werstreamt.domain.Role;
 import tech.dobler.werstreamt.domain.Theme;
 
@@ -60,6 +61,15 @@ public class AppUser {
     @Column(name = "show_age_ratings", nullable = false)
     private boolean showAgeRatings = true;
 
+    /** The user's UI language preference (defaults to English). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "language", nullable = false)
+    private Language language = Language.EN;
+
+    /** Whether film titles are shown in German where available (off by default). */
+    @Column(name = "show_german_title", nullable = false)
+    private boolean showGermanTitle = false;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -106,5 +116,18 @@ public class AppUser {
 
     public void changeShowAgeRatings(boolean show) {
         this.showAgeRatings = show;
+    }
+
+    public void changeLanguage(Language newLanguage) {
+        this.language = newLanguage;
+    }
+
+    public void changeShowGermanTitle(boolean show) {
+        this.showGermanTitle = show;
+    }
+
+    /** Change the login username (unique). Callers must ensure the new name is free. */
+    public void rename(String newUsername) {
+        this.username = newUsername;
     }
 }

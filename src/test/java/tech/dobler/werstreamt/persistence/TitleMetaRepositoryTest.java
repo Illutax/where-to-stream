@@ -23,8 +23,8 @@ class TitleMetaRepositoryTest {
     private TestEntityManager entityManager;
 
     @Test
-    void storesAndReloadsPosterPathAndRating() {
-        sut.save(TitleMeta.of(ImdbId.of("tt0110912"), "/pulp.jpg", RatingSystem.FSK, "16", NOW));
+    void storesAndReloadsPosterPathRatingAndGermanTitle() {
+        sut.save(TitleMeta.of(ImdbId.of("tt0110912"), "/pulp.jpg", RatingSystem.FSK, "16", "Pulp Fiction", NOW));
         entityManager.flush();
         entityManager.clear();
 
@@ -32,11 +32,12 @@ class TitleMetaRepositoryTest {
         assertThat(loaded.getPosterPath()).isEqualTo("/pulp.jpg");
         assertThat(loaded.getRatingSystem()).isEqualTo(RatingSystem.FSK);
         assertThat(loaded.getRatingLabel()).isEqualTo("16");
+        assertThat(loaded.getGermanTitle()).isEqualTo("Pulp Fiction");
     }
 
     @Test
     void storesANegativeRowWithAllNullData() {
-        sut.save(TitleMeta.of(ImdbId.of("tt9999999"), null, null, null, NOW));
+        sut.save(TitleMeta.of(ImdbId.of("tt9999999"), null, null, null, null, NOW));
         entityManager.flush();
         entityManager.clear();
 
@@ -44,5 +45,6 @@ class TitleMetaRepositoryTest {
         assertThat(loaded.getPosterPath()).isNull();
         assertThat(loaded.getRatingSystem()).isNull();
         assertThat(loaded.getRatingLabel()).isNull();
+        assertThat(loaded.getGermanTitle()).isNull();
     }
 }

@@ -38,7 +38,10 @@ class MeApiControllerTest {
                 // TMDB is not enabled in the test config, so posters come from IMDb (no attribution).
                 .andExpect(jsonPath("$.tmdbAttribution").value(false))
                 // Unknown user falls back to the age-rating badges being on.
-                .andExpect(jsonPath("$.showAgeRatings").value(true));
+                .andExpect(jsonPath("$.showAgeRatings").value(true))
+                // ...and to English with German titles off.
+                .andExpect(jsonPath("$.language").value("EN"))
+                .andExpect(jsonPath("$.showGermanTitle").value(false));
     }
 
     @Test
@@ -90,5 +93,38 @@ class MeApiControllerTest {
             mockMvc.perform(put("/api/me/show-age-ratings").with(user("admin").roles("ADMIN")).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON).content("{\"showAgeRatings\":true}"));
         }
+    }
+
+    @Test
+    void updatingLanguageAndGermanTitlePersistForTheCurrentUser() throws Exception {
+        try {
+            mockMvc.perform(put("/api/me/language").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"language\":\"DE\"}"))
+                    .andExpect(status().isNoContent());
+            mockMvc.perform(put("/api/me/show-german-title").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"showGermanTitle\":true}"))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/me").with(user("admin").roles("ADMIN")))
+                    .andExpect(jsonPath("$.language").value("DE"))
+                    .andExpect(jsonPath("$.showGermanTitle").value(true));
+
+            mockMvc.perform(put("/api/me/language").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest());
+        } finally {
+            mockMvc.perform(put("/api/me/language").with(user("admin").roles("ADMIN")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"language\":\"EN\"}"));
+            mockMvc.perform(put("/api/me/show-german-title").with(user("admin").roles("ADMIN")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"showGermanTitle\":false}"));
+        }
+    }
+
+    @Test
+    void rejectsABlankUsernameRename() throws Exception {
+        // Blank is rejected before any DB change, so the shared admin is untouched.
+        mockMvc.perform(put("/api/me/username").with(user("admin").roles("ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"username\":\"  \"}"))
+                .andExpect(status().isBadRequest());
     }
 }

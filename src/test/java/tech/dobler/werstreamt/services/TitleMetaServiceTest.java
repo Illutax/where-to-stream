@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class TitleMetaServiceTest {
 
-    private static final ImdbId TT = ImdbId.of("tt0482571");
+    private static final ImdbId TT = ImdbId.of("tt0068646");
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
     @Mock
@@ -52,19 +52,21 @@ class TitleMetaServiceTest {
 
     @Test
     void servesCachedMetadataWithoutFetching() {
-        when(repository.findByImdbId(TT)).thenReturn(Optional.of(TitleMeta.of(TT, "/p.jpg", RatingSystem.FSK, "16", NOW)));
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(
+                TitleMeta.of(TT, "/p.jpg", RatingSystem.FSK, "16", "Der Pate", NOW)));
 
         final var data = service().get(TT);
 
         assertThat(data).get().extracting(ImdbTitleData::posterUrl).isEqualTo("/p.jpg");
         assertThat(data.get().rating()).isEqualTo(AgeRating.fsk("16"));
+        assertThat(data.get().germanTitle()).isEqualTo("Der Pate");
         verifyNoInteractions(client);
     }
 
     @Test
     void onMissFetchesOnceAndStores() {
         when(repository.findByImdbId(TT)).thenReturn(Optional.empty());
-        final var fetched = new ImdbTitleData("/p.jpg", AgeRating.fsk("12"));
+        final var fetched = new ImdbTitleData("/p.jpg", AgeRating.fsk("12"), "Oben");
         when(client.fetch(TT)).thenReturn(Optional.of(fetched));
 
         assertThat(service().get(TT)).contains(fetched);
@@ -73,20 +75,30 @@ class TitleMetaServiceTest {
     }
 
     @Test
-    void honoursTheFreshNegativeCacheForBothPosterAndRating() {
-        when(repository.findByImdbId(TT)).thenReturn(Optional.of(TitleMeta.of(TT, null, null, null, NOW)));
+    void servesAGermanTitleOnlyRowAsAPositiveHit() {
+        // A title with no poster/rating but a German title is still a positive (permanent) result.
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(TitleMeta.of(TT, null, null, null, "Oben", NOW)));
+
+        assertThat(service().germanTitle(TT)).contains("Oben");
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void honoursTheFreshNegativeCacheForEverything() {
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(TitleMeta.of(TT, null, null, null, null, NOW)));
 
         final var service = service();
         assertThat(service.posterPath(TT)).isEmpty();
         assertThat(service.ageRating(TT)).isEmpty();
+        assertThat(service.germanTitle(TT)).isEmpty();
         verifyNoInteractions(client);
     }
 
     @Test
     void reFetchesAStaleNegative() {
-        final var stale = TitleMeta.of(TT, null, null, null, NOW.minus(30, ChronoUnit.DAYS));
+        final var stale = TitleMeta.of(TT, null, null, null, null, NOW.minus(30, ChronoUnit.DAYS));
         when(repository.findByImdbId(TT)).thenReturn(Optional.of(stale));
-        when(client.fetch(TT)).thenReturn(Optional.of(new ImdbTitleData("/p.jpg", null)));
+        when(client.fetch(TT)).thenReturn(Optional.of(new ImdbTitleData("/p.jpg", null, null)));
 
         assertThat(service().posterPath(TT)).contains("/p.jpg");
         verify(client).fetch(TT);
@@ -105,7 +117,7 @@ class TitleMetaServiceTest {
     void swallowsAConcurrentInsertAndStillReturnsTheData() {
         final var service = service();
         when(repository.findByImdbId(TT)).thenReturn(Optional.empty());
-        final var fetched = new ImdbTitleData("/p.jpg", AgeRating.fsk("16"));
+        final var fetched = new ImdbTitleData("/p.jpg", AgeRating.fsk("16"), "Der Pate");
         when(client.fetch(TT)).thenReturn(Optional.of(fetched));
         when(repository.save(any())).thenThrow(new DataIntegrityViolationException("Duplicate entry for key 'imdb_id'"));
 

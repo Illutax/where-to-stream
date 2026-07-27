@@ -29,3 +29,9 @@ databaseChangeLog:
   - include:
       file: changes/010-user-age-ratings.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/011-title-german-title.xml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/012-user-language-german-title.xml
+      relativeToChangelogFile: true

@@ -48,26 +48,34 @@ public class TitleMeta {
     @Column(name = "rating_label")
     private String ratingLabel;
 
+    @Column(name = "german_title")
+    private String germanTitle;
+
     @Column(name = "fetched_at", nullable = false)
     private Instant fetchedAt;
 
-    private TitleMeta(ImdbId imdbId, String posterPath, RatingSystem ratingSystem, String ratingLabel, Instant fetchedAt) {
+    private TitleMeta(ImdbId imdbId, String posterPath, RatingSystem ratingSystem, String ratingLabel,
+                      String germanTitle, Instant fetchedAt) {
         this.imdbId = imdbId;
         this.posterPath = posterPath;
         this.ratingSystem = ratingSystem;
         this.ratingLabel = ratingLabel;
+        this.germanTitle = germanTitle;
         this.fetchedAt = fetchedAt;
     }
 
-    public static TitleMeta of(ImdbId imdbId, String posterPath, RatingSystem ratingSystem, String ratingLabel, Instant fetchedAt) {
-        return new TitleMeta(imdbId, posterPath, ratingSystem, ratingLabel, fetchedAt);
+    public static TitleMeta of(ImdbId imdbId, String posterPath, RatingSystem ratingSystem, String ratingLabel,
+                               String germanTitle, Instant fetchedAt) {
+        return new TitleMeta(imdbId, posterPath, ratingSystem, ratingLabel, germanTitle, fetchedAt);
     }
 
     /** Re-record the metadata (e.g. a stale row re-fetched from IMDb). */
-    public void refresh(String posterPath, RatingSystem ratingSystem, String ratingLabel, Instant fetchedAt) {
+    public void refresh(String posterPath, RatingSystem ratingSystem, String ratingLabel,
+                        String germanTitle, Instant fetchedAt) {
         this.posterPath = posterPath;
         this.ratingSystem = ratingSystem;
         this.ratingLabel = ratingLabel;
+        this.germanTitle = germanTitle;
         this.fetchedAt = fetchedAt;
     }
 }

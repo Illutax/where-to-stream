@@ -39,10 +39,11 @@ public class ImdbTitleClient {
     /** Minimal GraphQL query; the id is a variable (never string-interpolated). */
     private static final String QUERY =
             "query($id:ID!){title(id:$id){primaryImage{url} certificate{rating} "
-                    + "certificates(first:60){edges{node{rating country{id}}}}}}";
+                    + "certificates(first:60){edges{node{rating country{id}}}} "
+                    + "akas(first:60){edges{node{text country{id}}}}}}";
 
     /** Everything we fetch and cache for a title in one request. Fields are null when unavailable. */
-    public record ImdbTitleData(String posterUrl, AgeRating rating) {
+    public record ImdbTitleData(String posterUrl, AgeRating rating, String germanTitle) {
     }
 
     private final ImdbPosterProperties properties;
@@ -81,7 +82,8 @@ public class ImdbTitleClient {
                 return Optional.empty();
             }
             final var data = parse(body);
-            log.debug("Resolved metadata for {}: poster={} rating={}", imdbId, data.posterUrl() != null, data.rating());
+            log.debug("Resolved metadata for {}: poster={} rating={} germanTitle={}",
+                    imdbId, data.posterUrl() != null, data.rating(), data.germanTitle());
             return Optional.of(data);
         } catch (IOException | InterruptedException | RuntimeException e) {
             if (e instanceof InterruptedException) {
@@ -106,12 +108,27 @@ public class ImdbTitleClient {
         try {
             final Map<String, Object> root = JsonParserFactory.getJsonParser().parseMap(json);
             if (root.get("data") instanceof Map<?, ?> data && data.get("title") instanceof Map<?, ?> title) {
-                return new ImdbTitleData(parsePosterUrl(title), parseRating(title));
+                return new ImdbTitleData(parsePosterUrl(title), parseRating(title), parseGermanTitle(title));
             }
         } catch (RuntimeException e) {
-            return new ImdbTitleData(null, null);
+            return new ImdbTitleData(null, null, null);
         }
-        return new ImdbTitleData(null, null);
+        return new ImdbTitleData(null, null, null);
+    }
+
+    /** The German ({@code DE}) alternative title, or null if the title has none. */
+    private static String parseGermanTitle(Map<?, ?> title) {
+        if (title.get("akas") instanceof Map<?, ?> akas && akas.get("edges") instanceof List<?> edges) {
+            for (Object edge : edges) {
+                if (edge instanceof Map<?, ?> e && e.get("node") instanceof Map<?, ?> node
+                        && node.get("country") instanceof Map<?, ?> country
+                        && GERMANY.equals(country.get("id"))
+                        && node.get("text") instanceof String text && !text.isBlank()) {
+                    return text;
+                }
+            }
+        }
+        return null;
     }
 
     private static String parsePosterUrl(Map<?, ?> title) {

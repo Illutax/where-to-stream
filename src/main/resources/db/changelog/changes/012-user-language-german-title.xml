@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="012-user-language-german-title" author="vdobler">
+        <comment>
+            Per-user UI language (default EN) and the "show German film title" toggle (default off).
+            Mirrors 007-user-theme / 010-user-age-ratings.
+        </comment>
+        <addColumn tableName="app_user">
+            <column name="language" type="varchar(8)" defaultValue="EN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="show_german_title" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

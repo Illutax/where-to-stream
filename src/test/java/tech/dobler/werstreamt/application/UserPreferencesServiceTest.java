@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.werstreamt.domain.Language;
 import tech.dobler.werstreamt.domain.Role;
 import tech.dobler.werstreamt.domain.Theme;
 import tech.dobler.werstreamt.persistence.AppUser;
@@ -91,6 +92,51 @@ class UserPreferencesServiceTest {
         service.updateShowAgeRatings("alice", false);
 
         assertThat(user.isShowAgeRatings()).isFalse();
+        verify(users).save(user);
+    }
+
+    @Test
+    void newAccountsDefaultToEnglishAndNoGermanTitles() {
+        assertThat(alice().getLanguage()).isEqualTo(Language.EN);
+        assertThat(alice().isShowGermanTitle()).isFalse();
+    }
+
+    @Test
+    void updateLanguageChangesAndSavesTheUser() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateLanguage("alice", Language.DE);
+
+        assertThat(user.getLanguage()).isEqualTo(Language.DE);
+        verify(users).save(user);
+    }
+
+    @Test
+    void usernameIsAvailableWhenFreeOrOwnedByTheSameUser() {
+        when(users.findByUsername("free")).thenReturn(Optional.empty());
+        when(users.findByUsername("alice")).thenReturn(Optional.of(alice()));
+
+        assertThat(service.usernameAvailable("free", "alice")).isTrue();  // free
+        assertThat(service.usernameAvailable("alice", "alice")).isTrue(); // their own name
+    }
+
+    @Test
+    void usernameIsUnavailableWhenTakenBySomeoneElse() {
+        final var bob = AppUser.local("bob", "{noop}x", null, Set.of(Role.USER), Instant.parse("2026-01-01T00:00:00Z"));
+        when(users.findByUsername("bob")).thenReturn(Optional.of(bob));
+
+        assertThat(service.usernameAvailable("bob", "alice")).isFalse();
+    }
+
+    @Test
+    void updateUsernameRenamesAndSavesTheUser() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateUsername("alice", "alice2");
+
+        assertThat(user.getUsername()).isEqualTo("alice2");
         verify(users).save(user);
     }
 }
