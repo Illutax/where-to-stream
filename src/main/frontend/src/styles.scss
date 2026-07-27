@@ -223,8 +223,11 @@ h2 {
 // High-resolution poster shown on hover (in a CDK overlay, so it is never clipped by the table).
 .poster-hover {
   display: block;
-  width: 200px;
-  max-width: 40vw;
+  // 50% larger than before (was 200px) on desktop; on small screens it caps to 60vw so it still
+  // fits beside the (left-column) thumbnail, and to 85vh so a tall poster never overflows a short
+  // viewport. Sizing via max-width (no fixed width) keeps the aspect ratio intact when either caps.
+  max-width: min(300px, 60vw);
+  max-height: 85vh;
   height: auto;
   border-radius: var(--mat-sys-corner-medium);
   box-shadow: var(--mat-sys-level3);
