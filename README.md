@@ -5,7 +5,7 @@ Manage lists of movies to watch and find **where to stream them**.
 Each signed-in user imports their own [IMDb](https://www.imdb.com/) watchlist CSV export;
 w2s scrapes [werstreamt.es](https://www.werstreamt.es/) for each title's streaming availability,
 caches the results in the database (shared across users), and presents each user's list as
-per-provider web pages (Netflix, Prime Video, Disney+, WOW, Google Play).
+per-provider web pages (Netflix, Prime Video, Disney+, WOW, Youtube Store).
 
 ## Tech stack
 
@@ -310,7 +310,7 @@ mvn -Ptestcontainers test
 | Method & Path | Description |
 | --- | --- |
 | `GET /api/catalog` | All entries with their available services |
-| `GET /api/providers/{amazon\|disney\|netflix\|wow\|google}` | Per-provider included + paid titles |
+| `GET /api/providers/{amazon\|disney\|netflix\|wow\|youtube}` | Per-provider included + paid titles |
 | `GET /api/watchlist` · `POST /api/watchlist/import` · `DELETE /api/watchlist` | Your watchlist: status / CSV import / clear |
 | `PUT /api/watchlist/{imdbId}/seen` | Mark one of your titles seen / not seen (`{ "seen": true }`) |
 | `GET /api/titles/{imdbId}/poster` · `…/poster/full` | Cached poster thumbnail / hi-res image (404 if none) |

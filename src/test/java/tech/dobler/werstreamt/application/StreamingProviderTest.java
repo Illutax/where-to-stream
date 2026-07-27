@@ -11,7 +11,7 @@ class StreamingProviderTest {
     @Test
     void keyIsTheLowerCaseName() {
         assertThat(StreamingProvider.AMAZON.key()).isEqualTo("amazon");
-        assertThat(StreamingProvider.GOOGLE.key()).isEqualTo("google");
+        assertThat(StreamingProvider.YOUTUBE.key()).isEqualTo("youtube");
     }
 
     @Test
@@ -19,17 +19,18 @@ class StreamingProviderTest {
         assertThat(StreamingProvider.AMAZON.serviceName()).isEqualTo("Prime Video");
         assertThat(StreamingProvider.DISNEY.serviceName()).isEqualTo("Disney+");
         assertThat(StreamingProvider.WOW.serviceName()).isEqualTo("WOW");
+        assertThat(StreamingProvider.YOUTUBE.serviceName()).isEqualTo("Youtube Store");
     }
 
     @Test
     void offeringFlagsDescribeWhichListsAPageHas() {
-        // Amazon shows both, flatrate-only providers only included, Google only paid.
+        // Amazon shows both, flatrate-only providers only included, Youtube Store only paid.
         assertThat(StreamingProvider.AMAZON.hasFlatrate()).isTrue();
         assertThat(StreamingProvider.AMAZON.hasPaid()).isTrue();
         assertThat(StreamingProvider.NETFLIX.hasFlatrate()).isTrue();
         assertThat(StreamingProvider.NETFLIX.hasPaid()).isFalse();
-        assertThat(StreamingProvider.GOOGLE.hasFlatrate()).isFalse();
-        assertThat(StreamingProvider.GOOGLE.hasPaid()).isTrue();
+        assertThat(StreamingProvider.YOUTUBE.hasFlatrate()).isFalse();
+        assertThat(StreamingProvider.YOUTUBE.hasPaid()).isTrue();
     }
 
     @Test

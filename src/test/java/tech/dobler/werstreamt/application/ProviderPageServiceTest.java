@@ -78,14 +78,14 @@ class ProviderPageServiceTest {
     }
 
     @Test
-    void googlePageHasOnlyPaidSortedByAdded() {
+    void youtubePageHasOnlyPaidSortedByAdded() {
         final var e1 = entry("tt1", "Alpha", "2021-05-05", 2021);
         final var e2 = entry("tt2", "Beta", "2020-01-01", 0);
-        when(aggregateService.paid("Google Play", USER)).thenReturn(List.of(paid("tt1", "Google Play"), paid("tt2", "Google Play")));
+        when(aggregateService.paid("Youtube Store", USER)).thenReturn(List.of(paid("tt1", "Youtube Store"), paid("tt2", "Youtube Store")));
         when(watchlistCatalog.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(e1));
         when(watchlistCatalog.findByImdb(USER, id("tt2"))).thenReturn(Optional.of(e2));
 
-        final var page = service.pageFor(StreamingProvider.GOOGLE, USER);
+        final var page = service.pageFor(StreamingProvider.YOUTUBE, USER);
 
         assertThat(page.included()).isEmpty();
         assertThat(page.paid()).extracting(PaidEntryDto::added).containsExactly(WatchlistDate.of("2020-01-01"), WatchlistDate.of("2021-05-05"));
@@ -94,9 +94,9 @@ class ProviderPageServiceTest {
     }
 
     @Test
-    void googleNeverResolvesFlatrate() {
-        when(aggregateService.paid("Google Play", USER)).thenReturn(List.of());
-        final var page = service.pageFor(StreamingProvider.GOOGLE, USER);
+    void youtubeNeverResolvesFlatrate() {
+        when(aggregateService.paid("Youtube Store", USER)).thenReturn(List.of());
+        final var page = service.pageFor(StreamingProvider.YOUTUBE, USER);
         assertThat(page.included()).isEmpty();
         verifyNoInteractions(watchlistCatalog);
     }

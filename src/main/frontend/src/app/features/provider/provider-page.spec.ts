@@ -69,15 +69,15 @@ describe('ProviderPage', () => {
     httpMock.expectOne((r) => r.url.endsWith('/api/providers/netflix')).flush(page({}));
     fixture.detectChanges();
 
-    paramMap.next(convertToParamMap({ key: 'google' }));
+    paramMap.next(convertToParamMap({ key: 'youtube' }));
     httpMock
-      .expectOne((r) => r.url.endsWith('/api/providers/google'))
-      .flush(page({ provider: 'google', paid: [
+      .expectOne((r) => r.url.endsWith('/api/providers/youtube'))
+      .flush(page({ provider: 'youtube', paid: [
         { name: 'Buyable', imdbId: imdbId('tt5'), price: 'kaufen: HD: 9,99 ', added: watchlistDate('2021-01-01'), isRated: false, year: '2021', languages: null },
       ] }));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Google Play');
+    expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Youtube Store');
     expect(fixture.nativeElement.querySelector('app-paid-table')).not.toBeNull();
   });
 

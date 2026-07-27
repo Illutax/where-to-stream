@@ -13,7 +13,7 @@ import tech.dobler.werstreamt.application.ProviderPageService;
 import tech.dobler.werstreamt.application.StreamingProvider;
 import tech.dobler.werstreamt.application.dto.ProviderPageDto;
 
-/** JSON per-provider page (amazon, disney, netflix, wow, google) for the current user. */
+/** JSON per-provider page (amazon, disney, netflix, wow, youtube) for the current user. */
 @RestController
 @RequestMapping("/api/providers")
 @RequiredArgsConstructor

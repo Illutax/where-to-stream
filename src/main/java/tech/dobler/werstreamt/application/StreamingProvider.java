@@ -9,7 +9,7 @@ import java.util.Optional;
  * records which kinds of offering the provider page shows.
  *
  * <p>{@code hasFlatrate}/{@code hasPaid} let a single {@code ProviderPageService} render all
- * five pages uniformly: Amazon shows both, Disney+/Netflix/WOW only the flatrate, Google Play
+ * five pages uniformly: Amazon shows both, Disney+/Netflix/WOW only the flatrate, Youtube Store
  * only paid titles.
  */
 public enum StreamingProvider {
@@ -17,7 +17,7 @@ public enum StreamingProvider {
     DISNEY("Disney+", true, false),
     NETFLIX("Netflix", true, false),
     WOW("WOW", true, false),
-    GOOGLE("Google Play", false, true);
+    YOUTUBE("Youtube Store", false, true);
 
     private final String serviceName;
     private final boolean hasFlatrate;
@@ -46,7 +46,7 @@ public enum StreamingProvider {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    /** Resolves a provider from its URL key ({@code amazon|disney|netflix|wow|google}); case-insensitive. */
+    /** Resolves a provider from its URL key ({@code amazon|disney|netflix|wow|youtube}); case-insensitive. */
     public static Optional<StreamingProvider> fromKey(String key) {
         if (key == null) {
             return Optional.empty();

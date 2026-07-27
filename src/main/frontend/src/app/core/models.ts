@@ -140,7 +140,7 @@ export interface ProviderInfo {
 export const PROVIDERS: ProviderInfo[] = [
   { key: 'disney', label: 'Disney+' },
   { key: 'amazon', label: 'Amazon Prime' },
-  { key: 'google', label: 'Google Play' },
+  { key: 'youtube', label: 'Youtube Store' },
   { key: 'netflix', label: 'Netflix' },
   { key: 'wow', label: 'Sky WOW' },
 ];
