@@ -1,3 +1,4 @@
+import { translocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
@@ -22,7 +23,7 @@ describe('PaidTable', () => {
   });
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [PaidTable], providers: [provideHttpClient(withFetch()), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({ imports: [PaidTable, translocoTesting()], providers: [provideHttpClient(withFetch()), provideHttpClientTesting()] });
     fixture = TestBed.createComponent(PaidTable);
   });
 

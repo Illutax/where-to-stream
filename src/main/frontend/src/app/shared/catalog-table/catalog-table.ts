@@ -4,19 +4,20 @@ import { MatTableModule } from '@angular/material/table';
 import { ImdbId, releaseYearDisplay } from '../../core/domain';
 import { OverviewEntry } from '../../core/models';
 import { TitleCell } from '../title-cell/title-cell';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { sortRows } from '../sort/table-sort';
 
 /** Presentational catalogue table: every title with the services it streams on. */
 @Component({
   selector: 'app-catalog-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatSortModule, TitleCell],
+  imports: [MatTableModule, MatSortModule, TitleCell, TranslocoPipe],
   template: `
     <div class="table-scroll">
     <table mat-table [dataSource]="sorted()" [trackBy]="trackByImdbId"
            matSort (matSortChange)="sort.set($event)">
       <ng-container matColumnDef="rated">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Seen</th>
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'table.seen' | transloco }}</th>
         <td mat-cell *matCellDef="let entry">
           <button type="button" class="seen-toggle"
                   (click)="seenToggle.emit({ imdbId: entry.imdbId, seen: !entry.isRated })"
@@ -26,26 +27,26 @@ import { sortRows } from '../sort/table-sort';
       </ng-container>
 
       <ng-container matColumnDef="title">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'table.title' | transloco }}</th>
         <td mat-cell *matCellDef="let entry">
           <app-title-cell [imdbId]="entry.imdbId" [name]="entry.name" />
         </td>
       </ng-container>
 
       <ng-container matColumnDef="year">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Year</th>
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'table.year' | transloco }}</th>
         <td mat-cell *matCellDef="let entry">{{ releaseYearDisplay(entry.year) }}</td>
       </ng-container>
 
       <ng-container matColumnDef="added">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Added</th>
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'table.added' | transloco }}</th>
         <td mat-cell *matCellDef="let entry">{{ entry.added }}</td>
       </ng-container>
 
       <ng-container matColumnDef="services">
-        <th mat-header-cell *matHeaderCellDef>Available on</th>
+        <th mat-header-cell *matHeaderCellDef>{{ 'table.availableOn' | transloco }}</th>
         <td mat-cell *matCellDef="let entry">
-          @if (entry.services) { {{ entry.services }} } @else { <em class="text-muted">N/A</em> }
+          @if (entry.services) { {{ entry.services }} } @else { <em class="text-muted">{{ 'table.na' | transloco }}</em> }
         </td>
       </ng-container>
 
@@ -53,7 +54,7 @@ import { sortRows } from '../sort/table-sort';
       <tr mat-row *matRowDef="let row; columns: displayedColumns"
           [class.recently-changed]="row.imdbId === recentlyChangedId()"></tr>
       <tr class="mat-row" *matNoDataRow>
-        <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">No entries.</td>
+        <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">{{ 'table.noEntries' | transloco }}</td>
       </tr>
     </table>
     </div>

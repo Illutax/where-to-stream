@@ -29,7 +29,29 @@
     "usernameTaken": "That username is already taken.",
     "usernameError": "Could not change the username."
   },
+  "table": {
+    "seen": "Seen",
+    "title": "Title",
+    "year": "Year",
+    "added": "Added",
+    "availableOn": "Available on",
+    "price": "Price",
+    "languages": "Languages",
+    "na": "N/A",
+    "noEntries": "No entries.",
+    "nothingHere": "Nothing here."
+  },
+  "overview": {
+    "loadError": "Failed to load the catalogue."
+  },
+  "provider": {
+    "included": "Included",
+    "buyRent": "Buy / Rent",
+    "empty": "Nothing available for this provider yet.",
+    "loadError": "Failed to load \"{{ provider }}\"."
+  },
   "common": {
+    "loading": "Loading…",
     "dismiss": "Dismiss"
   }
 }

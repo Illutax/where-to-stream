@@ -29,7 +29,29 @@
     "usernameTaken": "Dieser Benutzername ist bereits vergeben.",
     "usernameError": "Der Benutzername konnte nicht geändert werden."
   },
+  "table": {
+    "seen": "Gesehen",
+    "title": "Titel",
+    "year": "Jahr",
+    "added": "Hinzugefügt",
+    "availableOn": "Verfügbar auf",
+    "price": "Preis",
+    "languages": "Sprachen",
+    "na": "–",
+    "noEntries": "Keine Einträge.",
+    "nothingHere": "Nichts vorhanden."
+  },
+  "overview": {
+    "loadError": "Der Katalog konnte nicht geladen werden."
+  },
+  "provider": {
+    "included": "Inklusive",
+    "buyRent": "Kaufen / Leihen",
+    "empty": "Für diesen Anbieter ist noch nichts verfügbar.",
+    "loadError": "„{{ provider }}“ konnte nicht geladen werden."
+  },
   "common": {
+    "loading": "Lädt…",
     "dismiss": "Schließen"
   }
 }

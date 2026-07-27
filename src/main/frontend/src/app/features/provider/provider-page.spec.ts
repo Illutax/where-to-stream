@@ -1,3 +1,4 @@
+import { translocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -27,7 +28,7 @@ describe('ProviderPage', () => {
     };
     paramMap = new BehaviorSubject<ParamMap>(convertToParamMap({ key: initialKey }));
     TestBed.configureTestingModule({
-      imports: [ProviderPage],
+      imports: [ProviderPage, translocoTesting()],
       providers: [
         provideHttpClient(withFetch()),
         provideHttpClientTesting(),

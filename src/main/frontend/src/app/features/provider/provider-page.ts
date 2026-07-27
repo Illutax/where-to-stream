@@ -9,6 +9,7 @@ import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { FlatrateTable } from '../../shared/flatrate-table/flatrate-table';
 import { Loading } from '../../shared/loading/loading';
 import { PaidTable } from '../../shared/paid-table/paid-table';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 /**
  * Container for all five provider pages. Reacts to the {@code :key} route param (the same
@@ -18,7 +19,7 @@ import { PaidTable } from '../../shared/paid-table/paid-table';
 @Component({
   selector: 'app-provider-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FlatrateTable, PaidTable, Loading, ErrorAlert],
+  imports: [FlatrateTable, PaidTable, Loading, ErrorAlert, TranslocoPipe],
   template: `
     <h1>{{ label() }}</h1>
     @if (loading()) {
@@ -27,21 +28,21 @@ import { PaidTable } from '../../shared/paid-table/paid-table';
       <app-error-alert [message]="error()" />
     } @else if (page(); as p) {
       @if (p.included.length > 0) {
-        <h2>Included</h2>
+        <h2>{{ 'provider.included' | transloco }}</h2>
         <app-flatrate-table
           [entries]="p.included"
           [recentlyChangedId]="seenStore.recentlyChanged()"
           (seenToggle)="onSeenToggle($event)" />
       }
       @if (p.paid.length > 0) {
-        <h2>Buy / Rent</h2>
+        <h2>{{ 'provider.buyRent' | transloco }}</h2>
         <app-paid-table
           [entries]="p.paid"
           [recentlyChangedId]="seenStore.recentlyChanged()"
           (seenToggle)="onSeenToggle($event)" />
       }
       @if (p.included.length === 0 && p.paid.length === 0) {
-        <p class="text-muted">Nothing available for this provider yet.</p>
+        <p class="text-muted">{{ 'provider.empty' | transloco }}</p>
       }
     }
   `,
@@ -50,6 +51,7 @@ export class ProviderPage {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ProviderApi);
   protected readonly seenStore = inject(SeenStore);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly page = signal<ProviderPageDto | null>(null);
   protected readonly label = signal<string>('');
@@ -90,7 +92,7 @@ export class ProviderPage {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set(`Failed to load "${key}".`);
+        this.error.set(this.transloco.translate('provider.loadError', { provider: key }));
         this.loading.set(false);
       },
     });

@@ -1,14 +1,15 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-loading',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatProgressSpinnerModule],
+  imports: [MatProgressSpinnerModule, TranslocoPipe],
   template: `
     <div class="loading">
       <mat-spinner [diameter]="24" />
-      <span class="text-muted">Loading…</span>
+      <span class="text-muted">{{ 'common.loading' | transloco }}</span>
     </div>
   `,
   styles: `

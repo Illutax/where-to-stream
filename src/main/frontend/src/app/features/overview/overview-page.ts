@@ -6,6 +6,7 @@ import { SeenStore } from '../../core/seen-store';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { Loading } from '../../shared/loading/loading';
+import { TranslocoService } from '@jsverse/transloco';
 
 /** Container: loads the catalogue overview and hands it to the presentational table. */
 @Component({
@@ -29,6 +30,7 @@ import { Loading } from '../../shared/loading/loading';
 export class OverviewPage {
   private readonly api = inject(CatalogApi);
   protected readonly seenStore = inject(SeenStore);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly entries = signal<OverviewEntry[]>([]);
   protected readonly loading = signal(true);
@@ -49,7 +51,7 @@ export class OverviewPage {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load the catalogue.');
+        this.error.set(this.transloco.translate('overview.loadError'));
         this.loading.set(false);
       },
     });

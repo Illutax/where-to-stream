@@ -1,3 +1,4 @@
+import { translocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
@@ -20,7 +21,7 @@ describe('FlatrateTable', () => {
   });
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [FlatrateTable], providers: [provideHttpClient(withFetch()), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({ imports: [FlatrateTable, translocoTesting()], providers: [provideHttpClient(withFetch()), provideHttpClientTesting()] });
     fixture = TestBed.createComponent(FlatrateTable);
   });
 

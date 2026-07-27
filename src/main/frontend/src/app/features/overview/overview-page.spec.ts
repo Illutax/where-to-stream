@@ -1,3 +1,4 @@
+import { translocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -24,7 +25,7 @@ describe('OverviewPage', () => {
       },
     };
     TestBed.configureTestingModule({
-      imports: [OverviewPage],
+      imports: [OverviewPage, translocoTesting()],
       providers: [
         provideHttpClient(withFetch()),
         provideHttpClientTesting(),
