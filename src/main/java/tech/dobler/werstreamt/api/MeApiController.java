@@ -19,6 +19,7 @@ import tech.dobler.werstreamt.application.dto.MeDto;
 import tech.dobler.werstreamt.configurations.TmdbProperties;
 import tech.dobler.werstreamt.domain.Language;
 import tech.dobler.werstreamt.domain.Theme;
+import tech.dobler.werstreamt.domain.ViewMode;
 
 import java.util.List;
 
@@ -36,7 +37,8 @@ public class MeApiController {
         final boolean tmdbAttribution = tmdbProperties.active();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            return new MeDto(false, null, List.of(), false, Theme.SYSTEM, tmdbAttribution, true, Language.EN, false);
+            return new MeDto(false, null, List.of(), false, Theme.SYSTEM, tmdbAttribution, true, Language.EN, false,
+                    ViewMode.GRID, 6);
         }
         final List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -49,8 +51,10 @@ public class MeApiController {
         final var showAgeRatings = userPreferencesService.showAgeRatingsFor(username);
         final var language = userPreferencesService.languageFor(username);
         final var showGermanTitle = userPreferencesService.showGermanTitleFor(username);
+        final var viewMode = userPreferencesService.viewModeFor(username);
+        final var tilesPerRow = userPreferencesService.tilesPerRowFor(username);
         return new MeDto(true, username, roles, roles.contains("ADMIN"), theme, tmdbAttribution,
-                showAgeRatings, language, showGermanTitle);
+                showAgeRatings, language, showGermanTitle, viewMode, tilesPerRow);
     }
 
     /** Updates the current user's own theme preference. */
@@ -91,6 +95,29 @@ public class MeApiController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A showGermanTitle flag is required.");
         }
         userPreferencesService.updateShowGermanTitle(authentication.getName(), request.showGermanTitle());
+    }
+
+    /** Updates the current user's own library layout preference (list vs. poster grid). */
+    @PutMapping("/view-mode")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateViewMode(Authentication authentication, @RequestBody ViewModeUpdateRequest request) {
+        if (request == null || request.viewMode() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A viewMode is required.");
+        }
+        userPreferencesService.updateViewMode(authentication.getName(), request.viewMode());
+    }
+
+    /** Updates the current user's own tiles-per-row preference (2-6) for the grid view. */
+    @PutMapping("/tiles-per-row")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateTilesPerRow(Authentication authentication, @RequestBody TilesPerRowUpdateRequest request) {
+        if (request == null || request.tilesPerRow() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A tilesPerRow is required.");
+        }
+        if (request.tilesPerRow() < 2 || request.tilesPerRow() > 6) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tilesPerRow must be between 2 and 6.");
+        }
+        userPreferencesService.updateTilesPerRow(authentication.getName(), request.tilesPerRow());
     }
 
     /**

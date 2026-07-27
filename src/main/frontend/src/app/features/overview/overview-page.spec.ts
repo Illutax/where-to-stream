@@ -5,9 +5,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { OverviewPage } from './overview-page';
 import { ImdbId, imdbId, releaseYear, watchlistDate } from '../../core/domain';
+import { GridPrefsStore } from '../../core/grid-prefs-store';
 import { OverviewEntry } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
+import { TitleGrid } from '../../shared/title-grid/title-grid';
 
 describe('OverviewPage', () => {
   let fixture: ComponentFixture<OverviewPage>;
@@ -34,6 +36,8 @@ describe('OverviewPage', () => {
     });
     fixture = TestBed.createComponent(OverviewPage); // constructor kicks off the load
     httpMock = TestBed.inject(HttpTestingController);
+    // Most existing assertions target the table; the grid (now the default) is covered separately.
+    TestBed.inject(GridPrefsStore).init('LIST', 6);
   });
 
   afterEach(() => {
@@ -74,6 +78,32 @@ describe('OverviewPage', () => {
     expect(toggled).toEqual({ imdbId: 'tt1', seen: true });
     // optimistic apply flipped the flag -> the toggle now renders ✅
     expect(fixture.nativeElement.querySelector('tbody .seen-toggle').textContent).toContain('✅');
+  });
+
+  it('renders the poster grid by default (GRID is the default view mode)', () => {
+    TestBed.inject(GridPrefsStore).init('GRID', 6);
+    const payload: OverviewEntry[] = [
+      { isRated: true, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
+    ];
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.directive(TitleGrid))).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Movie');
+  });
+
+  it('delegates a seen toggle from the grid to the store', () => {
+    TestBed.inject(GridPrefsStore).init('GRID', 6);
+    const payload: OverviewEntry[] = [
+      { isRated: false, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
+    ];
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
+    fixture.detectChanges();
+
+    const grid = fixture.debugElement.query(By.directive(TitleGrid)).componentInstance as TitleGrid;
+    grid.seenToggle.emit({ imdbId: imdbId('tt1'), seen: true });
+
+    expect(toggled).toEqual({ imdbId: 'tt1', seen: true });
   });
 
   it('shows an error alert when the request fails', () => {

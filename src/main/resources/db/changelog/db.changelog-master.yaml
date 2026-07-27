@@ -35,3 +35,6 @@ databaseChangeLog:
   - include:
       file: changes/012-user-language-german-title.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/013-user-grid-view-prefs.xml
+      relativeToChangelogFile: true

@@ -7,9 +7,11 @@ import { By } from '@angular/platform-browser';
 import { BehaviorSubject } from 'rxjs';
 import { ProviderPage } from './provider-page';
 import { ImdbId, imdbId, releaseYear, watchlistDate } from '../../core/domain';
+import { GridPrefsStore } from '../../core/grid-prefs-store';
 import { ProviderPage as ProviderPageDto } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { FlatrateTable } from '../../shared/flatrate-table/flatrate-table';
+import { TitleGrid } from '../../shared/title-grid/title-grid';
 
 describe('ProviderPage', () => {
   let fixture: ComponentFixture<ProviderPage>;
@@ -38,6 +40,8 @@ describe('ProviderPage', () => {
     });
     fixture = TestBed.createComponent(ProviderPage);
     httpMock = TestBed.inject(HttpTestingController);
+    // Most existing assertions target the tables; the grid (now the default) is covered separately.
+    TestBed.inject(GridPrefsStore).init('LIST', 6);
   }
 
   afterEach(() => {
@@ -95,6 +99,33 @@ describe('ProviderPage', () => {
 
     expect(toggled).toEqual({ imdbId: 'tt9', seen: true });
     expect(fixture.nativeElement.querySelector('tbody .seen-toggle').textContent).toContain('✅');
+  });
+
+  it('renders the poster grid by default (GRID is the default view mode)', () => {
+    setup('netflix');
+    TestBed.inject(GridPrefsStore).init('GRID', 6);
+    httpMock
+      .expectOne((r) => r.url.endsWith('/api/providers/netflix'))
+      .flush(page({ included: [{ isRated: false, name: 'Nolan Film', imdbId: imdbId('tt9'), year: releaseYear(2020), added: watchlistDate('2020-01-01') }] }));
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.directive(TitleGrid))).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flatrate-table')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Nolan Film');
+  });
+
+  it('delegates a seen toggle from the grid to the store', () => {
+    setup('netflix');
+    TestBed.inject(GridPrefsStore).init('GRID', 6);
+    httpMock
+      .expectOne((r) => r.url.endsWith('/api/providers/netflix'))
+      .flush(page({ included: [{ isRated: false, name: 'Nolan Film', imdbId: imdbId('tt9'), year: releaseYear(2020), added: watchlistDate('2020-01-01') }] }));
+    fixture.detectChanges();
+
+    const grid = fixture.debugElement.query(By.directive(TitleGrid)).componentInstance as TitleGrid;
+    grid.seenToggle.emit({ imdbId: imdbId('tt9'), seen: true });
+
+    expect(toggled).toEqual({ imdbId: 'tt9', seen: true });
   });
 
   it('shows an empty-state message when nothing is available', () => {

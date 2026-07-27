@@ -1,10 +1,8 @@
-import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { AgeRatingStore } from '../../core/age-rating-store';
-import { API_BASE } from '../../core/api-base';
 import { ImdbId, imdbUrl } from '../../core/domain';
 import { GermanTitleStore } from '../../core/german-title-store';
-import { TitleMetaResponse } from '../../core/models';
+import { injectTitleMeta } from '../../core/title-meta';
 import { AgeBadge } from '../age-badge/age-badge';
 import { PosterThumb } from '../poster-thumb/poster-thumb';
 
@@ -34,26 +32,11 @@ export class TitleCell {
 
   protected readonly ageRatingStore = inject(AgeRatingStore);
   private readonly germanTitleStore = inject(GermanTitleStore);
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE);
   protected readonly imdbUrl = imdbUrl;
-  protected readonly meta = signal<TitleMetaResponse | null>(null);
+  protected readonly meta = injectTitleMeta(() => this.imdbId());
 
   /** The German title when the preference is on and one exists, else the original (English) name. */
   protected readonly displayTitle = computed(
     () => (this.germanTitleStore.show() && this.meta()?.germanTitle) || this.name(),
   );
-
-  constructor() {
-    // Fetch lazily the first time either preference needs it (and never when both are off).
-    effect(() => {
-      if ((!this.ageRatingStore.showAgeRatings() && !this.germanTitleStore.show()) || this.meta() !== null) {
-        return;
-      }
-      this.http.get<TitleMetaResponse>(`${this.base}titles/${this.imdbId()}/meta`).subscribe({
-        next: (m) => this.meta.set(m),
-        error: () => this.meta.set(null),
-      });
-    });
-  }
 }

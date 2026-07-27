@@ -2,6 +2,7 @@ package tech.dobler.werstreamt.application.dto;
 
 import tech.dobler.werstreamt.domain.Language;
 import tech.dobler.werstreamt.domain.Theme;
+import tech.dobler.werstreamt.domain.ViewMode;
 
 import java.util.List;
 
@@ -17,6 +18,8 @@ import java.util.List;
  * @param showAgeRatings  whether the user sees the FSK age-rating badges (on by default)
  * @param language        the user's UI language ({@code EN} when anonymous)
  * @param showGermanTitle whether film titles are shown in German where available (off by default)
+ * @param viewMode        the user's preferred library layout ({@code GRID} by default)
+ * @param tilesPerRow      number of poster tiles per row in the grid view (2-6, defaults to 6)
  */
 public record MeDto(
         boolean authenticated,
@@ -27,6 +30,8 @@ public record MeDto(
         boolean tmdbAttribution,
         boolean showAgeRatings,
         Language language,
-        boolean showGermanTitle
+        boolean showGermanTitle,
+        ViewMode viewMode,
+        int tilesPerRow
 ) {
 }

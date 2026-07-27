@@ -46,6 +46,14 @@
   "overview": {
     "loadError": "Der Katalog konnte nicht geladen werden."
   },
+  "grid": {
+    "perRowLabel": "PRO REIHE",
+    "watchedOf": "{{ watched }} von {{ total }} gesehen",
+    "sortBy": "Sortieren nach",
+    "sortDirection": "Sortierrichtung",
+    "switchToList": "Zur Listenansicht wechseln",
+    "switchToGrid": "Zur Kachelansicht wechseln"
+  },
   "provider": {
     "included": "Inklusive",
     "buyRent": "Kaufen / Leihen",

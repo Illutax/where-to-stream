@@ -10,6 +10,7 @@ import { map } from 'rxjs';
 import { AgeRatingStore } from './core/age-rating-store';
 import { AuthStore } from './core/auth-store';
 import { GermanTitleStore } from './core/german-title-store';
+import { GridPrefsStore } from './core/grid-prefs-store';
 import { LanguageStore } from './core/language-store';
 import { ThemeStore } from './core/theme-store';
 import { WatchlistStore } from './core/watchlist-store';
@@ -62,6 +63,7 @@ export class App {
   protected readonly ageRatingStore = inject(AgeRatingStore);
   private readonly languageStore = inject(LanguageStore);
   private readonly germanTitleStore = inject(GermanTitleStore);
+  private readonly gridPrefsStore = inject(GridPrefsStore);
   private readonly transloco = inject(TranslocoService);
 
   /** True on phone/narrow viewports: the drawer overlays and closes after navigation. */
@@ -83,6 +85,7 @@ export class App {
         this.ageRatingStore.init(me.showAgeRatings);
         this.languageStore.init(me.language);
         this.germanTitleStore.init(me.showGermanTitle);
+        this.gridPrefsStore.init(me.viewMode, me.tilesPerRow);
       }
     });
   }

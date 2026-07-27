@@ -41,7 +41,10 @@ class MeApiControllerTest {
                 .andExpect(jsonPath("$.showAgeRatings").value(true))
                 // ...and to English with German titles off.
                 .andExpect(jsonPath("$.language").value("EN"))
-                .andExpect(jsonPath("$.showGermanTitle").value(false));
+                .andExpect(jsonPath("$.showGermanTitle").value(false))
+                // ...and to the grid view with 6 tiles per row.
+                .andExpect(jsonPath("$.viewMode").value("GRID"))
+                .andExpect(jsonPath("$.tilesPerRow").value(6));
     }
 
     @Test
@@ -117,6 +120,40 @@ class MeApiControllerTest {
                     .contentType(MediaType.APPLICATION_JSON).content("{\"language\":\"EN\"}"));
             mockMvc.perform(put("/api/me/show-german-title").with(user("admin").roles("ADMIN")).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON).content("{\"showGermanTitle\":false}"));
+        }
+    }
+
+    @Test
+    void updatingViewModeAndTilesPerRowPersistForTheCurrentUser() throws Exception {
+        try {
+            mockMvc.perform(put("/api/me/view-mode").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"viewMode\":\"LIST\"}"))
+                    .andExpect(status().isNoContent());
+            mockMvc.perform(put("/api/me/tiles-per-row").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"tilesPerRow\":3}"))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/me").with(user("admin").roles("ADMIN")))
+                    .andExpect(jsonPath("$.viewMode").value("LIST"))
+                    .andExpect(jsonPath("$.tilesPerRow").value(3));
+
+            mockMvc.perform(put("/api/me/view-mode").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(put("/api/me/tiles-per-row").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(put("/api/me/tiles-per-row").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"tilesPerRow\":1}"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(put("/api/me/tiles-per-row").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"tilesPerRow\":7}"))
+                    .andExpect(status().isBadRequest());
+        } finally {
+            mockMvc.perform(put("/api/me/view-mode").with(user("admin").roles("ADMIN")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"viewMode\":\"GRID\"}"));
+            mockMvc.perform(put("/api/me/tiles-per-row").with(user("admin").roles("ADMIN")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"tilesPerRow\":6}"));
         }
     }
 

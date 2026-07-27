@@ -89,6 +89,9 @@ export type Theme = 'SYSTEM' | 'LIGHT' | 'DARK';
 /** UI language preference (mirrors the server Language enum). */
 export type Language = 'EN' | 'DE';
 
+/** The user's preferred library layout (mirrors the server ViewMode enum). */
+export type ViewMode = 'LIST' | 'GRID';
+
 /** The current principal (mirrors the server MeDto). */
 export interface Me {
   authenticated: boolean;
@@ -104,6 +107,10 @@ export interface Me {
   language: Language;
   /** Whether film titles are shown in German where available. */
   showGermanTitle: boolean;
+  /** The user's preferred library layout (list vs. poster grid). */
+  viewMode: ViewMode;
+  /** Tiles per row in the grid view (2-6). */
+  tilesPerRow: number;
 }
 
 /** Rating system of an age rating (mirrors the server AgeRating.RatingSystem). */

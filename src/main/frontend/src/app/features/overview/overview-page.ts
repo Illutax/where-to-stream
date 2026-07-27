@@ -1,24 +1,34 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CatalogApi } from '../../core/api/catalog-api';
 import { ImdbId } from '../../core/domain';
+import { GridPrefsStore } from '../../core/grid-prefs-store';
 import { OverviewEntry } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
+import { overviewToTile } from '../../core/tile-entry';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { Loading } from '../../shared/loading/loading';
+import { TitleGrid } from '../../shared/title-grid/title-grid';
+import { ViewToggleButton } from '../../shared/view-toggle-button/view-toggle-button';
 import { TranslocoService } from '@jsverse/transloco';
 
-/** Container: loads the catalogue overview and hands it to the presentational table. */
+/** Container: loads the catalogue overview and hands it to the presentational table/grid. */
 @Component({
   selector: 'app-overview-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CatalogTable, Loading, ErrorAlert],
+  imports: [CatalogTable, TitleGrid, ViewToggleButton, Loading, ErrorAlert],
   template: `
     <h1>Where 2 Stream</h1>
+    <app-view-toggle-button />
     @if (loading()) {
       <app-loading />
     } @else if (error()) {
       <app-error-alert [message]="error()" />
+    } @else if (gridPrefs.viewMode() === 'GRID') {
+      <app-title-grid
+        [entries]="tileEntries()"
+        [recentlyChangedId]="seenStore.recentlyChanged()"
+        (seenToggle)="onSeenToggle($event)" />
     } @else {
       <app-catalog-table
         [entries]="entries()"
@@ -30,9 +40,11 @@ import { TranslocoService } from '@jsverse/transloco';
 export class OverviewPage {
   private readonly api = inject(CatalogApi);
   protected readonly seenStore = inject(SeenStore);
+  protected readonly gridPrefs = inject(GridPrefsStore);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly entries = signal<OverviewEntry[]>([]);
+  protected readonly tileEntries = computed(() => this.entries().map(overviewToTile));
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 

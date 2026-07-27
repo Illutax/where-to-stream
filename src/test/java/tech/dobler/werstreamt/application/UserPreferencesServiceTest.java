@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.domain.Language;
 import tech.dobler.werstreamt.domain.Role;
 import tech.dobler.werstreamt.domain.Theme;
+import tech.dobler.werstreamt.domain.ViewMode;
 import tech.dobler.werstreamt.persistence.AppUser;
 import tech.dobler.werstreamt.persistence.AppUserRepository;
 
@@ -127,6 +128,48 @@ class UserPreferencesServiceTest {
         when(users.findByUsername("bob")).thenReturn(Optional.of(bob));
 
         assertThat(service.usernameAvailable("bob", "alice")).isFalse();
+    }
+
+    @Test
+    void newAccountsDefaultToTheGridViewWithSixTilesPerRow() {
+        assertThat(alice().getViewMode()).isEqualTo(ViewMode.GRID);
+        assertThat(alice().getTilesPerRow()).isEqualTo(6);
+    }
+
+    @Test
+    void viewModeForFallsBackToGridForAnUnknownUser() {
+        when(users.findByUsername("ghost")).thenReturn(Optional.empty());
+
+        assertThat(service.viewModeFor("ghost")).isEqualTo(ViewMode.GRID);
+    }
+
+    @Test
+    void updateViewModeChangesAndSavesTheUser() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateViewMode("alice", ViewMode.LIST);
+
+        assertThat(user.getViewMode()).isEqualTo(ViewMode.LIST);
+        verify(users).save(user);
+    }
+
+    @Test
+    void tilesPerRowForFallsBackToSixForAnUnknownUser() {
+        when(users.findByUsername("ghost")).thenReturn(Optional.empty());
+
+        assertThat(service.tilesPerRowFor("ghost")).isEqualTo(6);
+    }
+
+    @Test
+    void updateTilesPerRowChangesAndSavesTheUser() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateTilesPerRow("alice", 3);
+
+        assertThat(user.getTilesPerRow()).isEqualTo(3);
+        verify(users).save(user);
     }
 
     @Test

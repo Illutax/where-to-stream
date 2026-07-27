@@ -8,6 +8,7 @@ import tech.dobler.werstreamt.domain.AuthProvider;
 import tech.dobler.werstreamt.domain.Language;
 import tech.dobler.werstreamt.domain.Role;
 import tech.dobler.werstreamt.domain.Theme;
+import tech.dobler.werstreamt.domain.ViewMode;
 
 import java.time.Instant;
 import java.util.EnumSet;
@@ -70,6 +71,15 @@ public class AppUser {
     @Column(name = "show_german_title", nullable = false)
     private boolean showGermanTitle = false;
 
+    /** The user's preferred library layout (defaults to the poster-tile grid). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "view_mode", nullable = false)
+    private ViewMode viewMode = ViewMode.GRID;
+
+    /** Number of poster tiles per row in the grid view (2-6, defaults to 6). */
+    @Column(name = "tiles_per_row", nullable = false)
+    private int tilesPerRow = 6;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -124,6 +134,14 @@ public class AppUser {
 
     public void changeShowGermanTitle(boolean show) {
         this.showGermanTitle = show;
+    }
+
+    public void changeViewMode(ViewMode newViewMode) {
+        this.viewMode = newViewMode;
+    }
+
+    public void changeTilesPerRow(int newTilesPerRow) {
+        this.tilesPerRow = newTilesPerRow;
     }
 
     /** Change the login username (unique). Callers must ensure the new name is free. */

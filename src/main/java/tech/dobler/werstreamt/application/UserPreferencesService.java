@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.werstreamt.domain.Language;
 import tech.dobler.werstreamt.domain.Theme;
+import tech.dobler.werstreamt.domain.ViewMode;
 import tech.dobler.werstreamt.persistence.AppUser;
 import tech.dobler.werstreamt.persistence.AppUserRepository;
 
@@ -64,6 +65,30 @@ public class UserPreferencesService {
     public void updateShowGermanTitle(String username, boolean show) {
         final var user = user(username);
         user.changeShowGermanTitle(show);
+        users.save(user);
+    }
+
+    /** The user's preferred library layout, or {@link ViewMode#GRID} if the user is unknown. */
+    public ViewMode viewModeFor(String username) {
+        return users.findByUsername(username).map(AppUser::getViewMode).orElse(ViewMode.GRID);
+    }
+
+    @Transactional
+    public void updateViewMode(String username, ViewMode viewMode) {
+        final var user = user(username);
+        user.changeViewMode(viewMode);
+        users.save(user);
+    }
+
+    /** Tiles per row in the grid view, defaulting to {@code 6} for unknown users. */
+    public int tilesPerRowFor(String username) {
+        return users.findByUsername(username).map(AppUser::getTilesPerRow).orElse(6);
+    }
+
+    @Transactional
+    public void updateTilesPerRow(String username, int tilesPerRow) {
+        final var user = user(username);
+        user.changeTilesPerRow(tilesPerRow);
         users.save(user);
     }
 
