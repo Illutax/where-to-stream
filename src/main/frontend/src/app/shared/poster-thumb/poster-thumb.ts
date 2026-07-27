@@ -44,9 +44,13 @@ export class PosterThumb {
   protected readonly posterUrl = posterUrl;
   protected readonly posterFullUrl = posterFullUrl;
 
-  // Prefer the hi-res preview to the right of the thumbnail, falling back to the left.
+  // Prefer the hi-res preview to the right of the thumbnail, falling back to the left; and prefer
+  // aligning to the thumbnail's top, falling back to its bottom so a poster hovered near the
+  // bottom of the viewport flips upward instead of running off the bottom edge.
   protected readonly positions: ConnectedPosition[] = [
     { originX: 'end', originY: 'top', overlayX: 'start', overlayY: 'top', offsetX: 8 },
     { originX: 'start', originY: 'top', overlayX: 'end', overlayY: 'top', offsetX: -8 },
+    { originX: 'end', originY: 'bottom', overlayX: 'start', overlayY: 'bottom', offsetX: 8 },
+    { originX: 'start', originY: 'bottom', overlayX: 'end', overlayY: 'bottom', offsetX: -8 },
   ];
 }
