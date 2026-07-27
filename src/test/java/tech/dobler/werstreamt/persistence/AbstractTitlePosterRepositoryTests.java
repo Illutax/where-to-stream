@@ -48,6 +48,21 @@ public abstract class AbstractTitlePosterRepositoryTests {
     }
 
     @Test
+    void storesAHiResFullImageLargerThanMariaDbsBlobLimit() {
+        // A hi-res poster exceeds MariaDB's 64 KB plain-BLOB cap; full_bytes must be a larger type.
+        final byte[] large = new byte[200_000];
+        java.util.Arrays.fill(large, (byte) 7);
+        final var poster = TitlePoster.of(ImdbId.of("tt1375666"), "/inception.jpg", NOW);
+        poster.setFull(large, "image/jpeg");
+        sut.save(poster);
+        entityManager.flush();
+        entityManager.clear();
+
+        final var loaded = sut.findByImdbId(ImdbId.of("tt1375666")).orElseThrow();
+        assertThat(loaded.getFull()).hasSize(200_000);
+    }
+
+    @Test
     void storesANegativeRowWithoutImages() {
         sut.save(TitlePoster.of(ImdbId.of("tt9999999"), null, NOW));
         entityManager.flush();

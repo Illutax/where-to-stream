@@ -9,6 +9,9 @@
     <property name="uuid.type" value="uuid" dbms="mariadb"/>
     <property name="timestamp.type" value="timestamp(6) with time zone" dbms="h2"/>
     <property name="timestamp.type" value="datetime(6)" dbms="mariadb"/>
+    <!-- MariaDB's plain BLOB caps at 64 KB; a hi-res poster needs more. H2's BLOB is already large. -->
+    <property name="blob.type" value="blob" dbms="h2"/>
+    <property name="blob.type" value="mediumblob" dbms="mariadb"/>
 
     <changeSet id="008-title-poster" author="vdobler">
         <comment>
@@ -41,5 +44,15 @@
             separate changeset so the already-applied 008-title-poster checksum stays intact.
         </comment>
         <modifyDataType tableName="title_poster" columnName="poster_path" newDataType="varchar(1024)"/>
+    </changeSet>
+
+    <changeSet id="008-widen-poster-blobs" author="vdobler">
+        <comment>
+            A hi-res poster exceeds MariaDB's 64 KB BLOB limit ("Data too long for column
+            'full_bytes'"). Widen both image columns to MEDIUMBLOB (16 MB) on MariaDB; H2's BLOB is
+            already large. Appended as a separate changeset so the earlier 008 checksums stay intact.
+        </comment>
+        <modifyDataType tableName="title_poster" columnName="full_bytes" newDataType="${blob.type}"/>
+        <modifyDataType tableName="title_poster" columnName="thumb_bytes" newDataType="${blob.type}"/>
     </changeSet>
 </databaseChangeLog>

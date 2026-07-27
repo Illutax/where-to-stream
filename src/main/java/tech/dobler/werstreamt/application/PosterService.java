@@ -20,16 +20,17 @@ import java.util.Optional;
 /**
  * Resolves a title's poster image, caching it per {@code imdbId} in the DB (global, shared). The
  * thumbnail is fetched on first view and the full image on first hover; both are then stored so the
- * source is queried at most once per title. Mirrors the resolve/fetch/save shape of
- * {@code StreamInfoService}. The concrete image source (IMDb by default, or TMDB) is selected at
- * startup and injected as a {@link PosterSource}; this service is agnostic to which one it is.
+ * source is queried at most once per title. The concrete image source (IMDb by default, or TMDB) is
+ * selected at startup and injected as a {@link PosterSource}; this service is agnostic to which.
  *
- * <p>{@code title_poster} has a unique {@code imdb_id}, so two concurrent first-time requests for
- * the same title (e.g. the row thumbnail and a hover for the full image) would both try to insert
- * the discovery row and one would fail the constraint. The public entry points therefore run the
- * transactional {@link #resolve} through the bean's own proxy and retry once on a
- * {@link DataIntegrityViolationException}: the retry runs in a fresh transaction and simply reads
- * the row the other request committed.
+ * <p><b>No DB connection is held across the network calls.</b> A cold request runs as a fast
+ * transactional cache read, then the (throttled) HTTP lookup/download with <em>no transaction
+ * open</em>, then a fast transactional write. Holding the connection across the I/O previously
+ * pinned a Hikari connection for the whole slow fetch and exhausted the pool under a burst of
+ * poster requests. The short transactions run through the bean's own proxy (self-invocation would
+ * bypass it). {@code title_poster.imdb_id} is unique, so a concurrent first-time insert can trip the
+ * constraint; such a write is swallowed ({@link #tryStore}) — the bytes are still returned and the
+ * row self-heals on the next request.
  */
 @Slf4j
 @Service
@@ -39,7 +40,7 @@ public class PosterService {
     private final PosterSource posterSource;
     private final PosterProperties properties;
     private final TimeService timeService;
-    /** The bean's own proxy, so a retry re-enters {@link #resolve} in a new transaction. */
+    /** The bean's own proxy, so the short read/write steps are each transactional. */
     private final ObjectProvider<PosterService> self;
 
     public PosterService(TitlePosterRepository repository, PosterSource posterSource,
@@ -57,87 +58,108 @@ public class PosterService {
     }
 
     public Optional<Poster> thumb(ImdbId imdbId) {
-        return resolveRacefree(imdbId, PosterSize.THUMB);
+        return get(imdbId, PosterSize.THUMB);
     }
 
     public Optional<Poster> full(ImdbId imdbId) {
-        return resolveRacefree(imdbId, PosterSize.FULL);
+        return get(imdbId, PosterSize.FULL);
     }
 
-    /**
-     * Runs {@link #resolve} through the proxy (so it is transactional even though called from within
-     * the bean) and retries once if a concurrent request inserted the discovery row first.
-     */
-    private Optional<Poster> resolveRacefree(ImdbId imdbId, PosterSize size) {
-        final PosterService proxy = self.getObject();
-        try {
-            return proxy.resolve(imdbId, size);
-        } catch (DataIntegrityViolationException concurrentInsert) {
-            log.debug("title_poster row for {} was created concurrently; retrying read", imdbId);
-            return proxy.resolve(imdbId, size);
+    private Optional<Poster> get(ImdbId imdbId, PosterSize size) {
+        final PosterService tx = self.getObject();
+
+        // 1) Fast cache read; the connection is released before any network call.
+        final Cached cached = tx.readCached(imdbId, size);
+        if (cached.poster() != null) {
+            return Optional.of(cached.poster());
         }
-    }
-
-    @Transactional
-    public Optional<Poster> resolve(ImdbId imdbId, PosterSize size) {
-        final Instant now = timeService.now();
-        final TitlePoster row = repository.findByImdbId(imdbId)
-                .map(existing -> reDiscoverStaleNegative(existing, now))
-                .orElseGet(() -> discover(imdbId, now));
-
-        // A null poster_path is a (deliberately persisted) negative-cache marker, not an absent lookup.
-        if (row.getPosterPath() == null) {
-            return Optional.empty();
+        if (cached.done()) {
+            return Optional.empty(); // fresh negative cache: no poster
         }
-        return cachedBytes(row, size).or(() -> downloadAndStore(row, size));
-    }
 
-    /**
-     * Newly-seen title: discover the poster reference and insert the row. If a concurrent request
-     * inserts the same {@code imdbId} first, this insert trips the unique constraint at commit —
-     * which surfaces inside the proxied {@link #resolve} call and is retried by {@link #resolveRacefree}.
-     */
-    private TitlePoster discover(ImdbId imdbId, Instant now) {
-        final String posterPath = posterSource.findPosterPath(imdbId).orElse(null);
-        return repository.save(TitlePoster.of(imdbId, posterPath, now));
-    }
-
-    /** Re-ask the source for a negative row once its TTL has passed; otherwise leave the row as is. */
-    private TitlePoster reDiscoverStaleNegative(TitlePoster row, Instant now) {
-        if (row.getPosterPath() != null || isNegativeFresh(row, now)) {
-            return row;
+        // 2) Resolve the poster path (discovering it over the network if unknown) — no tx held.
+        final String posterPath = cached.posterPath() != null ? cached.posterPath() : discover(imdbId, tx);
+        if (posterPath == null) {
+            return Optional.empty(); // discovered: title has no poster
         }
-        row.refresh(posterSource.findPosterPath(row.getImdbId()).orElse(null), now);
-        return repository.save(row);
-    }
 
-    private Optional<Poster> cachedBytes(TitlePoster row, PosterSize size) {
-        final byte[] cached = size == PosterSize.THUMB ? row.getThumb() : row.getFull();
-        return cached != null && cached.length > 0
-                ? Optional.of(new Poster(cached, contentTypeOf(row, size)))
-                : Optional.empty();
-    }
-
-    private Optional<Poster> downloadAndStore(TitlePoster row, PosterSize size) {
-        return posterSource.download(row.getPosterPath(), size)
+        // 3) Download the image (no tx held), then persist it in a short transaction.
+        return posterSource.download(posterPath, size)
                 .filter(bytes -> bytes.length > 0)
                 .map(bytes -> {
-                    store(row, size, bytes);
+                    tryStore(imdbId, () -> tx.storeBytes(imdbId, posterPath, size, bytes));
                     return new Poster(bytes, "image/jpeg");
                 })
                 .or(() -> {
-                    log.debug("No {} poster bytes for {} (path {})", size, row.getImdbId(), row.getPosterPath());
+                    log.debug("No {} poster bytes for {} (path {})", size, imdbId, posterPath);
                     return Optional.empty();
                 });
     }
 
-    private void store(TitlePoster row, PosterSize size, byte[] bytes) {
+    /** Looks the poster path up over the network (no tx), persists it, and returns it (null = none). */
+    private String discover(ImdbId imdbId, PosterService tx) {
+        final String posterPath = posterSource.findPosterPath(imdbId).orElse(null);
+        tryStore(imdbId, () -> tx.storePath(imdbId, posterPath));
+        return posterPath;
+    }
+
+    /**
+     * Fast, read-only cache lookup: serve the cached bytes, report a fresh negative, or report that
+     * the path/bytes must be fetched. Reads the {@code @Lob} bytes inside the transaction.
+     */
+    @Transactional(readOnly = true)
+    public Cached readCached(ImdbId imdbId, PosterSize size) {
+        return repository.findByImdbId(imdbId)
+                .map(row -> classify(row, size))
+                .orElseGet(Cached::needsDiscovery);
+    }
+
+    private Cached classify(TitlePoster row, PosterSize size) {
+        if (row.getPosterPath() == null) {
+            return isNegativeFresh(row, timeService.now()) ? Cached.negative() : Cached.needsDiscovery();
+        }
+        final byte[] bytes = size == PosterSize.THUMB ? row.getThumb() : row.getFull();
+        return bytes != null && bytes.length > 0
+                ? Cached.hit(new Poster(bytes, contentTypeOf(row, size)))
+                : Cached.needsDownload(row.getPosterPath());
+    }
+
+    /** Persists a freshly discovered poster path (or {@code null} = negative), inserting/refreshing the row. */
+    @Transactional
+    public void storePath(ImdbId imdbId, String posterPath) {
+        final Instant now = timeService.now();
+        repository.findByImdbId(imdbId).ifPresentOrElse(
+                row -> {
+                    row.refresh(posterPath, now);
+                    repository.save(row);
+                },
+                () -> repository.save(TitlePoster.of(imdbId, posterPath, now)));
+    }
+
+    /** Persists downloaded bytes for a size onto the existing (or a newly created) row. */
+    @Transactional
+    public void storeBytes(ImdbId imdbId, String posterPath, PosterSize size, byte[] bytes) {
+        final TitlePoster row = repository.findByImdbId(imdbId)
+                .orElseGet(() -> TitlePoster.of(imdbId, posterPath, timeService.now()));
         if (size == PosterSize.THUMB) {
             row.setThumb(bytes, "image/jpeg");
         } else {
             row.setFull(bytes, "image/jpeg");
         }
         repository.save(row);
+    }
+
+    /**
+     * Runs a short write step, swallowing the unique-constraint violation from a concurrent
+     * first-time insert of the same title (the competitor stored the same data; this request still
+     * returns its bytes and the row self-heals on the next request).
+     */
+    private void tryStore(ImdbId imdbId, Runnable write) {
+        try {
+            write.run();
+        } catch (DataIntegrityViolationException concurrentInsert) {
+            log.debug("title_poster row for {} was written concurrently; skipping duplicate", imdbId);
+        }
     }
 
     /** A negative ("no poster") row is honoured until its TTL passes, then the source is asked again. */
@@ -148,5 +170,24 @@ public class PosterService {
     private static String contentTypeOf(TitlePoster row, PosterSize size) {
         final String ct = size == PosterSize.THUMB ? row.getThumbContentType() : row.getFullContentType();
         return ct == null ? "image/jpeg" : ct;
+    }
+
+    /** Outcome of the cache read: a served image, a resolved "no poster", or work still to do. */
+    record Cached(Poster poster, boolean done, String posterPath) {
+        static Cached hit(Poster poster) {
+            return new Cached(poster, false, null);
+        }
+
+        static Cached negative() {
+            return new Cached(null, true, null); // fresh negative cache
+        }
+
+        static Cached needsDownload(String posterPath) {
+            return new Cached(null, false, posterPath); // path known, bytes missing
+        }
+
+        static Cached needsDiscovery() {
+            return new Cached(null, false, null); // path unknown (or stale negative)
+        }
     }
 }
