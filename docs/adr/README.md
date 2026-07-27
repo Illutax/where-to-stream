@@ -17,5 +17,6 @@ zum `adr`-Skill der Team-Doku.
 | [0008](0008-thymeleaf-client-entfernen.md) | Thymeleaf-Client entfernen — SPA-only UI | Accepted |
 | [0009](0009-domainvalues-statt-primitiven.md) | Domain-Values statt primitiver Datentypen | Accepted |
 | [0010](0010-optionals-nicht-auf-null-defaulten.md) | Optionals nicht auf `null` defaulten (funktional konsumieren) | Accepted |
+| [0011](0011-kein-open-session-in-view.md) | Kein Open-Session-in-View, kein Lazy Loading | Accepted |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.
