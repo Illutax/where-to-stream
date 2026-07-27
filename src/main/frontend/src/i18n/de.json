@@ -1,0 +1,35 @@
+{
+  "nav": {
+    "home": "Start",
+    "status": "Status",
+    "myWatchlist": "Meine Watchlist",
+    "settings": "Einstellungen",
+    "manageCache": "Cache verwalten",
+    "users": "Benutzer",
+    "myList": "Meine Liste: {{ count }} Titel",
+    "signedInAs": "Angemeldet als {{ username }}",
+    "logout": "Abmelden"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "languageEnglish": "English",
+    "languageGerman": "Deutsch",
+    "appearance": "Darstellung",
+    "theme": "Design",
+    "themeSystem": "System folgen",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "ageRatings": "Altersfreigaben",
+    "germanTitles": "Deutsche Titel",
+    "account": "Konto",
+    "usernameHint": "Beim Ändern des Benutzernamens wirst du abgemeldet — danach meldest du dich mit dem neuen Namen an.",
+    "username": "Benutzername",
+    "changeUsername": "Benutzernamen ändern",
+    "usernameTaken": "Dieser Benutzername ist bereits vergeben.",
+    "usernameError": "Der Benutzername konnte nicht geändert werden."
+  },
+  "common": {
+    "dismiss": "Schließen"
+  }
+}

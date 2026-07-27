@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { AgeRatingStore } from './core/age-rating-store';
 import { AuthStore } from './core/auth-store';
@@ -61,6 +62,7 @@ export class App {
   protected readonly ageRatingStore = inject(AgeRatingStore);
   private readonly languageStore = inject(LanguageStore);
   private readonly germanTitleStore = inject(GermanTitleStore);
+  private readonly transloco = inject(TranslocoService);
 
   /** True on phone/narrow viewports: the drawer overlays and closes after navigation. */
   protected readonly handset = toSignal(
@@ -71,6 +73,8 @@ export class App {
   constructor() {
     this.watchlistStore.load();
     this.auth.load();
+    // Drive the active UI language off the user's preference (EN/DE -> en/de).
+    effect(() => this.transloco.setActiveLang(this.languageStore.language().toLowerCase()));
     // Adopt the theme once the principal (with its saved preference) has loaded.
     effect(() => {
       const me = this.auth.me();

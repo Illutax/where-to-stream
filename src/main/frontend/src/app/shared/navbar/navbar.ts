@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { PROVIDERS } from '../../core/models';
 
 /**
@@ -14,41 +15,41 @@ import { PROVIDERS } from '../../core/models';
 @Component({
   selector: 'app-navbar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatListModule, MatButtonModule, MatDividerModule, RouterLink, RouterLinkActive],
+  imports: [MatListModule, MatButtonModule, MatDividerModule, RouterLink, RouterLinkActive, TranslocoPipe],
   template: `
     <mat-nav-list class="app-nav">
       <a mat-list-item routerLink="/" [routerLinkActiveOptions]="{ exact: true }"
-         routerLinkActive="active-link" (click)="navigate.emit()">Home</a>
+         routerLinkActive="active-link" (click)="navigate.emit()">{{ 'nav.home' | transloco }}</a>
       @for (p of providers; track p.key) {
         <a mat-list-item [routerLink]="['/provider', p.key]" routerLinkActive="active-link"
            (click)="navigate.emit()">{{ p.label }}</a>
       }
       <a mat-list-item routerLink="/status" routerLinkActive="active-link"
-         (click)="navigate.emit()">Status</a>
+         (click)="navigate.emit()">{{ 'nav.status' | transloco }}</a>
 
       @if (username()) {
         <a mat-list-item routerLink="/watchlist" routerLinkActive="active-link"
-           (click)="navigate.emit()">My Watchlist</a>
+           (click)="navigate.emit()">{{ 'nav.myWatchlist' | transloco }}</a>
         <a mat-list-item routerLink="/settings" routerLinkActive="active-link"
-           (click)="navigate.emit()">Settings</a>
+           (click)="navigate.emit()">{{ 'nav.settings' | transloco }}</a>
       }
 
       @if (isAdmin()) {
         <mat-divider />
         <a mat-list-item routerLink="/manage" routerLinkActive="active-link"
-           (click)="navigate.emit()">Manage Cache</a>
+           (click)="navigate.emit()">{{ 'nav.manageCache' | transloco }}</a>
         <a mat-list-item routerLink="/admin/users" routerLinkActive="active-link"
-           (click)="navigate.emit()">Users</a>
+           (click)="navigate.emit()">{{ 'nav.users' | transloco }}</a>
       }
 
       <mat-divider />
       <div class="app-nav__meta">
         @if (watchlistCount() !== null) {
-          <div>My list: {{ watchlistCount() }} titles</div>
+          <div>{{ 'nav.myList' | transloco: { count: watchlistCount() } }}</div>
         }
         @if (username()) {
-          <div>Signed in as {{ username() }}</div>
-          <button matButton="outlined" (click)="logout.emit()">Logout</button>
+          <div>{{ 'nav.signedInAs' | transloco: { username: username() } }}</div>
+          <button matButton="outlined" (click)="logout.emit()">{{ 'nav.logout' | transloco }}</button>
         }
       </div>
     </mat-nav-list>

@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AgeRatingStore } from '../../core/age-rating-store';
 import { UsernameApi } from '../../core/api/username-api';
 import { AuthStore } from '../../core/auth-store';
@@ -25,48 +26,48 @@ import { ThemeStore } from '../../core/theme-store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatButtonModule, MatButtonToggleModule, MatSlideToggleModule,
+    MatButtonModule, MatButtonToggleModule, MatSlideToggleModule, TranslocoPipe,
   ],
   template: `
-    <h1>Settings</h1>
+    <h1>{{ 'settings.title' | transloco }}</h1>
 
     <mat-card class="settings-card">
-      <h2>Language</h2>
+      <h2>{{ 'settings.language' | transloco }}</h2>
       <mat-form-field appearance="outline">
-        <mat-label>Language</mat-label>
+        <mat-label>{{ 'settings.language' | transloco }}</mat-label>
         <mat-select [value]="languageStore.language()" (selectionChange)="languageStore.set($event.value)">
-          <mat-option value="EN">English</mat-option>
-          <mat-option value="DE">Deutsch</mat-option>
+          <mat-option value="EN">{{ 'settings.languageEnglish' | transloco }}</mat-option>
+          <mat-option value="DE">{{ 'settings.languageGerman' | transloco }}</mat-option>
         </mat-select>
       </mat-form-field>
     </mat-card>
 
     <mat-card class="settings-card">
-      <h2>Appearance</h2>
+      <h2>{{ 'settings.appearance' | transloco }}</h2>
       <div class="setting-row">
-        <span>Theme</span>
+        <span>{{ 'settings.theme' | transloco }}</span>
         <mat-button-toggle-group [value]="themeStore.theme()" (change)="themeStore.set($event.value)"
                                  hideSingleSelectionIndicator aria-label="Colour theme">
-          <mat-button-toggle value="SYSTEM" aria-label="System theme" title="Follow system">🖥️</mat-button-toggle>
-          <mat-button-toggle value="LIGHT" aria-label="Light theme" title="Light">☀️</mat-button-toggle>
-          <mat-button-toggle value="DARK" aria-label="Dark theme" title="Dark">🌙</mat-button-toggle>
+          <mat-button-toggle value="SYSTEM" [title]="'settings.themeSystem' | transloco">🖥️</mat-button-toggle>
+          <mat-button-toggle value="LIGHT" [title]="'settings.themeLight' | transloco">☀️</mat-button-toggle>
+          <mat-button-toggle value="DARK" [title]="'settings.themeDark' | transloco">🌙</mat-button-toggle>
         </mat-button-toggle-group>
       </div>
       <mat-slide-toggle [checked]="ageRatingStore.showAgeRatings()"
-                        (change)="ageRatingStore.set($event.checked)">Age ratings</mat-slide-toggle>
+                        (change)="ageRatingStore.set($event.checked)">{{ 'settings.ageRatings' | transloco }}</mat-slide-toggle>
       <mat-slide-toggle [checked]="germanTitleStore.show()"
-                        (change)="germanTitleStore.set($event.checked)">German titles</mat-slide-toggle>
+                        (change)="germanTitleStore.set($event.checked)">{{ 'settings.germanTitles' | transloco }}</mat-slide-toggle>
     </mat-card>
 
     <mat-card class="settings-card">
-      <h2>Account</h2>
-      <p class="text-muted">Changing your username signs you out — you then log in with the new name.</p>
+      <h2>{{ 'settings.account' | transloco }}</h2>
+      <p class="text-muted">{{ 'settings.usernameHint' | transloco }}</p>
       <form (submit)="rename($event)" class="setting-row">
         <mat-form-field appearance="outline">
-          <mat-label>Username</mat-label>
+          <mat-label>{{ 'settings.username' | transloco }}</mat-label>
           <input matInput type="text" [value]="username()" (input)="username.set($any($event.target).value)" required />
         </mat-form-field>
-        <button matButton="filled" type="submit" [disabled]="!canRename()">Change username</button>
+        <button matButton="filled" type="submit" [disabled]="!canRename()">{{ 'settings.changeUsername' | transloco }}</button>
       </form>
     </mat-card>
   `,
@@ -99,6 +100,7 @@ export class SettingsPage {
   private readonly auth = inject(AuthStore);
   private readonly usernameApi = inject(UsernameApi);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly username = signal(this.auth.username() ?? '');
   protected readonly canRename = computed(() => {
@@ -115,8 +117,8 @@ export class SettingsPage {
       next: () => this.redirectToLogin(),
       error: (err: HttpErrorResponse) =>
         this.snackBar.open(
-          err.status === 409 ? 'That username is already taken.' : 'Could not change the username.',
-          'Dismiss',
+          this.transloco.translate(err.status === 409 ? 'settings.usernameTaken' : 'settings.usernameError'),
+          this.transloco.translate('common.dismiss'),
           { duration: 5000 },
         ),
     });

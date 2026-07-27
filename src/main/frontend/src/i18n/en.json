@@ -1,0 +1,35 @@
+{
+  "nav": {
+    "home": "Home",
+    "status": "Status",
+    "myWatchlist": "My Watchlist",
+    "settings": "Settings",
+    "manageCache": "Manage Cache",
+    "users": "Users",
+    "myList": "My list: {{ count }} titles",
+    "signedInAs": "Signed in as {{ username }}",
+    "logout": "Logout"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "languageEnglish": "English",
+    "languageGerman": "Deutsch",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "themeSystem": "Follow system",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "ageRatings": "Age ratings",
+    "germanTitles": "German titles",
+    "account": "Account",
+    "usernameHint": "Changing your username signs you out — you then log in with the new name.",
+    "username": "Username",
+    "changeUsername": "Change username",
+    "usernameTaken": "That username is already taken.",
+    "usernameError": "Could not change the username."
+  },
+  "common": {
+    "dismiss": "Dismiss"
+  }
+}

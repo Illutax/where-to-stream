@@ -1,13 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Navbar } from './navbar';
+import { translocoTesting } from '../../testing/transloco-testing';
 
 describe('Navbar', () => {
   let fixture: ComponentFixture<Navbar>;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [Navbar],
+      imports: [Navbar, translocoTesting()],
       providers: [provideRouter([])],
     });
     fixture = TestBed.createComponent(Navbar);

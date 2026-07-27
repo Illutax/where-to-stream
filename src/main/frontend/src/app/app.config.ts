@@ -1,9 +1,11 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withHashLocation } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideTransloco } from '@jsverse/transloco';
 
 import { routes } from './app.routes';
 import { unauthorizedInterceptor } from './core/unauthorized-interceptor';
+import { TranslocoHttpLoader } from './core/transloco-loader';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -14,5 +16,15 @@ export const appConfig: ApplicationConfig = {
     // XSRF protection is on by default (cookie XSRF-TOKEN, header X-XSRF-TOKEN) and matches
     // Spring's CookieCsrfTokenRepository; the 401 interceptor sends expired sessions to /login.
     provideHttpClient(withFetch(), withInterceptors([unauthorizedInterceptor])),
+    provideTransloco({
+      config: {
+        availableLangs: ['en', 'de'],
+        defaultLang: 'en',
+        fallbackLang: 'en',
+        reRenderOnLangChange: true,
+        prodMode: !isDevMode(),
+      },
+      loader: TranslocoHttpLoader,
+    }),
   ],
 };
