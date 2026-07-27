@@ -23,3 +23,9 @@ databaseChangeLog:
   - include:
       file: changes/008-title-poster.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/009-title-meta.xml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/010-user-age-ratings.xml
+      relativeToChangelogFile: true

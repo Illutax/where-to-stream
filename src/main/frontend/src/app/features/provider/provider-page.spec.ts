@@ -39,7 +39,11 @@ describe('ProviderPage', () => {
     httpMock = TestBed.inject(HttpTestingController);
   }
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    // The per-row age-rating badges fetch independently; drain those before verifying.
+    httpMock.match((r) => r.url.includes('/rating')).forEach((req) => req.flush(null, { status: 404, statusText: 'Not Found' }));
+    httpMock.verify();
+  });
 
   const page = (over: Partial<ProviderPageDto>): ProviderPageDto => ({
     provider: 'netflix',

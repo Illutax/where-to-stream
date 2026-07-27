@@ -95,6 +95,17 @@ export interface Me {
   theme: Theme;
   /** Whether TMDB is the active poster source (drives the TMDB attribution footer). */
   tmdbAttribution: boolean;
+  /** Whether the user sees the FSK age-rating badges. */
+  showAgeRatings: boolean;
+}
+
+/** Rating system of an age rating (mirrors the server AgeRating.RatingSystem). */
+export type RatingSystem = 'FSK' | 'OTHER';
+
+/** A title's age rating (mirrors the server AgeRating). */
+export interface AgeRating {
+  system: RatingSystem;
+  label: string;
 }
 
 /** A user account in the administration UI (mirrors the server UserDto). */

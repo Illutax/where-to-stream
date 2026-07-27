@@ -6,6 +6,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
+import { AgeRatingStore } from './core/age-rating-store';
 import { AuthStore } from './core/auth-store';
 import { ThemeStore } from './core/theme-store';
 import { WatchlistStore } from './core/watchlist-store';
@@ -32,8 +33,10 @@ import { Navbar } from './shared/navbar/navbar';
           [username]="auth.username()"
           [isAdmin]="auth.isAdmin()"
           [theme]="themeStore.theme()"
+          [showAgeRatings]="ageRatingStore.showAgeRatings()"
           (logout)="auth.logout()"
           (themeChange)="themeStore.set($event)"
+          (showAgeRatingsChange)="ageRatingStore.set($event)"
           (navigate)="handset() && drawer.close()" />
       </mat-sidenav>
       <mat-sidenav-content>
@@ -57,6 +60,7 @@ export class App {
   protected readonly watchlistStore = inject(WatchlistStore);
   protected readonly auth = inject(AuthStore);
   protected readonly themeStore = inject(ThemeStore);
+  protected readonly ageRatingStore = inject(AgeRatingStore);
 
   /** True on phone/narrow viewports: the drawer overlays and closes after navigation. */
   protected readonly handset = toSignal(
@@ -72,6 +76,7 @@ export class App {
       const me = this.auth.me();
       if (me) {
         this.themeStore.init(me.theme);
+        this.ageRatingStore.init(me.showAgeRatings);
       }
     });
   }

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Dialect-specific types (per-file scope, mirrors 001/008). -->
+    <property name="uuid.type" value="uuid" dbms="h2"/>
+    <property name="uuid.type" value="uuid" dbms="mariadb"/>
+    <property name="timestamp.type" value="timestamp(6) with time zone" dbms="h2"/>
+    <property name="timestamp.type" value="datetime(6)" dbms="mariadb"/>
+
+    <changeSet id="009-title-meta" author="vdobler">
+        <comment>
+            Global (per-imdbId) cache of IMDb metadata from one GraphQL fetch: the poster reference
+            plus the age rating (FSK or a fallback certificate). Small text — the poster image bytes
+            stay in title_poster. A row with all-null data is a negative cache entry.
+        </comment>
+        <createTable tableName="title_meta">
+            <column name="id" type="${uuid.type}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="imdb_id" type="varchar(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="poster_path" type="varchar(1024)"/>
+            <column name="rating_system" type="varchar(16)"/>
+            <column name="rating_label" type="varchar(16)"/>
+            <column name="fetched_at" type="${timestamp.type}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

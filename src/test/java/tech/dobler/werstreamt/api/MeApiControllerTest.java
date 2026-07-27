@@ -36,7 +36,9 @@ class MeApiControllerTest {
                 // Unknown user (mock principal not in the DB) falls back to the SYSTEM theme.
                 .andExpect(jsonPath("$.theme").value("SYSTEM"))
                 // TMDB is not enabled in the test config, so posters come from IMDb (no attribution).
-                .andExpect(jsonPath("$.tmdbAttribution").value(false));
+                .andExpect(jsonPath("$.tmdbAttribution").value(false))
+                // Unknown user falls back to the age-rating badges being on.
+                .andExpect(jsonPath("$.showAgeRatings").value(true));
     }
 
     @Test
@@ -66,6 +68,27 @@ class MeApiControllerTest {
             // Reset so the shared context's seeded admin is left as-is for other tests.
             mockMvc.perform(put("/api/me/theme").with(user("admin").roles("ADMIN")).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON).content("{\"theme\":\"SYSTEM\"}"));
+        }
+    }
+
+    @Test
+    void updatingTheAgeRatingPreferencePersistsForTheCurrentUser() throws Exception {
+        try {
+            mockMvc.perform(put("/api/me/show-age-ratings").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"showAgeRatings\":false}"))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/me").with(user("admin").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.showAgeRatings").value(false));
+
+            mockMvc.perform(put("/api/me/show-age-ratings").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest());
+        } finally {
+            // Reset to the default (on) so the shared context's seeded admin is left as-is.
+            mockMvc.perform(put("/api/me/show-age-ratings").with(user("admin").roles("ADMIN")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"showAgeRatings\":true}"));
         }
     }
 }

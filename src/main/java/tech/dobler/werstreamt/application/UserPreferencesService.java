@@ -25,9 +25,25 @@ public class UserPreferencesService {
 
     @Transactional
     public void updateTheme(String username, Theme theme) {
-        final var user = users.findByUsername(username)
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + username));
+        final var user = user(username);
         user.changeTheme(theme);
         users.save(user);
+    }
+
+    /** Whether the user wants the age-rating badges, defaulting to {@code true} for unknown users. */
+    public boolean showAgeRatingsFor(String username) {
+        return users.findByUsername(username).map(AppUser::isShowAgeRatings).orElse(true);
+    }
+
+    @Transactional
+    public void updateShowAgeRatings(String username, boolean show) {
+        final var user = user(username);
+        user.changeShowAgeRatings(show);
+        users.save(user);
+    }
+
+    private AppUser user(String username) {
+        return users.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + username));
     }
 }

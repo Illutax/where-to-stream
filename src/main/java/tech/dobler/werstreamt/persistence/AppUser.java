@@ -56,6 +56,10 @@ public class AppUser {
     @Column(name = "theme", nullable = false)
     private Theme theme = Theme.SYSTEM;
 
+    /** Whether the user sees the FSK age-rating badges (on by default). */
+    @Column(name = "show_age_ratings", nullable = false)
+    private boolean showAgeRatings = true;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -98,5 +102,9 @@ public class AppUser {
 
     public void changeTheme(Theme newTheme) {
         this.theme = newTheme;
+    }
+
+    public void changeShowAgeRatings(boolean show) {
+        this.showAgeRatings = show;
     }
 }

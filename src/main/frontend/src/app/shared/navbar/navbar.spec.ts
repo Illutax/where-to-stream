@@ -89,6 +89,21 @@ describe('Navbar', () => {
     expect(picked).toBe('LIGHT');
   });
 
+  it('emits the age-rating preference when the toggle is switched off', () => {
+    fixture.componentRef.setInput('username', 'alice');
+    fixture.componentRef.setInput('showAgeRatings', true);
+    fixture.detectChanges();
+
+    let picked: boolean | undefined;
+    fixture.componentInstance.showAgeRatingsChange.subscribe((v) => (picked = v));
+
+    const toggle = fixture.nativeElement.querySelector('.app-nav__age-toggle button') as HTMLButtonElement;
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(picked).toBe(false);
+  });
+
   it('emits logout when the logout button is clicked', () => {
     let loggedOut = false;
     fixture.componentRef.setInput('username', 'alice');

@@ -3,6 +3,7 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { ImdbId, imdbUrl } from '../../core/domain';
 import { PaidEntry } from '../../core/models';
+import { AgeBadge } from '../age-badge/age-badge';
 import { PosterThumb } from '../poster-thumb/poster-thumb';
 import { sortRows } from '../sort/table-sort';
 
@@ -10,7 +11,7 @@ import { sortRows } from '../sort/table-sort';
 @Component({
   selector: 'app-paid-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatSortModule, PosterThumb],
+  imports: [MatTableModule, MatSortModule, PosterThumb, AgeBadge],
   template: `
     <div class="table-scroll">
     <table mat-table [dataSource]="sorted()" [trackBy]="trackByRow"
@@ -31,6 +32,7 @@ import { sortRows } from '../sort/table-sort';
           <div class="title-cell">
             <app-poster-thumb [imdbId]="entry.imdbId" [name]="entry.name" />
             <a [href]="imdbUrl(entry.imdbId)" target="_blank" rel="noopener">{{ entry.name }}</a>
+            <app-age-badge [imdbId]="entry.imdbId" />
           </div>
         </td>
       </ng-container>

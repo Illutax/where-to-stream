@@ -13,6 +13,7 @@ import java.util.List;
  * @param admin           convenience flag: whether {@code roles} contains {@code ADMIN}
  * @param theme           the user's UI colour-scheme preference ({@code SYSTEM} when anonymous)
  * @param tmdbAttribution whether TMDB is the active poster source (drives the TMDB footer)
+ * @param showAgeRatings  whether the user sees the FSK age-rating badges (on by default)
  */
 public record MeDto(
         boolean authenticated,
@@ -20,6 +21,7 @@ public record MeDto(
         List<String> roles,
         boolean admin,
         Theme theme,
-        boolean tmdbAttribution
+        boolean tmdbAttribution,
+        boolean showAgeRatings
 ) {
 }

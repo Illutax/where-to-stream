@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PROVIDERS, Theme } from '../../core/models';
 
@@ -15,7 +16,7 @@ import { PROVIDERS, Theme } from '../../core/models';
 @Component({
   selector: 'app-navbar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatListModule, MatButtonModule, MatButtonToggleModule, MatDividerModule, RouterLink, RouterLinkActive],
+  imports: [MatListModule, MatButtonModule, MatButtonToggleModule, MatSlideToggleModule, MatDividerModule, RouterLink, RouterLinkActive],
   template: `
     <mat-nav-list class="app-nav">
       <a mat-list-item routerLink="/" [routerLinkActiveOptions]="{ exact: true }"
@@ -55,6 +56,10 @@ import { PROVIDERS, Theme } from '../../core/models';
               <mat-button-toggle value="DARK" aria-label="Dark theme" title="Dark">🌙</mat-button-toggle>
             </mat-button-toggle-group>
           </div>
+          <mat-slide-toggle
+            class="app-nav__age-toggle"
+            [checked]="showAgeRatings()"
+            (change)="showAgeRatingsChange.emit($event.checked)">Age ratings</mat-slide-toggle>
         }
         @if (watchlistCount() !== null) {
           <div>My list: {{ watchlistCount() }} titles</div>
@@ -72,8 +77,10 @@ export class Navbar {
   readonly username = input<string | null>(null);
   readonly isAdmin = input<boolean>(false);
   readonly theme = input<Theme>('SYSTEM');
+  readonly showAgeRatings = input<boolean>(true);
   readonly logout = output<void>();
   readonly navigate = output<void>();
   readonly themeChange = output<Theme>();
+  readonly showAgeRatingsChange = output<boolean>();
   protected readonly providers = PROVIDERS;
 }

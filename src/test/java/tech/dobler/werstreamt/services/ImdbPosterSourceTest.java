@@ -4,42 +4,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Network-free tests for the IMDb GraphQL response parsing and the Amazon-CDN resizing helper. */
+/** Network-free tests for the Amazon-CDN resizing helper. (Metadata parsing lives in ImdbTitleClient.) */
 class ImdbPosterSourceTest {
 
     private static final String POSTER =
             "https://m.media-amazon.com/images/M/MV5BMTk4ODQzNDY3Ml5BMl5BanBnXkFtZTcwODA0NTU4Nw@@._V1_.jpg";
-
-    @Test
-    void readsThePrimaryImageUrl() {
-        final var json = """
-                {"data":{"title":{"primaryImage":{"url":"%s"}}}}""".formatted(POSTER);
-
-        assertThat(ImdbPosterSource.parsePosterUrl(json)).contains(POSTER);
-    }
-
-    @Test
-    void isEmptyWhenTheTitleHasNoPoster() {
-        assertThat(ImdbPosterSource.parsePosterUrl("""
-                {"data":{"title":{"primaryImage":null}}}""")).isEmpty();
-    }
-
-    @Test
-    void isEmptyWhenTheTitleIsUnknown() {
-        assertThat(ImdbPosterSource.parsePosterUrl("""
-                {"data":{"title":null}}""")).isEmpty();
-    }
-
-    @Test
-    void isEmptyOnAGraphqlError() {
-        assertThat(ImdbPosterSource.parsePosterUrl("""
-                {"errors":[{"message":"Cannot query field \\"bogus\\" on type \\"Title\\"."}]}""")).isEmpty();
-    }
-
-    @Test
-    void isEmptyForMalformedJson() {
-        assertThat(ImdbPosterSource.parsePosterUrl("not json")).isEmpty();
-    }
 
     @Test
     void buildsAResizedCdnUrlReplacingAnyExistingTransform() {

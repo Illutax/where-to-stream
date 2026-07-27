@@ -19,6 +19,8 @@ per-provider web pages (Netflix, Prime Video, Disney+, WOW, Google Play).
 - **Poster thumbnails** (small preview + hi-res on hover), scraped from **IMDb** by default or
   sourced from the **TMDB API** behind a feature flag, cached as BLOBs in the DB (see
   [Poster images](#poster-images))
+- **FSK age-rating badges** per title (German FSK, or a foreign certificate as fallback), from the
+  same one IMDb metadata fetch as the poster, cached per title; switchable per user (default on)
 - Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
 - jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
 - MapStruct (entity ↔ persistence mapping), Lombok
@@ -312,6 +314,8 @@ mvn -Ptestcontainers test
 | `GET /api/watchlist` · `POST /api/watchlist/import` · `DELETE /api/watchlist` | Your watchlist: status / CSV import / clear |
 | `PUT /api/watchlist/{imdbId}/seen` | Mark one of your titles seen / not seen (`{ "seen": true }`) |
 | `GET /api/titles/{imdbId}/poster` · `…/poster/full` | Cached poster thumbnail / hi-res image (404 if none) |
+| `GET /api/titles/{imdbId}/rating` | Cached age rating `{system,label}` — FSK or fallback (404 if none) |
+| `PUT /api/me/show-age-ratings` | Toggle the current user's age-rating badges (`{ "showAgeRatings": true }`) |
 | `GET /api/manage` · `POST /api/manage/invalidate` · `POST /api/manage/scrape` | Cache management (ADMIN) |
 | `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached (ADMIN) |
 | `POST /api/refresh?scope=seen\|all` | Force-refresh cached results (ADMIN) |

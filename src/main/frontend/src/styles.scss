@@ -204,11 +204,57 @@ h2 {
   }
 }
 
-// Title cell = small poster thumbnail next to the IMDb link.
+// Title cell = small poster thumbnail next to the IMDb link (+ the age-rating badge).
 .title-cell {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+// FSK age-rating badge. FSK colours are fixed brand colours (identical in light/dark); a foreign
+// fallback certificate uses the neutral theme tokens.
+.age-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.2rem;
+  padding: 0 0.35rem;
+  border-radius: var(--mat-sys-corner-small);
+  font: var(--mat-sys-label-small);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--mat-sys-outline);
+}
+
+.age-badge--fsk-0 {
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 1px solid var(--mat-sys-outline);
+}
+
+.age-badge--fsk-6 {
+  background: #f7d417;
+  color: #1a1a1a;
+}
+
+.age-badge--fsk-12 {
+  background: #1ea038;
+}
+
+.age-badge--fsk-16 {
+  background: #0a7bc2;
+}
+
+.age-badge--fsk-18 {
+  background: #e2001a;
+}
+
+.age-badge--other {
+  background: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .poster-thumb {

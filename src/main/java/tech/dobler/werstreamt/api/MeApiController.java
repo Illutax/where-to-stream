@@ -33,7 +33,7 @@ public class MeApiController {
         final boolean tmdbAttribution = tmdbProperties.active();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            return new MeDto(false, null, List.of(), false, Theme.SYSTEM, tmdbAttribution);
+            return new MeDto(false, null, List.of(), false, Theme.SYSTEM, tmdbAttribution, true);
         }
         final List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -41,8 +41,10 @@ public class MeApiController {
                 .map(a -> a.substring("ROLE_".length()))
                 .sorted()
                 .toList();
-        final var theme = userPreferencesService.themeFor(authentication.getName());
-        return new MeDto(true, authentication.getName(), roles, roles.contains("ADMIN"), theme, tmdbAttribution);
+        final var username = authentication.getName();
+        final var theme = userPreferencesService.themeFor(username);
+        final var showAgeRatings = userPreferencesService.showAgeRatingsFor(username);
+        return new MeDto(true, username, roles, roles.contains("ADMIN"), theme, tmdbAttribution, showAgeRatings);
     }
 
     /** Updates the current user's own theme preference. */
@@ -53,5 +55,15 @@ public class MeApiController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A theme is required.");
         }
         userPreferencesService.updateTheme(authentication.getName(), request.theme());
+    }
+
+    /** Updates the current user's own age-rating-badge preference. */
+    @PutMapping("/show-age-ratings")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateShowAgeRatings(Authentication authentication, @RequestBody ShowAgeRatingsUpdateRequest request) {
+        if (request == null || request.showAgeRatings() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A showAgeRatings flag is required.");
+        }
+        userPreferencesService.updateShowAgeRatings(authentication.getName(), request.showAgeRatings());
     }
 }

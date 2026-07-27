@@ -70,4 +70,27 @@ class UserPreferencesServiceTest {
         assertThatThrownBy(() -> service.updateTheme("ghost", Theme.DARK))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void newAccountsShowAgeRatingsByDefault() {
+        assertThat(alice().isShowAgeRatings()).isTrue();
+    }
+
+    @Test
+    void showAgeRatingsForFallsBackToTrueForAnUnknownUser() {
+        when(users.findByUsername("ghost")).thenReturn(Optional.empty());
+
+        assertThat(service.showAgeRatingsFor("ghost")).isTrue();
+    }
+
+    @Test
+    void updateShowAgeRatingsChangesAndSavesTheUser() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateShowAgeRatings("alice", false);
+
+        assertThat(user.isShowAgeRatings()).isFalse();
+        verify(users).save(user);
+    }
 }
