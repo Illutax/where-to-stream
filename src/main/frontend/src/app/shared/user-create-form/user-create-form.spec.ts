@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatCheckboxHarness } from '@angular/material/checkbox/testing';
 import { UserCreateForm } from './user-create-form';
 import { CreateUserRequest } from '../../core/models';
+import { translocoTesting } from '../../testing/transloco-testing';
 
 describe('UserCreateForm', () => {
   let fixture: ComponentFixture<UserCreateForm>;
@@ -11,7 +12,7 @@ describe('UserCreateForm', () => {
   let loader: HarnessLoader;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [UserCreateForm] });
+    TestBed.configureTestingModule({ imports: [UserCreateForm, translocoTesting()] });
     fixture = TestBed.createComponent(UserCreateForm);
     component = fixture.componentInstance;
     fixture.detectChanges();

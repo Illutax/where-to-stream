@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output, signal } from '@angu
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ImdbId } from '../../core/domain';
 import { ManageRow } from '../../core/models';
 
@@ -12,17 +13,16 @@ import { ManageRow } from '../../core/models';
 @Component({
   selector: 'app-manage-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatCheckboxModule, MatButtonModule],
+  imports: [MatTableModule, MatCheckboxModule, MatButtonModule, TranslocoPipe],
   template: `
     <form (submit)="onScrape($event)" class="scrape-form">
       <p>
-        <span>{{ needsScrapeCount() }}</span> title(s) currently need scraping
-        (never cached or invalidated).
+        <span>{{ needsScrapeCount() }}</span> {{ 'manage.needScraping' | transloco }}
       </p>
-      <button matButton="filled" type="submit">Scrape invalidated / missing</button>
+      <button matButton="filled" type="submit">{{ 'manage.scrapeButton' | transloco }}</button>
     </form>
 
-    <h2>Invalidate selected titles</h2>
+    <h2>{{ 'manage.invalidateHeading' | transloco }}</h2>
     <form (submit)="onInvalidate($event)">
       <div class="table-scroll">
       <table mat-table [dataSource]="rows()" [trackBy]="trackByImdbId">
@@ -30,27 +30,27 @@ import { ManageRow } from '../../core/models';
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let row">
             <mat-checkbox [checked]="selected().has(row.imdbId)" (change)="toggle(row.imdbId)"
-                          [aria-label]="'select ' + row.name" />
+                          [aria-label]="'manage.select' | transloco: { name: row.name }" />
           </td>
         </ng-container>
 
         <ng-container matColumnDef="title">
-          <th mat-header-cell *matHeaderCellDef>Title</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'manage.columnTitle' | transloco }}</th>
           <td mat-cell *matCellDef="let row">{{ row.name }}</td>
         </ng-container>
 
         <ng-container matColumnDef="imdbId">
-          <th mat-header-cell *matHeaderCellDef>IMDb id</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'manage.columnImdbId' | transloco }}</th>
           <td mat-cell *matCellDef="let row">{{ row.imdbId }}</td>
         </ng-container>
 
         <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'manage.columnStatus' | transloco }}</th>
           <td mat-cell *matCellDef="let row">
             @if (row.needsScrape) {
-              <span class="status-pill status-pill--needs-scrape">needs scrape</span>
+              <span class="status-pill status-pill--needs-scrape">{{ 'manage.statusNeedsScrape' | transloco }}</span>
             } @else {
-              <span class="status-pill status-pill--cached">cached</span>
+              <span class="status-pill status-pill--cached">{{ 'manage.statusCached' | transloco }}</span>
             }
           </td>
         </ng-container>
@@ -58,13 +58,13 @@ import { ManageRow } from '../../core/models';
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
         <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">No titles.</td>
+          <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">{{ 'manage.noTitles' | transloco }}</td>
         </tr>
       </table>
       </div>
 
       <button matButton="filled" type="submit" class="invalidate-button" [disabled]="selected().size === 0">
-        Invalidate selected
+        {{ 'manage.invalidateSelected' | transloco }}
       </button>
     </form>
   `,

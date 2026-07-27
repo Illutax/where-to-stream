@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { StatusApi } from '../../core/api/status-api';
 import { Status } from '../../core/models';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
@@ -9,9 +10,9 @@ import { StatusCard } from '../../shared/status-card/status-card';
 @Component({
   selector: 'app-status-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [StatusCard, Loading, ErrorAlert],
+  imports: [StatusCard, Loading, ErrorAlert, TranslocoPipe],
   template: `
-    <h1>Status</h1>
+    <h1>{{ 'status.title' | transloco }}</h1>
     @if (loading()) {
       <app-loading />
     } @else if (error()) {
@@ -23,6 +24,7 @@ import { StatusCard } from '../../shared/status-card/status-card';
 })
 export class StatusPage {
   private readonly api = inject(StatusApi);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly status = signal<Status | null>(null);
   protected readonly loading = signal(true);
@@ -35,7 +37,7 @@ export class StatusPage {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load status.');
+        this.error.set(this.transloco.translate('status.loadFailed'));
         this.loading.set(false);
       },
     });

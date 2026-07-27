@@ -78,7 +78,7 @@ describe('ProviderPage', () => {
       ] }));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Youtube Store');
+    expect(fixture.nativeElement.querySelector('h1').textContent).toContain('YouTube Store');
     expect(fixture.nativeElement.querySelector('app-paid-table')).not.toBeNull();
   });
 

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ManageApi } from '../../core/api/manage-api';
 import { ImdbId } from '../../core/domain';
 import { ManagePage as ManagePageDto } from '../../core/models';
@@ -11,9 +12,9 @@ import { ManageTable } from '../../shared/manage-table/manage-table';
 @Component({
   selector: 'app-manage-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ManageTable, Loading, ErrorAlert],
+  imports: [ManageTable, Loading, ErrorAlert, TranslocoPipe],
   template: `
-    <h1>Manage cache</h1>
+    <h1>{{ 'manage.title' | transloco }}</h1>
     @if (loading()) {
       <app-loading />
     } @else if (error()) {
@@ -30,6 +31,7 @@ import { ManageTable } from '../../shared/manage-table/manage-table';
 export class ManagePage {
   private readonly api = inject(ManageApi);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly page = signal<ManagePageDto | null>(null);
   protected readonly loading = signal(true);
@@ -48,7 +50,7 @@ export class ManagePage {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load the cache overview.');
+        this.error.set(this.transloco.translate('manage.loadFailed'));
         this.loading.set(false);
       },
     });
@@ -57,20 +59,28 @@ export class ManagePage {
   protected onInvalidate(imdbIds: ImdbId[]): void {
     this.api.invalidate(imdbIds).subscribe({
       next: (result) => {
-        this.snackBar.open(`Invalidated ${result.invalidated} cache row(s).`, 'OK', { duration: 4000 });
+        this.snackBar.open(
+          this.transloco.translate('manage.invalidated', { count: result.invalidated }),
+          'OK',
+          { duration: 4000 },
+        );
         this.reload();
       },
-      error: () => this.error.set('Invalidation failed.'),
+      error: () => this.error.set(this.transloco.translate('manage.invalidateFailed')),
     });
   }
 
   protected onScrape(): void {
     this.api.scrape().subscribe({
       next: (result) => {
-        this.snackBar.open(`(Re-)scraped ${result.scraped} title(s).`, 'OK', { duration: 4000 });
+        this.snackBar.open(
+          this.transloco.translate('manage.scraped', { count: result.scraped }),
+          'OK',
+          { duration: 4000 },
+        );
         this.reload();
       },
-      error: () => this.error.set('Scraping failed.'),
+      error: () => this.error.set(this.transloco.translate('manage.scrapeFailed')),
     });
   }
 }

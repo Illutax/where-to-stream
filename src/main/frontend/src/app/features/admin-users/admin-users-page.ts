@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AdminUsersApi } from '../../core/api/admin-users-api';
 import { AdminUser, CreateUserRequest, UpdateUserRequest } from '../../core/models';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
@@ -12,9 +13,9 @@ import { UserCreateForm } from '../../shared/user-create-form/user-create-form';
 @Component({
   selector: 'app-admin-users-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatCheckboxModule, MatButtonModule, Loading, ErrorAlert, UserCreateForm],
+  imports: [MatTableModule, MatCheckboxModule, MatButtonModule, Loading, ErrorAlert, UserCreateForm, TranslocoPipe],
   template: `
-    <h1>User administration</h1>
+    <h1>{{ 'users.title' | transloco }}</h1>
     <app-error-alert [message]="error()" />
 
     @if (loading()) {
@@ -23,34 +24,34 @@ import { UserCreateForm } from '../../shared/user-create-form/user-create-form';
       <div class="table-scroll">
       <table mat-table [dataSource]="users()" [trackBy]="trackById">
         <ng-container matColumnDef="username">
-          <th mat-header-cell *matHeaderCellDef>Username</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'users.columnUsername' | transloco }}</th>
           <td mat-cell *matCellDef="let u">{{ u.username }}</td>
         </ng-container>
         <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>E-mail</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'users.columnEmail' | transloco }}</th>
           <td mat-cell *matCellDef="let u">{{ u.email }}</td>
         </ng-container>
         <ng-container matColumnDef="provider">
-          <th mat-header-cell *matHeaderCellDef>Provider</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'users.columnProvider' | transloco }}</th>
           <td mat-cell *matCellDef="let u">{{ u.provider }}</td>
         </ng-container>
         <ng-container matColumnDef="enabled">
-          <th mat-header-cell *matHeaderCellDef>Enabled</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'users.columnEnabled' | transloco }}</th>
           <td mat-cell *matCellDef="let u">
-            <mat-checkbox [checked]="u.enabled" (change)="toggleEnabled(u)" [aria-label]="'enabled ' + u.username" />
+            <mat-checkbox [checked]="u.enabled" (change)="toggleEnabled(u)" [aria-label]="'users.enabledLabel' | transloco: { username: u.username }" />
           </td>
         </ng-container>
         <ng-container matColumnDef="admin">
-          <th mat-header-cell *matHeaderCellDef>Admin</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'users.columnAdmin' | transloco }}</th>
           <td mat-cell *matCellDef="let u">
-            <mat-checkbox [checked]="isAdmin(u)" (change)="toggleAdmin(u)" [aria-label]="'admin ' + u.username" />
+            <mat-checkbox [checked]="isAdmin(u)" (change)="toggleAdmin(u)" [aria-label]="'users.adminLabel' | transloco: { username: u.username }" />
           </td>
         </ng-container>
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let u">
-            <button matButton (click)="resetPassword(u)" [disabled]="u.provider !== 'LOCAL'">Reset password</button>
-            <button matButton="outlined" class="delete-button" (click)="remove(u)">Delete</button>
+            <button matButton (click)="resetPassword(u)" [disabled]="u.provider !== 'LOCAL'">{{ 'users.resetPassword' | transloco }}</button>
+            <button matButton="outlined" class="delete-button" (click)="remove(u)">{{ 'users.delete' | transloco }}</button>
           </td>
         </ng-container>
 
@@ -59,13 +60,14 @@ import { UserCreateForm } from '../../shared/user-create-form/user-create-form';
       </table>
       </div>
 
-      <h2>Create user</h2>
+      <h2>{{ 'users.createHeading' | transloco }}</h2>
       <app-user-create-form (create)="create($event)" />
     }
   `,
 })
 export class AdminUsersPage {
   private readonly api = inject(AdminUsersApi);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly loading = signal(true);
@@ -89,7 +91,7 @@ export class AdminUsersPage {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load users.');
+        this.error.set(this.transloco.translate('users.loadFailed'));
         this.loading.set(false);
       },
     });
@@ -110,7 +112,7 @@ export class AdminUsersPage {
     this.error.set(null);
     this.api.update(user.id, request).subscribe({
       next: () => this.reload(),
-      error: (err) => this.showError(err, 'Update failed.'),
+      error: (err) => this.showError(err, this.transloco.translate('users.updateFailed')),
     });
   }
 
@@ -118,28 +120,28 @@ export class AdminUsersPage {
     this.error.set(null);
     this.api.create(request).subscribe({
       next: () => this.reload(),
-      error: (err) => this.showError(err, 'Could not create user.'),
+      error: (err) => this.showError(err, this.transloco.translate('users.createFailed')),
     });
   }
 
   protected resetPassword(user: AdminUser): void {
-    const password = window.prompt(`New password for ${user.username}:`);
+    const password = window.prompt(this.transloco.translate('users.newPasswordPrompt', { username: user.username }));
     if (!password) {
       return;
     }
     this.api.resetPassword(user.id, password).subscribe({
       next: () => this.error.set(null),
-      error: (err) => this.showError(err, 'Password reset failed.'),
+      error: (err) => this.showError(err, this.transloco.translate('users.resetFailed')),
     });
   }
 
   protected remove(user: AdminUser): void {
-    if (!window.confirm(`Delete ${user.username}?`)) {
+    if (!window.confirm(this.transloco.translate('users.confirmDelete', { username: user.username }))) {
       return;
     }
     this.api.delete(user.id).subscribe({
       next: () => this.reload(),
-      error: (err) => this.showError(err, 'Delete failed.'),
+      error: (err) => this.showError(err, this.transloco.translate('users.deleteFailed')),
     });
   }
 

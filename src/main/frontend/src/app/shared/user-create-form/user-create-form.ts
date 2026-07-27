@@ -3,29 +3,30 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { CreateUserRequest } from '../../core/models';
 
 /** Presentational "create user" form. Emits a CreateUserRequest; performs no data loading. */
 @Component({
   selector: 'app-user-create-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatFormFieldModule, MatInputModule, MatCheckboxModule, MatButtonModule],
+  imports: [MatFormFieldModule, MatInputModule, MatCheckboxModule, MatButtonModule, TranslocoPipe],
   template: `
     <form (submit)="onSubmit($event)" class="create-form">
       <mat-form-field appearance="outline">
-        <mat-label>Username</mat-label>
+        <mat-label>{{ 'userForm.username' | transloco }}</mat-label>
         <input matInput type="text" [value]="username()" (input)="username.set($any($event.target).value)" required />
       </mat-form-field>
       <mat-form-field appearance="outline">
-        <mat-label>Password</mat-label>
+        <mat-label>{{ 'userForm.password' | transloco }}</mat-label>
         <input matInput type="password" [value]="password()" (input)="password.set($any($event.target).value)" required />
       </mat-form-field>
       <mat-form-field appearance="outline">
-        <mat-label>E-mail</mat-label>
+        <mat-label>{{ 'userForm.email' | transloco }}</mat-label>
         <input matInput type="email" [value]="email()" (input)="email.set($any($event.target).value)" />
       </mat-form-field>
-      <mat-checkbox [checked]="admin()" (change)="admin.set($any($event).checked)">Admin</mat-checkbox>
-      <button matButton="filled" type="submit" [disabled]="!username() || !password()">Create user</button>
+      <mat-checkbox [checked]="admin()" (change)="admin.set($any($event).checked)">{{ 'userForm.admin' | transloco }}</mat-checkbox>
+      <button matButton="filled" type="submit" [disabled]="!username() || !password()">{{ 'userForm.create' | transloco }}</button>
     </form>
   `,
   styles: `

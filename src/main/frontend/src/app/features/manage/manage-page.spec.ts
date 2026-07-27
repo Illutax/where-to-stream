@@ -6,6 +6,7 @@ import { ManagePage } from './manage-page';
 import { ManageTable } from '../../shared/manage-table/manage-table';
 import { imdbId } from '../../core/domain';
 import { ManagePage as ManagePageDto } from '../../core/models';
+import { translocoTesting } from '../../testing/transloco-testing';
 
 describe('ManagePage', () => {
   let fixture: ComponentFixture<ManagePage>;
@@ -18,7 +19,7 @@ describe('ManagePage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [ManagePage],
+      imports: [ManagePage, translocoTesting()],
       providers: [provideHttpClient(withFetch()), provideHttpClientTesting()],
     });
     fixture = TestBed.createComponent(ManagePage);

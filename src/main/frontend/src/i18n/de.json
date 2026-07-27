@@ -39,7 +39,9 @@
     "languages": "Sprachen",
     "na": "–",
     "noEntries": "Keine Einträge.",
-    "nothingHere": "Nichts vorhanden."
+    "nothingHere": "Nichts vorhanden.",
+    "markSeen": "Als gesehen markieren: {{ name }}",
+    "markNotSeen": "Als ungesehen markieren: {{ name }}"
   },
   "overview": {
     "loadError": "Der Katalog konnte nicht geladen werden."
@@ -49,6 +51,78 @@
     "buyRent": "Kaufen / Leihen",
     "empty": "Für diesen Anbieter ist noch nichts verfügbar.",
     "loadError": "„{{ provider }}“ konnte nicht geladen werden."
+  },
+  "watchlist": {
+    "title": "Meine Watchlist",
+    "titlesOnList": "Titel auf deiner Watchlist.",
+    "lastImport": "Letzter Import: {{ date }}.",
+    "importHeading": "IMDb-Export importieren",
+    "importHelp": "Exportiere deine Watchlist bei IMDb als CSV und lade sie hier hoch. Dies ersetzt deine aktuelle Liste (Titel, die nicht im Upload enthalten sind, werden entfernt).",
+    "import": "Importieren",
+    "clear": "Watchlist leeren",
+    "working": "Wird verarbeitet…",
+    "imported": "Importiert: +{{ added }} ~{{ updated }} -{{ removed }} ({{ total }} gesamt).",
+    "importFailed": "Die Datei konnte nicht importiert werden.",
+    "cleared": "Watchlist geleert.",
+    "clearFailed": "Deine Watchlist konnte nicht geleert werden.",
+    "loadFailed": "Deine Watchlist konnte nicht geladen werden."
+  },
+  "manage": {
+    "title": "Cache verwalten",
+    "loadFailed": "Die Cache-Übersicht konnte nicht geladen werden.",
+    "invalidated": "{{ count }} Cache-Zeile(n) invalidiert.",
+    "scraped": "{{ count }} Titel (neu) gescrapt.",
+    "invalidateFailed": "Invalidierung fehlgeschlagen.",
+    "scrapeFailed": "Scraping fehlgeschlagen.",
+    "needScraping": "Titel müssen derzeit gescrapt werden (nie gecacht oder invalidiert).",
+    "scrapeButton": "Invalidierte / fehlende scrapen",
+    "invalidateHeading": "Ausgewählte Titel invalidieren",
+    "columnTitle": "Titel",
+    "columnImdbId": "IMDb-ID",
+    "columnStatus": "Status",
+    "statusNeedsScrape": "muss gescrapt werden",
+    "statusCached": "gecacht",
+    "noTitles": "Keine Titel.",
+    "invalidateSelected": "Ausgewählte invalidieren",
+    "select": "{{ name }} auswählen"
+  },
+  "users": {
+    "title": "Benutzerverwaltung",
+    "loadFailed": "Benutzer konnten nicht geladen werden.",
+    "columnUsername": "Benutzername",
+    "columnEmail": "E-Mail",
+    "columnProvider": "Anbieter",
+    "columnEnabled": "Aktiviert",
+    "columnAdmin": "Admin",
+    "resetPassword": "Passwort zurücksetzen",
+    "delete": "Löschen",
+    "createHeading": "Benutzer anlegen",
+    "updateFailed": "Aktualisierung fehlgeschlagen.",
+    "createFailed": "Benutzer konnte nicht angelegt werden.",
+    "resetFailed": "Passwort-Zurücksetzung fehlgeschlagen.",
+    "deleteFailed": "Löschen fehlgeschlagen.",
+    "newPasswordPrompt": "Neues Passwort für {{ username }}:",
+    "confirmDelete": "{{ username }} löschen?",
+    "enabledLabel": "aktiviert {{ username }}",
+    "adminLabel": "admin {{ username }}"
+  },
+  "userForm": {
+    "username": "Benutzername",
+    "password": "Passwort",
+    "email": "E-Mail",
+    "admin": "Admin",
+    "create": "Benutzer anlegen"
+  },
+  "status": {
+    "title": "Status",
+    "loadFailed": "Status konnte nicht geladen werden.",
+    "generalInfo": "Allgemeine Informationen",
+    "version": "Version:",
+    "serverStart": "Serverstart:",
+    "dev": "dev"
+  },
+  "app": {
+    "toggleNav": "Navigation umschalten"
   },
   "common": {
     "loading": "Lädt…",

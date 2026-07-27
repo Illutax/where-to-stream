@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
-import { TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { AgeRatingStore } from './core/age-rating-store';
 import { AuthStore } from './core/auth-store';
@@ -18,10 +18,10 @@ import { Navbar } from './shared/navbar/navbar';
 @Component({
   selector: 'app-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, Navbar, MatToolbarModule, MatButtonModule, MatSidenavModule],
+  imports: [RouterOutlet, RouterLink, Navbar, MatToolbarModule, MatButtonModule, MatSidenavModule, TranslocoPipe],
   template: `
     <mat-toolbar class="app-toolbar">
-      <button matIconButton (click)="drawer.toggle()" aria-label="Toggle navigation">☰</button>
+      <button matIconButton (click)="drawer.toggle()" [attr.aria-label]="'app.toggleNav' | transloco">☰</button>
       <a class="app-brand" routerLink="/">W2S</a>
     </mat-toolbar>
 

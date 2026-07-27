@@ -5,6 +5,7 @@ import { MatCheckboxHarness } from '@angular/material/checkbox/testing';
 import { ManageTable } from './manage-table';
 import { imdbId } from '../../core/domain';
 import { ManageRow } from '../../core/models';
+import { translocoTesting } from '../../testing/transloco-testing';
 
 describe('ManageTable', () => {
   let fixture: ComponentFixture<ManageTable>;
@@ -17,7 +18,7 @@ describe('ManageTable', () => {
   ];
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [ManageTable] });
+    TestBed.configureTestingModule({ imports: [ManageTable, translocoTesting()] });
     fixture = TestBed.createComponent(ManageTable);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('rows', rows);

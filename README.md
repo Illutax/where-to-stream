@@ -5,7 +5,7 @@ Manage lists of movies to watch and find **where to stream them**.
 Each signed-in user imports their own [IMDb](https://www.imdb.com/) watchlist CSV export;
 w2s scrapes [werstreamt.es](https://www.werstreamt.es/) for each title's streaming availability,
 caches the results in the database (shared across users), and presents each user's list as
-per-provider web pages (Netflix, Prime Video, Disney+, WOW, Youtube Store).
+per-provider web pages (Netflix, Prime Video, Disney+, WOW, YouTube Store).
 
 ## Tech stack
 

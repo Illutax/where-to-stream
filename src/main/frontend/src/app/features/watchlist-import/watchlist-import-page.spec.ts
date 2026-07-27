@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WatchlistImportPage } from './watchlist-import-page';
 import { WatchlistStatus } from '../../core/models';
+import { translocoTesting } from '../../testing/transloco-testing';
 
 describe('WatchlistImportPage', () => {
   let fixture: ComponentFixture<WatchlistImportPage>;
@@ -15,7 +16,7 @@ describe('WatchlistImportPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [WatchlistImportPage],
+      imports: [WatchlistImportPage, translocoTesting()],
       providers: [provideHttpClient(withFetch()), provideHttpClientTesting()],
     });
     fixture = TestBed.createComponent(WatchlistImportPage);

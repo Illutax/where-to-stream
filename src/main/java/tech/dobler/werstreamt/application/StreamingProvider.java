@@ -9,7 +9,7 @@ import java.util.Optional;
  * records which kinds of offering the provider page shows.
  *
  * <p>{@code hasFlatrate}/{@code hasPaid} let a single {@code ProviderPageService} render all
- * five pages uniformly: Amazon shows both, Disney+/Netflix/WOW only the flatrate, Youtube Store
+ * five pages uniformly: Amazon shows both, Disney+/Netflix/WOW only the flatrate, YouTube Store
  * only paid titles.
  */
 public enum StreamingProvider {
@@ -17,7 +17,7 @@ public enum StreamingProvider {
     DISNEY("Disney+", true, false),
     NETFLIX("Netflix", true, false),
     WOW("WOW", true, false),
-    YOUTUBE("Youtube Store", false, true);
+    YOUTUBE("YouTube Store", false, true);
 
     private final String serviceName;
     private final boolean hasFlatrate;

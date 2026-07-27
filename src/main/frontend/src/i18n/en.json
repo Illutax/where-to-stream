@@ -39,7 +39,9 @@
     "languages": "Languages",
     "na": "N/A",
     "noEntries": "No entries.",
-    "nothingHere": "Nothing here."
+    "nothingHere": "Nothing here.",
+    "markSeen": "Mark seen: {{ name }}",
+    "markNotSeen": "Mark not seen: {{ name }}"
   },
   "overview": {
     "loadError": "Failed to load the catalogue."
@@ -49,6 +51,78 @@
     "buyRent": "Buy / Rent",
     "empty": "Nothing available for this provider yet.",
     "loadError": "Failed to load \"{{ provider }}\"."
+  },
+  "watchlist": {
+    "title": "My Watchlist",
+    "titlesOnList": "title(s) on your watchlist.",
+    "lastImport": "Last import: {{ date }}.",
+    "importHeading": "Import an IMDb export",
+    "importHelp": "Export your watchlist from IMDb as a CSV and upload it here. This replaces your current list (titles not in the upload are removed).",
+    "import": "Import",
+    "clear": "Clear my watchlist",
+    "working": "Working…",
+    "imported": "Imported: +{{ added }} ~{{ updated }} -{{ removed }} ({{ total }} total).",
+    "importFailed": "Could not import the file.",
+    "cleared": "Watchlist cleared.",
+    "clearFailed": "Could not clear your watchlist.",
+    "loadFailed": "Failed to load your watchlist."
+  },
+  "manage": {
+    "title": "Manage cache",
+    "loadFailed": "Failed to load the cache overview.",
+    "invalidated": "Invalidated {{ count }} cache row(s).",
+    "scraped": "(Re-)scraped {{ count }} title(s).",
+    "invalidateFailed": "Invalidation failed.",
+    "scrapeFailed": "Scraping failed.",
+    "needScraping": "title(s) currently need scraping (never cached or invalidated).",
+    "scrapeButton": "Scrape invalidated / missing",
+    "invalidateHeading": "Invalidate selected titles",
+    "columnTitle": "Title",
+    "columnImdbId": "IMDb id",
+    "columnStatus": "Status",
+    "statusNeedsScrape": "needs scrape",
+    "statusCached": "cached",
+    "noTitles": "No titles.",
+    "invalidateSelected": "Invalidate selected",
+    "select": "select {{ name }}"
+  },
+  "users": {
+    "title": "User administration",
+    "loadFailed": "Failed to load users.",
+    "columnUsername": "Username",
+    "columnEmail": "E-mail",
+    "columnProvider": "Provider",
+    "columnEnabled": "Enabled",
+    "columnAdmin": "Admin",
+    "resetPassword": "Reset password",
+    "delete": "Delete",
+    "createHeading": "Create user",
+    "updateFailed": "Update failed.",
+    "createFailed": "Could not create user.",
+    "resetFailed": "Password reset failed.",
+    "deleteFailed": "Delete failed.",
+    "newPasswordPrompt": "New password for {{ username }}:",
+    "confirmDelete": "Delete {{ username }}?",
+    "enabledLabel": "enabled {{ username }}",
+    "adminLabel": "admin {{ username }}"
+  },
+  "userForm": {
+    "username": "Username",
+    "password": "Password",
+    "email": "E-mail",
+    "admin": "Admin",
+    "create": "Create user"
+  },
+  "status": {
+    "title": "Status",
+    "loadFailed": "Failed to load status.",
+    "generalInfo": "General Information",
+    "version": "Version:",
+    "serverStart": "Server start:",
+    "dev": "dev"
+  },
+  "app": {
+    "toggleNav": "Toggle navigation"
   },
   "common": {
     "loading": "Loading…",

@@ -21,7 +21,7 @@ import { sortRows } from '../sort/table-sort';
         <td mat-cell *matCellDef="let entry">
           <button type="button" class="seen-toggle"
                   (click)="seenToggle.emit({ imdbId: entry.imdbId, seen: !entry.isRated })"
-                  [attr.aria-label]="(entry.isRated ? 'Mark not seen: ' : 'Mark seen: ') + entry.name"
+                  [attr.aria-label]="(entry.isRated ? 'table.markNotSeen' : 'table.markSeen') | transloco: { name: entry.name }"
                   [attr.aria-pressed]="entry.isRated">{{ entry.isRated ? '✅' : '⭕' }}</button>
         </td>
       </ng-container>

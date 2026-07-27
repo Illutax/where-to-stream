@@ -18,7 +18,7 @@ describe('Navbar', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
-    for (const label of ['Disney+', 'Amazon Prime', 'Youtube Store', 'Netflix', 'Sky WOW']) {
+    for (const label of ['Disney+', 'Amazon Prime', 'YouTube Store', 'Netflix', 'Sky WOW']) {
       expect(text).toContain(label);
     }
   });

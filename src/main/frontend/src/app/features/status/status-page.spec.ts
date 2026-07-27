@@ -2,6 +2,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { StatusPage } from './status-page';
+import { translocoTesting } from '../../testing/transloco-testing';
 
 describe('StatusPage', () => {
   let fixture: ComponentFixture<StatusPage>;
@@ -9,7 +10,7 @@ describe('StatusPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [StatusPage],
+      imports: [StatusPage, translocoTesting()],
       providers: [provideHttpClient(withFetch()), provideHttpClientTesting()],
     });
     fixture = TestBed.createComponent(StatusPage);

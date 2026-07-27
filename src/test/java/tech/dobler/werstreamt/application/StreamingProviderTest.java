@@ -19,12 +19,12 @@ class StreamingProviderTest {
         assertThat(StreamingProvider.AMAZON.serviceName()).isEqualTo("Prime Video");
         assertThat(StreamingProvider.DISNEY.serviceName()).isEqualTo("Disney+");
         assertThat(StreamingProvider.WOW.serviceName()).isEqualTo("WOW");
-        assertThat(StreamingProvider.YOUTUBE.serviceName()).isEqualTo("Youtube Store");
+        assertThat(StreamingProvider.YOUTUBE.serviceName()).isEqualTo("YouTube Store");
     }
 
     @Test
     void offeringFlagsDescribeWhichListsAPageHas() {
-        // Amazon shows both, flatrate-only providers only included, Youtube Store only paid.
+        // Amazon shows both, flatrate-only providers only included, YouTube Store only paid.
         assertThat(StreamingProvider.AMAZON.hasFlatrate()).isTrue();
         assertThat(StreamingProvider.AMAZON.hasPaid()).isTrue();
         assertThat(StreamingProvider.NETFLIX.hasFlatrate()).isTrue();

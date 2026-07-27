@@ -81,7 +81,7 @@ class ProviderPageServiceTest {
     void youtubePageHasOnlyPaidSortedByAdded() {
         final var e1 = entry("tt1", "Alpha", "2021-05-05", 2021);
         final var e2 = entry("tt2", "Beta", "2020-01-01", 0);
-        when(aggregateService.paid("Youtube Store", USER)).thenReturn(List.of(paid("tt1", "Youtube Store"), paid("tt2", "Youtube Store")));
+        when(aggregateService.paid("YouTube Store", USER)).thenReturn(List.of(paid("tt1", "YouTube Store"), paid("tt2", "YouTube Store")));
         when(watchlistCatalog.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(e1));
         when(watchlistCatalog.findByImdb(USER, id("tt2"))).thenReturn(Optional.of(e2));
 
@@ -95,7 +95,7 @@ class ProviderPageServiceTest {
 
     @Test
     void youtubeNeverResolvesFlatrate() {
-        when(aggregateService.paid("Youtube Store", USER)).thenReturn(List.of());
+        when(aggregateService.paid("YouTube Store", USER)).thenReturn(List.of());
         final var page = service.pageFor(StreamingProvider.YOUTUBE, USER);
         assertThat(page.included()).isEmpty();
         verifyNoInteractions(watchlistCatalog);

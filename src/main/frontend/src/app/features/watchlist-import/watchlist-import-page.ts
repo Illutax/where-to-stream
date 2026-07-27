@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { WatchlistApi } from '../../core/api/watchlist-api';
 import { WatchlistStore } from '../../core/watchlist-store';
 import { WatchlistStatus } from '../../core/models';
@@ -12,9 +13,9 @@ import { Loading } from '../../shared/loading/loading';
 @Component({
   selector: 'app-watchlist-import-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatCardModule, MatButtonModule, Loading, ErrorAlert],
+  imports: [MatCardModule, MatButtonModule, Loading, ErrorAlert, TranslocoPipe],
   template: `
-    <h1>My Watchlist</h1>
+    <h1>{{ 'watchlist.title' | transloco }}</h1>
     <app-error-alert [message]="error()" />
 
     @if (loading()) {
@@ -23,18 +24,17 @@ import { Loading } from '../../shared/loading/loading';
       <mat-card>
         <mat-card-content>
           <p>
-            <span>{{ s.count }}</span> title(s) on your watchlist.
+            <span>{{ s.count }}</span> {{ 'watchlist.titlesOnList' | transloco }}
             @if (s.lastImportedAt) {
-              <span>Last import: {{ s.lastImportedAt }}.</span>
+              <span>{{ 'watchlist.lastImport' | transloco: { date: s.lastImportedAt } }}</span>
             }
           </p>
         </mat-card-content>
       </mat-card>
 
-      <h2>Import an IMDb export</h2>
+      <h2>{{ 'watchlist.importHeading' | transloco }}</h2>
       <p class="text-muted">
-        Export your watchlist from IMDb as a CSV and upload it here. This replaces your current
-        list (titles not in the upload are removed).
+        {{ 'watchlist.importHelp' | transloco }}
       </p>
       <form (submit)="onImport($event)">
         <input
@@ -42,16 +42,16 @@ import { Loading } from '../../shared/loading/loading';
           accept=".csv"
           (change)="onFilePicked($any($event.target).files)"
           [disabled]="busy()" />
-        <button matButton="filled" type="submit" [disabled]="busy() || !file()">Import</button>
+        <button matButton="filled" type="submit" [disabled]="busy() || !file()">{{ 'watchlist.import' | transloco }}</button>
       </form>
 
       <div class="watchlist-clear">
         <button matButton="outlined" (click)="onClear()" [disabled]="busy() || s.count === 0">
-          Clear my watchlist
+          {{ 'watchlist.clear' | transloco }}
         </button>
       </div>
       @if (busy()) {
-        <p class="text-muted">Working…</p>
+        <p class="text-muted">{{ 'watchlist.working' | transloco }}</p>
       }
     }
   `,
@@ -65,6 +65,7 @@ export class WatchlistImportPage {
   private readonly api = inject(WatchlistApi);
   private readonly store = inject(WatchlistStore);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly status = signal<WatchlistStatus | null>(null);
   protected readonly loading = signal(true);
@@ -85,7 +86,7 @@ export class WatchlistImportPage {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load your watchlist.');
+        this.error.set(this.transloco.translate('watchlist.loadFailed'));
         this.loading.set(false);
       },
     });
@@ -108,7 +109,12 @@ export class WatchlistImportPage {
         this.busy.set(false);
         this.file.set(null);
         this.snackBar.open(
-          `Imported: +${result.added} ~${result.updated} -${result.removed} (${result.total} total).`,
+          this.transloco.translate('watchlist.imported', {
+            added: result.added,
+            updated: result.updated,
+            removed: result.removed,
+            total: result.total,
+          }),
           'OK',
           { duration: 4000 },
         );
@@ -116,7 +122,7 @@ export class WatchlistImportPage {
       },
       error: (err) => {
         this.busy.set(false);
-        this.error.set(err?.error?.detail ?? 'Could not import the file.');
+        this.error.set(err?.error?.detail ?? this.transloco.translate('watchlist.importFailed'));
       },
     });
   }
@@ -127,12 +133,12 @@ export class WatchlistImportPage {
     this.api.clear().subscribe({
       next: () => {
         this.busy.set(false);
-        this.snackBar.open('Watchlist cleared.', 'OK', { duration: 4000 });
+        this.snackBar.open(this.transloco.translate('watchlist.cleared'), 'OK', { duration: 4000 });
         this.reload();
       },
       error: () => {
         this.busy.set(false);
-        this.error.set('Could not clear your watchlist.');
+        this.error.set(this.transloco.translate('watchlist.clearFailed'));
       },
     });
   }

@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { AdminUsersPage } from './admin-users-page';
 import { UserCreateForm } from '../../shared/user-create-form/user-create-form';
 import { AdminUser } from '../../core/models';
+import { translocoTesting } from '../../testing/transloco-testing';
 
 describe('AdminUsersPage', () => {
   let fixture: ComponentFixture<AdminUsersPage>;
@@ -16,7 +17,7 @@ describe('AdminUsersPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [AdminUsersPage],
+      imports: [AdminUsersPage, translocoTesting()],
       providers: [provideHttpClient(withFetch()), provideHttpClientTesting()],
     });
     fixture = TestBed.createComponent(AdminUsersPage);
