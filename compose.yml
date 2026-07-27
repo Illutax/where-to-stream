@@ -3,8 +3,6 @@ services:
     container_name: w2s
     image: "w2s:${DOCKER_IMAGE_TAG}"
     volumes:
-      # Watchlists are per-user now and imported through the UI (uploaded and stored in the DB),
-      # so there is no longer an assets/ directory to mount.
       - ./logs:/opt/app/logs:Z
     environment:
       - SERVER_PORT=8080
@@ -20,16 +18,13 @@ services:
       - W2S_SECURITY_INITIALADMIN_PASSWORD=${W2S_ADMIN_PASSWORD}
       # Stable secret so remember-me / persistent login survives restarts (see .env.example).
       - W2S_SECURITY_REMEMBERME_KEY=${W2S_REMEMBER_ME_KEY}
-      # Only used when the 'google' profile is active; harmless (ignored) otherwise.
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       # Posters come from IMDb by default. Set TMDB_ENABLED=true + a key to use TMDB instead.
       - TMDB_ENABLED=${TMDB_ENABLED:-false}
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       # Uncomment to log every poster resource fetched (lookup URL + image CDN URL).
       # Dotted form matches the DispatcherServlet example above; canonical env form is
-      # LOGGING_LEVEL_TECH_DOBLER_WERSTREAMT_SERVICES=DEBUG.
-      - logging.level.tech.dobler.werstreamt.services=DEBUG
+#      - LOGGING_LEVEL_TECH_DOBLER_WERSTREAMT_SERVICES=DEBUG.
+#      - logging.level.tech.dobler.werstreamt.services=DEBUG
     depends_on:
       - db
     networks:
