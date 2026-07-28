@@ -47,7 +47,7 @@ services:
       - mariadb-data:/var/lib/mysql
     networks:
       - db
-    restart: no
+    restart: always
 
 volumes:
   mariadb-data:
