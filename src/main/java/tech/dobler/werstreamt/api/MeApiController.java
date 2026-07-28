@@ -14,12 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import tech.dobler.werstreamt.application.UserPreferences;
 import tech.dobler.werstreamt.application.UserPreferencesService;
 import tech.dobler.werstreamt.application.dto.MeDto;
 import tech.dobler.werstreamt.configurations.TmdbProperties;
-import tech.dobler.werstreamt.domain.Language;
-import tech.dobler.werstreamt.domain.Theme;
-import tech.dobler.werstreamt.domain.ViewMode;
 
 import java.util.List;
 
@@ -37,8 +35,7 @@ public class MeApiController {
         final boolean tmdbAttribution = tmdbProperties.active();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            return new MeDto(false, null, List.of(), false, Theme.SYSTEM, tmdbAttribution, true, Language.EN, false,
-                    ViewMode.GRID, 6);
+            return toDto(false, null, List.of(), tmdbAttribution, UserPreferences.defaults());
         }
         final List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -47,14 +44,14 @@ public class MeApiController {
                 .sorted()
                 .toList();
         final var username = authentication.getName();
-        final var theme = userPreferencesService.themeFor(username);
-        final var showAgeRatings = userPreferencesService.showAgeRatingsFor(username);
-        final var language = userPreferencesService.languageFor(username);
-        final var showGermanTitle = userPreferencesService.showGermanTitleFor(username);
-        final var viewMode = userPreferencesService.viewModeFor(username);
-        final var tilesPerRow = userPreferencesService.tilesPerRowFor(username);
-        return new MeDto(true, username, roles, roles.contains("ADMIN"), theme, tmdbAttribution,
-                showAgeRatings, language, showGermanTitle, viewMode, tilesPerRow);
+        final var prefs = userPreferencesService.preferencesFor(username);
+        return toDto(true, username, roles, tmdbAttribution, prefs);
+    }
+
+    private static MeDto toDto(boolean authenticated, String username, List<String> roles,
+                               boolean tmdbAttribution, UserPreferences prefs) {
+        return new MeDto(authenticated, username, roles, roles.contains("ADMIN"), prefs.theme(), tmdbAttribution,
+                prefs.showAgeRatings(), prefs.language(), prefs.showGermanTitle(), prefs.viewMode(), prefs.tilesPerRow());
     }
 
     /** Updates the current user's own theme preference. */

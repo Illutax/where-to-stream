@@ -34,24 +34,36 @@ class UserPreferencesServiceTest {
     }
 
     @Test
-    void themeForReturnsTheStoredThemeOfAKnownUser() {
+    void newAccountsDefaultToSystemThemeEnglishGridAndSixTilesPerRow() {
+        final var user = alice();
+        assertThat(user.getTheme()).isEqualTo(Theme.SYSTEM);
+        assertThat(user.isShowAgeRatings()).isTrue();
+        assertThat(user.getLanguage()).isEqualTo(Language.EN);
+        assertThat(user.isShowGermanTitle()).isFalse();
+        assertThat(user.getViewMode()).isEqualTo(ViewMode.GRID);
+        assertThat(user.getTilesPerRow()).isEqualTo(6);
+    }
+
+    @Test
+    void preferencesForReturnsEveryStoredPreferenceInOneRead() {
         final var user = alice();
         user.changeTheme(Theme.DARK);
+        user.changeShowAgeRatings(false);
+        user.changeLanguage(Language.DE);
+        user.changeShowGermanTitle(true);
+        user.changeViewMode(ViewMode.LIST);
+        user.changeTilesPerRow(3);
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
-        assertThat(service.themeFor("alice")).isEqualTo(Theme.DARK);
+        assertThat(service.preferencesFor("alice"))
+                .isEqualTo(new UserPreferences(Theme.DARK, false, Language.DE, true, ViewMode.LIST, 3));
     }
 
     @Test
-    void themeForFallsBackToSystemForAnUnknownUser() {
+    void preferencesForFallsBackToDefaultsForAnUnknownUser() {
         when(users.findByUsername("ghost")).thenReturn(Optional.empty());
 
-        assertThat(service.themeFor("ghost")).isEqualTo(Theme.SYSTEM);
-    }
-
-    @Test
-    void newAccountsDefaultToTheSystemTheme() {
-        assertThat(alice().getTheme()).isEqualTo(Theme.SYSTEM);
+        assertThat(service.preferencesFor("ghost")).isEqualTo(UserPreferences.defaults());
     }
 
     @Test
@@ -74,18 +86,6 @@ class UserPreferencesServiceTest {
     }
 
     @Test
-    void newAccountsShowAgeRatingsByDefault() {
-        assertThat(alice().isShowAgeRatings()).isTrue();
-    }
-
-    @Test
-    void showAgeRatingsForFallsBackToTrueForAnUnknownUser() {
-        when(users.findByUsername("ghost")).thenReturn(Optional.empty());
-
-        assertThat(service.showAgeRatingsFor("ghost")).isTrue();
-    }
-
-    @Test
     void updateShowAgeRatingsChangesAndSavesTheUser() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
@@ -97,12 +97,6 @@ class UserPreferencesServiceTest {
     }
 
     @Test
-    void newAccountsDefaultToEnglishAndNoGermanTitles() {
-        assertThat(alice().getLanguage()).isEqualTo(Language.EN);
-        assertThat(alice().isShowGermanTitle()).isFalse();
-    }
-
-    @Test
     void updateLanguageChangesAndSavesTheUser() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
@@ -110,6 +104,39 @@ class UserPreferencesServiceTest {
         service.updateLanguage("alice", Language.DE);
 
         assertThat(user.getLanguage()).isEqualTo(Language.DE);
+        verify(users).save(user);
+    }
+
+    @Test
+    void updateShowGermanTitleChangesAndSavesTheUser() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateShowGermanTitle("alice", true);
+
+        assertThat(user.isShowGermanTitle()).isTrue();
+        verify(users).save(user);
+    }
+
+    @Test
+    void updateViewModeChangesAndSavesTheUser() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateViewMode("alice", ViewMode.LIST);
+
+        assertThat(user.getViewMode()).isEqualTo(ViewMode.LIST);
+        verify(users).save(user);
+    }
+
+    @Test
+    void updateTilesPerRowChangesAndSavesTheUser() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateTilesPerRow("alice", 3);
+
+        assertThat(user.getTilesPerRow()).isEqualTo(3);
         verify(users).save(user);
     }
 
@@ -128,48 +155,6 @@ class UserPreferencesServiceTest {
         when(users.findByUsername("bob")).thenReturn(Optional.of(bob));
 
         assertThat(service.usernameAvailable("bob", "alice")).isFalse();
-    }
-
-    @Test
-    void newAccountsDefaultToTheGridViewWithSixTilesPerRow() {
-        assertThat(alice().getViewMode()).isEqualTo(ViewMode.GRID);
-        assertThat(alice().getTilesPerRow()).isEqualTo(6);
-    }
-
-    @Test
-    void viewModeForFallsBackToGridForAnUnknownUser() {
-        when(users.findByUsername("ghost")).thenReturn(Optional.empty());
-
-        assertThat(service.viewModeFor("ghost")).isEqualTo(ViewMode.GRID);
-    }
-
-    @Test
-    void updateViewModeChangesAndSavesTheUser() {
-        final var user = alice();
-        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
-
-        service.updateViewMode("alice", ViewMode.LIST);
-
-        assertThat(user.getViewMode()).isEqualTo(ViewMode.LIST);
-        verify(users).save(user);
-    }
-
-    @Test
-    void tilesPerRowForFallsBackToSixForAnUnknownUser() {
-        when(users.findByUsername("ghost")).thenReturn(Optional.empty());
-
-        assertThat(service.tilesPerRowFor("ghost")).isEqualTo(6);
-    }
-
-    @Test
-    void updateTilesPerRowChangesAndSavesTheUser() {
-        final var user = alice();
-        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
-
-        service.updateTilesPerRow("alice", 3);
-
-        assertThat(user.getTilesPerRow()).isEqualTo(3);
-        verify(users).save(user);
     }
 
     @Test

@@ -9,10 +9,18 @@ import tech.dobler.werstreamt.domain.ViewMode;
 import tech.dobler.werstreamt.persistence.AppUser;
 import tech.dobler.werstreamt.persistence.AppUserRepository;
 
+import java.util.function.Consumer;
+
 /**
- * Reads and updates a user's own UI preferences (currently just the colour-scheme theme). Keyed by
- * the authenticated username handed down from the presentation layer — the SPA loads the theme via
- * {@code /api/me} and changes it via {@code PUT /api/me/theme}.
+ * Reads and updates a user's own UI preferences (theme, language, age-rating badges, German
+ * titles, library view mode, tiles-per-row). Keyed by the authenticated username handed down from
+ * the presentation layer — the SPA loads every preference in one {@code GET /api/me} and changes
+ * one at a time via {@code PUT /api/me/<preference>}.
+ *
+ * <p>One {@link #preferencesFor} read replaces what used to be six separate {@code xFor(username)}
+ * getters (one DB round-trip instead of up to six); the six {@code updateX} methods stay separate
+ * (each still persists independently, mirroring the six distinct PUT endpoints) but now share the
+ * {@link #update} load-mutate-save helper instead of repeating it.
  */
 @Service
 @RequiredArgsConstructor
@@ -20,76 +28,42 @@ public class UserPreferencesService {
 
     private final AppUserRepository users;
 
-    /** The user's theme preference, or {@link Theme#SYSTEM} if the user is unknown. */
-    public Theme themeFor(String username) {
-        return users.findByUsername(username).map(AppUser::getTheme).orElse(Theme.SYSTEM);
+    /** Every preference for {@code username} at once, or the defaults for an unknown user. */
+    public UserPreferences preferencesFor(String username) {
+        return users.findByUsername(username)
+                .map(u -> new UserPreferences(u.getTheme(), u.isShowAgeRatings(), u.getLanguage(),
+                        u.isShowGermanTitle(), u.getViewMode(), u.getTilesPerRow()))
+                .orElseGet(UserPreferences::defaults);
     }
 
     @Transactional
     public void updateTheme(String username, Theme theme) {
-        final var user = user(username);
-        user.changeTheme(theme);
-        users.save(user);
-    }
-
-    /** Whether the user wants the age-rating badges, defaulting to {@code true} for unknown users. */
-    public boolean showAgeRatingsFor(String username) {
-        return users.findByUsername(username).map(AppUser::isShowAgeRatings).orElse(true);
+        update(username, user -> user.changeTheme(theme));
     }
 
     @Transactional
     public void updateShowAgeRatings(String username, boolean show) {
-        final var user = user(username);
-        user.changeShowAgeRatings(show);
-        users.save(user);
-    }
-
-    /** The user's UI language, or {@link Language#EN} if the user is unknown. */
-    public Language languageFor(String username) {
-        return users.findByUsername(username).map(AppUser::getLanguage).orElse(Language.EN);
+        update(username, user -> user.changeShowAgeRatings(show));
     }
 
     @Transactional
     public void updateLanguage(String username, Language language) {
-        final var user = user(username);
-        user.changeLanguage(language);
-        users.save(user);
-    }
-
-    /** Whether the user wants German titles, defaulting to {@code false} for unknown users. */
-    public boolean showGermanTitleFor(String username) {
-        return users.findByUsername(username).map(AppUser::isShowGermanTitle).orElse(false);
+        update(username, user -> user.changeLanguage(language));
     }
 
     @Transactional
     public void updateShowGermanTitle(String username, boolean show) {
-        final var user = user(username);
-        user.changeShowGermanTitle(show);
-        users.save(user);
-    }
-
-    /** The user's preferred library layout, or {@link ViewMode#GRID} if the user is unknown. */
-    public ViewMode viewModeFor(String username) {
-        return users.findByUsername(username).map(AppUser::getViewMode).orElse(ViewMode.GRID);
+        update(username, user -> user.changeShowGermanTitle(show));
     }
 
     @Transactional
     public void updateViewMode(String username, ViewMode viewMode) {
-        final var user = user(username);
-        user.changeViewMode(viewMode);
-        users.save(user);
-    }
-
-    /** Tiles per row in the grid view, defaulting to {@code 6} for unknown users. */
-    public int tilesPerRowFor(String username) {
-        return users.findByUsername(username).map(AppUser::getTilesPerRow).orElse(6);
+        update(username, user -> user.changeViewMode(viewMode));
     }
 
     @Transactional
     public void updateTilesPerRow(String username, int tilesPerRow) {
-        final var user = user(username);
-        user.changeTilesPerRow(tilesPerRow);
-        users.save(user);
+        update(username, user -> user.changeTilesPerRow(tilesPerRow));
     }
 
     /** Whether {@code newUsername} may be taken by {@code currentUsername} (free, or their own name). */
@@ -102,8 +76,12 @@ public class UserPreferencesService {
     /** Renames the login username. The caller must have checked {@link #usernameAvailable}. */
     @Transactional
     public void updateUsername(String currentUsername, String newUsername) {
-        final var user = user(currentUsername);
-        user.rename(newUsername);
+        update(currentUsername, user -> user.rename(newUsername));
+    }
+
+    private void update(String username, Consumer<AppUser> mutator) {
+        final var user = user(username);
+        mutator.accept(user);
         users.save(user);
     }
 
