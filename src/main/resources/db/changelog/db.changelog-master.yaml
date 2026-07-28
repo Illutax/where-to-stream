@@ -38,3 +38,6 @@ databaseChangeLog:
   - include:
       file: changes/013-user-grid-view-prefs.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/014-index-query-cache-imdb-id.xml
+      relativeToChangelogFile: true

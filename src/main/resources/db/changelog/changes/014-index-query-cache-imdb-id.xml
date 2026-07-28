@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="014-index-query-cache-imdb-id" author="vdobler">
+        <comment>
+            query_meta.imdb_id and query_result.imdb_id are looked up on every cache read/write
+            (the busiest tables in the app) but had no index, unlike every other imdb_id-keyed
+            table (watchlist_entry, title_meta, title_poster). Full table scans on every search.
+        </comment>
+        <createIndex tableName="query_meta" indexName="ix_query_meta_imdb_id">
+            <column name="imdb_id"/>
+        </createIndex>
+        <createIndex tableName="query_result" indexName="ix_query_result_imdb_id">
+            <column name="imdb_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
