@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.werstreamt.application.dto.WatchlistDto;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
@@ -83,10 +84,10 @@ class WatchlistImportServiceTest {
 
         final WatchlistImportResultDto result = newService().importCsv(USER, anyCsv());
 
-        assertThat(result.added()).isEqualTo(1);
-        assertThat(result.updated()).isEqualTo(1);
-        assertThat(result.removed()).isEqualTo(1);
-        assertThat(result.total()).isEqualTo(3);
+        assertThat(result)
+                .extracting(WatchlistImportResultDto::added, WatchlistImportResultDto::updated,
+                        WatchlistImportResultDto::removed, WatchlistImportResultDto::total)
+                .containsExactly(1, 1, 1, 3);
 
         // tt4 inserted, tt2 mutated + saved, tt3 deleted, tt1 untouched (no save for an unchanged row).
         final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
@@ -189,12 +190,12 @@ class WatchlistImportServiceTest {
 
         final var result = newService().importCsv(USER, anyCsv());
 
-        assertThat(result.added()).isEqualTo(1);
-        assertThat(result.total()).isEqualTo(1);
+        assertThat(result).extracting(WatchlistImportResultDto::added, WatchlistImportResultDto::total)
+                .containsExactly(1, 1);
         final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
         verify(repository).save(saved.capture());
-        assertThat(saved.getValue().getName()).isEqualTo("Second");
-        assertThat(saved.getValue().isRated()).isTrue();
+        assertThat(saved.getValue()).extracting(WatchlistEntry::getName, WatchlistEntry::isRated)
+                .containsExactly("Second", true);
     }
 
     @Test
@@ -211,8 +212,7 @@ class WatchlistImportServiceTest {
 
         final var status = newService().status(USER);
 
-        assertThat(status.count()).isEqualTo(5);
-        assertThat(status.lastImportedAt()).isEqualTo(NOW);
+        assertThat(status).extracting(WatchlistDto::count, WatchlistDto::lastImportedAt).containsExactly(5L, NOW);
     }
 
     @Test
@@ -239,11 +239,10 @@ class WatchlistImportServiceTest {
 
         final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
         verify(repository).save(saved.capture());
-        assertThat(saved.getValue().getImdbId()).isEqualTo(id("tt1"));
-        assertThat(saved.getValue().getName()).isEqualTo("The Matrix");
-        assertThat(saved.getValue().getYear()).isEqualTo(ReleaseYear.of(1999));
-        assertThat(saved.getValue().isRated()).isFalse();
-        assertThat(saved.getValue().getAdded()).isEqualTo(WatchlistDate.of("2026-01-01"));
+        assertThat(saved.getValue())
+                .extracting(WatchlistEntry::getImdbId, WatchlistEntry::getName, WatchlistEntry::getYear,
+                        WatchlistEntry::isRated, WatchlistEntry::getAdded)
+                .containsExactly(id("tt1"), "The Matrix", ReleaseYear.of(1999), false, WatchlistDate.of("2026-01-01"));
     }
 
     @Test

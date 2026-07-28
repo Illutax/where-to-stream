@@ -77,9 +77,8 @@ class GoogleOidcUserServiceTest {
         final var captor = org.mockito.ArgumentCaptor.forClass(AppUser.class);
         verify(users).save(captor.capture());
         final var saved = captor.getValue();
-        assertThat(saved.getUsername()).isEqualTo("alice@example.com");
-        assertThat(saved.getEmail()).isEqualTo("alice@example.com");
-        assertThat(saved.getProvider()).isEqualTo(AuthProvider.GOOGLE);
+        assertThat(saved).extracting(AppUser::getUsername, AppUser::getEmail, AppUser::getProvider)
+                .containsExactly("alice@example.com", "alice@example.com", AuthProvider.GOOGLE);
         assertThat(saved.getRoles()).containsExactly(Role.USER);
 
         assertThat(result.getName()).isEqualTo("alice@example.com");

@@ -2,6 +2,7 @@ package tech.dobler.werstreamt.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import tech.dobler.werstreamt.application.ValidationException;
 import tech.dobler.werstreamt.domain.ScrapingException;
 
@@ -15,8 +16,8 @@ class ApiExceptionHandlerTest {
     void validationExceptionDefaultsToBadRequest() {
         final var problem = handler.handleValidation(new ValidationException("A theme is required."));
 
-        assertThat(problem.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
-        assertThat(problem.getDetail()).isEqualTo("A theme is required.");
+        assertThat(problem).extracting(ProblemDetail::getStatus, ProblemDetail::getDetail)
+                .containsExactly(HttpStatus.BAD_REQUEST.value(), "A theme is required.");
     }
 
     @Test
@@ -31,7 +32,7 @@ class ApiExceptionHandlerTest {
         final var cause = new java.io.IOException("connection reset");
         final var problem = handler.handleScraping(new ScrapingException("Query for imdbId 'tt1' failed", cause));
 
-        assertThat(problem.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY.value());
-        assertThat(problem.getDetail()).isEqualTo("Query for imdbId 'tt1' failed");
+        assertThat(problem).extracting(ProblemDetail::getStatus, ProblemDetail::getDetail)
+                .containsExactly(HttpStatus.BAD_GATEWAY.value(), "Query for imdbId 'tt1' failed");
     }
 }

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.werstreamt.application.dto.MetaDto;
 import tech.dobler.werstreamt.domain.AgeRating;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.services.ImdbTitleClient.ImdbTitleData;
@@ -32,9 +33,7 @@ class TitleInfoServiceTest {
 
         final var meta = service.metaFor(ID);
 
-        assertThat(meta).isPresent();
-        assertThat(meta.get().rating()).isEqualTo(rating);
-        assertThat(meta.get().germanTitle()).isEqualTo("Der Pate");
+        assertThat(meta).contains(new MetaDto(rating, "Der Pate"));
     }
 
     @Test
@@ -43,9 +42,7 @@ class TitleInfoServiceTest {
 
         final var meta = service.metaFor(ID);
 
-        assertThat(meta).isPresent();
-        assertThat(meta.get().rating()).isNull();
-        assertThat(meta.get().germanTitle()).isNull();
+        assertThat(meta).contains(new MetaDto(null, null));
     }
 
     @Test

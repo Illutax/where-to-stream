@@ -57,9 +57,9 @@ class TitleMetaServiceTest {
 
         final var data = service().get(TT);
 
-        assertThat(data).get().extracting(ImdbTitleData::posterUrl).isEqualTo("/p.jpg");
-        assertThat(data.get().rating()).isEqualTo(AgeRating.fsk("16"));
-        assertThat(data.get().germanTitle()).isEqualTo("Der Pate");
+        assertThat(data).get()
+                .extracting(ImdbTitleData::posterUrl, ImdbTitleData::rating, ImdbTitleData::germanTitle)
+                .containsExactly("/p.jpg", AgeRating.fsk("16"), "Der Pate");
         verifyNoInteractions(client);
     }
 
@@ -91,8 +91,7 @@ class TitleMetaServiceTest {
         assertThat(service.posterPath(TT)).isEmpty();
         final var data = service.get(TT);
         assertThat(data).isPresent();
-        assertThat(data.get().rating()).isNull();
-        assertThat(data.get().germanTitle()).isNull();
+        assertThat(data).get().extracting(ImdbTitleData::rating, ImdbTitleData::germanTitle).containsOnlyNulls();
         verifyNoInteractions(client);
     }
 

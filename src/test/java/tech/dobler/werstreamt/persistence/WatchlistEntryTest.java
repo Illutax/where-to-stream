@@ -21,8 +21,7 @@ class WatchlistEntryTest {
         final var entry = WatchlistEntry.of(USER, ImdbId.of("tt1"), "The Matrix", null,
                 WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(1999), NOW);
 
-        assertThat(entry.getUrl()).isNull();
-        assertThat(entry.urlAsUri()).isNull();
+        assertThat(entry).extracting(WatchlistEntry::getUrl, WatchlistEntry::urlAsUri).containsOnlyNulls();
     }
 
     @Test
@@ -31,8 +30,8 @@ class WatchlistEntryTest {
         final var entry = WatchlistEntry.of(USER, ImdbId.of("tt1"), "The Matrix", uri,
                 WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(1999), NOW);
 
-        assertThat(entry.getUrl()).isEqualTo(uri.toString());
-        assertThat(entry.urlAsUri()).isEqualTo(uri);
+        assertThat(entry).extracting(WatchlistEntry::getUrl, WatchlistEntry::urlAsUri)
+                .containsExactly(uri.toString(), uri);
     }
 
     @Test
@@ -43,8 +42,7 @@ class WatchlistEntryTest {
 
         entry.update("The Matrix", null, WatchlistDate.of("2021-01-01"), true, ReleaseYear.of(1999));
 
-        assertThat(entry.getUrl()).isNull();
-        assertThat(entry.isRated()).isTrue();
+        assertThat(entry).extracting(WatchlistEntry::getUrl, WatchlistEntry::isRated).containsExactly(null, true);
     }
 
     @Test

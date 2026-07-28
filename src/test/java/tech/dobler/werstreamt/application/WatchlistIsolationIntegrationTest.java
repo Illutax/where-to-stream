@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.Role;
@@ -123,8 +124,8 @@ class WatchlistIsolationIntegrationTest {
         // Re-import for alice: keep tt2, drop tt1, add tt4. Bob shares tt1 but must be untouched.
         final var result = importService.importCsv(alice, csv(row("tt2", "Beta", false), row("tt4", "Delta", false)));
 
-        assertThat(result.added()).isEqualTo(1);
-        assertThat(result.removed()).isEqualTo(1);
+        assertThat(result).extracting(WatchlistImportResultDto::added, WatchlistImportResultDto::removed)
+                .containsExactly(1, 1);
         assertThat(catalog.findAll(alice)).extracting(ImdbEntry::imdbId)
                 .containsExactlyInAnyOrder(ImdbId.of("tt2"), ImdbId.of("tt4"));
         // Bob still has both his titles — alice removing tt1 did not remove bob's tt1.

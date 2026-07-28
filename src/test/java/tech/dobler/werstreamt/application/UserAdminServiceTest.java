@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import tech.dobler.werstreamt.application.dto.CreateUserRequest;
 import tech.dobler.werstreamt.application.dto.UpdateUserRequest;
+import tech.dobler.werstreamt.application.dto.UserDto;
 import tech.dobler.werstreamt.domain.AuthProvider;
 import tech.dobler.werstreamt.domain.Role;
 import tech.dobler.werstreamt.persistence.AppUser;
@@ -60,8 +61,7 @@ class UserAdminServiceTest {
 
         final var dto = service.create(new CreateUserRequest("bob", "secret", "bob@x", List.of(Role.USER)));
 
-        assertThat(dto.username()).isEqualTo("bob");
-        assertThat(dto.roles()).containsExactly("USER");
+        assertThat(dto).extracting(UserDto::username, UserDto::roles).containsExactly("bob", List.of("USER"));
         verify(passwordEncoder).encode("secret");
     }
 

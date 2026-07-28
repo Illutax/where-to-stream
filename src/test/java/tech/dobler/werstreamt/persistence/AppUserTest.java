@@ -18,18 +18,17 @@ class AppUserTest {
     void localBuildsAPasswordBearingLocalAccount() {
         final var user = AppUser.local("bob", "{bcrypt}hash", "bob@x", Set.of(Role.USER), NOW);
 
-        assertThat(user.getUsername()).isEqualTo("bob");
-        assertThat(user.getPasswordHash()).isEqualTo("{bcrypt}hash");
-        assertThat(user.getProvider()).isEqualTo(AuthProvider.LOCAL);
-        assertThat(user.isEnabled()).isTrue();
+        assertThat(user)
+                .extracting(AppUser::getUsername, AppUser::getPasswordHash, AppUser::getProvider, AppUser::isEnabled)
+                .containsExactly("bob", "{bcrypt}hash", AuthProvider.LOCAL, true);
     }
 
     @Test
     void fromProviderBuildsAPasswordlessOidcAccount() {
         final var user = AppUser.fromProvider("bob@x", "bob@x", AuthProvider.GOOGLE, Set.of(Role.USER), NOW);
 
-        assertThat(user.getPasswordHash()).isNull();
-        assertThat(user.getProvider()).isEqualTo(AuthProvider.GOOGLE);
+        assertThat(user).extracting(AppUser::getPasswordHash, AppUser::getProvider)
+                .containsExactly(null, AuthProvider.GOOGLE);
     }
 
     @Test

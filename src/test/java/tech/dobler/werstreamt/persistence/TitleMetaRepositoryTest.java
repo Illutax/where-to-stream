@@ -29,10 +29,10 @@ class TitleMetaRepositoryTest {
         entityManager.clear();
 
         final var loaded = sut.findByImdbId(ImdbId.of("tt0110912")).orElseThrow();
-        assertThat(loaded.getPosterPath()).isEqualTo("/pulp.jpg");
-        assertThat(loaded.getRatingSystem()).isEqualTo(RatingSystem.FSK);
-        assertThat(loaded.getRatingLabel()).isEqualTo("16");
-        assertThat(loaded.getGermanTitle()).isEqualTo("Pulp Fiction");
+        assertThat(loaded)
+                .extracting(TitleMeta::getPosterPath, TitleMeta::getRatingSystem, TitleMeta::getRatingLabel,
+                        TitleMeta::getGermanTitle)
+                .containsExactly("/pulp.jpg", RatingSystem.FSK, "16", "Pulp Fiction");
     }
 
     @Test
@@ -42,9 +42,9 @@ class TitleMetaRepositoryTest {
         entityManager.clear();
 
         final var loaded = sut.findByImdbId(ImdbId.of("tt9999999")).orElseThrow();
-        assertThat(loaded.getPosterPath()).isNull();
-        assertThat(loaded.getRatingSystem()).isNull();
-        assertThat(loaded.getRatingLabel()).isNull();
-        assertThat(loaded.getGermanTitle()).isNull();
+        assertThat(loaded)
+                .extracting(TitleMeta::getPosterPath, TitleMeta::getRatingSystem, TitleMeta::getRatingLabel,
+                        TitleMeta::getGermanTitle)
+                .containsOnlyNulls();
     }
 }

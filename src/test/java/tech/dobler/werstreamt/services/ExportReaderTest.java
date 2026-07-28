@@ -93,8 +93,8 @@ class ExportReaderTest {
 
         final ImdbEntry entry = exportReader.parse(in).getFirst();
 
-        assertThat(entry.imdbId()).isEqualTo(ImdbId.of("tt1337"));
-        assertThat(entry.url()).isEqualTo(URI.create("https://www.imdb.com/title/tt1337/"));
+        assertThat(entry).extracting(ImdbEntry::imdbId, ImdbEntry::url)
+                .containsExactly(ImdbId.of("tt1337"), URI.create("https://www.imdb.com/title/tt1337/"));
     }
 
     @Test

@@ -148,10 +148,10 @@ class WerStreamtEsApiClientTest {
                 offering("90 Min. | Deutsch", CHECK, "-", "-")));
 
         final var netflix = single(results, "Netflix");
-        assertThat(netflix.flatrate()).isTrue();
-        assertThat(netflix.availabilities()).isEmpty();
-        assertThat(netflix.isAvailable()).isTrue();
-        assertThat(netflix.languages()).isNull(); // single offering ⇒ no differentiator
+        assertThat(netflix)
+                .extracting(QueryResult::flatrate, QueryResult::availabilities, QueryResult::isAvailable,
+                        QueryResult::languages)
+                .containsExactly(true, List.of(), true, null); // single offering ⇒ no language differentiator
     }
 
     @Test
@@ -165,13 +165,12 @@ class WerStreamtEsApiClientTest {
         assertThat(amazon.flatrate()).isFalse();
 
         final var rent = byType(amazon, AvailabilityType.RENT);
-        assertThat(rent.sd().value()).contains("3.99");
-        assertThat(rent.hd().value()).contains("5.99");
-        assertThat(rent.fourK()).isNull();
+        assertThat(rent).extracting(a -> a.sd().value().trim(), a -> a.hd().value().trim(), Availability::fourK)
+                .containsExactly("3.99 €", "5.99 €", null);
 
         final var buy = byType(amazon, AvailabilityType.BUY);
-        assertThat(buy.hd().value()).contains("9.99");
-        assertThat(buy.sd()).isNull();
+        assertThat(buy).extracting(a -> a.hd().value().trim(), Availability::sd)
+                .containsExactly("9.99 €", null);
     }
 
     @Test

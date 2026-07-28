@@ -26,17 +26,11 @@ class AgeRatingTest {
 
     @Test
     void fskBuildsAnFskRating() {
-        final var rating = AgeRating.fsk("12");
-
-        assertThat(rating.system()).isEqualTo(AgeRating.RatingSystem.FSK);
-        assertThat(rating.label()).isEqualTo("12");
+        assertThat(AgeRating.fsk("12")).isEqualTo(new AgeRating(AgeRating.RatingSystem.FSK, "12"));
     }
 
     @Test
     void otherBuildsAFallbackRating() {
-        final var rating = AgeRating.other("PG-13");
-
-        assertThat(rating.system()).isEqualTo(AgeRating.RatingSystem.OTHER);
-        assertThat(rating.label()).isEqualTo("PG-13");
+        assertThat(AgeRating.other("PG-13")).isEqualTo(new AgeRating(AgeRating.RatingSystem.OTHER, "PG-13"));
     }
 }

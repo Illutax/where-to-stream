@@ -116,9 +116,10 @@ class ImdbSuggestionClientTest {
         final var results = ImdbSuggestionClient.parse(json, 10);
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).imdbId()).isEqualTo(ImdbId.of("tt0133093"));
-        assertThat(results.get(0).name()).isEqualTo("The Matrix");
-        assertThat(results.get(0).year().value()).isEqualTo(1999);
+        assertThat(results.get(0))
+                .extracting(ImdbSuggestionClient.ImdbSuggestion::imdbId, ImdbSuggestionClient.ImdbSuggestion::name,
+                        s -> s.year().value())
+                .containsExactly(ImdbId.of("tt0133093"), "The Matrix", 1999);
     }
 
     @Test

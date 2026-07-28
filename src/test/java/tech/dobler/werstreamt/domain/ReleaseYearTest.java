@@ -16,15 +16,15 @@ class ReleaseYearTest {
     void zeroMeansNotYetReleased() {
         final var year = ReleaseYear.of(0);
 
-        assertThat(year.isReleased()).isFalse();
-        assertThat(year.display()).isEqualTo(ReleaseYear.NOT_YET_RELEASED);
+        assertThat(year).extracting(ReleaseYear::isReleased, ReleaseYear::display)
+                .containsExactly(false, ReleaseYear.NOT_YET_RELEASED);
     }
 
     @Test
     void aPositiveYearIsReleasedAndDisplaysAsANumber() {
         final var year = ReleaseYear.of(1999);
 
-        assertThat(year.isReleased()).isTrue();
-        assertThat(year.display()).isEqualTo("1999");
+        assertThat(year).extracting(ReleaseYear::isReleased, ReleaseYear::display)
+                .containsExactly(true, "1999");
     }
 }

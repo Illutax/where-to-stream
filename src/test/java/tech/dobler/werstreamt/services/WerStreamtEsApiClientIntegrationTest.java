@@ -66,8 +66,8 @@ class WerStreamtEsApiClientIntegrationTest {
 
         final QueryResult first = prime.getFirst();
         assertThat(first.flatrate()).isFalse();
-        assertThat(byType(first, AvailabilityType.RENT).sd().value()).contains("2.99");
-        assertThat(byType(first, AvailabilityType.RENT).hd().value()).contains("3.99");
+        assertThat(byType(first, AvailabilityType.RENT)).extracting(a -> a.sd().value().trim(), a -> a.hd().value().trim())
+                .containsExactly("2.99 €", "3.99 €");
         assertThat(byType(first, AvailabilityType.BUY).hd().value()).contains("7.99");
     }
 
@@ -75,10 +75,10 @@ class WerStreamtEsApiClientIntegrationTest {
     void flatrateProviderHasNoPricesAndNoLanguageSuffix() throws Exception {
         final QueryResult hoh = single(parseFixture(), "Home of Horror");
 
-        assertThat(hoh.flatrate()).isTrue();
-        assertThat(hoh.isAvailable()).isTrue();
-        assertThat(hoh.availabilities()).isEmpty();
-        assertThat(hoh.languages()).isNull(); // single offering ⇒ no differentiator
+        assertThat(hoh)
+                .extracting(QueryResult::flatrate, QueryResult::isAvailable, QueryResult::availabilities,
+                        QueryResult::languages)
+                .containsExactly(true, true, List.of(), null); // single offering ⇒ no language differentiator
     }
 
     @Test
@@ -86,14 +86,14 @@ class WerStreamtEsApiClientIntegrationTest {
         final List<QueryResult> results = parseFixture();
 
         final QueryResult sky = single(results, "Sky Store");
-        assertThat(byType(sky, AvailabilityType.RENT).hd().value()).contains("3.99");
-        assertThat(byType(sky, AvailabilityType.RENT).sd()).isNull();
+        assertThat(byType(sky, AvailabilityType.RENT)).extracting(a -> a.hd().value().trim(), Availability::sd)
+                .containsExactly("3.99 €", null);
         assertThat(byType(sky, AvailabilityType.BUY).hd().value()).contains("9.99");
         assertThat(sky.languages()).isNull();
 
         final QueryResult apple = single(results, "Apple TV");
-        assertThat(byType(apple, AvailabilityType.RENT).sd().value()).contains("4.99");
-        assertThat(byType(apple, AvailabilityType.RENT).hd().value()).contains("4.99");
+        assertThat(byType(apple, AvailabilityType.RENT)).extracting(a -> a.sd().value().trim(), a -> a.hd().value().trim())
+                .containsExactly("4.99 €", "4.99 €");
     }
 
     private static QueryResult single(List<QueryResult> results, String name) {

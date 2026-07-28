@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.werstreamt.application.dto.ImdbSearchResultDto;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.ReleaseYear;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,10 +41,8 @@ class ImdbSearchServiceTest {
 
         final var results = service.search(USER, "matrix");
 
-        assertThat(results).hasSize(2);
-        assertThat(results.get(0).onWatchlist()).isTrue();
-        assertThat(results.get(0).name()).isEqualTo("The Matrix");
-        assertThat(results.get(1).onWatchlist()).isFalse();
+        assertThat(results).extracting(ImdbSearchResultDto::name, ImdbSearchResultDto::onWatchlist)
+                .containsExactly(tuple("The Matrix", true), tuple("The Matrix Resurrections", false));
     }
 
     @Test

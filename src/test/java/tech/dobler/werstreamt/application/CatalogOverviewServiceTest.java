@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,11 +64,10 @@ class CatalogOverviewServiceTest {
 
         final List<OverviewEntryDto> overview = service.overview(USER);
 
-        // sorted by name: Apple before Zebra
-        assertThat(overview).extracting(OverviewEntryDto::name).containsExactly("Apple", "Zebra");
-        // available services rendered for the resolved entry, null for the unavailable one
-        assertThat(overview.get(0).services()).isEqualTo("Netflix");
-        assertThat(overview.get(1).services()).isNull();
+        // sorted by name: Apple before Zebra; available services rendered for the resolved entry,
+        // null for the unavailable one.
+        assertThat(overview).extracting(OverviewEntryDto::name, OverviewEntryDto::services)
+                .containsExactly(tuple("Apple", "Netflix"), tuple("Zebra", null));
 
         // single batched lookup (no N+1)
         final ArgumentCaptor<Collection<ImdbId>> captor = ArgumentCaptor.captor();

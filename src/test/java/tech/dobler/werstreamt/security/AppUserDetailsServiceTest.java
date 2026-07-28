@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import tech.dobler.werstreamt.domain.AuthProvider;
 import tech.dobler.werstreamt.domain.Role;
@@ -36,8 +37,8 @@ class AppUserDetailsServiceTest {
 
         final var details = service.loadUserByUsername("admin");
 
-        assertThat(details.getPassword()).isEqualTo("{bcrypt}hash");
-        assertThat(details.isEnabled()).isTrue();
+        assertThat(details).extracting(UserDetails::getPassword, UserDetails::isEnabled)
+                .containsExactly("{bcrypt}hash", true);
         assertThat(details.getAuthorities())
                 .extracting("authority")
                 .contains("ROLE_ADMIN", "ROLE_USER");

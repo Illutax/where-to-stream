@@ -89,9 +89,9 @@ class ImdbTitleClientTest {
 
         final var data = ImdbTitleClient.parse(json);
 
-        assertThat(data.posterUrl()).isEqualTo(POSTER);
-        assertThat(data.rating().system()).isEqualTo(RatingSystem.FSK);
-        assertThat(data.rating().label()).isEqualTo("16");
+        assertThat(data).extracting(ImdbTitleClient.ImdbTitleData::posterUrl,
+                        d -> d.rating().system(), d -> d.rating().label())
+                .containsExactly(POSTER, RatingSystem.FSK, "16");
     }
 
     @Test
@@ -102,8 +102,8 @@ class ImdbTitleClientTest {
 
         final var data = ImdbTitleClient.parse(json);
 
-        assertThat(data.rating().system()).isEqualTo(RatingSystem.OTHER);
-        assertThat(data.rating().label()).isEqualTo("PG-13");
+        assertThat(data).extracting(d -> d.rating().system(), d -> d.rating().label())
+                .containsExactly(RatingSystem.OTHER, "PG-13");
     }
 
     @Test
@@ -132,8 +132,8 @@ class ImdbTitleClientTest {
 
         final var data = ImdbTitleClient.parse(json);
 
-        assertThat(data.posterUrl()).isEqualTo(POSTER);
-        assertThat(data.rating()).isNull();
+        assertThat(data).extracting(ImdbTitleClient.ImdbTitleData::posterUrl, ImdbTitleClient.ImdbTitleData::rating)
+                .containsExactly(POSTER, null);
     }
 
     @Test
@@ -145,7 +145,7 @@ class ImdbTitleClientTest {
         assertThat(ImdbTitleClient.parse("""
                 {"errors":[{"message":"boom"}]}""").rating()).isNull();
         final var malformed = ImdbTitleClient.parse("not json");
-        assertThat(malformed.posterUrl()).isNull();
-        assertThat(malformed.rating()).isNull();
+        assertThat(malformed).extracting(ImdbTitleClient.ImdbTitleData::posterUrl, ImdbTitleClient.ImdbTitleData::rating)
+                .containsOnlyNulls();
     }
 }

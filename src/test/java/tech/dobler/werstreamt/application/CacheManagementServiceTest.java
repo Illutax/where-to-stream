@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -56,8 +57,8 @@ class CacheManagementServiceTest {
         final var page = service.managePage();
 
         assertThat(page.needsScrapeCount()).isEqualTo(1);
-        assertThat(page.rows()).extracting(ManageRowDto::name).containsExactly("Apple", "Zebra");
-        assertThat(page.rows()).extracting(ManageRowDto::needsScrape).containsExactly(false, true);
+        assertThat(page.rows()).extracting(ManageRowDto::name, ManageRowDto::needsScrape)
+                .containsExactly(tuple("Apple", false), tuple("Zebra", true));
     }
 
     @Test

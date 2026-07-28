@@ -13,7 +13,6 @@ class SearchResultTest {
         final var url = URI.create("https://www.werstreamt.es/the-matrix");
         final var result = new SearchResult("The Matrix", url);
 
-        assertThat(result.name()).isEqualTo("The Matrix");
-        assertThat(result.url()).isEqualTo(url);
+        assertThat(result).extracting(SearchResult::name, SearchResult::url).containsExactly("The Matrix", url);
     }
 }

@@ -41,10 +41,10 @@ public abstract class AbstractTitlePosterRepositoryTests {
         entityManager.clear();
 
         final var loaded = sut.findByImdbId(ImdbId.of("tt0482571")).orElseThrow();
-        assertThat(loaded.getPosterPath()).isEqualTo("/prestige.jpg");
+        assertThat(loaded).extracting(TitlePoster::getPosterPath, TitlePoster::getThumbContentType)
+                .containsExactly("/prestige.jpg", "image/jpeg");
         assertThat(loaded.getThumb()).containsExactly(1, 2, 3, 4);
         assertThat(loaded.getFull()).containsExactly(5, 6, 7, 8, 9);
-        assertThat(loaded.getThumbContentType()).isEqualTo("image/jpeg");
     }
 
     @Test
@@ -69,8 +69,7 @@ public abstract class AbstractTitlePosterRepositoryTests {
         entityManager.clear();
 
         final var loaded = sut.findByImdbId(ImdbId.of("tt9999999")).orElseThrow();
-        assertThat(loaded.getPosterPath()).isNull();
-        assertThat(loaded.getThumb()).isNull();
-        assertThat(loaded.getFull()).isNull();
+        assertThat(loaded).extracting(TitlePoster::getPosterPath, TitlePoster::getThumb, TitlePoster::getFull)
+                .containsOnlyNulls();
     }
 }

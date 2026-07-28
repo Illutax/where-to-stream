@@ -36,12 +36,10 @@ class UserPreferencesServiceTest {
     @Test
     void newAccountsDefaultToSystemThemeEnglishGridAndSixTilesPerRow() {
         final var user = alice();
-        assertThat(user.getTheme()).isEqualTo(Theme.SYSTEM);
-        assertThat(user.isShowAgeRatings()).isTrue();
-        assertThat(user.getLanguage()).isEqualTo(Language.EN);
-        assertThat(user.isShowGermanTitle()).isFalse();
-        assertThat(user.getViewMode()).isEqualTo(ViewMode.GRID);
-        assertThat(user.getTilesPerRow()).isEqualTo(6);
+        assertThat(user)
+                .extracting(AppUser::getTheme, AppUser::isShowAgeRatings, AppUser::getLanguage,
+                        AppUser::isShowGermanTitle, AppUser::getViewMode, AppUser::getTilesPerRow)
+                .containsExactly(Theme.SYSTEM, true, Language.EN, false, ViewMode.GRID, 6);
     }
 
     @Test

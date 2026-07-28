@@ -17,47 +17,54 @@ class ConvertersTest {
     void releaseYearConverterRoundTripsANullValue() {
         final var converter = new ReleaseYearConverter();
 
-        assertThat(converter.convertToDatabaseColumn(null)).isNull();
-        assertThat(converter.convertToEntityAttribute(null)).isNull();
+        assertThat(converter)
+                .extracting(c -> c.convertToDatabaseColumn(null), c -> c.convertToEntityAttribute(null))
+                .containsOnlyNulls();
     }
 
     @Test
     void releaseYearConverterRoundTripsARealValue() {
         final var converter = new ReleaseYearConverter();
 
-        assertThat(converter.convertToDatabaseColumn(ReleaseYear.of(1999))).isEqualTo(1999);
-        assertThat(converter.convertToEntityAttribute(1999)).isEqualTo(ReleaseYear.of(1999));
+        assertThat(converter)
+                .extracting(c -> c.convertToDatabaseColumn(ReleaseYear.of(1999)), c -> c.convertToEntityAttribute(1999))
+                .containsExactly(1999, ReleaseYear.of(1999));
     }
 
     @Test
     void watchlistDateConverterRoundTripsANullValue() {
         final var converter = new WatchlistDateConverter();
 
-        assertThat(converter.convertToDatabaseColumn(null)).isNull();
-        assertThat(converter.convertToEntityAttribute(null)).isNull();
+        assertThat(converter)
+                .extracting(c -> c.convertToDatabaseColumn(null), c -> c.convertToEntityAttribute(null))
+                .containsOnlyNulls();
     }
 
     @Test
     void watchlistDateConverterRoundTripsARealValue() {
         final var converter = new WatchlistDateConverter();
 
-        assertThat(converter.convertToDatabaseColumn(WatchlistDate.of("2020-01-01"))).isEqualTo("2020-01-01");
-        assertThat(converter.convertToEntityAttribute("2020-01-01")).isEqualTo(WatchlistDate.of("2020-01-01"));
+        assertThat(converter)
+                .extracting(c -> c.convertToDatabaseColumn(WatchlistDate.of("2020-01-01")),
+                        c -> c.convertToEntityAttribute("2020-01-01"))
+                .containsExactly("2020-01-01", WatchlistDate.of("2020-01-01"));
     }
 
     @Test
     void imdbIdConverterRoundTripsANullValue() {
         final var converter = new ImdbIdConverter();
 
-        assertThat(converter.convertToDatabaseColumn(null)).isNull();
-        assertThat(converter.convertToEntityAttribute(null)).isNull();
+        assertThat(converter)
+                .extracting(c -> c.convertToDatabaseColumn(null), c -> c.convertToEntityAttribute(null))
+                .containsOnlyNulls();
     }
 
     @Test
     void imdbIdConverterRoundTripsARealValue() {
         final var converter = new ImdbIdConverter();
 
-        assertThat(converter.convertToDatabaseColumn(ImdbId.of("tt1"))).isEqualTo("tt1");
-        assertThat(converter.convertToEntityAttribute("tt1")).isEqualTo(ImdbId.of("tt1"));
+        assertThat(converter)
+                .extracting(c -> c.convertToDatabaseColumn(ImdbId.of("tt1")), c -> c.convertToEntityAttribute("tt1"))
+                .containsExactly("tt1", ImdbId.of("tt1"));
     }
 }
