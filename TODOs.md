@@ -58,12 +58,12 @@ TODO-Tickets:
 - ✅ **TODO-40** — Liquibase-Changesets auf XML umgestellt (portables Schema, `ddl-auto=none`).
 - ✅ **TODO-41** — MariaDB als First-Class-DB (Profil `mariadb`, Treiber, compose-Service);
   Repository-Tests laufen zusätzlich gegen eine Testcontainers-MariaDB.
-
+- ✅ **TODO-1** — Entfernt ImdbApiClient.
 ---
 
 ## Bugs / Korrektheit
 
-### 🔴 TODO-1 — `ImdbApiClient.search()` ist kaputt / ungenutzt
+### ✅ TODO-1 — `ImdbApiClient.search()` ist kaputt / ungenutzt
 `services/ImdbApiClient.java`: lädt das Dokument mit `connect.get()` und gibt dann
 hart `return null;` zurück. Die Klasse ist außerdem kein Spring-Bean (kein `@Service`)
 und wird nirgends produktiv verwendet.
