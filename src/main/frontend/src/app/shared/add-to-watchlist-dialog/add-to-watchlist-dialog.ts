@@ -2,22 +2,31 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { Observable } from 'rxjs';
 import { AgeRatingStore } from '../../core/age-rating-store';
-import { WatchlistApi } from '../../core/api/watchlist-api';
 import { imdbUrl, posterFullUrl, releaseYearDisplay } from '../../core/domain';
 import { GermanTitleStore } from '../../core/german-title-store';
 import { ImdbSearchResult } from '../../core/models';
 import { injectTitleMeta } from '../../core/title-meta';
 import { AgeBadge } from '../age-badge/age-badge';
 
-export type AddToWatchlistDialogData = ImdbSearchResult;
+export interface AddToWatchlistDialogData extends ImdbSearchResult {
+  /**
+   * Performs the actual "add to watchlist" mutation. Owned and constructed by the caller (the
+   * smart `ImdbSearchBox`, which already injects `WatchlistApi`) — this dialog only triggers it
+   * and reflects busy/error state, it never talks to `WatchlistApi` itself.
+   */
+  submit: () => Observable<void>;
+}
 
 /**
  * Confirms adding a search hit to the watchlist. Fetches nothing from IMDb directly: the poster
  * and meta (age rating, German title) come from the app's own DB-cache-first
  * {@code /api/titles/{id}/poster} and {@code /meta} endpoints (via {@link injectTitleMeta}), same
- * as everywhere else in the app. Closes with {@code true} once the title is actually added, so the
- * caller (the search box) can flip that result's `onWatchlist` state locally.
+ * as everywhere else in the app (the same established exception `TitleCell`/`TitleTile` already
+ * use — a component fetching its own per-row metadata isn't the same thing as owning a mutation).
+ * Closes with {@code true} once the title is actually added, so the caller (the search box) can
+ * flip that result's `onWatchlist` state locally.
  */
 @Component({
   selector: 'app-add-to-watchlist-dialog',
@@ -90,7 +99,6 @@ export type AddToWatchlistDialogData = ImdbSearchResult;
 export class AddToWatchlistDialog {
   protected readonly dialogRef = inject(MatDialogRef<AddToWatchlistDialog, boolean>);
   protected readonly data = inject<AddToWatchlistDialogData>(MAT_DIALOG_DATA);
-  private readonly watchlistApi = inject(WatchlistApi);
   protected readonly ageRatingStore = inject(AgeRatingStore);
   private readonly germanTitleStore = inject(GermanTitleStore);
 
@@ -109,7 +117,7 @@ export class AddToWatchlistDialog {
   protected add(): void {
     this.busy.set(true);
     this.error.set(false);
-    this.watchlistApi.addToWatchlist(this.data.imdbId, this.data.name, this.data.year).subscribe({
+    this.data.submit().subscribe({
       next: () => this.dialogRef.close(true),
       error: () => {
         this.busy.set(false);

@@ -95,8 +95,18 @@ describe('ImdbSearchBox', () => {
 
     expect(dialogOpen).toHaveBeenCalledWith(
       AddToWatchlistDialog,
-      { data: { imdbId: 'tt0133093', name: 'The Matrix', year: 1999, onWatchlist: false } },
+      { data: expect.objectContaining({ imdbId: 'tt0133093', name: 'The Matrix', year: 1999, onWatchlist: false }) },
     );
+    // the dialog itself is dumb: it only triggers whatever `submit` it's handed, so the
+    // search box must supply one that actually performs the mutation via WatchlistApi.
+    const { submit } = dialogOpen.mock.calls[0][1].data;
+    expect(typeof submit).toBe('function');
+    let completed = false;
+    submit().subscribe(() => (completed = true));
+    const addReq = httpMock.expectOne((r) => r.url.endsWith('/api/watchlist/tt0133093'));
+    expect(addReq.request.body).toEqual({ name: 'The Matrix', year: 1999 });
+    addReq.flush(null);
+    expect(completed).toBe(true);
     fixture.detectChanges();
     expect(document.querySelector('.search-result-onwatchlist')).not.toBeNull();
   });

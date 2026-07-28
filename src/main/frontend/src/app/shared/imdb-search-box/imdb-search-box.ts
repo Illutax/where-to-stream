@@ -13,6 +13,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { ImdbSearchApi } from '../../core/api/imdb-search-api';
+import { WatchlistApi } from '../../core/api/watchlist-api';
 import { ImdbId } from '../../core/domain';
 import { ImdbSearchResult } from '../../core/models';
 import { AddToWatchlistDialog, AddToWatchlistDialogData } from '../add-to-watchlist-dialog/add-to-watchlist-dialog';
@@ -100,6 +101,7 @@ const MIN_QUERY_LENGTH = 2;
 })
 export class ImdbSearchBox {
   private readonly imdbSearchApi = inject(ImdbSearchApi);
+  private readonly watchlistApi = inject(WatchlistApi);
   private readonly dialog = inject(MatDialog);
   private readonly inputRef = viewChild<ElementRef<HTMLInputElement>>('input');
 
@@ -150,8 +152,12 @@ export class ImdbSearchBox {
     if (!result) {
       return;
     }
+    const data: AddToWatchlistDialogData = {
+      ...result,
+      submit: () => this.watchlistApi.addToWatchlist(result.imdbId, result.name, result.year),
+    };
     this.dialog
-      .open<AddToWatchlistDialog, AddToWatchlistDialogData, boolean>(AddToWatchlistDialog, { data: result })
+      .open<AddToWatchlistDialog, AddToWatchlistDialogData, boolean>(AddToWatchlistDialog, { data })
       .afterClosed()
       .subscribe((added) => {
         if (added) {

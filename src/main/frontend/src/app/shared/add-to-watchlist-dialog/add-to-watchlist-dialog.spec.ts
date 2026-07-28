@@ -2,6 +2,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { Observable, of, throwError } from 'rxjs';
 import { AgeRatingStore } from '../../core/age-rating-store';
 import { imdbId, releaseYear } from '../../core/domain';
 import { GermanTitleStore } from '../../core/german-title-store';
@@ -12,8 +13,9 @@ describe('AddToWatchlistDialog', () => {
   let fixture: ComponentFixture<AddToWatchlistDialog>;
   let httpMock: HttpTestingController;
   let dialogRef: { close: ReturnType<typeof vi.fn> };
+  let submit: ReturnType<typeof vi.fn> & (() => Observable<void>);
 
-  const data: AddToWatchlistDialogData = {
+  const baseData = {
     imdbId: imdbId('tt1'),
     name: 'The Matrix',
     year: releaseYear(1999),
@@ -22,13 +24,15 @@ describe('AddToWatchlistDialog', () => {
 
   function setup(overrides: Partial<AddToWatchlistDialogData> = {}) {
     dialogRef = { close: vi.fn() };
+    submit = vi.fn(() => of(undefined)) as typeof submit;
+    const data: AddToWatchlistDialogData = { ...baseData, submit, ...overrides };
     TestBed.configureTestingModule({
       imports: [AddToWatchlistDialog, translocoTesting()],
       providers: [
         provideHttpClient(withFetch()),
         provideHttpClientTesting(),
         { provide: MatDialogRef, useValue: dialogRef },
-        { provide: MAT_DIALOG_DATA, useValue: { ...data, ...overrides } },
+        { provide: MAT_DIALOG_DATA, useValue: data },
       ],
     });
     fixture = TestBed.createComponent(AddToWatchlistDialog);
@@ -67,30 +71,26 @@ describe('AddToWatchlistDialog', () => {
     expect(fixture.nativeElement.querySelector('h2').textContent?.trim()).toBe('Die Matrix');
   });
 
-  it('shows an Add button and adds the title, closing with true on success', () => {
+  it('shows an Add button that calls the injected submit function and closes with true on success', () => {
     setup({ onWatchlist: false });
     TestBed.inject(AgeRatingStore).init(false);
     TestBed.inject(GermanTitleStore).init(false);
     fixture.detectChanges();
 
     addButton()!.click();
-    fixture.detectChanges();
 
-    const req = httpMock.expectOne((r) => r.url.endsWith('/api/watchlist/tt1'));
-    expect(req.request.body).toEqual({ name: 'The Matrix', year: 1999 });
-    req.flush(null);
-
+    expect(submit).toHaveBeenCalledTimes(1);
     expect(dialogRef.close).toHaveBeenCalledWith(true);
   });
 
-  it('shows an error and stays open when adding fails', () => {
-    setup({ onWatchlist: false });
+  it('shows an error and stays open when the submit function fails', () => {
+    submit = vi.fn(() => throwError(() => new Error('boom'))) as typeof submit;
+    setup({ onWatchlist: false, submit });
     TestBed.inject(AgeRatingStore).init(false);
     TestBed.inject(GermanTitleStore).init(false);
     fixture.detectChanges();
 
     addButton()!.click();
-    httpMock.expectOne((r) => r.url.endsWith('/api/watchlist/tt1')).flush('boom', { status: 409, statusText: 'Conflict' });
     fixture.detectChanges();
 
     expect(dialogRef.close).not.toHaveBeenCalled();
