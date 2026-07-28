@@ -9,7 +9,6 @@ import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.PosterSize;
 
 import java.io.IOException;
-import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -18,12 +17,13 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 /**
  * TMDB-backed {@link PosterSource}: resolves an IMDb id to a {@code poster_path} via the
  * {@code /find} endpoint, then downloads the pre-sized image bytes from the TMDB image CDN. One
  * {@code find} call per title; images come from the CDN. All failures degrade to empty (logged).
+ * Outbound requests are throttled (own {@link RateLimiter}, configured from
+ * {@code tmdb.rate-limit}).
  */
 @Slf4j
 @Service
@@ -31,17 +31,12 @@ public class TmdbPosterSource implements PosterSource {
 
     private final TmdbProperties properties;
     private final HttpClient httpClient;
-    private final long minIntervalNanos;
-    private long nextAllowedNanos = System.nanoTime();
+    private final RateLimiter rateLimiter;
 
     public TmdbPosterSource(TmdbProperties properties) {
         this.properties = properties;
-        this.httpClient = HttpClient.newBuilder()
-                .proxy(ProxySelector.getDefault())
-                .connectTimeout(Duration.ofSeconds(5))
-                .build();
-        final double rps = properties.rateLimit().requestsPerSecond();
-        this.minIntervalNanos = rps <= 0 ? 0 : (long) (TimeUnit.SECONDS.toNanos(1) / rps);
+        this.httpClient = OutboundHttpClients.newClient();
+        this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
     }
 
     @Override
@@ -55,9 +50,10 @@ public class TmdbPosterSource implements PosterSource {
                 .queryParam("api_key", properties.apiKey())
                 .build().toUri();
         try {
-            acquire();
+            rateLimiter.acquire();
             log.debug("Fetching poster metadata for {} from {}", imdbId, redactApiKey(uri));
             final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
+                    .header("User-Agent", OutboundHttpClients.USER_AGENT)
                     .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofString());
             log.trace("Poster metadata for {}: HTTP {} ({} bytes)", imdbId, response.statusCode(), response.body().length());
             if (response.statusCode() != 200) {
@@ -85,9 +81,10 @@ public class TmdbPosterSource implements PosterSource {
         }
         final var uri = URI.create(properties.imageBaseUrl() + "/" + tmdbSize(size) + posterPath);
         try {
-            acquire();
+            rateLimiter.acquire();
             log.debug("Downloading {} poster image: GET {}", size, uri);
             final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
+                    .header("User-Agent", OutboundHttpClients.USER_AGENT)
                     .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() != 200 || response.body().length == 0) {
                 log.warn("TMDB {} image download {} returned HTTP {} ({} bytes)",
@@ -135,22 +132,4 @@ public class TmdbPosterSource implements PosterSource {
         return size == PosterSize.THUMB ? "w92" : "w500";
     }
 
-    private synchronized void acquire() {
-        if (minIntervalNanos == 0) {
-            return;
-        }
-        final long now = System.nanoTime();
-        if (now < nextAllowedNanos) {
-            final long waitNanos = nextAllowedNanos - now;
-            log.trace("Throttled outbound poster request by {}ms", TimeUnit.NANOSECONDS.toMillis(waitNanos));
-            try {
-                TimeUnit.NANOSECONDS.sleep(waitNanos);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            nextAllowedNanos += minIntervalNanos;
-        } else {
-            nextAllowedNanos = now + minIntervalNanos;
-        }
-    }
 }

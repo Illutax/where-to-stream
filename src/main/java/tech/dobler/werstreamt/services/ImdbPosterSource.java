@@ -7,14 +7,12 @@ import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.PosterSize;
 
 import java.io.IOException;
-import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 /**
  * IMDb-backed {@link PosterSource} (the default): the poster reference comes from the shared
@@ -23,32 +21,24 @@ import java.util.concurrent.TimeUnit;
  * CDN. The CDN resizes and re-compresses on the fly via URL params (the {@code _V1_} transform), so
  * a small thumbnail and a larger hover image are two requests against the same base URL — no
  * server-side image processing. All failures degrade to empty (logged). Downloads are throttled
- * (default 10 req/s) to stay polite.
+ * (own {@link RateLimiter}, default 10 req/s) to stay polite.
  */
 @Slf4j
 @Service
 public class ImdbPosterSource implements PosterSource {
 
     private static final String V1 = "_V1_";
-    private static final String USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
     private final ImdbPosterProperties properties;
     private final TitleMetaService titleMetaService;
     private final HttpClient httpClient;
-    private final long minIntervalNanos;
-    private long nextAllowedNanos = System.nanoTime();
+    private final RateLimiter rateLimiter;
 
     public ImdbPosterSource(ImdbPosterProperties properties, TitleMetaService titleMetaService) {
         this.properties = properties;
         this.titleMetaService = titleMetaService;
-        this.httpClient = HttpClient.newBuilder()
-                .proxy(ProxySelector.getDefault())
-                .connectTimeout(Duration.ofSeconds(5))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
-        final double rps = properties.rateLimit().requestsPerSecond();
-        this.minIntervalNanos = rps <= 0 ? 0 : (long) (TimeUnit.SECONDS.toNanos(1) / rps);
+        this.httpClient = OutboundHttpClients.newClient();
+        this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
     }
 
     @Override
@@ -63,10 +53,10 @@ public class ImdbPosterSource implements PosterSource {
         }
         final var uri = URI.create(sizedUrl(posterPath, properties.widthFor(size), properties.qualityFor(size)));
         try {
-            acquire();
+            rateLimiter.acquire();
             log.debug("Downloading {} poster image: GET {}", size, uri);
             final var response = httpClient.send(HttpRequest.newBuilder(uri).GET()
-                    .header("User-Agent", USER_AGENT)
+                    .header("User-Agent", OutboundHttpClients.USER_AGENT)
                     .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() != 200 || response.body().length == 0) {
                 log.warn("IMDb {} image download {} returned HTTP {} ({} bytes)",
@@ -95,24 +85,5 @@ public class ImdbPosterSource implements PosterSource {
             return base;
         }
         return base.substring(0, idx + V1.length()) + "QL" + quality + "_UX" + width + "_.jpg";
-    }
-
-    private synchronized void acquire() {
-        if (minIntervalNanos == 0) {
-            return;
-        }
-        final long now = System.nanoTime();
-        if (now < nextAllowedNanos) {
-            final long waitNanos = nextAllowedNanos - now;
-            log.trace("Throttled outbound poster download by {}ms", TimeUnit.NANOSECONDS.toMillis(waitNanos));
-            try {
-                TimeUnit.NANOSECONDS.sleep(waitNanos);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            nextAllowedNanos += minIntervalNanos;
-        } else {
-            nextAllowedNanos = now + minIntervalNanos;
-        }
     }
 }

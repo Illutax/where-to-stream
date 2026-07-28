@@ -20,8 +20,8 @@ class WerStreamtEsApiClientTest {
     private static final String CHECK = "<i class=\"fi-check\"></i>";
 
     // parse() does not hit the network, so the rate limiter is irrelevant here (disabled).
-    private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(new RateLimiter(
-            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0))));
+    private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(
+            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)));
 
     // --- fixture builders mirroring the real werstreamt.es per-listing structure ---
 

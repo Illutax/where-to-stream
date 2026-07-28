@@ -1,6 +1,5 @@
 package tech.dobler.werstreamt.services;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.HttpStatusException;
 import org.jsoup.nodes.Document;
@@ -8,6 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
+import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.domain.AvailabilityType;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.Price;
@@ -27,10 +27,13 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
     private final URI baseUrl = URI.create("https://www.werstreamt.es/filme/");
     private final RateLimiter rateLimiter;
+
+    public WerStreamtEsApiClient(WerStreamtProperties properties) {
+        this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
+    }
 
     public List<SearchResult> search(String searchTerm) {
         log.info("Searching for: {}", searchTerm);

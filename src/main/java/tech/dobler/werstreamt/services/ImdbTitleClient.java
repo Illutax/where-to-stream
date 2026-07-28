@@ -8,7 +8,6 @@ import tech.dobler.werstreamt.domain.AgeRating;
 import tech.dobler.werstreamt.domain.ImdbId;
 
 import java.io.IOException;
-import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -17,23 +16,20 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 /**
  * The single IMDb GraphQL data access for a title: <strong>one</strong> request returns everything
  * we cache per title — the poster URL and the age rating (and, later, the localized title) — so we
  * never hit the API more than once per film. All failures degrade to empty (logged); a parsed
  * response with no poster/rating is a valid result with null fields. Outbound requests are throttled
- * (shared {@code imdb-poster.rate-limit}). The HTML title page is unusable server-side
- * ({@code www.imdb.com} returns an empty {@code 202} to datacenter IPs), hence the GraphQL API; the
- * data is IMDb's under their terms (limited non-commercial use).
+ * (own {@link RateLimiter}, configured from {@code imdb-poster.rate-limit}). The HTML title page is
+ * unusable server-side ({@code www.imdb.com} returns an empty {@code 202} to datacenter IPs), hence
+ * the GraphQL API; the data is IMDb's under their terms (limited non-commercial use).
  */
 @Slf4j
 @Service
 public class ImdbTitleClient {
 
-    private static final String USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
     /** The German FSK certificate lives under this country id; everything else is a fallback. */
     private static final String GERMANY = "DE";
     /** Minimal GraphQL query; the id is a variable (never string-interpolated). */
@@ -48,29 +44,23 @@ public class ImdbTitleClient {
 
     private final ImdbPosterProperties properties;
     private final HttpClient httpClient;
-    private final long minIntervalNanos;
-    private long nextAllowedNanos = System.nanoTime();
+    private final RateLimiter rateLimiter;
 
     public ImdbTitleClient(ImdbPosterProperties properties) {
         this.properties = properties;
-        this.httpClient = HttpClient.newBuilder()
-                .proxy(ProxySelector.getDefault())
-                .connectTimeout(Duration.ofSeconds(5))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
-        final double rps = properties.rateLimit().requestsPerSecond();
-        this.minIntervalNanos = rps <= 0 ? 0 : (long) (TimeUnit.SECONDS.toNanos(1) / rps);
+        this.httpClient = OutboundHttpClients.newClient();
+        this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
     }
 
     /** Fetches a title's metadata; empty only on a hard failure (so the caller can retry). */
     public Optional<ImdbTitleData> fetch(ImdbId imdbId) {
         final var uri = URI.create(properties.apiUrl());
         try {
-            acquire();
+            rateLimiter.acquire();
             log.debug("Fetching title metadata for {} from {}", imdbId, uri);
             final var request = HttpRequest.newBuilder(uri)
                     .header("Content-Type", "application/json")
-                    .header("User-Agent", USER_AGENT)
+                    .header("User-Agent", OutboundHttpClients.USER_AGENT)
                     .timeout(Duration.ofSeconds(10))
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody(imdbId)))
                     .build();
@@ -158,24 +148,5 @@ public class ImdbTitleClient {
             return AgeRating.other(rating);
         }
         return null;
-    }
-
-    private synchronized void acquire() {
-        if (minIntervalNanos == 0) {
-            return;
-        }
-        final long now = System.nanoTime();
-        if (now < nextAllowedNanos) {
-            final long waitNanos = nextAllowedNanos - now;
-            log.trace("Throttled outbound title request by {}ms", TimeUnit.NANOSECONDS.toMillis(waitNanos));
-            try {
-                TimeUnit.NANOSECONDS.sleep(waitNanos);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            nextAllowedNanos += minIntervalNanos;
-        } else {
-            nextAllowedNanos = now + minIntervalNanos;
-        }
     }
 }

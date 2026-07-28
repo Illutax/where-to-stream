@@ -1,25 +1,26 @@
 package tech.dobler.werstreamt.services;
 
-import org.springframework.stereotype.Component;
-import tech.dobler.werstreamt.configurations.WerStreamtProperties;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.TimeUnit;
 
 /**
- * Simple global throttle for outbound werstreamt.es requests. {@link #acquire()} blocks the
- * calling thread until the next request slot is due, spacing requests at least
- * {@code 1 / requestsPerSecond} apart. It is {@code synchronized}, so it also throttles the
- * parallel pre-cache/refresh runs (which call it from many threads at once). A configured
- * rate of {@code <= 0} disables throttling.
+ * A simple per-integration outbound throttle. Each outbound integration (werstreamt.es scraping,
+ * the IMDb GraphQL client, the IMDb suggestion-search client, the TMDB poster source) constructs
+ * and owns exactly one instance, seeded from its own configurable requests-per-second — rates stay
+ * independently controllable per integration, never shared across them. {@link #acquire()} blocks
+ * the calling thread until the next request slot is due, spacing requests at least
+ * {@code 1 / requestsPerSecond} apart. It is {@code synchronized}, so it also throttles concurrent
+ * callers of the same instance (e.g. a parallel pre-cache/refresh run). A configured rate of
+ * {@code <= 0} disables throttling.
  */
-@Component
+@Slf4j
 public class RateLimiter {
 
     private final long minIntervalNanos;
     private long nextAllowedNanos;
 
-    public RateLimiter(WerStreamtProperties properties) {
-        final double requestsPerSecond = properties.rateLimit().requestsPerSecond();
+    public RateLimiter(double requestsPerSecond) {
         this.minIntervalNanos = requestsPerSecond <= 0
                 ? 0
                 : (long) (TimeUnit.SECONDS.toNanos(1) / requestsPerSecond);
@@ -32,7 +33,9 @@ public class RateLimiter {
         }
         final long now = System.nanoTime();
         if (now < nextAllowedNanos) {
-            sleep(nextAllowedNanos - now);
+            final long waitNanos = nextAllowedNanos - now;
+            log.trace("Throttled outbound request by {}ms", TimeUnit.NANOSECONDS.toMillis(waitNanos));
+            sleep(waitNanos);
             nextAllowedNanos += minIntervalNanos;
         } else {
             nextAllowedNanos = now + minIntervalNanos;

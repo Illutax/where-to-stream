@@ -8,7 +8,6 @@ import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.ReleaseYear;
 
 import java.io.IOException;
-import java.net.ProxySelector;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -20,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Title search against IMDb's public suggestion/typeahead endpoint — the same JSON API IMDb's own
@@ -30,14 +28,11 @@ import java.util.concurrent.TimeUnit;
  * {@link ImdbTitleClient}), which stay served from our own DB cache first and are never duplicated
  * here. The response mixes title ({@code tt…}), person ({@code nm…}) and company ({@code co…}) hits;
  * only titles are kept. Failures degrade to an empty list (logged). Outbound requests are throttled
- * (shared {@code imdb-search.rate-limit}), mirroring {@link ImdbTitleClient}'s rate limiter.
+ * (own {@link RateLimiter}, configured from {@code imdb-search.rate-limit}).
  */
 @Slf4j
 @Service
 public class ImdbSuggestionClient {
-
-    private static final String USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
     /** A single title hit; {@code year} is {@code 0} ("not yet released"/unknown) when absent. */
     public record ImdbSuggestion(ImdbId imdbId, String name, ReleaseYear year) {
@@ -45,18 +40,12 @@ public class ImdbSuggestionClient {
 
     private final ImdbSearchProperties properties;
     private final HttpClient httpClient;
-    private final long minIntervalNanos;
-    private long nextAllowedNanos = System.nanoTime();
+    private final RateLimiter rateLimiter;
 
     public ImdbSuggestionClient(ImdbSearchProperties properties) {
         this.properties = properties;
-        this.httpClient = HttpClient.newBuilder()
-                .proxy(ProxySelector.getDefault())
-                .connectTimeout(Duration.ofSeconds(5))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
-        final double rps = properties.rateLimit().requestsPerSecond();
-        this.minIntervalNanos = rps <= 0 ? 0 : (long) (TimeUnit.SECONDS.toNanos(1) / rps);
+        this.httpClient = OutboundHttpClients.newClient();
+        this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
     }
 
     /** Searches IMDb by title text; empty list on a blank query, any failure, or no matches. */
@@ -67,10 +56,10 @@ public class ImdbSuggestionClient {
         }
         try {
             final var uri = buildUri(properties.apiUrl(), trimmed);
-            acquire();
+            rateLimiter.acquire();
             log.debug("Searching IMDb suggestions for '{}' via {}", trimmed, uri);
             final var request = HttpRequest.newBuilder(uri)
-                    .header("User-Agent", USER_AGENT)
+                    .header("User-Agent", OutboundHttpClients.USER_AGENT)
                     .timeout(Duration.ofSeconds(10))
                     .GET()
                     .build();
@@ -144,24 +133,5 @@ public class ImdbSuggestionClient {
 
     private static ReleaseYear year(Map<?, ?> entry) {
         return entry.get("y") instanceof Number y ? ReleaseYear.of(y.intValue()) : ReleaseYear.of(0);
-    }
-
-    private synchronized void acquire() {
-        if (minIntervalNanos == 0) {
-            return;
-        }
-        final long now = System.nanoTime();
-        if (now < nextAllowedNanos) {
-            final long waitNanos = nextAllowedNanos - now;
-            log.trace("Throttled outbound suggestion request by {}ms", TimeUnit.NANOSECONDS.toMillis(waitNanos));
-            try {
-                TimeUnit.NANOSECONDS.sleep(waitNanos);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            nextAllowedNanos += minIntervalNanos;
-        } else {
-            nextAllowedNanos = now + minIntervalNanos;
-        }
     }
 }
