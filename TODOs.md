@@ -187,15 +187,20 @@ der Cron deployt automatisch Milestones/RCs in den Betrieb.
 `pom.xml`: Plugin ohne fixierte `<version>`.
 - **Akzeptanzkriterium:** Version festnageln für reproduzierbare Builds.
 
-### 🟢 TODO-15 — Port-Inkonsistenz dokumentieren/vereinheitlichen
+### ✅ TODO-15 — Port-Inkonsistenz dokumentieren/vereinheitlichen
 `server.port=8001` (properties), `EXPOSE 8080` (Dockerfile), `SERVER_PORT=8080` (compose).
 Funktioniert, weil compose überschreibt.
 - **Akzeptanzkriterium:** Werte angleichen oder in der README erklären.
+- **Erledigt:** Werte bleiben bewusst unterschiedlich (Compose überschreibt), sind aber jetzt
+  in der README-Konfigurationstabelle dokumentiert (`server.port` → „HTTP port (Docker
+  overrides to 8080)").
 
-### 🟢 TODO-16 — README fehlt
+### ✅ TODO-16 — README fehlt
 Kein Setup-Dokument vorhanden.
 - **Akzeptanzkriterium:** README mit Setup (CSV in `assets/` ablegen, Profile, Port,
   verfügbare Endpunkte) ergänzen.
+- **Erledigt:** Umfassende README (Setup, Prerequisites, Profile inkl. `mariadb`/`google`,
+  Konfigurationstabelle, vollständige `## Endpoints`-Übersicht).
 
 ---
 
@@ -226,12 +231,15 @@ ausgegeben werden.
 
 ## Aus dem Re-Scan (2026-06-27, nach Umsetzung von TODO-6/7/8/9/17/18)
 
-### 🟠 TODO-19 — `/query` umgeht den Cache
+### ✅ TODO-19 — `/query` umgeht den Cache
 `rest/QueryController.query(...)` ruft `werStreamtEsApiClient.query(...)` **direkt** auf und
 scrapet damit bei jedem Aufruf live, während `/search` über `StreamInfoService` (gecacht)
 geht. Inkonsistent und teuer.
 - **Akzeptanzkriterium:** `/query` ebenfalls über `StreamInfoService.resolve(...)` laufen
   lassen (oder den Endpunkt entfernen, falls redundant zu `/search`).
+- **Erledigt (obsolet):** `QueryController`/`/query` existiert nicht mehr. Der heutige
+  Lookup-by-id-Endpunkt `GET /api/search?imdbId=` (`SearchApiController` →
+  `SearchService.resolveByImdbId` → `StreamInfoService.resolve`) läuft bereits über den Cache.
 
 ### 🟠 TODO-20 — Kein zentrales Fehler-Handling
 Scraping-/IO-Fehler werden in `WerStreamtEsApiClient`/`ImdbApiClient` als nacktes
@@ -239,6 +247,12 @@ Scraping-/IO-Fehler werden in `WerStreamtEsApiClient`/`ImdbApiClient` als nackte
 `@ControllerAdvice`/`@ExceptionHandler`.
 - **Akzeptanzkriterium:** Zentrales Exception-Handling ergänzen; IO-Fehler in eine
   domänenspezifische Exception kapseln und sauber als 502/503 o. ä. abbilden.
+- **Teilweise:** `api/ApiExceptionHandler.java` (`@RestControllerAdvice`) existiert
+  mittlerweile, deckt aber nur Anwendungsfehler ab (`InvalidImportException`,
+  `UserManagementException`, `NoSuchWatchlistEntryException`,
+  `WatchlistEntryAlreadyExistsException`). `WerStreamtEsApiClient` wirft IO-Fehler weiterhin
+  als nackte `RuntimeException` (unverändert seit dem Review) — die landen nach wie vor
+  ungefiltert als 500. Bleibt offen.
 
 ### ✅ TODO-21 — `ExportReader` bricht beim ganzen Import ab, wenn eine Zeile fehlerhaft ist
 `services/ExportReader.parse(...)`: `Integer.parseInt(year)` (NumberFormatException) bzw.
@@ -258,10 +272,13 @@ Exportformat ändert.
   (`CSVFormat.builder().setHeader().setSkipHeaderRecord(true)`) und nur die benötigten
   Spalten gezielt referenzieren.
 
-### 🟢 TODO-23 — `ResponseEntity<?>` mit rohem Wildcard
+### ✅ TODO-23 — `ResponseEntity<?>` mit rohem Wildcard
 `rest/QueryController`: `query(...)` und `search(...)` geben `ResponseEntity<?>` zurück —
 keine Typsicherheit für die Aufrufer/Tests.
 - **Akzeptanzkriterium:** Konkrete Rückgabetypen (`ResponseEntity<List<QueryResult>>` o. ä.).
+- **Erledigt (obsolet):** `QueryController` existiert nicht mehr; kein Controller im
+  Codebase gibt heute noch `ResponseEntity<?>` zurück (`grep` liefert keine Treffer) — alle
+  REST-Controller haben konkrete Rückgabetypen.
 
 ### ✅ TODO-24 — Tests für neue/ungetestete Service-Logik fehlen
 Nach den Refactorings waren `PreCacheService`, `StreamInfoService.resolveAll(...)`
@@ -367,10 +384,14 @@ Service-/View-Namen.
   kein Open-Session-in-View nötig. (Nebeneffekt: Cache-Writes bei Miss laufen jetzt in einer
   Read-Write-Tx statt in einer Read-only-Tx.)
 
-### 🟢 TODO-34 — View-Model-Aufbau im Controller
+### ✅ TODO-34 — View-Model-Aufbau im Controller
 `IndexDto`, `PaidDto` und `prettyPrint(...)` stecken im `DataAggregateController`.
 - **Akzeptanzkriterium:** In einen Assembler/Formatter (oder DTO-Factory-Methoden)
   auslagern; Controller ruft nur noch den Assembler.
+- **Erledigt (obsolet):** `DataAggregateController` existiert nicht mehr. Die heutigen
+  Controller (`api/CatalogApiController`, `api/ProviderApiController`, …) sind dünn; die
+  View-Model-Zusammenstellung sitzt in der Application-Schicht
+  (`application/CatalogOverviewService`, `application/ProviderPageService`).
 
 ### ✅ TODO-35 — `invalidated`-Flag ist faktisch tot
 `QueryMeta.invalidated` wurde nie auf `true` gesetzt, aber überall mitgefiltert.
