@@ -114,41 +114,27 @@
              org.junit.rules.TestRule (legacy JUnit4 @Rule support) — junit:junit itself can't be
              excluded, the JVM needs that interface class present to load those classes at all,
              even though we never use the @Rule API (only org.testcontainers:junit-jupiter's JUnit
-             5 extension). Hamcrest, which junit:junit pulls in only for org.junit.Assert's own
-             matcher support (never called here), is excluded on every path that pulls it in
-             (ADR-0005). -->
+             5 extension). Hamcrest (pulled in transitively by junit:junit here) ALSO can't be
+             excluded: Spring's own MockMvcResultMatchers.jsonPath()/JsonPathResultMatchers.value()
+             reference org.hamcrest.Matcher in their overload signatures, so javac needs that class
+             resolvable to compile the jsonPath(...).value(...) idiom used throughout this test
+             suite's MockMvc tests — confirmed by a full `mvn clean test-compile` failure when it
+             was excluded. See ADR-0005 for the full story (both were originally targeted for
+             removal; neither can actually go). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.hamcrest</groupId>
-                    <artifactId>hamcrest-core</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.hamcrest</groupId>
-                    <artifactId>hamcrest-core</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>mariadb</artifactId>
             <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.hamcrest</groupId>
-                    <artifactId>hamcrest-core</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
