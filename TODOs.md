@@ -516,3 +516,25 @@ Application (+ Domain) ab").
   entfernt; die Schichtenregel greift jetzt ohne Ausnahme.
 - **Hinweis:** Für den Angular-Client gibt es kein Äquivalent (die aktive Liste kommt dort über
   `GET /api/lists`), d. h. der Service ist rein Thymeleaf-spezifisch.
+
+---
+
+## Architektur-Review (2026-07-28)
+
+Vollständige Analyse: [`docs/ARCHITECTURE_REVIEW.md`](docs/ARCHITECTURE_REVIEW.md). Die meisten
+Funde wurden direkt umgesetzt (siehe Commit-Historie); ein Punkt wird hier stattdessen als
+Low-Prio-Ticket für später vorgemerkt, statt sofort umgesetzt zu werden.
+
+### 🟢 TODO-42 — Keine Mindestlänge/Komplexität für Passwörter
+`UserAdminService.create()`/`resetPassword()` prüfen nur `requireText()` (nicht-leer), keine
+Mindestlänge oder Komplexität — ein ADMIN kann einem Account ein Ein-Zeichen-Passwort geben.
+Ebenso keine Prüfung für das initiale Admin-Passwort (`w2s.security.initial-admin.password`).
+- **Akzeptanzkriterium:** Sinnvolle Mindestanforderungen (Länge, ggf. Zeichenklassen) einführen,
+  serverseitig durchsetzen, Fehlermeldung im Frontend anzeigen.
+- **Bewusst zurückgestellt:** Das bekannte Default-Passwort in `.env.example`
+  (`W2S_ADMIN_PASSWORD=change-me-please`) ist kein eigenständiges Problem — der Platzhaltertext
+  ist die etablierte "bitte ändern"-Konvention dieser Datei (vgl. `MARIADB_ROOT_PASSWORD=change-me`
+  direkt darunter), und `compose.yml` übersetzt die vereinfachten `.env`-Variablennamen bereits
+  korrekt auf die tatsächlichen Spring-Property-Namen (`W2S_SECURITY_INITIALADMIN_PASSWORD` etc.,
+  mit erklärendem Kommentar zur Relaxed-Binding-Eigenheit). Nur die fehlende
+  Längen-/Komplexitätsprüfung selbst bleibt offen.
