@@ -71,6 +71,10 @@ app-root {
     text-decoration: none;
     font: var(--mat-sys-title-large);
   }
+
+  .app-toolbar-spacer {
+    flex: 1 1 auto;
+  }
 }
 
 .app-sidenav-container {

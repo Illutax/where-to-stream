@@ -14,16 +14,21 @@ import { GridPrefsStore } from './core/grid-prefs-store';
 import { LanguageStore } from './core/language-store';
 import { ThemeStore } from './core/theme-store';
 import { WatchlistStore } from './core/watchlist-store';
+import { ImdbSearchBox } from './shared/imdb-search-box/imdb-search-box';
 import { Navbar } from './shared/navbar/navbar';
 
 @Component({
   selector: 'app-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, Navbar, MatToolbarModule, MatButtonModule, MatSidenavModule, TranslocoPipe],
+  imports: [RouterOutlet, RouterLink, Navbar, ImdbSearchBox, MatToolbarModule, MatButtonModule, MatSidenavModule, TranslocoPipe],
   template: `
     <mat-toolbar class="app-toolbar">
       <button matIconButton (click)="drawer.toggle()" [attr.aria-label]="'app.toggleNav' | transloco">☰</button>
       <a class="app-brand" routerLink="/">W2S</a>
+      <span class="app-toolbar-spacer"></span>
+      @if (auth.authenticated()) {
+        <app-imdb-search-box />
+      }
     </mat-toolbar>
 
     <mat-sidenav-container class="app-sidenav-container">

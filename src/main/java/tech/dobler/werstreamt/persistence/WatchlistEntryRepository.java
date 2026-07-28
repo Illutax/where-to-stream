@@ -19,9 +19,13 @@ public interface WatchlistEntryRepository extends ListCrudRepository<WatchlistEn
 
     Optional<WatchlistEntry> findByUserIdAndImdbId(UUID userId, ImdbId imdbId);
 
+    boolean existsByUserIdAndImdbId(UUID userId, ImdbId imdbId);
+
     long countByUserId(UUID userId);
 
     void deleteByUserId(UUID userId);
+
+    long deleteByUserIdAndRatedTrue(UUID userId);
 
     // Selected as the raw column (native) rather than JPQL `select w.imdbId`: a single-path JPQL
     // projection onto the ImdbId value type makes Spring Data attempt a DTO constructor expression

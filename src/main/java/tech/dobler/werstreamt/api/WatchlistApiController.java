@@ -21,6 +21,7 @@ import tech.dobler.werstreamt.application.WatchlistImportService;
 import tech.dobler.werstreamt.application.dto.WatchlistDto;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
 
 import java.io.IOException;
 
@@ -53,6 +54,25 @@ public class WatchlistApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void clear(Authentication authentication) {
         watchlistImportService.clear(watchlistImportService.resolveUserId(authentication.getName()));
+    }
+
+    /** Removes only the current user's watched (seen) titles. */
+    @DeleteMapping("/seen")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearSeen(Authentication authentication) {
+        watchlistImportService.clearSeen(watchlistImportService.resolveUserId(authentication.getName()));
+    }
+
+    /** Adds a single title (found via search) to the current user's watchlist. */
+    @PostMapping("/{imdbId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void addOne(Authentication authentication, @PathVariable ImdbId imdbId,
+                       @RequestBody AddWatchlistEntryRequest request) {
+        if (request == null || request.name() == null || request.name().isBlank() || request.year() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A name and year are required.");
+        }
+        final var userId = watchlistImportService.resolveUserId(authentication.getName());
+        watchlistImportService.addOne(userId, imdbId, request.name(), ReleaseYear.of(request.year()));
     }
 
     /** Toggle a single title's "seen" flag for the current user (the lightweight in-app marking). */

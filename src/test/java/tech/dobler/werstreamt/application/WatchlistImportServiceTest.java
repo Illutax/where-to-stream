@@ -148,6 +148,40 @@ class WatchlistImportServiceTest {
     }
 
     @Test
+    void clearSeenDelegatesToRepositoryDeleteByUserIdAndRatedTrue() {
+        newService().clearSeen(USER);
+
+        verify(repository).deleteByUserIdAndRatedTrue(USER);
+    }
+
+    @Test
+    void addOnePersistsANewEntryWithTodaysDateAndUnrated() {
+        when(timeService.now()).thenReturn(NOW);
+        when(timeService.today()).thenReturn(java.time.LocalDate.parse("2026-01-01"));
+        when(repository.existsByUserIdAndImdbId(USER, id("tt1"))).thenReturn(false);
+
+        newService().addOne(USER, id("tt1"), "The Matrix", ReleaseYear.of(1999));
+
+        final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getImdbId()).isEqualTo(id("tt1"));
+        assertThat(saved.getValue().getName()).isEqualTo("The Matrix");
+        assertThat(saved.getValue().getYear()).isEqualTo(ReleaseYear.of(1999));
+        assertThat(saved.getValue().isRated()).isFalse();
+        assertThat(saved.getValue().getAdded()).isEqualTo(WatchlistDate.of("2026-01-01"));
+    }
+
+    @Test
+    void addOneThrowsWhenAlreadyOnTheWatchlist() {
+        when(repository.existsByUserIdAndImdbId(USER, id("tt1"))).thenReturn(true);
+
+        final var service = newService();
+        assertThatThrownBy(() -> service.addOne(USER, id("tt1"), "The Matrix", ReleaseYear.of(1999)))
+                .isInstanceOf(WatchlistEntryAlreadyExistsException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void resolveUserIdBridgesThroughCurrentUserService() {
         when(currentUserService.resolveId("alice")).thenReturn(USER);
 

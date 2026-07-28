@@ -73,7 +73,23 @@
     "importFailed": "Die Datei konnte nicht importiert werden.",
     "cleared": "Watchlist geleert.",
     "clearFailed": "Deine Watchlist konnte nicht geleert werden.",
-    "loadFailed": "Deine Watchlist konnte nicht geladen werden."
+    "loadFailed": "Deine Watchlist konnte nicht geladen werden.",
+    "moreActions": "Weitere Aktionen",
+    "removeWatched": "Gesehene entfernen",
+    "removeWatchedConfirmTitle": "Gesehene Titel entfernen?",
+    "removeWatchedConfirmMessage": "Dadurch werden alle gesehenen Titel von deiner Watchlist entfernt. Dies kann nicht rückgängig gemacht werden.",
+    "watchedRemoved": "Gesehene Titel entfernt.",
+    "removeWatchedFailed": "Gesehene Titel konnten nicht entfernt werden."
+  },
+  "search": {
+    "open": "IMDb durchsuchen",
+    "close": "Suche schließen",
+    "placeholder": "IMDb durchsuchen…",
+    "noResults": "Keine Treffer.",
+    "alreadyOnWatchlist": "Bereits auf deiner Watchlist",
+    "addToWatchlist": "Zur Watchlist hinzufügen",
+    "addFailed": "Dieser Titel konnte nicht zur Watchlist hinzugefügt werden.",
+    "viewOnImdb": "Bei IMDb ansehen"
   },
   "manage": {
     "title": "Cache verwalten",
@@ -134,6 +150,7 @@
   },
   "common": {
     "loading": "Lädt…",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "cancel": "Abbrechen"
   }
 }

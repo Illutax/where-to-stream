@@ -2,7 +2,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { WatchlistApi } from './watchlist-api';
-import { imdbId } from '../domain';
+import { imdbId, releaseYear } from '../domain';
 import { WatchlistImportResult, WatchlistStatus } from '../models';
 
 describe('WatchlistApi', () => {
@@ -54,6 +54,29 @@ describe('WatchlistApi', () => {
 
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/watchlist'));
     expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+
+    expect(completed).toBe(true);
+  });
+
+  it('removes only watched titles with a DELETE to "watchlist/seen"', () => {
+    let completed = false;
+    api.clearSeen().subscribe(() => (completed = true));
+
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/watchlist/seen'));
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+
+    expect(completed).toBe(true);
+  });
+
+  it('adds a single title with a POST to "watchlist/{imdbId}"', () => {
+    let completed = false;
+    api.addToWatchlist(imdbId('tt1'), 'The Matrix', releaseYear(1999)).subscribe(() => (completed = true));
+
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/watchlist/tt1'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ name: 'The Matrix', year: 1999 });
     req.flush(null);
 
     expect(completed).toBe(true);

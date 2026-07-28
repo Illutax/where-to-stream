@@ -8,6 +8,8 @@ import tech.dobler.werstreamt.application.dto.WatchlistDto;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
 import tech.dobler.werstreamt.domain.ImdbEntry;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+import tech.dobler.werstreamt.domain.WatchlistDate;
 import tech.dobler.werstreamt.persistence.WatchlistEntry;
 import tech.dobler.werstreamt.persistence.WatchlistEntryRepository;
 import tech.dobler.werstreamt.services.ExportReader;
@@ -109,6 +111,27 @@ public class WatchlistImportService {
     @Transactional
     public void clear(UUID userId) {
         repository.deleteByUserId(userId);
+    }
+
+    /** Removes only the user's watched (seen) titles, leaving the rest of the watchlist untouched. */
+    @Transactional
+    public void clearSeen(UUID userId) {
+        repository.deleteByUserIdAndRatedTrue(userId);
+    }
+
+    /**
+     * Adds a single title found via search to the user's watchlist. Throws
+     * {@link WatchlistEntryAlreadyExistsException} if it's already there. {@code url} is left
+     * unset (null) — unlike a CSV import, there is no export-provided URL, and the frontend already
+     * derives the canonical IMDb link from the id itself.
+     */
+    @Transactional
+    public void addOne(UUID userId, ImdbId imdbId, String name, ReleaseYear year) {
+        if (repository.existsByUserIdAndImdbId(userId, imdbId)) {
+            throw new WatchlistEntryAlreadyExistsException(imdbId);
+        }
+        repository.save(WatchlistEntry.of(userId, imdbId, name, null,
+                WatchlistDate.of(timeService.today().toString()), false, year, timeService.now()));
     }
 
     private static boolean differs(WatchlistEntry current, ImdbEntry incoming) {

@@ -1,0 +1,157 @@
+package tech.dobler.werstreamt.services;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.json.JsonParserFactory;
+import org.springframework.stereotype.Service;
+import tech.dobler.werstreamt.configurations.ImdbSearchProperties;
+import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
+
+import java.io.IOException;
+import java.net.ProxySelector;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Title search against IMDb's public suggestion/typeahead endpoint — the same JSON API IMDb's own
+ * site search box uses, verified reachable and stable, and simpler than IMDb's GraphQL
+ * {@code mainSearch} (unused elsewhere in this codebase, schema unverified). Free-text discovery
+ * across IMDb's whole catalog has no local equivalent, unlike per-id metadata lookups (see
+ * {@link ImdbTitleClient}), which stay served from our own DB cache first and are never duplicated
+ * here. The response mixes title ({@code tt…}), person ({@code nm…}) and company ({@code co…}) hits;
+ * only titles are kept. Failures degrade to an empty list (logged). Outbound requests are throttled
+ * (shared {@code imdb-search.rate-limit}), mirroring {@link ImdbTitleClient}'s rate limiter.
+ */
+@Slf4j
+@Service
+public class ImdbSuggestionClient {
+
+    private static final String USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+    /** A single title hit; {@code year} is {@code 0} ("not yet released"/unknown) when absent. */
+    public record ImdbSuggestion(ImdbId imdbId, String name, ReleaseYear year) {
+    }
+
+    private final ImdbSearchProperties properties;
+    private final HttpClient httpClient;
+    private final long minIntervalNanos;
+    private long nextAllowedNanos = System.nanoTime();
+
+    public ImdbSuggestionClient(ImdbSearchProperties properties) {
+        this.properties = properties;
+        this.httpClient = HttpClient.newBuilder()
+                .proxy(ProxySelector.getDefault())
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+        final double rps = properties.rateLimit().requestsPerSecond();
+        this.minIntervalNanos = rps <= 0 ? 0 : (long) (TimeUnit.SECONDS.toNanos(1) / rps);
+    }
+
+    /** Searches IMDb by title text; empty list on a blank query, any failure, or no matches. */
+    public List<ImdbSuggestion> search(String query) {
+        final var trimmed = query == null ? "" : query.trim();
+        if (trimmed.isEmpty()) {
+            return List.of();
+        }
+        final var firstChar = Character.toLowerCase(trimmed.charAt(0));
+        final var uri = URI.create(properties.apiUrl() + "/" + firstChar + "/"
+                + URLEncoder.encode(trimmed, StandardCharsets.UTF_8) + ".json");
+        try {
+            acquire();
+            log.debug("Searching IMDb suggestions for '{}' via {}", trimmed, uri);
+            final var request = HttpRequest.newBuilder(uri)
+                    .header("User-Agent", USER_AGENT)
+                    .timeout(Duration.ofSeconds(10))
+                    .GET()
+                    .build();
+            final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                log.warn("IMDb suggestion lookup for '{}' returned HTTP {}", trimmed, response.statusCode());
+                return List.of();
+            }
+            return parse(response.body());
+        } catch (IOException | InterruptedException | RuntimeException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            log.warn("IMDb suggestion lookup for '{}' failed: {}", trimmed, e.toString());
+            return List.of();
+        }
+    }
+
+    /**
+     * Parses the {@code {"d":[...]}} suggestion payload, keeping only real title hits (a failed
+     * {@link ImdbId} construction marks a person/company id, silently skipped). Network-free
+     * (unit-testable).
+     */
+    static List<ImdbSuggestion> parse(String json, int maxResults) {
+        try {
+            final Map<String, Object> root = JsonParserFactory.getJsonParser().parseMap(json);
+            if (!(root.get("d") instanceof List<?> hits)) {
+                return List.of();
+            }
+            final var results = new ArrayList<ImdbSuggestion>();
+            for (Object hit : hits) {
+                if (results.size() >= maxResults) {
+                    break;
+                }
+                toSuggestion(hit).ifPresent(results::add);
+            }
+            return results;
+        } catch (RuntimeException e) {
+            return List.of();
+        }
+    }
+
+    private List<ImdbSuggestion> parse(String json) {
+        return parse(json, properties.maxResults());
+    }
+
+    private static Optional<ImdbSuggestion> toSuggestion(Object hit) {
+        if (!(hit instanceof Map<?, ?> entry)
+                || !(entry.get("id") instanceof String id)
+                || !(entry.get("l") instanceof String name) || name.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new ImdbSuggestion(ImdbId.of(id), name, year(entry)));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty(); // not a title id (person/company)
+        }
+    }
+
+    private static ReleaseYear year(Map<?, ?> entry) {
+        return entry.get("y") instanceof Number y ? ReleaseYear.of(y.intValue()) : ReleaseYear.of(0);
+    }
+
+    private synchronized void acquire() {
+        if (minIntervalNanos == 0) {
+            return;
+        }
+        final long now = System.nanoTime();
+        if (now < nextAllowedNanos) {
+            final long waitNanos = nextAllowedNanos - now;
+            log.trace("Throttled outbound suggestion request by {}ms", TimeUnit.NANOSECONDS.toMillis(waitNanos));
+            try {
+                TimeUnit.NANOSECONDS.sleep(waitNanos);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            nextAllowedNanos += minIntervalNanos;
+        } else {
+            nextAllowedNanos = now + minIntervalNanos;
+        }
+    }
+}

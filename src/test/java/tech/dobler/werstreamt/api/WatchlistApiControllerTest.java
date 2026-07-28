@@ -11,11 +11,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.werstreamt.application.NoSuchWatchlistEntryException;
+import tech.dobler.werstreamt.application.WatchlistEntryAlreadyExistsException;
 import tech.dobler.werstreamt.application.WatchlistImportService;
 import tech.dobler.werstreamt.application.dto.WatchlistDto;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
 import tech.dobler.werstreamt.configurations.StringToImdbIdConverter;
 import tech.dobler.werstreamt.domain.ImdbId;
+import tech.dobler.werstreamt.domain.ReleaseYear;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +33,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -95,6 +98,49 @@ class WatchlistApiControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(watchlistImportService).clear(USER);
+    }
+
+    @Test
+    void clearSeenReturns204AndDelegates() throws Exception {
+        when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
+
+        mockMvc.perform(delete("/api/watchlist/seen").principal(alice()))
+                .andExpect(status().isNoContent());
+
+        verify(watchlistImportService).clearSeen(USER);
+    }
+
+    @Test
+    void addOneReturns204AndDelegates() throws Exception {
+        when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
+
+        mockMvc.perform(post("/api/watchlist/tt0133093").principal(alice())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"The Matrix\",\"year\":1999}"))
+                .andExpect(status().isNoContent());
+
+        verify(watchlistImportService).addOne(USER, ImdbId.of("tt0133093"), "The Matrix", ReleaseYear.of(1999));
+    }
+
+    @Test
+    void addOneWithoutNameOrYearIsRejectedWith400() throws Exception {
+        when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
+
+        mockMvc.perform(post("/api/watchlist/tt0133093").principal(alice())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+
+        verify(watchlistImportService, never()).addOne(any(), any(), any(), any());
+    }
+
+    @Test
+    void addOneForATitleAlreadyOnTheListReturns409() throws Exception {
+        when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
+        doThrow(new WatchlistEntryAlreadyExistsException(ImdbId.of("tt0133093")))
+                .when(watchlistImportService).addOne(USER, ImdbId.of("tt0133093"), "The Matrix", ReleaseYear.of(1999));
+
+        mockMvc.perform(post("/api/watchlist/tt0133093").principal(alice())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"The Matrix\",\"year\":1999}"))
+                .andExpect(status().isConflict());
     }
 
     @Test

@@ -73,7 +73,23 @@
     "importFailed": "Could not import the file.",
     "cleared": "Watchlist cleared.",
     "clearFailed": "Could not clear your watchlist.",
-    "loadFailed": "Failed to load your watchlist."
+    "loadFailed": "Failed to load your watchlist.",
+    "moreActions": "More actions",
+    "removeWatched": "Remove watched titles",
+    "removeWatchedConfirmTitle": "Remove watched titles?",
+    "removeWatchedConfirmMessage": "This removes every watched title from your watchlist. This cannot be undone.",
+    "watchedRemoved": "Watched titles removed.",
+    "removeWatchedFailed": "Could not remove watched titles."
+  },
+  "search": {
+    "open": "Search IMDb",
+    "close": "Close search",
+    "placeholder": "Search IMDb…",
+    "noResults": "No results.",
+    "alreadyOnWatchlist": "Already on your watchlist",
+    "addToWatchlist": "Add to Watchlist",
+    "addFailed": "Could not add this title to your watchlist.",
+    "viewOnImdb": "View on IMDb"
   },
   "manage": {
     "title": "Manage cache",
@@ -134,6 +150,7 @@
   },
   "common": {
     "loading": "Loading…",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "cancel": "Cancel"
   }
 }

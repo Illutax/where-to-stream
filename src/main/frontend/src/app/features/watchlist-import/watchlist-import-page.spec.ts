@@ -1,6 +1,8 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { of } from 'rxjs';
 import { WatchlistImportPage } from './watchlist-import-page';
 import { WatchlistStatus } from '../../core/models';
 import { translocoTesting } from '../../testing/transloco-testing';
@@ -8,6 +10,7 @@ import { translocoTesting } from '../../testing/transloco-testing';
 describe('WatchlistImportPage', () => {
   let fixture: ComponentFixture<WatchlistImportPage>;
   let httpMock: HttpTestingController;
+  let dialogOpen: ReturnType<typeof vi.fn>;
 
   const status = (count = 3, lastImportedAt: string | null = '2026-01-01T00:00:00Z'): WatchlistStatus => ({
     count,
@@ -15,9 +18,14 @@ describe('WatchlistImportPage', () => {
   });
 
   beforeEach(() => {
+    dialogOpen = vi.fn();
     TestBed.configureTestingModule({
       imports: [WatchlistImportPage, translocoTesting()],
-      providers: [provideHttpClient(withFetch()), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(withFetch()),
+        provideHttpClientTesting(),
+        { provide: MatDialog, useValue: { open: dialogOpen } },
+      ],
     });
     fixture = TestBed.createComponent(WatchlistImportPage);
     httpMock = TestBed.inject(HttpTestingController);
@@ -66,6 +74,26 @@ describe('WatchlistImportPage', () => {
 
     httpMock.expectOne((r) => r.url.endsWith('/api/watchlist') && r.method === 'DELETE').flush(null);
     httpMock.expectOne((r) => r.url.endsWith('/api/watchlist') && r.method === 'GET').flush(status(0, null));
+  });
+
+  it('opens a confirm dialog and removes only watched titles when confirmed', () => {
+    dialogOpen.mockReturnValue({ afterClosed: () => of(true) });
+    flushInitialLoad(status(4));
+
+    (fixture.componentInstance as unknown as { onRemoveWatched(): void }).onRemoveWatched();
+
+    expect(dialogOpen).toHaveBeenCalled();
+    httpMock.expectOne((r) => r.url.endsWith('/api/watchlist/seen') && r.method === 'DELETE').flush(null);
+    httpMock.expectOne((r) => r.url.endsWith('/api/watchlist') && r.method === 'GET').flush(status(2, null));
+  });
+
+  it('does not remove anything when the confirm dialog is cancelled', () => {
+    dialogOpen.mockReturnValue({ afterClosed: () => of(false) });
+    flushInitialLoad(status(4));
+
+    (fixture.componentInstance as unknown as { onRemoveWatched(): void }).onRemoveWatched();
+
+    httpMock.expectNone((r) => r.url.endsWith('/api/watchlist/seen'));
   });
 
   it('shows an error alert when the initial load fails', () => {

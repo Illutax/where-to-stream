@@ -70,6 +70,15 @@ export interface WatchlistImportResult {
   total: number;
 }
 
+/** A single IMDb title-search hit (mirrors the server ImdbSearchResultDto). */
+export interface ImdbSearchResult {
+  imdbId: ImdbId;
+  name: string;
+  year: ReleaseYear;
+  /** Whether this title is already on the current user's watchlist. */
+  onWatchlist: boolean;
+}
+
 export interface InvalidateResult {
   invalidated: number;
 }

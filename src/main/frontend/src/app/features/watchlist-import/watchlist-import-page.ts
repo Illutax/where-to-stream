@@ -1,11 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { WatchlistApi } from '../../core/api/watchlist-api';
 import { WatchlistStore } from '../../core/watchlist-store';
 import { WatchlistStatus } from '../../core/models';
+import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { Loading } from '../../shared/loading/loading';
 
@@ -13,9 +16,15 @@ import { Loading } from '../../shared/loading/loading';
 @Component({
   selector: 'app-watchlist-import-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatCardModule, MatButtonModule, Loading, ErrorAlert, TranslocoPipe],
+  imports: [MatCardModule, MatButtonModule, MatMenuModule, Loading, ErrorAlert, TranslocoPipe],
   template: `
-    <h1>{{ 'watchlist.title' | transloco }}</h1>
+    <div class="watchlist-heading">
+      <h1>{{ 'watchlist.title' | transloco }}</h1>
+      <button type="button" matIconButton [matMenuTriggerFor]="menu" [attr.aria-label]="'watchlist.moreActions' | transloco">⋮</button>
+      <mat-menu #menu="matMenu">
+        <button type="button" mat-menu-item (click)="onRemoveWatched()">{{ 'watchlist.removeWatched' | transloco }}</button>
+      </mat-menu>
+    </div>
     <app-error-alert [message]="error()" />
 
     @if (loading()) {
@@ -59,6 +68,14 @@ import { Loading } from '../../shared/loading/loading';
     .watchlist-clear {
       margin-top: 1.5rem;
     }
+    .watchlist-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .watchlist-heading h1 {
+      margin: 0;
+    }
   `,
 })
 export class WatchlistImportPage {
@@ -66,6 +83,7 @@ export class WatchlistImportPage {
   private readonly store = inject(WatchlistStore);
   private readonly snackBar = inject(MatSnackBar);
   private readonly transloco = inject(TranslocoService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly status = signal<WatchlistStatus | null>(null);
   protected readonly loading = signal(true);
@@ -123,6 +141,38 @@ export class WatchlistImportPage {
       error: (err) => {
         this.busy.set(false);
         this.error.set(err?.error?.detail ?? this.transloco.translate('watchlist.importFailed'));
+      },
+    });
+  }
+
+  protected onRemoveWatched(): void {
+    const data: ConfirmDialogData = {
+      title: this.transloco.translate('watchlist.removeWatchedConfirmTitle'),
+      message: this.transloco.translate('watchlist.removeWatchedConfirmMessage'),
+      confirmLabel: this.transloco.translate('watchlist.removeWatched'),
+    };
+    this.dialog
+      .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, { data })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (confirmed) {
+          this.removeWatched();
+        }
+      });
+  }
+
+  private removeWatched(): void {
+    this.busy.set(true);
+    this.error.set(null);
+    this.api.clearSeen().subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.snackBar.open(this.transloco.translate('watchlist.watchedRemoved'), 'OK', { duration: 4000 });
+        this.reload();
+      },
+      error: () => {
+        this.busy.set(false);
+        this.error.set(this.transloco.translate('watchlist.removeWatchedFailed'));
       },
     });
   }
