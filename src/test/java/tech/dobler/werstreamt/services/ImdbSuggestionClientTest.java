@@ -4,9 +4,39 @@ import org.junit.jupiter.api.Test;
 import tech.dobler.werstreamt.domain.ImdbId;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 /** Network-free tests for parsing IMDb's suggestion/typeahead JSON payload. */
 class ImdbSuggestionClientTest {
+
+    /**
+     * A query starting with a character that isn't safe unescaped in a URI path segment (a bare
+     * "%", a quote, a backslash, a space, …) used to make {@code URI.create} throw
+     * {@code IllegalArgumentException} — reproduced directly here, not just indirectly via
+     * {@code search()}'s catch-all, so a future regression fails loudly at the source.
+     */
+    @Test
+    void buildUriNeverThrowsForAWkwardLeadingCharacters() {
+        for (String query : new String[] { "%", "%20", "\"quoted\"", "back\\slash", " leading space", "?" }) {
+            assertThatCode(() -> ImdbSuggestionClient.buildUri("https://v2.sg.media-imdb.com/suggestion", query))
+                    .as("query starting with %s", query)
+                    .doesNotThrowAnyException();
+        }
+    }
+
+    @Test
+    void buildUriEncodesTheLeadingCharacterAndTheQuery() {
+        final var uri = ImdbSuggestionClient.buildUri("https://v2.sg.media-imdb.com/suggestion", "%matrix");
+
+        assertThat(uri.toString()).isEqualTo("https://v2.sg.media-imdb.com/suggestion/%25/%25matrix.json");
+    }
+
+    @Test
+    void buildUriLowercasesAPlainLeadingLetter() {
+        final var uri = ImdbSuggestionClient.buildUri("https://v2.sg.media-imdb.com/suggestion", "Matrix");
+
+        assertThat(uri.toString()).isEqualTo("https://v2.sg.media-imdb.com/suggestion/m/Matrix.json");
+    }
 
     @Test
     void keepsOnlyTitleHitsAndReadsNameAndYear() {

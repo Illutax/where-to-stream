@@ -65,10 +65,8 @@ public class ImdbSuggestionClient {
         if (trimmed.isEmpty()) {
             return List.of();
         }
-        final var firstChar = Character.toLowerCase(trimmed.charAt(0));
-        final var uri = URI.create(properties.apiUrl() + "/" + firstChar + "/"
-                + URLEncoder.encode(trimmed, StandardCharsets.UTF_8) + ".json");
         try {
+            final var uri = buildUri(properties.apiUrl(), trimmed);
             acquire();
             log.debug("Searching IMDb suggestions for '{}' via {}", trimmed, uri);
             final var request = HttpRequest.newBuilder(uri)
@@ -89,6 +87,18 @@ public class ImdbSuggestionClient {
             log.warn("IMDb suggestion lookup for '{}' failed: {}", trimmed, e.toString());
             return List.of();
         }
+    }
+
+    /**
+     * Builds the suggestion-endpoint URI for a (non-blank) query. Both the leading-character path
+     * segment and the query itself are percent-encoded, so a query starting with a character that
+     * would otherwise break the URI (a bare {@code %}, a quote, a backslash, a space, …) degrades
+     * to a harmless encoded segment instead of making {@link URI#create} throw. Network-free
+     * (unit-testable).
+     */
+    static URI buildUri(String apiUrl, String query) {
+        final var firstChar = URLEncoder.encode(String.valueOf(Character.toLowerCase(query.charAt(0))), StandardCharsets.UTF_8);
+        return URI.create(apiUrl + "/" + firstChar + "/" + URLEncoder.encode(query, StandardCharsets.UTF_8) + ".json");
     }
 
     /**
