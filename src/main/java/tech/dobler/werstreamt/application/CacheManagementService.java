@@ -1,6 +1,7 @@
 package tech.dobler.werstreamt.application;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.application.dto.CacheResultDto;
 import tech.dobler.werstreamt.application.dto.InvalidateResultDto;
@@ -28,9 +29,14 @@ import java.util.Set;
  * <p>Deliberately not {@code @Transactional}: {@link PreCacheService} fans out over a
  * {@code parallelStream} relying on per-thread transactions from the proxied
  * {@code StreamInfoService}.
+ *
+ * <p>ADMIN-only (enforced both by the {@code /api/manage/**}/{@code /api/cache/**} URL rules in
+ * {@code SecurityConfig} and {@link PreAuthorize} here as defense in depth, mirroring
+ * {@code UserAdminService}).
  */
 @Service
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class CacheManagementService {
 
     private final WatchlistEntryRepository watchlistEntryRepository;
