@@ -1,14 +1,11 @@
 package tech.dobler.werstreamt.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.domain.AvailabilityType;
@@ -27,7 +24,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -35,15 +31,9 @@ import java.util.stream.Stream;
 public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
     private final URI baseUrl = URI.create("https://www.werstreamt.es/filme/");
     private final RateLimiter rateLimiter;
-    private final Function<UriComponents, Connection> connectionFactory;
+    private final ConnectionFactory connectionFactory;
 
-    @Autowired
-    public WerStreamtEsApiClient(WerStreamtProperties properties) {
-        this(properties, ApiClientUtils::getConnectionWithUserAgent);
-    }
-
-    // Package-private: lets tests substitute a fake jsoup Connection instead of a real one.
-    WerStreamtEsApiClient(WerStreamtProperties properties, Function<UriComponents, Connection> connectionFactory) {
+    public WerStreamtEsApiClient(WerStreamtProperties properties, ConnectionFactory connectionFactory) {
         this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
         this.connectionFactory = connectionFactory;
     }
@@ -51,7 +41,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
     public List<SearchResult> search(String searchTerm) {
         log.info("Searching for: {}", searchTerm);
         final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", searchTerm).build();
-        final var connect = connectionFactory.apply(query);
+        final var connect = connectionFactory.connectionFor(query);
         try {
             rateLimiter.acquire();
             final var document = connect.get();
@@ -87,7 +77,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
         log.info("Query with id: {}", imdbId);
 
         final var query = UriComponentsBuilder.fromUri(baseUrl).queryParam("q", imdbId.value()).queryParam("action_results", "suchen").build();
-        final var connect = connectionFactory.apply(query).followRedirects(true);
+        final var connect = connectionFactory.connectionFor(query).followRedirects(true);
         try {
             rateLimiter.acquire();
             return parse(connect.get(), imdbId);

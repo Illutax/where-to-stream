@@ -38,7 +38,7 @@ class ImdbSuggestionClientTest {
         when(response.statusCode()).thenReturn(200);
         when(response.body()).thenReturn("""
                 {"d":[{"id":"tt0133093","l":"The Matrix","y":1999}]}""");
-        final var client = new ImdbSuggestionClient(properties(), httpClient);
+        final var client = new ImdbSuggestionClient(properties(), () -> httpClient);
 
         final var results = client.search("matrix");
 
@@ -49,7 +49,7 @@ class ImdbSuggestionClientTest {
     void searchReturnsEmptyOnANon200Status() throws Exception {
         doReturn(response).when(httpClient).send(any(), any());
         when(response.statusCode()).thenReturn(500);
-        final var client = new ImdbSuggestionClient(properties(), httpClient);
+        final var client = new ImdbSuggestionClient(properties(), () -> httpClient);
 
         assertThat(client.search("matrix")).isEmpty();
     }
@@ -57,7 +57,7 @@ class ImdbSuggestionClientTest {
     @Test
     void searchReturnsEmptyOnAnIOException() throws Exception {
         doThrow(new IOException("connection reset")).when(httpClient).send(any(), any());
-        final var client = new ImdbSuggestionClient(properties(), httpClient);
+        final var client = new ImdbSuggestionClient(properties(), () -> httpClient);
 
         assertThat(client.search("matrix")).isEmpty();
     }
@@ -65,7 +65,7 @@ class ImdbSuggestionClientTest {
     @Test
     void searchRestoresTheInterruptFlagOnInterruptedException() throws Exception {
         doThrow(new InterruptedException()).when(httpClient).send(any(), any());
-        final var client = new ImdbSuggestionClient(properties(), httpClient);
+        final var client = new ImdbSuggestionClient(properties(), () -> httpClient);
 
         try {
             assertThat(client.search("matrix")).isEmpty();

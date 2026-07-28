@@ -34,7 +34,8 @@ class WerStreamtEsApiClientTest {
 
     // parse() does not hit the network, so the rate limiter is irrelevant here (disabled).
     private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(
-            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)));
+            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)),
+            new RealConnectionFactory());
 
     @Mock
     private Connection connection;

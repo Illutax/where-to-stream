@@ -1,7 +1,6 @@
 package tech.dobler.werstreamt.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.configurations.ImdbPosterProperties;
 import tech.dobler.werstreamt.domain.ImdbId;
@@ -35,16 +34,11 @@ public class ImdbPosterSource implements PosterSource {
     private final HttpClient httpClient;
     private final RateLimiter rateLimiter;
 
-    @Autowired
-    public ImdbPosterSource(ImdbPosterProperties properties, TitleMetaService titleMetaService) {
-        this(properties, titleMetaService, OutboundHttpClients.newClient());
-    }
-
-    // Package-private: lets tests inject a mocked HttpClient instead of a real one.
-    ImdbPosterSource(ImdbPosterProperties properties, TitleMetaService titleMetaService, HttpClient httpClient) {
+    public ImdbPosterSource(ImdbPosterProperties properties, TitleMetaService titleMetaService,
+                            HttpClientFactory httpClientFactory) {
         this.properties = properties;
         this.titleMetaService = titleMetaService;
-        this.httpClient = httpClient;
+        this.httpClient = httpClientFactory.newClient();
         this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
     }
 

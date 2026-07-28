@@ -38,7 +38,7 @@ class ImdbTitleClientTest {
         when(response.statusCode()).thenReturn(200);
         when(response.body()).thenReturn("""
                 {"data":{"title":{"primaryImage":{"url":"%s"}}}}""".formatted(POSTER));
-        final var client = new ImdbTitleClient(properties(), httpClient);
+        final var client = new ImdbTitleClient(properties(), () -> httpClient);
 
         final var result = client.fetch(ImdbId.of("tt0133093"));
 
@@ -50,7 +50,7 @@ class ImdbTitleClientTest {
     void fetchReturnsEmptyOnANon200Status() throws Exception {
         doReturn(response).when(httpClient).send(any(), any());
         when(response.statusCode()).thenReturn(500);
-        final var client = new ImdbTitleClient(properties(), httpClient);
+        final var client = new ImdbTitleClient(properties(), () -> httpClient);
 
         assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();
     }
@@ -58,7 +58,7 @@ class ImdbTitleClientTest {
     @Test
     void fetchReturnsEmptyOnAnIOException() throws Exception {
         doThrow(new IOException("connection reset")).when(httpClient).send(any(), any());
-        final var client = new ImdbTitleClient(properties(), httpClient);
+        final var client = new ImdbTitleClient(properties(), () -> httpClient);
 
         assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();
     }
@@ -66,7 +66,7 @@ class ImdbTitleClientTest {
     @Test
     void fetchRestoresTheInterruptFlagOnInterruptedException() throws Exception {
         doThrow(new InterruptedException()).when(httpClient).send(any(), any());
-        final var client = new ImdbTitleClient(properties(), httpClient);
+        final var client = new ImdbTitleClient(properties(), () -> httpClient);
 
         try {
             assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();

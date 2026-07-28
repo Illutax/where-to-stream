@@ -42,7 +42,7 @@ class ImdbPosterSourceTest {
         doReturn(response).when(httpClient).send(any(), any());
         when(response.statusCode()).thenReturn(200);
         when(response.body()).thenReturn(new byte[]{1, 2, 3});
-        final var source = new ImdbPosterSource(properties(), titleMetaService, httpClient);
+        final var source = new ImdbPosterSource(properties(), titleMetaService, () -> httpClient);
 
         assertThat(source.download(POSTER, PosterSize.THUMB)).contains(new byte[]{1, 2, 3});
     }
@@ -52,7 +52,7 @@ class ImdbPosterSourceTest {
         doReturn(response).when(httpClient).send(any(), any());
         when(response.statusCode()).thenReturn(404);
         when(response.body()).thenReturn(new byte[0]);
-        final var source = new ImdbPosterSource(properties(), titleMetaService, httpClient);
+        final var source = new ImdbPosterSource(properties(), titleMetaService, () -> httpClient);
 
         assertThat(source.download(POSTER, PosterSize.THUMB)).isEmpty();
     }
@@ -60,14 +60,14 @@ class ImdbPosterSourceTest {
     @Test
     void downloadReturnsEmptyOnAnIOException() throws Exception {
         doThrow(new IOException("connection reset")).when(httpClient).send(any(), any());
-        final var source = new ImdbPosterSource(properties(), titleMetaService, httpClient);
+        final var source = new ImdbPosterSource(properties(), titleMetaService, () -> httpClient);
 
         assertThat(source.download(POSTER, PosterSize.THUMB)).isEmpty();
     }
 
     @Test
     void downloadNeverCallsOutForABlankPosterPath() {
-        final var source = new ImdbPosterSource(properties(), titleMetaService, httpClient);
+        final var source = new ImdbPosterSource(properties(), titleMetaService, () -> httpClient);
 
         assertThat(source.download("  ", PosterSize.THUMB)).isEmpty();
         verifyNoInteractions(httpClient);
