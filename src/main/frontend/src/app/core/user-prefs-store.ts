@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal, untracked } from '@angular/core';
 import { UserPrefsApi } from './api/user-prefs-api';
 import { Language, Theme, ViewMode } from './models';
 
@@ -42,10 +42,23 @@ export class UserPrefsStore {
   readonly viewMode = computed(() => this._prefs().viewMode);
   readonly tilesPerRow = computed(() => this._prefs().tilesPerRow);
 
-  /** Adopt (all or some of) the preferences loaded from the server without persisting them back. */
+  /**
+   * Adopt (all or some of) the preferences loaded from the server without persisting them back.
+   *
+   * `app.ts` calls this from inside an `effect()` that's meant to depend only on the loaded
+   * principal, not on this store's own state — but reading `_prefs()` below (to pick up `theme`
+   * after the update) would otherwise register as a dependency of *whichever* reactive context
+   * happens to call `init()`. That turned every later `setViewMode`/`setTilesPerRow`/… call into
+   * a trigger for that effect to re-run and call `init()` again with the original (by then stale)
+   * `prefs`, silently reverting the just-made change a moment later. Wrapping the read in
+   * `untracked` keeps `init()`'s internals from leaking as an accidental dependency, regardless of
+   * what calls it.
+   */
   init(prefs: Partial<UserPrefs>): void {
-    this._prefs.update((current) => ({ ...current, ...prefs }));
-    this.applyTheme(this._prefs().theme);
+    untracked(() => {
+      this._prefs.update((current) => ({ ...current, ...prefs }));
+      this.applyTheme(this._prefs().theme);
+    });
   }
 
   setTheme(theme: Theme): void {

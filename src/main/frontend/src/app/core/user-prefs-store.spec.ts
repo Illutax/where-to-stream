@@ -1,5 +1,6 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component, effect, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { UserPrefsStore } from './user-prefs-store';
 
@@ -99,6 +100,48 @@ describe('UserPrefsStore', () => {
     store.setTilesPerRow(4);
 
     expect(store.tilesPerRow()).toBe(4);
+    httpMock.expectOne((r) => r.url.endsWith('/api/me/tiles-per-row')).flush(null);
+  });
+
+  /**
+   * Regression test for a real bug: app.ts calls init() from inside an effect() that's meant to
+   * depend only on the loaded principal. init() used to read this._prefs() (to re-apply the theme),
+   * which registered as a dependency of *whichever* reactive context called it — so any later
+   * setViewMode()/setTilesPerRow()/... triggered that effect to re-run and call init() again with
+   * the original (by then stale) prefs, silently reverting the just-made change a moment later.
+   * Reproduced here with the same shape (an effect that calls init() once a "principal" signal
+   * resolves), without needing app.ts itself.
+   */
+  it('a later setX() is not reverted by an effect that once called init()', async () => {
+    const principal = signal<{ tilesPerRow: number } | null>(null);
+
+    @Component({ selector: 'app-test-host', template: '' })
+    class TestHost {
+      readonly userPrefsStore = inject(UserPrefsStore);
+      constructor() {
+        effect(() => {
+          const me = principal();
+          if (me) {
+            this.userPrefsStore.init(me);
+          }
+        });
+      }
+    }
+
+    const fixture = TestBed.createComponent(TestHost);
+    fixture.detectChanges();
+    principal.set({ tilesPerRow: 6 }); // simulates GET /api/me resolving
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    store.setTilesPerRow(3); // the user's own change, right after
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve, 0)); // let any scheduled effect re-run flush
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(store.tilesPerRow()).toBe(3);
     httpMock.expectOne((r) => r.url.endsWith('/api/me/tiles-per-row')).flush(null);
   });
 });
