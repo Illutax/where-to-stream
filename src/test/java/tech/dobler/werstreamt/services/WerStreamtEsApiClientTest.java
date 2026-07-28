@@ -1,21 +1,31 @@
 package tech.dobler.werstreamt.services;
 
+import org.jsoup.Connection;
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.werstreamt.configurations.WerStreamtProperties;
 import tech.dobler.werstreamt.domain.AvailabilityType;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
+import tech.dobler.werstreamt.domain.ScrapingException;
 import tech.dobler.werstreamt.domain.SearchResult;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class WerStreamtEsApiClientTest {
 
     private static final ImdbId IMDB_ID = ImdbId.of("tt0482571");
@@ -25,6 +35,80 @@ class WerStreamtEsApiClientTest {
     // parse() does not hit the network, so the rate limiter is irrelevant here (disabled).
     private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(
             new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)));
+
+    @Mock
+    private Connection connection;
+
+    private static WerStreamtEsApiClient clientWithFakeConnection(Connection connection) {
+        return new WerStreamtEsApiClient(
+                new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)),
+                uri -> connection);
+    }
+
+    // --- search()/query() network-error handling (connectionFactory seam, network-free) ---
+
+    @Test
+    void searchReturnsAnEmptyListWhenTheSiteRespondsWithAnErrorStatus() throws Exception {
+        when(connection.get()).thenThrow(new HttpStatusException("Not Found", 404, "https://www.werstreamt.es/filme/"));
+
+        assertThat(clientWithFakeConnection(connection).search("matrix")).isEmpty();
+    }
+
+    @Test
+    void searchWrapsAnIOExceptionInAScrapingException() throws Exception {
+        when(connection.get()).thenThrow(new IOException("connection reset"));
+
+        assertThatThrownBy(() -> clientWithFakeConnection(connection).search("matrix"))
+                .isInstanceOf(ScrapingException.class);
+    }
+
+    @Test
+    void searchParsesResultsFromTheFetchedDocument() throws Exception {
+        when(connection.get()).thenReturn(Jsoup.parse("""
+                <div class="results"><ul>
+                  <li data-contentid="1"><a href="the-matrix"><strong>The Matrix</strong></a></li>
+                </ul></div>"""));
+
+        final var results = clientWithFakeConnection(connection).search("matrix");
+
+        assertThat(results).containsExactly(new SearchResult("The Matrix", URI.create("https://www.werstreamt.es/the-matrix")));
+    }
+
+    @Test
+    void queryParsesResultsFromTheFetchedDocument() throws Exception {
+        when(connection.followRedirects(true)).thenReturn(connection);
+        when(connection.get()).thenReturn(Jsoup.parse("<div id=\"avalibility\">"
+                + "<div class=\"provider\" data-ext-provider-name=\"Netflix\">"
+                + "<div class=\"row panel small-collapse available\">"
+                + "<div class=\"columns large-5\"><button><strong class=\"title\">Title</strong><br>"
+                + "90 Min. | Deutsch<br><span class=\"badges\"></span></button></div>"
+                + "<div class=\"columns large-5\"><div class=\"row small-collapse large-uncollapse\">"
+                + "<div class=\"columns small-4\"><small>Flatrate</small><br><i class=\"fi-check\"></i></div>"
+                + "<div class=\"columns small-4\"><small>Leihen</small><br>-</div>"
+                + "<div class=\"columns small-4\"><small>Kaufen</small><br>-</div>"
+                + "</div></div></div></div></div>"));
+
+        final var results = clientWithFakeConnection(connection).query(IMDB_ID);
+
+        assertThat(results).extracting(QueryResult::streamingServiceName).containsExactly("Netflix");
+    }
+
+    @Test
+    void queryReturnsAnEmptyListWhenTheSiteRespondsWithAnErrorStatus() throws Exception {
+        when(connection.followRedirects(true)).thenReturn(connection);
+        when(connection.get()).thenThrow(new HttpStatusException("Not Found", 404, "https://www.werstreamt.es/filme/"));
+
+        assertThat(clientWithFakeConnection(connection).query(IMDB_ID)).isEmpty();
+    }
+
+    @Test
+    void queryWrapsAnIOExceptionInAScrapingException() throws Exception {
+        when(connection.followRedirects(true)).thenReturn(connection);
+        when(connection.get()).thenThrow(new IOException("connection reset"));
+
+        assertThatThrownBy(() -> clientWithFakeConnection(connection).query(IMDB_ID))
+                .isInstanceOf(ScrapingException.class);
+    }
 
     // --- fixture builders mirroring the real werstreamt.es per-listing structure ---
 

@@ -1,6 +1,7 @@
 package tech.dobler.werstreamt.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.stereotype.Service;
 import tech.dobler.werstreamt.configurations.ImdbSearchProperties;
@@ -42,9 +43,15 @@ public class ImdbSuggestionClient {
     private final HttpClient httpClient;
     private final RateLimiter rateLimiter;
 
+    @Autowired
     public ImdbSuggestionClient(ImdbSearchProperties properties) {
+        this(properties, OutboundHttpClients.newClient());
+    }
+
+    // Package-private: lets tests inject a mocked HttpClient instead of a real one.
+    ImdbSuggestionClient(ImdbSearchProperties properties, HttpClient httpClient) {
         this.properties = properties;
-        this.httpClient = OutboundHttpClients.newClient();
+        this.httpClient = httpClient;
         this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
     }
 

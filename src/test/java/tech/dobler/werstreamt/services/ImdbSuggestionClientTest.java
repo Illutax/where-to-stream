@@ -1,13 +1,79 @@
 package tech.dobler.werstreamt.services;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.werstreamt.configurations.ImdbSearchProperties;
 import tech.dobler.werstreamt.domain.ImdbId;
+
+import java.io.IOException;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 /** Network-free tests for parsing IMDb's suggestion/typeahead JSON payload. */
+@ExtendWith(MockitoExtension.class)
 class ImdbSuggestionClientTest {
+
+    @Mock
+    private HttpClient httpClient;
+    @Mock
+    private HttpResponse<String> response;
+
+    private static ImdbSearchProperties properties() {
+        return new ImdbSearchProperties("https://v2.sg.media-imdb.com/suggestion",
+                new ImdbSearchProperties.RateLimit(0), 8);
+    }
+
+    @Test
+    void searchReturnsTheParsedResultsOnASuccessfulResponse() throws Exception {
+        doReturn(response).when(httpClient).send(any(), any());
+        when(response.statusCode()).thenReturn(200);
+        when(response.body()).thenReturn("""
+                {"d":[{"id":"tt0133093","l":"The Matrix","y":1999}]}""");
+        final var client = new ImdbSuggestionClient(properties(), httpClient);
+
+        final var results = client.search("matrix");
+
+        assertThat(results).extracting(ImdbSuggestionClient.ImdbSuggestion::imdbId).containsExactly(ImdbId.of("tt0133093"));
+    }
+
+    @Test
+    void searchReturnsEmptyOnANon200Status() throws Exception {
+        doReturn(response).when(httpClient).send(any(), any());
+        when(response.statusCode()).thenReturn(500);
+        final var client = new ImdbSuggestionClient(properties(), httpClient);
+
+        assertThat(client.search("matrix")).isEmpty();
+    }
+
+    @Test
+    void searchReturnsEmptyOnAnIOException() throws Exception {
+        doThrow(new IOException("connection reset")).when(httpClient).send(any(), any());
+        final var client = new ImdbSuggestionClient(properties(), httpClient);
+
+        assertThat(client.search("matrix")).isEmpty();
+    }
+
+    @Test
+    void searchRestoresTheInterruptFlagOnInterruptedException() throws Exception {
+        doThrow(new InterruptedException()).when(httpClient).send(any(), any());
+        final var client = new ImdbSuggestionClient(properties(), httpClient);
+
+        try {
+            assertThat(client.search("matrix")).isEmpty();
+            assertThat(Thread.interrupted()).isTrue();
+        } finally {
+            Thread.interrupted(); // clear the flag regardless of assertion outcome
+        }
+    }
 
     /**
      * A query starting with a character that isn't safe unescaped in a URI path segment (a bare

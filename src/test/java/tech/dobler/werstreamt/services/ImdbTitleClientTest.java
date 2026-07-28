@@ -1,12 +1,80 @@
 package tech.dobler.werstreamt.services;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.werstreamt.configurations.ImdbPosterProperties;
 import tech.dobler.werstreamt.domain.AgeRating.RatingSystem;
+import tech.dobler.werstreamt.domain.ImdbId;
+
+import java.io.IOException;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 /** Network-free tests for parsing the one IMDb GraphQL response into poster URL + age rating. */
+@ExtendWith(MockitoExtension.class)
 class ImdbTitleClientTest {
+
+    @Mock
+    private HttpClient httpClient;
+    @Mock
+    private HttpResponse<String> response;
+
+    private static ImdbPosterProperties properties() {
+        return new ImdbPosterProperties("https://api.graphql.imdb.com/", new ImdbPosterProperties.RateLimit(0),
+                100, 50, 600, 85);
+    }
+
+    @Test
+    void fetchReturnsTheParsedDataOnASuccessfulResponse() throws Exception {
+        doReturn(response).when(httpClient).send(any(), any());
+        when(response.statusCode()).thenReturn(200);
+        when(response.body()).thenReturn("""
+                {"data":{"title":{"primaryImage":{"url":"%s"}}}}""".formatted(POSTER));
+        final var client = new ImdbTitleClient(properties(), httpClient);
+
+        final var result = client.fetch(ImdbId.of("tt0133093"));
+
+        assertThat(result).isPresent();
+        assertThat(result.get().posterUrl()).isEqualTo(POSTER);
+    }
+
+    @Test
+    void fetchReturnsEmptyOnANon200Status() throws Exception {
+        doReturn(response).when(httpClient).send(any(), any());
+        when(response.statusCode()).thenReturn(500);
+        final var client = new ImdbTitleClient(properties(), httpClient);
+
+        assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();
+    }
+
+    @Test
+    void fetchReturnsEmptyOnAnIOException() throws Exception {
+        doThrow(new IOException("connection reset")).when(httpClient).send(any(), any());
+        final var client = new ImdbTitleClient(properties(), httpClient);
+
+        assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();
+    }
+
+    @Test
+    void fetchRestoresTheInterruptFlagOnInterruptedException() throws Exception {
+        doThrow(new InterruptedException()).when(httpClient).send(any(), any());
+        final var client = new ImdbTitleClient(properties(), httpClient);
+
+        try {
+            assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();
+            assertThat(Thread.interrupted()).isTrue();
+        } finally {
+            Thread.interrupted();
+        }
+    }
 
     private static final String POSTER =
             "https://m.media-amazon.com/images/M/MV5Babc@@._V1_.jpg";

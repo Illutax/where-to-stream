@@ -1,6 +1,7 @@
 package tech.dobler.werstreamt.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -33,9 +34,15 @@ public class TmdbPosterSource implements PosterSource {
     private final HttpClient httpClient;
     private final RateLimiter rateLimiter;
 
+    @Autowired
     public TmdbPosterSource(TmdbProperties properties) {
+        this(properties, OutboundHttpClients.newClient());
+    }
+
+    // Package-private: lets tests inject a mocked HttpClient instead of a real one.
+    TmdbPosterSource(TmdbProperties properties, HttpClient httpClient) {
         this.properties = properties;
-        this.httpClient = OutboundHttpClients.newClient();
+        this.httpClient = httpClient;
         this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
     }
 
