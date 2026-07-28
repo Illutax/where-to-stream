@@ -18,5 +18,6 @@ zum `adr`-Skill der Team-Doku.
 | [0009](0009-domainvalues-statt-primitiven.md) | Domain-Values statt primitiver Datentypen | Accepted |
 | [0010](0010-optionals-nicht-auf-null-defaulten.md) | Optionals nicht auf `null` defaulten (funktional konsumieren) | Accepted |
 | [0011](0011-kein-open-session-in-view.md) | Kein Open-Session-in-View, kein Lazy Loading | Accepted |
+| [0012](0012-permanenter-titel-cache-vs-ttl-verfuegbarkeits-cache.md) | Permanenter Titel-Cache vs. TTL-basierter Verfügbarkeits-Cache | Accepted |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.
