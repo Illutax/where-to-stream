@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import tech.dobler.werstreamt.application.UserPreferences;
 import tech.dobler.werstreamt.application.UserPreferencesService;
+import tech.dobler.werstreamt.application.ValidationException;
 import tech.dobler.werstreamt.application.dto.MeDto;
 import tech.dobler.werstreamt.configurations.TmdbProperties;
 
@@ -59,7 +59,7 @@ public class MeApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateTheme(Authentication authentication, @RequestBody ThemeUpdateRequest request) {
         if (request == null || request.theme() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A theme is required.");
+            throw new ValidationException("A theme is required.");
         }
         userPreferencesService.updateTheme(authentication.getName(), request.theme());
     }
@@ -69,7 +69,7 @@ public class MeApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateShowAgeRatings(Authentication authentication, @RequestBody ShowAgeRatingsUpdateRequest request) {
         if (request == null || request.showAgeRatings() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A showAgeRatings flag is required.");
+            throw new ValidationException("A showAgeRatings flag is required.");
         }
         userPreferencesService.updateShowAgeRatings(authentication.getName(), request.showAgeRatings());
     }
@@ -79,7 +79,7 @@ public class MeApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateLanguage(Authentication authentication, @RequestBody LanguageUpdateRequest request) {
         if (request == null || request.language() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A language is required.");
+            throw new ValidationException("A language is required.");
         }
         userPreferencesService.updateLanguage(authentication.getName(), request.language());
     }
@@ -89,7 +89,7 @@ public class MeApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateShowGermanTitle(Authentication authentication, @RequestBody ShowGermanTitleUpdateRequest request) {
         if (request == null || request.showGermanTitle() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A showGermanTitle flag is required.");
+            throw new ValidationException("A showGermanTitle flag is required.");
         }
         userPreferencesService.updateShowGermanTitle(authentication.getName(), request.showGermanTitle());
     }
@@ -99,7 +99,7 @@ public class MeApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateViewMode(Authentication authentication, @RequestBody ViewModeUpdateRequest request) {
         if (request == null || request.viewMode() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A viewMode is required.");
+            throw new ValidationException("A viewMode is required.");
         }
         userPreferencesService.updateViewMode(authentication.getName(), request.viewMode());
     }
@@ -109,10 +109,10 @@ public class MeApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateTilesPerRow(Authentication authentication, @RequestBody TilesPerRowUpdateRequest request) {
         if (request == null || request.tilesPerRow() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A tilesPerRow is required.");
+            throw new ValidationException("A tilesPerRow is required.");
         }
         if (request.tilesPerRow() < 2 || request.tilesPerRow() > 6) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tilesPerRow must be between 2 and 6.");
+            throw new ValidationException("tilesPerRow must be between 2 and 6.");
         }
         userPreferencesService.updateTilesPerRow(authentication.getName(), request.tilesPerRow());
     }
@@ -126,12 +126,12 @@ public class MeApiController {
     public void updateUsername(Authentication authentication, @RequestBody UsernameUpdateRequest request,
                                HttpServletRequest httpRequest) {
         if (request == null || request.username() == null || request.username().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A username is required.");
+            throw new ValidationException("A username is required.");
         }
         final var currentUsername = authentication.getName();
         final var newUsername = request.username().trim();
         if (!userPreferencesService.usernameAvailable(newUsername, currentUsername)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "That username is already taken.");
+            throw new ValidationException(HttpStatus.CONFLICT, "That username is already taken.");
         }
         userPreferencesService.updateUsername(currentUsername, newUsername);
         // Force re-authentication as the new name.

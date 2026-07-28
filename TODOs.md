@@ -241,18 +241,17 @@ geht. Inkonsistent und teuer.
   Lookup-by-id-Endpunkt `GET /api/search?imdbId=` (`SearchApiController` →
   `SearchService.resolveByImdbId` → `StreamInfoService.resolve`) läuft bereits über den Cache.
 
-### 🟠 TODO-20 — Kein zentrales Fehler-Handling
-Scraping-/IO-Fehler werden in `WerStreamtEsApiClient`/`ImdbApiClient` als nacktes
-`new RuntimeException(e)` weitergeworfen und landen ungefiltert als HTTP 500. Es gibt keinen
-`@ControllerAdvice`/`@ExceptionHandler`.
-- **Akzeptanzkriterium:** Zentrales Exception-Handling ergänzen; IO-Fehler in eine
-  domänenspezifische Exception kapseln und sauber als 502/503 o. ä. abbilden.
-- **Teilweise:** `api/ApiExceptionHandler.java` (`@RestControllerAdvice`) existiert
-  mittlerweile, deckt aber nur Anwendungsfehler ab (`InvalidImportException`,
-  `UserManagementException`, `NoSuchWatchlistEntryException`,
-  `WatchlistEntryAlreadyExistsException`). `WerStreamtEsApiClient` wirft IO-Fehler weiterhin
-  als nackte `RuntimeException` (unverändert seit dem Review) — die landen nach wie vor
-  ungefiltert als 500. Bleibt offen.
+### ✅ TODO-20 — Kein zentrales Fehler-Handling
+Scraping-/IO-Fehler wurden in `WerStreamtEsApiClient` als nacktes `new RuntimeException(e)`
+weitergeworfen und landeten ungefiltert als HTTP 500.
+- **Erledigt:** Neue `domain.ScrapingException` (bewusst in `domain`, nicht `services`, da
+  `ApiExceptionHandler` in der Presentation-Schicht sonst laut `ArchitectureTest` nicht
+  darauf zugreifen dürfte) kapselt den `IOException`-Fall in `search()`/`query()`.
+  `ApiExceptionHandler` bildet sie neu auf **502 Bad Gateway** ab. Live gegen
+  `mvn spring-boot:run` verifiziert: `GET /api/search?imdbId=tt0111161` lieferte in dieser
+  Umgebung einen echten IO-Fehler (Egress-Proxy) und kam sauber als
+  `{"status":502,"title":"Upstream lookup failed","detail":"Query for imdbId 'tt0111161' failed"}`
+  zurück statt als leeres 500. Siehe auch F12 (Validierungsfehler derselben Lücke).
 
 ### ✅ TODO-21 — `ExportReader` bricht beim ganzen Import ab, wenn eine Zeile fehlerhaft ist
 `services/ExportReader.parse(...)`: `Integer.parseInt(year)` (NumberFormatException) bzw.
@@ -538,3 +537,16 @@ Ebenso keine Prüfung für das initiale Admin-Passwort (`w2s.security.initial-ad
   korrekt auf die tatsächlichen Spring-Property-Namen (`W2S_SECURITY_INITIALADMIN_PASSWORD` etc.,
   mit erklärendem Kommentar zur Relaxed-Binding-Eigenheit). Nur die fehlende
   Längen-/Komplexitätsprüfung selbst bleibt offen.
+
+### ✅ F12 — Controller umgehen `ApiExceptionHandler` via rohem `ResponseStatusException`
+`MeApiController` (6×), `WatchlistApiController` (2×) und `ImdbSearchApiController` (1×) warfen
+`ResponseStatusException` direkt statt einer gemappten Exception, wodurch die Fehlermeldung ohne
+`spring.mvc.problemdetails.enabled`/`server.error.include-message` verloren gehen konnte.
+- **Erledigt:** Neue `application.ValidationException` (trägt optional einen `HttpStatus`, Default
+  `BAD_REQUEST`, analog zu `UserManagementException`) ersetzt alle 9 Stellen. `ApiExceptionHandler`
+  bildet sie auf eine `ProblemDetail` mit dem jeweiligen Status ab. Live verifiziert: fehlendes
+  `theme`-Feld → `400` mit `{"detail":"A theme is required.", "title":"Invalid request", ...}` statt
+  einer leeren Standard-Fehlerseite; `tilesPerRow`-Bereichsprüfung ebenso. Die beiden
+  `ResponseStatusException`-404-Fälle (`SearchApiController`, `ProviderApiController`, "unbekannte
+  Ressource" statt Validierung) wurden bewusst nicht angefasst — andere Fehlerkategorie, außerhalb
+  von F12s "400-Validierung"-Fokus.

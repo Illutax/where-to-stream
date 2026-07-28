@@ -7,7 +7,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import tech.dobler.werstreamt.application.InvalidImportException;
 import tech.dobler.werstreamt.application.NoSuchWatchlistEntryException;
 import tech.dobler.werstreamt.application.UserManagementException;
+import tech.dobler.werstreamt.application.ValidationException;
 import tech.dobler.werstreamt.application.WatchlistEntryAlreadyExistsException;
+import tech.dobler.werstreamt.domain.ScrapingException;
 
 /**
  * Translates application exceptions into RFC-7807 {@link ProblemDetail} responses. Scoped to
@@ -40,6 +42,20 @@ public class ApiExceptionHandler {
     public ProblemDetail handleWatchlistEntryAlreadyExists(WatchlistEntryAlreadyExistsException ex) {
         final var problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problem.setTitle("Already on watchlist");
+        return problem;
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ProblemDetail handleValidation(ValidationException ex) {
+        final var problem = ProblemDetail.forStatusAndDetail(ex.status(), ex.getMessage());
+        problem.setTitle("Invalid request");
+        return problem;
+    }
+
+    @ExceptionHandler(ScrapingException.class)
+    public ProblemDetail handleScraping(ScrapingException ex) {
+        final var problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, ex.getMessage());
+        problem.setTitle("Upstream lookup failed");
         return problem;
     }
 }

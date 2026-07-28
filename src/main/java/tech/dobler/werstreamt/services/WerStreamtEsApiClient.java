@@ -13,6 +13,7 @@ import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.Price;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.QueryResult;
+import tech.dobler.werstreamt.domain.ScrapingException;
 import tech.dobler.werstreamt.domain.SearchResult;
 
 import java.io.IOException;
@@ -50,7 +51,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
         } catch (HttpStatusException e) {
             log.error("Search for '{}' failed: {}", searchTerm, e.getMessage());
         } catch (IOException e) {
-            throw new RuntimeException("Search for '%s' failed".formatted(searchTerm), e);
+            throw new ScrapingException("Search for '%s' failed".formatted(searchTerm), e);
         }
         return List.of();
     }
@@ -79,7 +80,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
         } catch (HttpStatusException e) {
             log.error("Query for imdbId '{}' failed: {}", imdbId, e.getMessage());
         } catch (IOException e) {
-            throw new RuntimeException("Query for imdbId '%s' failed".formatted(imdbId), e);
+            throw new ScrapingException("Query for imdbId '%s' failed".formatted(imdbId), e);
         }
         log.info("Found none for id: {}", imdbId);
         return List.of();

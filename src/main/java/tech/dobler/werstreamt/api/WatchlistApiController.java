@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import tech.dobler.werstreamt.application.InvalidImportException;
+import tech.dobler.werstreamt.application.ValidationException;
 import tech.dobler.werstreamt.application.WatchlistImportService;
 import tech.dobler.werstreamt.application.dto.WatchlistDto;
 import tech.dobler.werstreamt.application.dto.WatchlistImportResultDto;
@@ -69,7 +69,7 @@ public class WatchlistApiController {
     public void addOne(Authentication authentication, @PathVariable ImdbId imdbId,
                        @RequestBody AddWatchlistEntryRequest request) {
         if (request == null || request.name() == null || request.name().isBlank() || request.year() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A name and year are required.");
+            throw new ValidationException("A name and year are required.");
         }
         final var userId = watchlistImportService.resolveUserId(authentication.getName());
         watchlistImportService.addOne(userId, imdbId, request.name(), ReleaseYear.of(request.year()));
@@ -82,7 +82,7 @@ public class WatchlistApiController {
                          @PathVariable ImdbId imdbId,
                          @RequestBody SeenUpdateRequest request) {
         if (request == null || request.seen() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A 'seen' flag is required.");
+            throw new ValidationException("A 'seen' flag is required.");
         }
         final var userId = watchlistImportService.resolveUserId(authentication.getName());
         watchlistImportService.markSeen(userId, imdbId, request.seen());
