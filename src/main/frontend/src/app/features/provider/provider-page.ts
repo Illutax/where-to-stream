@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { ProviderApi } from '../../core/api/provider-api';
 import { ImdbId } from '../../core/domain';
-import { GridPrefsStore } from '../../core/grid-prefs-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { PROVIDERS, ProviderPage as ProviderPageDto } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { flatrateToTile, paidToTile } from '../../core/tile-entry';
@@ -34,7 +34,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     } @else if (page(); as p) {
       @if (p.included.length > 0) {
         <h2>{{ 'provider.included' | transloco }}</h2>
-        @if (gridPrefs.viewMode() === 'GRID') {
+        @if (userPrefs.viewMode() === 'GRID') {
           <app-title-grid
             [entries]="includedTiles()"
             [recentlyChangedId]="seenStore.recentlyChanged()"
@@ -48,7 +48,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
       }
       @if (p.paid.length > 0) {
         <h2>{{ 'provider.buyRent' | transloco }}</h2>
-        @if (gridPrefs.viewMode() === 'GRID') {
+        @if (userPrefs.viewMode() === 'GRID') {
           <app-title-grid
             [entries]="paidTiles()"
             [recentlyChangedId]="seenStore.recentlyChanged()"
@@ -70,7 +70,7 @@ export class ProviderPage {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ProviderApi);
   protected readonly seenStore = inject(SeenStore);
-  protected readonly gridPrefs = inject(GridPrefsStore);
+  protected readonly userPrefs = inject(UserPrefsStore);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly page = signal<ProviderPageDto | null>(null);

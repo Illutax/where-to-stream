@@ -3,11 +3,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Observable } from 'rxjs';
-import { AgeRatingStore } from '../../core/age-rating-store';
 import { imdbUrl, posterFullUrl, releaseYearDisplay } from '../../core/domain';
-import { GermanTitleStore } from '../../core/german-title-store';
 import { ImdbSearchResult } from '../../core/models';
 import { injectTitleMeta } from '../../core/title-meta';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
 
 export interface AddToWatchlistDialogData extends ImdbSearchResult {
@@ -44,7 +43,7 @@ export interface AddToWatchlistDialogData extends ImdbSearchResult {
       }
       <div class="add-to-watchlist-details">
         <p class="add-to-watchlist-year">{{ releaseYearDisplay(data.year) }}</p>
-        @if (ageRatingStore.showAgeRatings() && meta()?.rating; as rating) {
+        @if (userPrefsStore.showAgeRatings() && meta()?.rating; as rating) {
           <app-age-badge [rating]="rating" />
         }
         <a [href]="imdbUrl(data.imdbId)" target="_blank" rel="noopener">{{ 'search.viewOnImdb' | transloco }}</a>
@@ -99,8 +98,7 @@ export interface AddToWatchlistDialogData extends ImdbSearchResult {
 export class AddToWatchlistDialog {
   protected readonly dialogRef = inject(MatDialogRef<AddToWatchlistDialog, boolean>);
   protected readonly data = inject<AddToWatchlistDialogData>(MAT_DIALOG_DATA);
-  protected readonly ageRatingStore = inject(AgeRatingStore);
-  private readonly germanTitleStore = inject(GermanTitleStore);
+  protected readonly userPrefsStore = inject(UserPrefsStore);
 
   protected readonly imdbUrl = imdbUrl;
   protected readonly posterFullUrl = posterFullUrl;
@@ -111,7 +109,7 @@ export class AddToWatchlistDialog {
 
   protected readonly meta = injectTitleMeta(() => this.data.imdbId);
   protected readonly displayTitle = computed(
-    () => (this.germanTitleStore.show() && this.meta()?.germanTitle) || this.data.name,
+    () => (this.userPrefsStore.showGermanTitle() && this.meta()?.germanTitle) || this.data.name,
   );
 
   protected add(): void {

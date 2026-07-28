@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { GridPrefsStore } from '../../core/grid-prefs-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 
 /**
  * A single icon button that flips the library layout between the poster grid and the list view —
@@ -14,15 +14,15 @@ import { GridPrefsStore } from '../../core/grid-prefs-store';
   imports: [MatButtonModule, TranslocoPipe],
   template: `
     <button type="button" matIconButton (click)="toggle()" [attr.aria-label]="label() | transloco">
-      {{ gridPrefs.viewMode() === 'GRID' ? '☰' : '▦' }}
+      {{ userPrefs.viewMode() === 'GRID' ? '☰' : '▦' }}
     </button>
   `,
 })
 export class ViewToggleButton {
-  protected readonly gridPrefs = inject(GridPrefsStore);
-  protected readonly label = computed(() => (this.gridPrefs.viewMode() === 'GRID' ? 'grid.switchToList' : 'grid.switchToGrid'));
+  protected readonly userPrefs = inject(UserPrefsStore);
+  protected readonly label = computed(() => (this.userPrefs.viewMode() === 'GRID' ? 'grid.switchToList' : 'grid.switchToGrid'));
 
   protected toggle(): void {
-    this.gridPrefs.setViewMode(this.gridPrefs.viewMode() === 'GRID' ? 'LIST' : 'GRID');
+    this.userPrefs.setViewMode(this.userPrefs.viewMode() === 'GRID' ? 'LIST' : 'GRID');
   }
 }

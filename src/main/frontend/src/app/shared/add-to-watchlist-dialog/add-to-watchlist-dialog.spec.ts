@@ -3,9 +3,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Observable, of, throwError } from 'rxjs';
-import { AgeRatingStore } from '../../core/age-rating-store';
 import { imdbId, releaseYear } from '../../core/domain';
-import { GermanTitleStore } from '../../core/german-title-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { translocoTesting } from '../../testing/transloco-testing';
 import { AddToWatchlistDialog, AddToWatchlistDialogData } from './add-to-watchlist-dialog';
 
@@ -62,7 +61,7 @@ describe('AddToWatchlistDialog', () => {
 
   it('shows the German title when that preference is on and one exists', () => {
     setup();
-    TestBed.inject(GermanTitleStore).init(true);
+    TestBed.inject(UserPrefsStore).init({ showGermanTitle: true });
     fixture.detectChanges();
 
     httpMock.expectOne((r) => r.url.endsWith('/api/titles/tt1/meta')).flush({ rating: null, germanTitle: 'Die Matrix' });
@@ -73,8 +72,7 @@ describe('AddToWatchlistDialog', () => {
 
   it('shows an Add button that calls the injected submit function and closes with true on success', () => {
     setup({ onWatchlist: false });
-    TestBed.inject(AgeRatingStore).init(false);
-    TestBed.inject(GermanTitleStore).init(false);
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
     fixture.detectChanges();
 
     addButton()!.click();
@@ -86,8 +84,7 @@ describe('AddToWatchlistDialog', () => {
   it('shows an error and stays open when the submit function fails', () => {
     submit = vi.fn(() => throwError(() => new Error('boom'))) as typeof submit;
     setup({ onWatchlist: false, submit });
-    TestBed.inject(AgeRatingStore).init(false);
-    TestBed.inject(GermanTitleStore).init(false);
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
     fixture.detectChanges();
 
     addButton()!.click();
@@ -99,8 +96,7 @@ describe('AddToWatchlistDialog', () => {
 
   it('shows the already-on-watchlist state instead of an Add button', () => {
     setup({ onWatchlist: true });
-    TestBed.inject(AgeRatingStore).init(false);
-    TestBed.inject(GermanTitleStore).init(false);
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Already on your watchlist');

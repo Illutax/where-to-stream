@@ -2,10 +2,9 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AgeRatingStore } from './age-rating-store';
-import { GermanTitleStore } from './german-title-store';
 import { ImdbId, imdbId } from './domain';
 import { injectTitleMeta } from './title-meta';
+import { UserPrefsStore } from './user-prefs-store';
 
 // A throwaway host so `injectTitleMeta` (a functional-injection helper) runs inside a real
 // component lifecycle, exactly like its two real callers (TitleCell, TitleTile) do.
@@ -47,8 +46,7 @@ describe('injectTitleMeta', () => {
   });
 
   it('does not fetch when both preferences are off', () => {
-    TestBed.inject(AgeRatingStore).init(false);
-    TestBed.inject(GermanTitleStore).init(false);
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
 
     fixture.detectChanges();
 

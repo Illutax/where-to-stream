@@ -7,12 +7,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
-import { AgeRatingStore } from './core/age-rating-store';
 import { AuthStore } from './core/auth-store';
-import { GermanTitleStore } from './core/german-title-store';
-import { GridPrefsStore } from './core/grid-prefs-store';
-import { LanguageStore } from './core/language-store';
-import { ThemeStore } from './core/theme-store';
+import { UserPrefsStore } from './core/user-prefs-store';
 import { WatchlistStore } from './core/watchlist-store';
 import { ImdbSearchBox } from './shared/imdb-search-box/imdb-search-box';
 import { Navbar } from './shared/navbar/navbar';
@@ -64,11 +60,7 @@ export class App {
   private readonly breakpoints = inject(BreakpointObserver);
   protected readonly watchlistStore = inject(WatchlistStore);
   protected readonly auth = inject(AuthStore);
-  protected readonly themeStore = inject(ThemeStore);
-  protected readonly ageRatingStore = inject(AgeRatingStore);
-  private readonly languageStore = inject(LanguageStore);
-  private readonly germanTitleStore = inject(GermanTitleStore);
-  private readonly gridPrefsStore = inject(GridPrefsStore);
+  protected readonly userPrefsStore = inject(UserPrefsStore);
   private readonly transloco = inject(TranslocoService);
 
   /** True on phone/narrow viewports: the drawer overlays and closes after navigation. */
@@ -81,16 +73,12 @@ export class App {
     this.watchlistStore.load();
     this.auth.load();
     // Drive the active UI language off the user's preference (EN/DE -> en/de).
-    effect(() => this.transloco.setActiveLang(this.languageStore.language().toLowerCase()));
-    // Adopt the theme once the principal (with its saved preference) has loaded.
+    effect(() => this.transloco.setActiveLang(this.userPrefsStore.language().toLowerCase()));
+    // Adopt every preference once the principal (with its saved preferences) has loaded.
     effect(() => {
       const me = this.auth.me();
       if (me) {
-        this.themeStore.init(me.theme);
-        this.ageRatingStore.init(me.showAgeRatings);
-        this.languageStore.init(me.language);
-        this.germanTitleStore.init(me.showGermanTitle);
-        this.gridPrefsStore.init(me.viewMode, me.tilesPerRow);
+        this.userPrefsStore.init(me);
       }
     });
   }

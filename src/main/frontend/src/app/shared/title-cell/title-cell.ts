@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { AgeRatingStore } from '../../core/age-rating-store';
 import { ImdbId, imdbUrl } from '../../core/domain';
-import { GermanTitleStore } from '../../core/german-title-store';
 import { injectTitleMeta } from '../../core/title-meta';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
 import { PosterThumb } from '../poster-thumb/poster-thumb';
 
@@ -20,7 +19,7 @@ import { PosterThumb } from '../poster-thumb/poster-thumb';
     <div class="title-cell">
       <app-poster-thumb [imdbId]="imdbId()" [name]="name()" />
       <a [href]="imdbUrl(imdbId())" target="_blank" rel="noopener">{{ displayTitle() }}</a>
-      @if (ageRatingStore.showAgeRatings() && meta()?.rating; as rating) {
+      @if (userPrefsStore.showAgeRatings() && meta()?.rating; as rating) {
         <app-age-badge [rating]="rating" />
       }
     </div>
@@ -30,13 +29,12 @@ export class TitleCell {
   readonly imdbId = input.required<ImdbId>();
   readonly name = input<string>('');
 
-  protected readonly ageRatingStore = inject(AgeRatingStore);
-  private readonly germanTitleStore = inject(GermanTitleStore);
+  protected readonly userPrefsStore = inject(UserPrefsStore);
   protected readonly imdbUrl = imdbUrl;
   protected readonly meta = injectTitleMeta(() => this.imdbId());
 
   /** The German title when the preference is on and one exists, else the original (English) name. */
   protected readonly displayTitle = computed(
-    () => (this.germanTitleStore.show() && this.meta()?.germanTitle) || this.name(),
+    () => (this.userPrefsStore.showGermanTitle() && this.meta()?.germanTitle) || this.name(),
   );
 }

@@ -4,7 +4,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { Sort } from '@angular/material/sort';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ImdbId } from '../../core/domain';
-import { GridPrefsStore } from '../../core/grid-prefs-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { sortRows } from '../sort/table-sort';
 import { TileEntry } from '../../core/tile-entry';
 import { TitleTile } from '../title-tile/title-tile';
@@ -50,8 +50,8 @@ const TILE_COUNT_OPTIONS = [2, 3, 4, 5, 6] as const;
       <span class="per-row-label">{{ 'grid.perRowLabel' | transloco }}</span>
       <mat-button-toggle-group
         class="per-row-group"
-        [value]="gridPrefs.tilesPerRow()"
-        (change)="gridPrefs.setTilesPerRow($event.value)"
+        [value]="userPrefs.tilesPerRow()"
+        (change)="userPrefs.setTilesPerRow($event.value)"
         hideSingleSelectionIndicator
         [attr.aria-label]="'grid.perRowLabel' | transloco">
         @for (n of tileCountOptions; track n) {
@@ -62,7 +62,7 @@ const TILE_COUNT_OPTIONS = [2, 3, 4, 5, 6] as const;
       <span class="watched-counter">{{ 'grid.watchedOf' | transloco: { watched: watchedCount(), total: total() } }}</span>
     </div>
 
-    <div class="tile-grid" [style.--tiles-per-row]="gridPrefs.tilesPerRow()">
+    <div class="tile-grid" [style.--tiles-per-row]="userPrefs.tilesPerRow()">
       @for (entry of sorted(); track entry.imdbId) {
         <app-title-tile
           [imdbId]="entry.imdbId"
@@ -122,7 +122,7 @@ export class TitleGrid {
   readonly recentlyChangedId = input<ImdbId | null>(null);
   readonly seenToggle = output<{ imdbId: ImdbId; seen: boolean }>();
 
-  protected readonly gridPrefs = inject(GridPrefsStore);
+  protected readonly userPrefs = inject(UserPrefsStore);
   protected readonly tileCountOptions = TILE_COUNT_OPTIONS;
 
   protected readonly sort = signal<Sort>({ active: '', direction: '' });

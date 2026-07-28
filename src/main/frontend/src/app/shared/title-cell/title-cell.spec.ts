@@ -2,9 +2,8 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TitleCell } from './title-cell';
-import { AgeRatingStore } from '../../core/age-rating-store';
-import { GermanTitleStore } from '../../core/german-title-store';
 import { imdbId } from '../../core/domain';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 
 describe('TitleCell', () => {
   let fixture: ComponentFixture<TitleCell>;
@@ -25,7 +24,7 @@ describe('TitleCell', () => {
   const badge = () => fixture.nativeElement.querySelector('.age-badge') as HTMLElement | null;
 
   it('shows the English name and the FSK badge when age ratings are on', () => {
-    // AgeRatingStore defaults on → the cell fetches its metadata.
+    // UserPrefsStore.showAgeRatings defaults on → the cell fetches its metadata.
     fixture.componentRef.setInput('imdbId', imdbId('tt1'));
     fixture.componentRef.setInput('name', 'The Godfather');
     fixture.detectChanges();
@@ -39,8 +38,7 @@ describe('TitleCell', () => {
   });
 
   it('shows the German title when that preference is on and one exists', () => {
-    TestBed.inject(GermanTitleStore).init(true);
-    TestBed.inject(AgeRatingStore).init(false); // only the German-title preference is on
+    TestBed.inject(UserPrefsStore).init({ showGermanTitle: true, showAgeRatings: false }); // only the German-title preference is on
     fixture.componentRef.setInput('imdbId', imdbId('tt1'));
     fixture.componentRef.setInput('name', 'Up');
     fixture.detectChanges();
@@ -54,8 +52,7 @@ describe('TitleCell', () => {
   });
 
   it('does not fetch or change the title when both preferences are off', () => {
-    TestBed.inject(AgeRatingStore).init(false);
-    TestBed.inject(GermanTitleStore).init(false);
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
     fixture.componentRef.setInput('imdbId', imdbId('tt1'));
     fixture.componentRef.setInput('name', 'Up');
     fixture.detectChanges();

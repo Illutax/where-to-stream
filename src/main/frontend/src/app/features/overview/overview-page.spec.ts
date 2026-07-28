@@ -5,7 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { OverviewPage } from './overview-page';
 import { ImdbId, imdbId, releaseYear, watchlistDate } from '../../core/domain';
-import { GridPrefsStore } from '../../core/grid-prefs-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { OverviewEntry } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
@@ -37,7 +37,7 @@ describe('OverviewPage', () => {
     fixture = TestBed.createComponent(OverviewPage); // constructor kicks off the load
     httpMock = TestBed.inject(HttpTestingController);
     // Most existing assertions target the table; the grid (now the default) is covered separately.
-    TestBed.inject(GridPrefsStore).init('LIST', 6);
+    TestBed.inject(UserPrefsStore).init({ viewMode: 'LIST', tilesPerRow: 6 });
   });
 
   afterEach(() => {
@@ -81,7 +81,7 @@ describe('OverviewPage', () => {
   });
 
   it('renders the poster grid by default (GRID is the default view mode)', () => {
-    TestBed.inject(GridPrefsStore).init('GRID', 6);
+    TestBed.inject(UserPrefsStore).init({ viewMode: 'GRID', tilesPerRow: 6 });
     const payload: OverviewEntry[] = [
       { isRated: true, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
     ];
@@ -93,7 +93,7 @@ describe('OverviewPage', () => {
   });
 
   it('delegates a seen toggle from the grid to the store', () => {
-    TestBed.inject(GridPrefsStore).init('GRID', 6);
+    TestBed.inject(UserPrefsStore).init({ viewMode: 'GRID', tilesPerRow: 6 });
     const payload: OverviewEntry[] = [
       { isRated: false, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
     ];

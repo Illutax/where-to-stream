@@ -9,12 +9,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { AgeRatingStore } from '../../core/age-rating-store';
 import { UsernameApi } from '../../core/api/username-api';
 import { AuthStore } from '../../core/auth-store';
-import { GermanTitleStore } from '../../core/german-title-store';
-import { LanguageStore } from '../../core/language-store';
-import { ThemeStore } from '../../core/theme-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 
 /**
  * The user's settings: display language, colour theme, age-rating badges, German film titles, and
@@ -35,7 +32,7 @@ import { ThemeStore } from '../../core/theme-store';
       <h2>{{ 'settings.language' | transloco }}</h2>
       <mat-form-field appearance="outline">
         <mat-label>{{ 'settings.language' | transloco }}</mat-label>
-        <mat-select [value]="languageStore.language()" (selectionChange)="languageStore.set($event.value)">
+        <mat-select [value]="userPrefsStore.language()" (selectionChange)="userPrefsStore.setLanguage($event.value)">
           <mat-option value="EN">{{ 'settings.languageEnglish' | transloco }}</mat-option>
           <mat-option value="DE">{{ 'settings.languageGerman' | transloco }}</mat-option>
         </mat-select>
@@ -46,17 +43,17 @@ import { ThemeStore } from '../../core/theme-store';
       <h2>{{ 'settings.appearance' | transloco }}</h2>
       <div class="setting-row">
         <span>{{ 'settings.theme' | transloco }}</span>
-        <mat-button-toggle-group [value]="themeStore.theme()" (change)="themeStore.set($event.value)"
+        <mat-button-toggle-group [value]="userPrefsStore.theme()" (change)="userPrefsStore.setTheme($event.value)"
                                  hideSingleSelectionIndicator aria-label="Colour theme">
           <mat-button-toggle value="SYSTEM" [title]="'settings.themeSystem' | transloco">🖥️</mat-button-toggle>
           <mat-button-toggle value="LIGHT" [title]="'settings.themeLight' | transloco">☀️</mat-button-toggle>
           <mat-button-toggle value="DARK" [title]="'settings.themeDark' | transloco">🌙</mat-button-toggle>
         </mat-button-toggle-group>
       </div>
-      <mat-slide-toggle [checked]="ageRatingStore.showAgeRatings()"
-                        (change)="ageRatingStore.set($event.checked)">{{ 'settings.ageRatings' | transloco }}</mat-slide-toggle>
-      <mat-slide-toggle [checked]="germanTitleStore.show()"
-                        (change)="germanTitleStore.set($event.checked)">{{ 'settings.germanTitles' | transloco }}</mat-slide-toggle>
+      <mat-slide-toggle [checked]="userPrefsStore.showAgeRatings()"
+                        (change)="userPrefsStore.setShowAgeRatings($event.checked)">{{ 'settings.ageRatings' | transloco }}</mat-slide-toggle>
+      <mat-slide-toggle [checked]="userPrefsStore.showGermanTitle()"
+                        (change)="userPrefsStore.setShowGermanTitle($event.checked)">{{ 'settings.germanTitles' | transloco }}</mat-slide-toggle>
     </mat-card>
 
     <mat-card class="settings-card">
@@ -93,10 +90,7 @@ import { ThemeStore } from '../../core/theme-store';
   `,
 })
 export class SettingsPage {
-  protected readonly themeStore = inject(ThemeStore);
-  protected readonly ageRatingStore = inject(AgeRatingStore);
-  protected readonly languageStore = inject(LanguageStore);
-  protected readonly germanTitleStore = inject(GermanTitleStore);
+  protected readonly userPrefsStore = inject(UserPrefsStore);
   private readonly auth = inject(AuthStore);
   private readonly usernameApi = inject(UsernameApi);
   private readonly snackBar = inject(MatSnackBar);

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CatalogApi } from '../../core/api/catalog-api';
 import { ImdbId } from '../../core/domain';
-import { GridPrefsStore } from '../../core/grid-prefs-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { OverviewEntry } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { overviewToTile } from '../../core/tile-entry';
@@ -24,7 +24,7 @@ import { TranslocoService } from '@jsverse/transloco';
       <app-loading />
     } @else if (error()) {
       <app-error-alert [message]="error()" />
-    } @else if (gridPrefs.viewMode() === 'GRID') {
+    } @else if (userPrefs.viewMode() === 'GRID') {
       <app-title-grid
         [entries]="tileEntries()"
         [recentlyChangedId]="seenStore.recentlyChanged()"
@@ -40,7 +40,7 @@ import { TranslocoService } from '@jsverse/transloco';
 export class OverviewPage {
   private readonly api = inject(CatalogApi);
   protected readonly seenStore = inject(SeenStore);
-  protected readonly gridPrefs = inject(GridPrefsStore);
+  protected readonly userPrefs = inject(UserPrefsStore);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly entries = signal<OverviewEntry[]>([]);

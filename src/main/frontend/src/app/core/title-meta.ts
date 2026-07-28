@@ -1,9 +1,8 @@
 import { effect, inject, Signal, signal } from '@angular/core';
-import { AgeRatingStore } from './age-rating-store';
 import { TitleMetaApi } from './api/title-meta-api';
 import { ImdbId } from './domain';
-import { GermanTitleStore } from './german-title-store';
 import { TitleMetaResponse } from './models';
+import { UserPrefsStore } from './user-prefs-store';
 
 /**
  * Lazily fetches a title's metadata (age rating + German title) via {@link TitleMetaApi} — only
@@ -12,13 +11,12 @@ import { TitleMetaResponse } from './models';
  * constructor), mirroring functions like `takeUntilDestroyed`.
  */
 export function injectTitleMeta(imdbId: () => ImdbId): Signal<TitleMetaResponse | null> {
-  const ageRatingStore = inject(AgeRatingStore);
-  const germanTitleStore = inject(GermanTitleStore);
+  const userPrefsStore = inject(UserPrefsStore);
   const titleMetaApi = inject(TitleMetaApi);
   const meta = signal<TitleMetaResponse | null>(null);
 
   effect(() => {
-    if ((!ageRatingStore.showAgeRatings() && !germanTitleStore.show()) || meta() !== null) {
+    if ((!userPrefsStore.showAgeRatings() && !userPrefsStore.showGermanTitle()) || meta() !== null) {
       return;
     }
     titleMetaApi.get(imdbId()).subscribe({

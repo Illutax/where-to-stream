@@ -7,7 +7,7 @@ import { By } from '@angular/platform-browser';
 import { BehaviorSubject } from 'rxjs';
 import { ProviderPage } from './provider-page';
 import { ImdbId, imdbId, releaseYear, watchlistDate } from '../../core/domain';
-import { GridPrefsStore } from '../../core/grid-prefs-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { ProviderPage as ProviderPageDto } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { FlatrateTable } from '../../shared/flatrate-table/flatrate-table';
@@ -41,7 +41,7 @@ describe('ProviderPage', () => {
     fixture = TestBed.createComponent(ProviderPage);
     httpMock = TestBed.inject(HttpTestingController);
     // Most existing assertions target the tables; the grid (now the default) is covered separately.
-    TestBed.inject(GridPrefsStore).init('LIST', 6);
+    TestBed.inject(UserPrefsStore).init({ viewMode: 'LIST', tilesPerRow: 6 });
   }
 
   afterEach(() => {
@@ -103,7 +103,7 @@ describe('ProviderPage', () => {
 
   it('renders the poster grid by default (GRID is the default view mode)', () => {
     setup('netflix');
-    TestBed.inject(GridPrefsStore).init('GRID', 6);
+    TestBed.inject(UserPrefsStore).init({ viewMode: 'GRID', tilesPerRow: 6 });
     httpMock
       .expectOne((r) => r.url.endsWith('/api/providers/netflix'))
       .flush(page({ included: [{ isRated: false, name: 'Nolan Film', imdbId: imdbId('tt9'), year: releaseYear(2020), added: watchlistDate('2020-01-01') }] }));
@@ -116,7 +116,7 @@ describe('ProviderPage', () => {
 
   it('delegates a seen toggle from the grid to the store', () => {
     setup('netflix');
-    TestBed.inject(GridPrefsStore).init('GRID', 6);
+    TestBed.inject(UserPrefsStore).init({ viewMode: 'GRID', tilesPerRow: 6 });
     httpMock
       .expectOne((r) => r.url.endsWith('/api/providers/netflix'))
       .flush(page({ included: [{ isRated: false, name: 'Nolan Film', imdbId: imdbId('tt9'), year: releaseYear(2020), added: watchlistDate('2020-01-01') }] }));

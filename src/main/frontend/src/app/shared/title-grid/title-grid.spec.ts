@@ -108,6 +108,6 @@ describe('TitleGrid', () => {
     await three.check();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance['gridPrefs'].tilesPerRow()).toBe(3);
+    expect(fixture.componentInstance['userPrefs'].tilesPerRow()).toBe(3);
   });
 });

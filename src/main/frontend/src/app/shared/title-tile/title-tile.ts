@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { AgeRatingStore } from '../../core/age-rating-store';
 import { ImdbId, imdbUrl, posterFullUrl, WatchlistDate } from '../../core/domain';
-import { GermanTitleStore } from '../../core/german-title-store';
 import { injectTitleMeta } from '../../core/title-meta';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
 import { splitTitle, titleSizeSteps } from './title-split';
 
@@ -45,7 +44,7 @@ import { splitTitle, titleSizeSteps } from './title-split';
         </div>
         <div class="badge-stack">
           <span class="year-chip">{{ year() }}</span>
-          @if (ageRatingStore.showAgeRatings() && meta()?.rating; as rating) {
+          @if (userPrefsStore.showAgeRatings() && meta()?.rating; as rating) {
             <app-age-badge [rating]="rating" />
           }
         </div>
@@ -266,8 +265,7 @@ export class TitleTile {
   readonly recentlyChanged = input(false);
   readonly seenToggle = output<{ imdbId: ImdbId; seen: boolean }>();
 
-  protected readonly ageRatingStore = inject(AgeRatingStore);
-  private readonly germanTitleStore = inject(GermanTitleStore);
+  protected readonly userPrefsStore = inject(UserPrefsStore);
   protected readonly imdbUrl = imdbUrl;
   protected readonly posterFullUrl = posterFullUrl;
   protected readonly hidden = signal(false);
@@ -275,7 +273,7 @@ export class TitleTile {
 
   /** The German title when the preference is on and one exists, else the original (English) name. */
   private readonly displayTitle = computed(
-    () => (this.germanTitleStore.show() && this.meta()?.germanTitle) || this.name(),
+    () => (this.userPrefsStore.showGermanTitle() && this.meta()?.germanTitle) || this.name(),
   );
   protected readonly titleParts = computed(() => splitTitle(this.displayTitle()));
   protected readonly sizeSteps = computed(() => titleSizeSteps(this.titleParts().main.length));

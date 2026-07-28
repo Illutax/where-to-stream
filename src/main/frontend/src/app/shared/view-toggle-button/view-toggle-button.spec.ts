@@ -1,7 +1,7 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { GridPrefsStore } from '../../core/grid-prefs-store';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { translocoTesting } from '../../testing/transloco-testing';
 import { ViewToggleButton } from './view-toggle-button';
 
@@ -34,14 +34,14 @@ describe('ViewToggleButton', () => {
     button().click();
     fixture.detectChanges();
 
-    expect(TestBed.inject(GridPrefsStore).viewMode()).toBe('LIST');
+    expect(TestBed.inject(UserPrefsStore).viewMode()).toBe('LIST');
     expect(button().getAttribute('aria-label')).toBe('Switch to tile view');
     httpMock.expectOne((r) => r.url.endsWith('/api/me/view-mode')).flush(null);
 
     button().click();
     fixture.detectChanges();
 
-    expect(TestBed.inject(GridPrefsStore).viewMode()).toBe('GRID');
+    expect(TestBed.inject(UserPrefsStore).viewMode()).toBe('GRID');
     httpMock.expectOne((r) => r.url.endsWith('/api/me/view-mode')).flush(null);
   });
 });
