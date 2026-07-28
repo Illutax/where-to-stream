@@ -112,6 +112,74 @@ class WatchlistImportServiceTest {
     }
 
     @Test
+    void reimportUpdatesWhenOnlyTheRatedFlagDiffers() {
+        when(timeService.now()).thenReturn(NOW);
+        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(incoming("tt1", "Same", true)));
+        when(repository.findByUserId(USER)).thenReturn(List.of(stored("tt1", "Same", false)));
+
+        final var result = newService().importCsv(USER, anyCsv());
+
+        assertThat(result.updated()).isEqualTo(1);
+    }
+
+    @Test
+    void reimportUpdatesWhenOnlyTheYearDiffers() {
+        when(timeService.now()).thenReturn(NOW);
+        final var differentYear = new ImdbEntry("Same", URI.create("https://www.imdb.com/title/tt1/"),
+                WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(1999), id("tt1"));
+        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(differentYear));
+        when(repository.findByUserId(USER)).thenReturn(List.of(stored("tt1", "Same", false)));
+
+        final var result = newService().importCsv(USER, anyCsv());
+
+        assertThat(result.updated()).isEqualTo(1);
+    }
+
+    @Test
+    void reimportUpdatesWhenOnlyTheAddedDateDiffers() {
+        when(timeService.now()).thenReturn(NOW);
+        final var differentAdded = new ImdbEntry("Same", URI.create("https://www.imdb.com/title/tt1/"),
+                WatchlistDate.of("2021-06-15"), false, ReleaseYear.of(2020), id("tt1"));
+        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(differentAdded));
+        when(repository.findByUserId(USER)).thenReturn(List.of(stored("tt1", "Same", false)));
+
+        final var result = newService().importCsv(USER, anyCsv());
+
+        assertThat(result.updated()).isEqualTo(1);
+    }
+
+    @Test
+    void reimportUpdatesWhenOnlyTheUrlDiffersToNull() {
+        when(timeService.now()).thenReturn(NOW);
+        // ImdbEntry with no url at all (differs() must still compare it against the stored, non-null url).
+        final var noUrl = new ImdbEntry("Same", null, WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(2020), id("tt1"));
+        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(noUrl));
+        when(repository.findByUserId(USER)).thenReturn(List.of(stored("tt1", "Same", false)));
+
+        final var result = newService().importCsv(USER, anyCsv());
+
+        assertThat(result.updated()).isEqualTo(1);
+        final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getUrl()).isNull();
+    }
+
+    @Test
+    void reimportSkipsAnUnchangedEntryEvenWithoutAUrl() {
+        when(timeService.now()).thenReturn(NOW);
+        final var noUrlIncoming = new ImdbEntry("Same", null, WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(2020), id("tt1"));
+        final var noUrlStored = WatchlistEntry.of(USER, id("tt1"), "Same", null,
+                WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(2020), NOW);
+        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(noUrlIncoming));
+        when(repository.findByUserId(USER)).thenReturn(List.of(noUrlStored));
+
+        final var result = newService().importCsv(USER, anyCsv());
+
+        assertThat(result.updated()).isZero();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void duplicateImdbIdsInTheUploadCollapseToOneRowLastWins() {
         when(timeService.now()).thenReturn(NOW);
         when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(
@@ -127,6 +195,13 @@ class WatchlistImportServiceTest {
         verify(repository).save(saved.capture());
         assertThat(saved.getValue().getName()).isEqualTo("Second");
         assertThat(saved.getValue().isRated()).isTrue();
+    }
+
+    @Test
+    void countDelegatesToRepository() {
+        when(repository.countByUserId(USER)).thenReturn(3L);
+
+        assertThat(newService().count(USER)).isEqualTo(3L);
     }
 
     @Test

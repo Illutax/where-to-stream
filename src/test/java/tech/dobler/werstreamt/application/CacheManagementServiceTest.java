@@ -74,6 +74,33 @@ class CacheManagementServiceTest {
     }
 
     @Test
+    void managePageMergeShortCircuitsWhenTheFirstSeenEntryIsAlreadyRated() {
+        // Opposite order from the test above: the first-seen entry (the merge's "a") is already
+        // rated, so a.rated() || b.rated() short-circuits without evaluating b.rated() at all.
+        when(watchlistEntryRepository.findAll()).thenReturn(List.of(
+                entry("tt1", "Movie", true), entry("tt1", "Movie", false)));
+        when(preCacheService.findUncachedImdbIds()).thenReturn(List.of());
+
+        final var page = service.managePage();
+
+        assertThat(page.rows()).hasSize(1);
+        assertThat(page.rows().get(0).isRated()).isTrue();
+    }
+
+    @Test
+    void managePageMergeStaysUnratedWhenNeitherEntryIsRated() {
+        // a.rated() is false (evaluated), forcing b.rated() to be evaluated too (also false).
+        when(watchlistEntryRepository.findAll()).thenReturn(List.of(
+                entry("tt1", "Movie", false), entry("tt1", "Movie", false)));
+        when(preCacheService.findUncachedImdbIds()).thenReturn(List.of());
+
+        final var page = service.managePage();
+
+        assertThat(page.rows()).hasSize(1);
+        assertThat(page.rows().get(0).isRated()).isFalse();
+    }
+
+    @Test
     void invalidateDelegatesToPreCache() {
         when(preCacheService.invalidate(List.of(id("tt1")))).thenReturn(3);
         assertThat(service.invalidate(List.of(id("tt1"))).invalidated()).isEqualTo(3);

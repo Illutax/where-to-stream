@@ -7,8 +7,11 @@ import tech.dobler.werstreamt.domain.AvailabilityType;
 import tech.dobler.werstreamt.domain.Availability;
 import tech.dobler.werstreamt.domain.ImdbId;
 import tech.dobler.werstreamt.domain.QueryResult;
+import tech.dobler.werstreamt.domain.SearchResult;
 
+import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
@@ -160,6 +163,42 @@ class WerStreamtEsApiClientTest {
                 .filter(a -> a.type() == type)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No %s availability in %s".formatted(type, result.streamingServiceName())));
+    }
+
+    // --- toSearchResult() (the free-text search() parsing, network-free) ---
+
+    private static org.jsoup.nodes.Element searchListing(String html) {
+        return Jsoup.parse("<li data-contentid=\"1\">" + html + "</li>").selectFirst("li");
+    }
+
+    @Test
+    void toSearchResultParsesNameAndRelativeUrl() {
+        final var listing = searchListing("<a href=\"the-matrix\"><strong>The Matrix</strong></a>");
+
+        final Optional<SearchResult> result = WerStreamtEsApiClient.toSearchResult(listing);
+
+        assertThat(result).contains(new SearchResult("The Matrix", URI.create("https://www.werstreamt.es/the-matrix")));
+    }
+
+    @Test
+    void toSearchResultSkipsAListingWithoutATitle() {
+        final var listing = searchListing("<a href=\"x\"></a>");
+
+        assertThat(WerStreamtEsApiClient.toSearchResult(listing)).isEmpty();
+    }
+
+    @Test
+    void toSearchResultSkipsAnEmptyTitleElement() {
+        final var listing = searchListing("<a href=\"x\"><strong></strong></a>");
+
+        assertThat(WerStreamtEsApiClient.toSearchResult(listing)).isEmpty();
+    }
+
+    @Test
+    void toSearchResultSkipsAListingWithoutALink() {
+        final var listing = searchListing("<strong>The Matrix</strong>");
+
+        assertThat(WerStreamtEsApiClient.toSearchResult(listing)).isEmpty();
     }
 
     @Test

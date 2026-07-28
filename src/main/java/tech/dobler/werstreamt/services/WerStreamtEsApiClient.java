@@ -56,7 +56,9 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
         return List.of();
     }
 
-    private static Optional<SearchResult> toSearchResult(Element element) {
+    // Package-private so the (network-free) per-result parsing can be unit tested directly,
+    // mirroring the existing parse(Document, ImdbId) seam below.
+    static Optional<SearchResult> toSearchResult(Element element) {
         final var strong = element.selectFirst("strong");
         final var anchor = element.selectFirst("a");
         if (strong == null || strong.childNodeSize() == 0 || anchor == null) {

@@ -66,6 +66,30 @@ class UserAdminServiceTest {
     }
 
     @Test
+    void createWithAnEmptyRoleListDefaultsToUser() {
+        when(timeService.now()).thenReturn(NOW);
+        when(users.existsByUsername("bob")).thenReturn(false);
+        when(passwordEncoder.encode("secret")).thenReturn("{bcrypt}enc");
+        when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        final var dto = service.create(new CreateUserRequest("bob", "secret", null, List.of()));
+
+        assertThat(dto.roles()).containsExactly("USER");
+    }
+
+    @Test
+    void createWithNullRolesDefaultsToUser() {
+        when(timeService.now()).thenReturn(NOW);
+        when(users.existsByUsername("bob")).thenReturn(false);
+        when(passwordEncoder.encode("secret")).thenReturn("{bcrypt}enc");
+        when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        final var dto = service.create(new CreateUserRequest("bob", "secret", null, null));
+
+        assertThat(dto.roles()).containsExactly("USER");
+    }
+
+    @Test
     void createRejectsADuplicateUsername() {
         when(users.existsByUsername("bob")).thenReturn(true);
 
@@ -88,6 +112,22 @@ class UserAdminServiceTest {
         when(users.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.get(id)).isInstanceOf(UserManagementException.class);
+    }
+
+    @Test
+    void getReturnsTheUserWhenFound() {
+        final var bob = user("bob", Set.of(Role.USER), true, AuthProvider.LOCAL);
+        final var id = (UUID) ReflectionTestUtils.getField(bob, "id");
+        when(users.findById(id)).thenReturn(Optional.of(bob));
+
+        assertThat(service.get(id).username()).isEqualTo("bob");
+    }
+
+    @Test
+    void createRejectsANullUsername() {
+        assertThatThrownBy(() -> service.create(new CreateUserRequest(null, "secret", null, List.of())))
+                .isInstanceOf(UserManagementException.class);
+        verify(users, never()).save(any());
     }
 
     @Test
@@ -117,6 +157,31 @@ class UserAdminServiceTest {
     }
 
     @Test
+    void updateKeepingTheAdminRoleAndEnabledNeverChecksForTheLastAdmin() {
+        final var admin = user("admin", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
+        final var id = (UUID) ReflectionTestUtils.getField(admin, "id");
+        when(users.findById(id)).thenReturn(Optional.of(admin));
+        when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        final var dto = service.update(id, new UpdateUserRequest("new@x", List.of(Role.ADMIN), true));
+
+        assertThat(dto.roles()).containsExactly("ADMIN");
+        verify(users, never()).findAll(); // losesAdmin short-circuits false; isLastEnabledAdmin never runs
+    }
+
+    @Test
+    void updateDisablingTheLastAdminIsRefusedEvenWithTheRoleKept() {
+        final var admin = user("admin", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
+        final var id = (UUID) ReflectionTestUtils.getField(admin, "id");
+        when(users.findById(id)).thenReturn(Optional.of(admin));
+        when(users.findAll()).thenReturn(List.of(admin)); // the only admin
+
+        assertThatThrownBy(() -> service.update(id, new UpdateUserRequest("admin@x", List.of(Role.ADMIN), false)))
+                .isInstanceOf(UserManagementException.class);
+        verify(users, never()).save(any());
+    }
+
+    @Test
     void deleteRefusesToRemoveTheLastEnabledAdmin() {
         final var admin = user("admin", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
         final var id = (UUID) ReflectionTestUtils.getField(admin, "id");
@@ -125,6 +190,30 @@ class UserAdminServiceTest {
 
         assertThatThrownBy(() -> service.delete(id)).isInstanceOf(UserManagementException.class);
         verify(users, never()).delete(any());
+    }
+
+    @Test
+    void deleteSucceedsForADisabledAdmin() {
+        // A disabled admin is never "the last enabled admin" — isLastEnabledAdmin short-circuits.
+        final var admin = user("admin", Set.of(Role.ADMIN), false, AuthProvider.LOCAL);
+        final var id = (UUID) ReflectionTestUtils.getField(admin, "id");
+        when(users.findById(id)).thenReturn(Optional.of(admin));
+
+        service.delete(id);
+
+        verify(users).delete(admin);
+        verify(users, never()).findAll();
+    }
+
+    @Test
+    void deleteSucceedsForARegularUser() {
+        final var bob = user("bob", Set.of(Role.USER), true, AuthProvider.LOCAL);
+        final var id = (UUID) ReflectionTestUtils.getField(bob, "id");
+        when(users.findById(id)).thenReturn(Optional.of(bob));
+
+        service.delete(id);
+
+        verify(users).delete(bob);
     }
 
     @Test

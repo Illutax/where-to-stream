@@ -105,6 +105,77 @@ class PosterServiceTest {
     }
 
     @Test
+    void returnsEmptyWhenTheImageDownloadYieldsEmptyBytes() {
+        // A distinct path from an absent Optional: the source responds but with a zero-length body.
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(TitlePoster.of(TT, "/p.jpg", NOW)));
+        when(posterSource.download("/p.jpg", PosterSize.THUMB)).thenReturn(Optional.of(new byte[0]));
+
+        assertThat(service().thumb(TT)).isEmpty();
+    }
+
+    @Test
+    void discoveryFindingNoPosterPathAtAllReturnsEmpty() {
+        when(repository.findByImdbId(TT)).thenReturn(Optional.empty());
+        when(posterSource.findPosterPath(TT)).thenReturn(Optional.empty());
+
+        assertThat(service().thumb(TT)).isEmpty();
+        verify(posterSource, never()).download(any(), any());
+    }
+
+    @Test
+    void cachedEmptyBytesAreTreatedAsNeedingARedownload() {
+        // A previously-stored zero-length blob (e.g. an interrupted write) must not be served as a hit.
+        final var row = TitlePoster.of(TT, "/p.jpg", NOW);
+        row.setThumb(new byte[0], "image/jpeg");
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(row));
+        when(posterSource.download("/p.jpg", PosterSize.THUMB)).thenReturn(Optional.of(new byte[]{1}));
+
+        final var result = service().thumb(TT);
+
+        assertThat(result).get().extracting(PosterService.Poster::bytes).isEqualTo(new byte[]{1});
+        verify(posterSource, never()).findPosterPath(any()); // path already known, only bytes were missing
+    }
+
+    @Test
+    void staleNegativeCacheAsksTheSourceAgainAndRefreshesTheExistingRow() {
+        final var stalePast = NOW.minus(30, java.time.temporal.ChronoUnit.DAYS); // past the 14-day TTL
+        final var row = TitlePoster.of(TT, null, stalePast);
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(row));
+        when(posterSource.findPosterPath(TT)).thenReturn(Optional.of("/new.jpg"));
+        when(posterSource.download("/new.jpg", PosterSize.THUMB)).thenReturn(Optional.of(new byte[]{1}));
+
+        final var result = service().thumb(TT);
+
+        assertThat(result).isPresent();
+        verify(posterSource).findPosterPath(TT);
+        assertThat(row.getPosterPath()).isEqualTo("/new.jpg"); // refreshed in place, not replaced
+    }
+
+    @Test
+    void fullSizeCacheHitUsesTheStoredFullContentType() {
+        final var row = TitlePoster.of(TT, "/p.jpg", NOW);
+        row.setThumb(new byte[]{1}, "image/jpeg");
+        row.setFull(new byte[]{2, 3}, "image/png");
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(row));
+
+        final var result = service().full(TT);
+
+        assertThat(result).get().extracting(PosterService.Poster::contentType).isEqualTo("image/png");
+        verifyNoInteractions(posterSource);
+    }
+
+    @Test
+    void contentTypeFallsBackToJpegWhenNoneWasStored() {
+        final var row = TitlePoster.of(TT, "/p.jpg", NOW);
+        row.setThumb(new byte[]{1}, null);
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(row));
+
+        final var result = service().thumb(TT);
+
+        assertThat(result).get().extracting(PosterService.Poster::contentType).isEqualTo("image/jpeg");
+    }
+
+    @Test
     void swallowsAConcurrentInsertAndStillServesTheImage() {
         // Cold miss: the discovery/store insert loses the unique-key race, but the request still
         // returns the bytes it downloaded (the row self-heals on a later request).
