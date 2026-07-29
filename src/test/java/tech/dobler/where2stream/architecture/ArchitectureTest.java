@@ -119,41 +119,63 @@ class ArchitectureTest {
                     + "own outbound ports (PosterSource, TitleMetaRepository, TitlePosterRepository)");
 
     /**
+     * Same isolation rule again, for Streaming Availability. Unlike the other three contexts, it
+     * publishes no inbound port at all: it only ever reaches <em>out</em> to watchlist's and title
+     * catalog's published ports (WatchlistCatalogPort, TitleCacheMaintenancePort) — nothing outside
+     * this context currently needs to call into it. The rule still guards the boundary going
+     * forward even though there's nothing in {@code port.in} to exempt yet.
+     */
+    @ArchTest
+    static final ArchRule streamingavailability_is_only_accessed_through_its_published_ports = noClasses()
+            .that().resideOutsideOfPackage("..streamingavailability..")
+            .and().resideOutsideOfPackage("..shared..")
+            .should().dependOnClassesThat(
+                    resideInAPackage("..streamingavailability..")
+                            .and(not(resideInAPackage("..streamingavailability.port.in..")))
+            )
+            .because("nothing outside streaming availability should depend on its internals — it "
+                    + "has no published inbound port because nothing currently needs to call into it");
+
+    /**
      * A Spring Data repository interface is itself the outbound port to the database: Spring Data
      * generates the adapter (a runtime proxy) directly from the interface, so there's no separate
-     * hand-written adapter class the way there is for e.g. {@code PosterSource}. Scoped to
-     * already-migrated contexts for now — old flat {@code persistence} classes haven't moved yet;
-     * extend the package list as each further context migrates (finished in the final cleanup step).
+     * hand-written adapter class the way there is for e.g. {@code PosterSource}. All four bounded
+     * contexts have now migrated, so this applies everywhere (old flat {@code persistence} classes
+     * are gone).
      */
     @ArchTest
     static final ArchRule spring_data_repositories_are_the_port_not_the_adapter = classes()
             .that().areAssignableTo(Repository.class)
-            .and().resideInAnyPackage("..accountaccess..", "..watchlist..", "..titlecatalog..")
+            .and().resideInAnyPackage("..accountaccess..", "..watchlist..", "..titlecatalog..", "..streamingavailability..")
             .should().resideInAPackage("..port.out..")
             .because("the repository interface is the outbound port; JPA supplies the adapter as a "
                     + "runtime proxy, so there is no separate adapter class for persistence "
                     + "(see docs/adr for the framing-A-vs-B discussion)");
 
     /**
-     * Layering: presentation (web/rest/api) → application → services → persistence, over the
-     * domain leaf. {@code configurations} and {@code time} are cross-cutting and intentionally
-     * not modelled ({@code consideringOnlyDependenciesInLayers}).
+     * Layering: presentation (web/rest/api) → application → persistence, over the domain leaf.
+     * {@code configurations} and {@code time} are cross-cutting and intentionally not modelled
+     * ({@code consideringOnlyDependenciesInLayers}).
+     *
+     * <p>The old flat "Services" layer (a second, technically-distinct use-case layer alongside
+     * "Application" — the exact duplication that motivated this whole restructuring, see the plan's
+     * Context section) is gone as of the last bounded-context migration: every context now has a
+     * single {@code application} package, and no package anywhere uses a {@code services} segment
+     * any more. Kept only until the final cleanup step removes this whole rule (superseded by the
+     * per-context isolation rules above, which are the actual boundary that matters now).
      */
     @ArchTest
     static final ArchRule layers_are_respected = layeredArchitecture().consideringOnlyDependenciesInLayers()
             .layer("Domain").definedBy("..domain..")
             .layer("Persistence").definedBy("..persistence..")
-            .layer("Services").definedBy("..services..")
             .layer("Application").definedBy("..application..")
             .layer("Presentation").definedBy("..web..", "..rest..", "..api..")
 
             .whereLayer("Presentation").mayNotBeAccessedByAnyLayer()
             .whereLayer("Application").mayOnlyBeAccessedByLayers("Presentation")
-            .whereLayer("Services").mayOnlyBeAccessedByLayers("Application")
-            // Persistence (Spring Data repositories) is the port the use-case layer consumes, so
-            // both Services and the Application layer may access it (e.g. UserAdminService).
-            .whereLayer("Persistence").mayOnlyBeAccessedByLayers("Services", "Application")
+            // Persistence (Spring Data repositories) is the port the use-case layer consumes.
+            .whereLayer("Persistence").mayOnlyBeAccessedByLayers("Application")
             // Domain is a leaf and may be accessed by any layer — no constraint.
             .because("presentation depends only on the application layer; repositories back the "
-                    + "services and application (use-case) layers");
+                    + "application (use-case) layer");
 }

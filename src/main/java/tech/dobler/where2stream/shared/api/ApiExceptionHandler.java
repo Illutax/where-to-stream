@@ -9,7 +9,7 @@ import tech.dobler.where2stream.watchlist.domain.InvalidImportException;
 import tech.dobler.where2stream.watchlist.domain.NoSuchWatchlistEntryException;
 import tech.dobler.where2stream.accountaccess.application.UserManagementException;
 import tech.dobler.where2stream.watchlist.domain.WatchlistEntryAlreadyExistsException;
-import tech.dobler.where2stream.domain.ScrapingException;
+import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 
 /**
  * Translates application exceptions into RFC-7807 {@link ProblemDetail} responses. Scoped to

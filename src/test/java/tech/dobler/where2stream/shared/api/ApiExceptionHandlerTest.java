@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import tech.dobler.where2stream.shared.api.ValidationException;
-import tech.dobler.where2stream.domain.ScrapingException;
+import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

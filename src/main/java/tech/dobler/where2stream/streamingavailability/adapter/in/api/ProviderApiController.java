@@ -1,0 +1,32 @@
+package tech.dobler.where2stream.streamingavailability.adapter.in.api;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
+import tech.dobler.where2stream.streamingavailability.application.ProviderPageService;
+import tech.dobler.where2stream.streamingavailability.domain.StreamingProvider;
+import tech.dobler.where2stream.streamingavailability.application.dto.ProviderPageDto;
+
+/** JSON per-provider page (amazon, disney, netflix, wow, youtube) for the current user. */
+@RestController
+@RequestMapping("/api/providers")
+@RequiredArgsConstructor
+public class ProviderApiController {
+
+    private final ProviderPageService providerPageService;
+    private final CurrentUserPort currentUserPort;
+
+    @GetMapping("/{provider}")
+    public ProviderPageDto provider(@PathVariable String provider, Authentication authentication) {
+        final var userId = currentUserPort.resolveId(authentication.getName());
+        return StreamingProvider.fromKey(provider)
+                .map(p -> providerPageService.pageFor(p, userId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unknown provider: " + provider));
+    }
+}

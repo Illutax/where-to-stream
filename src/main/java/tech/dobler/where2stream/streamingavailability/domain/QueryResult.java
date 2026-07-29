@@ -1,0 +1,25 @@
+package tech.dobler.where2stream.streamingavailability.domain;
+
+import tech.dobler.where2stream.shared.domain.ImdbId;
+
+import java.util.List;
+
+public record QueryResult(
+        ImdbId imdbId,
+        String streamingServiceName,
+        boolean flatrate,
+        List<Availability> availabilities,
+        String languages
+) {
+
+    public boolean isAvailable() {
+        return flatrate || !availabilities.isEmpty();
+    }
+
+    /** Display name including the language differentiator, e.g. {@code "Prime Video (Deutsch)"}. */
+    public String label() {
+        return languages == null || languages.isBlank()
+                ? streamingServiceName
+                : "%s (%s)".formatted(streamingServiceName, languages);
+    }
+}
