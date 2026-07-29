@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="WerStreamtApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
     <module name="where-to-stream" />
-    <option name="SPRING_BOOT_MAIN_CLASS" value="tech.dobler.werstreamt.WerStreamtApplication" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="tech.dobler.where2stream.WerStreamtApplication" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
