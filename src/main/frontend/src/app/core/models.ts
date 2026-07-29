@@ -1,5 +1,6 @@
 /**
- * TypeScript mirrors of the server-side DTOs (tech.dobler.werstreamt.application.dto).
+ * TypeScript mirrors of the server-side DTOs (each backend bounded context's own
+ * tech.dobler.where2stream.<context>.application.dto package, e.g. .watchlist.application.dto).
  * Kept 1:1 with the JSON shape returned by the /api endpoints — no client-side reshaping. The
  * imdbId/year/added fields carry the branded domain value types (see core/domain.ts); at runtime
  * they are the same string/number the JSON already holds.

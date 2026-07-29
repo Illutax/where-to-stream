@@ -18,11 +18,16 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.belongToAnyO
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
 /**
  * Enforced architecture rules. Analyses production classes only (tests may read the real clock
  * and construct fixtures freely).
+ *
+ * <p>The backend is organised by bounded context first, ports &amp; adapters second (see
+ * {@code docs/adr} for the restructuring ADR) — replacing the purely technical layering
+ * (presentation → application → services → persistence) this file used to enforce. The isolation
+ * rules below are the actual boundary that matters now: one per context, checked pairwise for
+ * free since each rule guards its own context against every other caller.
  */
 @AnalyzeClasses(packages = "tech.dobler.where2stream", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
@@ -49,7 +54,7 @@ class ArchitectureTest {
      */
     @ArchTest
     static final ArchRule security_context_is_only_read_in_the_presentation_layer = noClasses()
-            .that().resideInAnyPackage("..application..", "..services..", "..persistence..", "..domain..")
+            .that().resideInAnyPackage("..application..", "..persistence..", "..domain..")
             .should().dependOnClassesThat()
             .haveFullyQualifiedName("org.springframework.security.core.context.SecurityContextHolder")
             .because("lower layers receive the username/userId from the presentation layer instead "
@@ -151,31 +156,4 @@ class ArchitectureTest {
             .because("the repository interface is the outbound port; JPA supplies the adapter as a "
                     + "runtime proxy, so there is no separate adapter class for persistence "
                     + "(see docs/adr for the framing-A-vs-B discussion)");
-
-    /**
-     * Layering: presentation (web/rest/api) → application → persistence, over the domain leaf.
-     * {@code configurations} and {@code time} are cross-cutting and intentionally not modelled
-     * ({@code consideringOnlyDependenciesInLayers}).
-     *
-     * <p>The old flat "Services" layer (a second, technically-distinct use-case layer alongside
-     * "Application" — the exact duplication that motivated this whole restructuring, see the plan's
-     * Context section) is gone as of the last bounded-context migration: every context now has a
-     * single {@code application} package, and no package anywhere uses a {@code services} segment
-     * any more. Kept only until the final cleanup step removes this whole rule (superseded by the
-     * per-context isolation rules above, which are the actual boundary that matters now).
-     */
-    @ArchTest
-    static final ArchRule layers_are_respected = layeredArchitecture().consideringOnlyDependenciesInLayers()
-            .layer("Domain").definedBy("..domain..")
-            .layer("Persistence").definedBy("..persistence..")
-            .layer("Application").definedBy("..application..")
-            .layer("Presentation").definedBy("..web..", "..rest..", "..api..")
-
-            .whereLayer("Presentation").mayNotBeAccessedByAnyLayer()
-            .whereLayer("Application").mayOnlyBeAccessedByLayers("Presentation")
-            // Persistence (Spring Data repositories) is the port the use-case layer consumes.
-            .whereLayer("Persistence").mayOnlyBeAccessedByLayers("Application")
-            // Domain is a leaf and may be accessed by any layer — no constraint.
-            .because("presentation depends only on the application layer; repositories back the "
-                    + "application (use-case) layer");
 }

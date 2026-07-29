@@ -86,12 +86,19 @@ steps).
 
 ### Architecture
 
-Controllers hold no business logic: it lives in view-agnostic **application services**
-(`tech.dobler.werstreamt.application`) that return DTOs. The `@RestController`s under
-`tech.dobler.werstreamt.api` expose them as JSON under `/api`, which the Angular SPA consumes.
-The Angular app (`src/main/frontend`) follows a smart/dumb split: container components under
-`features/` own all data loading; presentational components under `shared/` only render inputs
-(the availability tables are sortable by name / year / added date).
+The backend is organised **by bounded context first, ports & adapters second** (see
+[`docs/adr`](docs/adr/README.md) for the restructuring ADR): `accountaccess`, `watchlist`,
+`titlecatalog`, and `streamingavailability` each own a `domain` → `application` → `port` →
+`adapter` package tree under `tech.dobler.where2stream`, plus a deliberately minimal `shared`
+kernel (`ImdbId`, `ReleaseYear`, the `TimeService` facade, cross-cutting `ApiExceptionHandler`).
+Controllers hold no business logic: it lives in view-agnostic **application services** that
+return DTOs; the `@RestController`s under each context's `adapter/in/api` expose them as JSON
+under `/api`, which the Angular SPA consumes. A context exposes a capability to the others only
+through an explicit **published port** (e.g. `WatchlistCatalogPort`, `CurrentUserPort`) — enforced
+by `ArchitectureTest` (ArchUnit), one isolation rule per context. The Angular app
+(`src/main/frontend`) follows a smart/dumb split: container components under `features/` own all
+data loading; presentational components under `shared/` only render inputs (the availability
+tables are sortable by name / year / added date).
 
 Domain concepts are modelled as **value objects** rather than bare primitives (`ImdbId`,
 `ReleaseYear`, `WatchlistDate`; see [ADR 0009](docs/adr/0009-domainvalues-statt-primitiven.md)):
@@ -125,8 +132,9 @@ npm run test:coverage  # single run + v8 coverage report
 The reads of "now" go through a `TimeService` facade (backend and frontend) instead of
 `Instant.now()` / `Date.now()`, so time-dependent tests use a fixed clock — see
 [`docs/adr/0003`](docs/adr/0003-zeit-ueber-timeservice-facade.md). This is **enforced**: the
-backend `ArchitectureTest` (ArchUnit) checks both the layering and the no-`now()` rule during
-`mvn test`; the Angular client enforces the no-`now()` rule via ESLint (`cd src/main/frontend &&
+backend `ArchitectureTest` (ArchUnit) checks both the bounded-context isolation and the
+no-`now()` rule during `mvn test`; the Angular client enforces the no-`now()` rule via ESLint
+(`cd src/main/frontend &&
 npm run lint`). Known architecture exceptions are tracked in [`TODOs.md`](./TODOs.md) (ARCH-1). Testing conventions are
 recorded in [`docs/adr/0004`](docs/adr/0004-vitest-als-angular-test-runner.md) (Vitest) and
 [`docs/adr/0005`](docs/adr/0005-assertj-und-mockito-im-backend.md) (AssertJ + Mockito).

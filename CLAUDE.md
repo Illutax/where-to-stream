@@ -1,8 +1,12 @@
 # w2s (where-to-stream)
 
-Spring Boot 4 / Java 25 backend + Angular 22 SPA frontend. Layered backend:
-`api/` → `application/` → `services/` → `persistence/`, over a `domain/` leaf
-(`configurations/`, `time/` cross-cutting), enforced by `ArchitectureTest`.
+Spring Boot 4 / Java 25 backend + Angular 22 SPA frontend. Backend is organised by bounded
+context first, ports & adapters second (see ADR-0014): `accountaccess`, `watchlist`,
+`titlecatalog`, `streamingavailability`, each with its own `domain` → `application` → `port` →
+`adapter` tree, plus a minimal `shared` kernel (`ImdbId`, `ReleaseYear`, `TimeService`,
+`ApiExceptionHandler`). One context may depend on another only through its published `port.in`
+interface (e.g. `CurrentUserPort`, `WatchlistCatalogPort`) — enforced per-context by
+`ArchitectureTest`.
 
 ## Before writing or reviewing code
 

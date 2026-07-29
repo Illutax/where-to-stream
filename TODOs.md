@@ -498,6 +498,14 @@ Die Changesets waren H2-spezifisches Roh-SQL (`uuid`, `enum('BUY','RENT')`,
 
 ## Architektur-Enforcement (2026-07-20)
 
+> **Update (2026-07-29):** Die hier beschriebene Schichtenarchitektur (Presentation → Application
+> → Services → Persistence) ist durch die fachliche Gliederung nach Bounded Context ersetzt worden
+> (`accountaccess`/`watchlist`/`titlecatalog`/`streamingavailability`, je mit eigenem
+> `domain`/`application`/`port`/`adapter`-Baum) — siehe die neue ADR unter
+> [`docs/adr`](docs/adr/README.md). `ArchitectureTest` erzwingt jetzt stattdessen die
+> Context-Isolation (eine Regel pro Context) plus weiterhin die `now()`-Regel; die alte
+> Schichtenregel wurde entfernt, da die "Services"-Schicht durch die Umstellung endgültig leer war.
+
 Die Schichtenarchitektur (Presentation → Application → Services → Persistence, über dem
 Domain-Leaf) und die „keine statischen `now()`-Aufrufe"-Regel ([ADR-0003](docs/adr/0003-zeit-ueber-timeservice-facade.md))
 werden per **ArchUnit** erzwungen (`ArchitectureTest`); im Frontend prüft ESLint die
@@ -512,7 +520,8 @@ Application (+ Domain) ab").
   Präsentationsschicht) und die Datenquelle von `ImdbCatalog` (Services) auf
   `ListSelectionService.currentList()` (Application) umgestellt — damit hängt kein Controller
   mehr an der Services-Schicht. Die `ignoreDependency`-Ausnahme in `ArchitectureTest` ist
-  entfernt; die Schichtenregel greift jetzt ohne Ausnahme.
+  entfernt; die Schichtenregel greift jetzt ohne Ausnahme. (Historische Notiz: Klassen- und
+  Paketnamen von damals sind seither mehrfach umgezogen, s.o.)
 - **Hinweis:** Für den Angular-Client gibt es kein Äquivalent (die aktive Liste kommt dort über
   `GET /api/lists`), d. h. der Service ist rein Thymeleaf-spezifisch.
 

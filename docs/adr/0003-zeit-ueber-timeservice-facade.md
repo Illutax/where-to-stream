@@ -19,11 +19,12 @@ weniger ausdrucksstark und potenziell flaky.
 Zeit wird ausschließlich über eine **TimeService-Facade** gelesen; direkte statische
 `now()`-Aufrufe sind in Produktionscode nicht mehr erlaubt.
 
-- **Backend**: Interface `tech.dobler.werstreamt.time.TimeService` (`Instant now()`,
+- **Backend**: Interface `tech.dobler.where2stream.shared.time.TimeService` (`Instant now()`,
   `LocalDate today()`) mit Produktions-Implementierung `SystemTimeService` (`@Service`, ruft die
   echten statischen Methoden). `StreamInfoService` und `StatusService` bekommen den `TimeService`
-  injiziert. Das Facade liegt in einem eigenen, abhängigkeitsfreien Paket `time`, sodass sowohl
-  `services` als auch `application` es ohne neue Paketzyklen nutzen können.
+  injiziert. Das Facade liegt im gemeinsamen `shared`-Kernel (nicht in einem der Bounded Contexts),
+  sodass jeder Context es nutzen kann, ohne von einem anderen Context abhängig zu werden (siehe die
+  ADR zur Bounded-Context-Umstrukturierung).
 - **Frontend**: `@Injectable({ providedIn: 'root' })` `TimeService` (`now(): number`,
   `nowDate(): Date`), das `Date.now()` / `new Date()` kapselt. Der Client liest aktuell keine
   Zeit direkt (Server-Zeitstempel werden unverändert angezeigt) — der Service ist der

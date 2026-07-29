@@ -23,8 +23,8 @@ services:
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       # Uncomment to log every poster resource fetched (lookup URL + image CDN URL).
       # Dotted form matches the DispatcherServlet example above; canonical env form is
-#      - LOGGING_LEVEL_TECH_DOBLER_WERSTREAMT_SERVICES=DEBUG.
-#      - logging.level.tech.dobler.where2stream.services=DEBUG
+#      - LOGGING_LEVEL_TECH_DOBLER_WHERE2STREAM_TITLECATALOG=DEBUG.
+#      - logging.level.tech.dobler.where2stream.titlecatalog=DEBUG
     depends_on:
       - db
     networks:
