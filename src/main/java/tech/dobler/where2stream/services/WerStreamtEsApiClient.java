@@ -15,6 +15,7 @@ import tech.dobler.where2stream.domain.Availability;
 import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.domain.ScrapingException;
 import tech.dobler.where2stream.domain.SearchResult;
+import tech.dobler.where2stream.shared.outbound.RateLimiter;
 
 import java.io.IOException;
 import java.net.URI;

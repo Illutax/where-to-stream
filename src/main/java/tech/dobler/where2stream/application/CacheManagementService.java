@@ -12,6 +12,7 @@ import tech.dobler.where2stream.application.dto.UncachedCountDto;
 import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
+import tech.dobler.where2stream.titlecatalog.port.in.TitleCacheMaintenancePort;
 import tech.dobler.where2stream.services.PreCacheService;
 
 import java.util.Comparator;
@@ -41,7 +42,7 @@ public class CacheManagementService {
 
     private final WatchlistCatalogPort watchlistCatalogPort;
     private final PreCacheService preCacheService;
-    private final PosterService posterService;
+    private final TitleCacheMaintenancePort titleCacheMaintenancePort;
 
     private record TitleAgg(String name, boolean rated) {
     }
@@ -79,14 +80,9 @@ public class CacheManagementService {
         return new CacheResultDto(cached);
     }
 
-    /**
-     * Warm the poster thumbnail cache for every known title. Each {@code thumb(...)} is a proxied
-     * call on a different bean, so the parallel fan-out gets a per-thread transaction (same reason
-     * {@link PreCacheService} calls {@code StreamInfoService}). Uses whichever poster source is
-     * active (IMDb by default, or TMDB).
-     */
+    /** Delegates to Title Catalog's own maintenance port; this service only supplies which titles. */
     private void warmPosterThumbnails() {
-        watchlistCatalogPort.allDistinctImdbIds().parallelStream().forEach(posterService::thumb);
+        titleCacheMaintenancePort.warmPosterThumbnails(watchlistCatalogPort.allDistinctImdbIds());
     }
 
     public UncachedCountDto uncachedCount() {

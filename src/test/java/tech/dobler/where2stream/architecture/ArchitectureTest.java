@@ -101,6 +101,24 @@ class ArchitectureTest {
                     + "own outbound port (WatchlistEntryRepository)");
 
     /**
+     * Same isolation rule again, for Title Catalog (published port: {@code TitleCacheMaintenancePort},
+     * under {@code port.in}). Unlike Watchlist's port, this one's only method takes/returns shared
+     * kernel types ({@code ImdbId}) — nothing titlecatalog-local leaks through it, so no extra
+     * value-type exemption is needed here.
+     */
+    @ArchTest
+    static final ArchRule titlecatalog_is_only_accessed_through_its_published_ports = noClasses()
+            .that().resideOutsideOfPackage("..titlecatalog..")
+            .and().resideOutsideOfPackage("..shared..")
+            .should().dependOnClassesThat(
+                    resideInAPackage("..titlecatalog..")
+                            .and(not(resideInAPackage("..titlecatalog.port.in..")))
+            )
+            .because("other bounded contexts may depend on titlecatalog only through its published "
+                    + "inbound port (TitleCacheMaintenancePort), not its internals — including its "
+                    + "own outbound ports (PosterSource, TitleMetaRepository, TitlePosterRepository)");
+
+    /**
      * A Spring Data repository interface is itself the outbound port to the database: Spring Data
      * generates the adapter (a runtime proxy) directly from the interface, so there's no separate
      * hand-written adapter class the way there is for e.g. {@code PosterSource}. Scoped to
@@ -110,7 +128,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule spring_data_repositories_are_the_port_not_the_adapter = classes()
             .that().areAssignableTo(Repository.class)
-            .and().resideInAnyPackage("..accountaccess..", "..watchlist..")
+            .and().resideInAnyPackage("..accountaccess..", "..watchlist..", "..titlecatalog..")
             .should().resideInAPackage("..port.out..")
             .because("the repository interface is the outbound port; JPA supplies the adapter as a "
                     + "runtime proxy, so there is no separate adapter class for persistence "

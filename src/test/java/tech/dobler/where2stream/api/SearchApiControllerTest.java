@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.application.SearchService;
-import tech.dobler.where2stream.configurations.StringToImdbIdConverter;
+import tech.dobler.where2stream.shared.web.StringToImdbIdConverter;
 import tech.dobler.where2stream.domain.Availability;
 import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.QueryResult;

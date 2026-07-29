@@ -11,6 +11,7 @@ import tech.dobler.where2stream.shared.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
+import tech.dobler.where2stream.titlecatalog.port.in.TitleCacheMaintenancePort;
 import tech.dobler.where2stream.services.PreCacheService;
 
 import java.net.URI;
@@ -32,7 +33,7 @@ class CacheManagementServiceTest {
     @Mock
     private PreCacheService preCacheService;
     @Mock
-    private PosterService posterService;
+    private TitleCacheMaintenancePort titleCacheMaintenancePort;
     @InjectMocks
     private CacheManagementService service;
 

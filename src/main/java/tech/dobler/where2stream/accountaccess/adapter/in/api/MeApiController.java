@@ -17,7 +17,7 @@ import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.application.UserPreferencesService;
 import tech.dobler.where2stream.shared.api.ValidationException;
 import tech.dobler.where2stream.accountaccess.application.dto.MeDto;
-import tech.dobler.where2stream.configurations.TmdbProperties;
+import tech.dobler.where2stream.titlecatalog.port.in.PosterAttributionPort;
 
 import java.util.List;
 
@@ -28,11 +28,11 @@ import java.util.List;
 public class MeApiController {
 
     private final UserPreferencesService userPreferencesService;
-    private final TmdbProperties tmdbProperties;
+    private final PosterAttributionPort posterAttributionPort;
 
     @GetMapping
     public MeDto me(Authentication authentication) {
-        final boolean tmdbAttribution = tmdbProperties.active();
+        final boolean tmdbAttribution = posterAttributionPort.tmdbAttributionRequired();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
             return toDto(false, null, List.of(), tmdbAttribution, UserPreferences.defaults());
