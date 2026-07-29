@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.where2stream.streamingavailability.application.command.InvalidateCommand;
 import tech.dobler.where2stream.streamingavailability.application.dto.ManageRowDto;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
@@ -103,13 +104,13 @@ class CacheManagementServiceTest {
     @Test
     void invalidateDelegatesToPreCache() {
         when(preCacheService.invalidate(List.of(id("tt1")))).thenReturn(3);
-        assertThat(service.invalidate(List.of(id("tt1"))).invalidated()).isEqualTo(3);
+        assertThat(service.invalidate(new InvalidateCommand(List.of(id("tt1")))).invalidated()).isEqualTo(3);
     }
 
     @Test
     void invalidateNullTreatedAsEmpty() {
         when(preCacheService.invalidate(List.of())).thenReturn(0);
-        assertThat(service.invalidate(null).invalidated()).isZero();
+        assertThat(service.invalidate(new InvalidateCommand(null)).invalidated()).isZero();
     }
 
     @Test

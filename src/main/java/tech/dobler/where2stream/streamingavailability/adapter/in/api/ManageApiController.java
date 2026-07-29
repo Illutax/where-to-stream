@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.where2stream.streamingavailability.application.CacheManagementService;
+import tech.dobler.where2stream.streamingavailability.application.command.InvalidateCommand;
 import tech.dobler.where2stream.streamingavailability.application.dto.CacheResultDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.InvalidateResultDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.ManagePageDto;
@@ -27,8 +28,8 @@ public class ManageApiController {
     }
 
     @PostMapping("/manage/invalidate")
-    public InvalidateResultDto invalidate(@RequestBody InvalidateRequest request) {
-        return cacheManagementService.invalidate(request == null ? null : request.imdbIds());
+    public InvalidateResultDto invalidate(@RequestBody InvalidateCommand command) {
+        return cacheManagementService.invalidate(command);
     }
 
     @PostMapping("/manage/scrape")

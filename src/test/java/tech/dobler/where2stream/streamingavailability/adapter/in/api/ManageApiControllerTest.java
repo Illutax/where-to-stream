@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.streamingavailability.application.CacheManagementService;
+import tech.dobler.where2stream.streamingavailability.application.command.InvalidateCommand;
 import tech.dobler.where2stream.streamingavailability.application.dto.InvalidateResultDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.ManagePageDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.ManageRowDto;
@@ -44,7 +45,8 @@ class ManageApiControllerTest {
 
     @Test
     void invalidateReturnsCount() throws Exception {
-        when(cacheManagementService.invalidate(List.of(ImdbId.of("tt1"), ImdbId.of("tt2")))).thenReturn(new InvalidateResultDto(2));
+        when(cacheManagementService.invalidate(new InvalidateCommand(List.of(ImdbId.of("tt1"), ImdbId.of("tt2")))))
+                .thenReturn(new InvalidateResultDto(2));
 
         mockMvc.perform(post("/api/manage/invalidate")
                         .contentType(MediaType.APPLICATION_JSON)

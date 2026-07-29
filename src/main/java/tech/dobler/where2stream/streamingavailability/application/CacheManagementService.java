@@ -3,6 +3,7 @@ package tech.dobler.where2stream.streamingavailability.application;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import tech.dobler.where2stream.streamingavailability.application.command.InvalidateCommand;
 import tech.dobler.where2stream.streamingavailability.application.dto.CacheResultDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.InvalidateResultDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.ManagePageDto;
@@ -65,9 +66,8 @@ public class CacheManagementService {
         return new ManagePageDto(rows, needsScrape.size());
     }
 
-    public InvalidateResultDto invalidate(List<ImdbId> imdbIds) {
-        final var ids = imdbIds == null ? List.<ImdbId>of() : imdbIds;
-        return new InvalidateResultDto(preCacheService.invalidate(ids));
+    public InvalidateResultDto invalidate(InvalidateCommand command) {
+        return new InvalidateResultDto(preCacheService.invalidate(command.imdbIds()));
     }
 
     public ScrapeResultDto scrapeUncached() {
