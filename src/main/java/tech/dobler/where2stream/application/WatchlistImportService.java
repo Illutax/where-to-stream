@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
 import tech.dobler.where2stream.application.dto.WatchlistDto;
 import tech.dobler.where2stream.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.domain.ImdbEntry;
@@ -13,7 +14,7 @@ import tech.dobler.where2stream.domain.WatchlistDate;
 import tech.dobler.where2stream.persistence.WatchlistEntry;
 import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
 import tech.dobler.where2stream.services.ExportReader;
-import tech.dobler.where2stream.time.TimeService;
+import tech.dobler.where2stream.shared.time.TimeService;
 
 import java.io.InputStream;
 import java.time.Instant;
@@ -38,7 +39,7 @@ public class WatchlistImportService {
 
     private final WatchlistEntryRepository repository;
     private final ExportReader exportReader;
-    private final CurrentUserService currentUserService;
+    private final CurrentUserPort currentUserPort;
     private final TimeService timeService;
 
     public WatchlistDto status(UUID userId) {
@@ -52,7 +53,7 @@ public class WatchlistImportService {
     }
 
     public UUID resolveUserId(String username) {
-        return currentUserService.resolveId(username);
+        return currentUserPort.resolveId(username);
     }
 
     /**

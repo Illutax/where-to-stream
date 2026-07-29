@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tech.dobler.where2stream.application.InvalidImportException;
-import tech.dobler.where2stream.application.ValidationException;
+import tech.dobler.where2stream.shared.api.ValidationException;
 import tech.dobler.where2stream.application.WatchlistImportService;
 import tech.dobler.where2stream.application.dto.WatchlistDto;
 import tech.dobler.where2stream.application.dto.WatchlistImportResultDto;

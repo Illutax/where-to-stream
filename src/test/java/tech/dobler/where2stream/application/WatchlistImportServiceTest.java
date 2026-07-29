@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
 import tech.dobler.where2stream.application.dto.WatchlistDto;
 import tech.dobler.where2stream.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.domain.ImdbEntry;
@@ -14,7 +15,7 @@ import tech.dobler.where2stream.domain.WatchlistDate;
 import tech.dobler.where2stream.persistence.WatchlistEntry;
 import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
 import tech.dobler.where2stream.services.ExportReader;
-import tech.dobler.where2stream.time.TimeService;
+import tech.dobler.where2stream.shared.time.TimeService;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -43,12 +44,12 @@ class WatchlistImportServiceTest {
     @Mock
     private ExportReader exportReader;
     @Mock
-    private CurrentUserService currentUserService;
+    private CurrentUserPort currentUserPort;
     @Mock
     private TimeService timeService;
 
     private WatchlistImportService newService() {
-        return new WatchlistImportService(repository, exportReader, currentUserService, timeService);
+        return new WatchlistImportService(repository, exportReader, currentUserPort, timeService);
     }
 
     private static InputStream anyCsv() {
@@ -256,8 +257,8 @@ class WatchlistImportServiceTest {
     }
 
     @Test
-    void resolveUserIdBridgesThroughCurrentUserService() {
-        when(currentUserService.resolveId("alice")).thenReturn(USER);
+    void resolveUserIdBridgesThroughCurrentUserPort() {
+        when(currentUserPort.resolveId("alice")).thenReturn(USER);
 
         assertThat(newService().resolveUserId("alice")).isEqualTo(USER);
     }

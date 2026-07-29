@@ -7,7 +7,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tech.dobler.where2stream.application.CurrentUserService;
+import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
 import tech.dobler.where2stream.application.ProviderPageService;
 import tech.dobler.where2stream.application.StreamingProvider;
 import tech.dobler.where2stream.application.dto.FlatrateEntryDto;
@@ -37,7 +37,7 @@ class ProviderApiControllerTest {
     @MockitoBean
     private ProviderPageService providerPageService;
     @MockitoBean
-    private CurrentUserService currentUserService;
+    private CurrentUserPort currentUserPort;
 
     private static UsernamePasswordAuthenticationToken alice() {
         return new UsernamePasswordAuthenticationToken("alice", "pw");
@@ -45,7 +45,7 @@ class ProviderApiControllerTest {
 
     @Test
     void knownProviderReturnsPage() throws Exception {
-        when(currentUserService.resolveId("alice")).thenReturn(USER);
+        when(currentUserPort.resolveId("alice")).thenReturn(USER);
         when(providerPageService.pageFor(eq(StreamingProvider.AMAZON), eq(USER))).thenReturn(new ProviderPageDto(
                 "amazon",
                 List.of(new FlatrateEntryDto(true, "Incl", ImdbId.of("tt1"), ReleaseYear.of(2020), WatchlistDate.of("2020-01-01"))),
@@ -60,7 +60,7 @@ class ProviderApiControllerTest {
 
     @Test
     void unknownProviderReturns404() throws Exception {
-        when(currentUserService.resolveId("alice")).thenReturn(USER);
+        when(currentUserPort.resolveId("alice")).thenReturn(USER);
 
         mockMvc.perform(get("/api/providers/hbo").principal(alice()))
                 .andExpect(status().isNotFound());

@@ -11,7 +11,7 @@ import tech.dobler.where2stream.domain.PosterSize;
 import tech.dobler.where2stream.persistence.TitlePoster;
 import tech.dobler.where2stream.persistence.TitlePosterRepository;
 import tech.dobler.where2stream.services.PosterSource;
-import tech.dobler.where2stream.time.TimeService;
+import tech.dobler.where2stream.shared.time.TimeService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

@@ -7,7 +7,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tech.dobler.where2stream.application.CurrentUserService;
+import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
 import tech.dobler.where2stream.application.ImdbSearchService;
 import tech.dobler.where2stream.application.dto.ImdbSearchResultDto;
 import tech.dobler.where2stream.domain.ImdbId;
@@ -32,7 +32,7 @@ class ImdbSearchApiControllerTest {
     @MockitoBean
     private ImdbSearchService imdbSearchService;
     @MockitoBean
-    private CurrentUserService currentUserService;
+    private CurrentUserPort currentUserPort;
 
     private static UsernamePasswordAuthenticationToken alice() {
         return new UsernamePasswordAuthenticationToken("alice", "pw");
@@ -40,7 +40,7 @@ class ImdbSearchApiControllerTest {
 
     @Test
     void searchReturnsTheResults() throws Exception {
-        when(currentUserService.resolveId("alice")).thenReturn(USER);
+        when(currentUserPort.resolveId("alice")).thenReturn(USER);
         when(imdbSearchService.search(USER, "matrix")).thenReturn(List.of(
                 new ImdbSearchResultDto(ImdbId.of("tt0133093"), "The Matrix", ReleaseYear.of(1999), true)));
 

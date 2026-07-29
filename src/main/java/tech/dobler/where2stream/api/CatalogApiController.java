@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.where2stream.application.CatalogOverviewService;
-import tech.dobler.where2stream.application.CurrentUserService;
+import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
 import tech.dobler.where2stream.application.dto.OverviewEntryDto;
 
 import java.util.List;
@@ -18,10 +18,10 @@ import java.util.List;
 public class CatalogApiController {
 
     private final CatalogOverviewService catalogOverviewService;
-    private final CurrentUserService currentUserService;
+    private final CurrentUserPort currentUserPort;
 
     @GetMapping
     public List<OverviewEntryDto> catalog(Authentication authentication) {
-        return catalogOverviewService.overview(currentUserService.resolveId(authentication.getName()));
+        return catalogOverviewService.overview(currentUserPort.resolveId(authentication.getName()));
     }
 }

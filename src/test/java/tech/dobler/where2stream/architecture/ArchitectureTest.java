@@ -10,6 +10,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
@@ -26,7 +28,7 @@ class ArchitectureTest {
      */
     @ArchTest
     static final ArchRule time_is_read_only_through_the_facade = noClasses()
-            .that().doNotHaveFullyQualifiedName("tech.dobler.where2stream.time.SystemTimeService")
+            .that().doNotHaveFullyQualifiedName("tech.dobler.where2stream.shared.time.SystemTimeService")
             .should().callMethod(Instant.class, "now")
             .orShould().callMethod(LocalDate.class, "now")
             .orShould().callMethod(LocalDateTime.class, "now")
@@ -47,6 +49,26 @@ class ArchitectureTest {
             .haveFullyQualifiedName("org.springframework.security.core.context.SecurityContextHolder")
             .because("lower layers receive the username/userId from the presentation layer instead "
                     + "of reading the SecurityContext (ADR-0007)");
+
+    /**
+     * Bounded-context isolation: as each context is carved out of the old technical layering
+     * (see {@code docs/adr} for the restructuring), classes outside {@code accountaccess} may
+     * depend on it only through its published port ({@code CurrentUserPort}), never through its
+     * domain/application/adapter internals directly. One such rule gets added per migrated
+     * context. {@code shared..} is exempt: {@code ApiExceptionHandler} deliberately maps every
+     * context's own exception types (a cross-cutting concern the shared kernel is meant to know
+     * about), which is a different thing from one bounded context depending on another's internals.
+     */
+    @ArchTest
+    static final ArchRule accountaccess_is_only_accessed_through_its_published_ports = noClasses()
+            .that().resideOutsideOfPackage("..accountaccess..")
+            .and().resideOutsideOfPackage("..shared..")
+            .should().dependOnClassesThat(
+                    resideInAPackage("..accountaccess..")
+                            .and(not(resideInAPackage("..accountaccess.application.port..")))
+            )
+            .because("other bounded contexts may depend on accountaccess only through its "
+                    + "published ports (e.g. CurrentUserPort), not its internals");
 
     /**
      * Layering: presentation (web/rest/api) → application → services → persistence, over the

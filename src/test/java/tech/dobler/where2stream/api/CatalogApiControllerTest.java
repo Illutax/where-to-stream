@@ -8,7 +8,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.application.CatalogOverviewService;
-import tech.dobler.where2stream.application.CurrentUserService;
+import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
 import tech.dobler.where2stream.application.dto.OverviewEntryDto;
 import tech.dobler.where2stream.domain.ImdbId;
 import tech.dobler.where2stream.domain.ReleaseYear;
@@ -34,11 +34,11 @@ class CatalogApiControllerTest {
     @MockitoBean
     private CatalogOverviewService catalogOverviewService;
     @MockitoBean
-    private CurrentUserService currentUserService;
+    private CurrentUserPort currentUserPort;
 
     @Test
     void catalogReturnsJsonArray() throws Exception {
-        when(currentUserService.resolveId("alice")).thenReturn(USER);
+        when(currentUserPort.resolveId("alice")).thenReturn(USER);
         when(catalogOverviewService.overview(eq(USER))).thenReturn(List.of(
                 new OverviewEntryDto(true, "Movie", ImdbId.of("tt1"), ReleaseYear.of(2020), WatchlistDate.of("2020-01-01"), "Netflix"),
                 new OverviewEntryDto(false, "Other", ImdbId.of("tt2"), ReleaseYear.of(2021), WatchlistDate.of("2021-01-01"), null)));

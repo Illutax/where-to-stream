@@ -13,7 +13,7 @@ import tech.dobler.where2stream.domain.ImdbId;
 import tech.dobler.where2stream.persistence.TitleMeta;
 import tech.dobler.where2stream.persistence.TitleMetaRepository;
 import tech.dobler.where2stream.services.ImdbTitleClient.ImdbTitleData;
-import tech.dobler.where2stream.time.TimeService;
+import tech.dobler.where2stream.shared.time.TimeService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

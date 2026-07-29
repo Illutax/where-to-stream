@@ -10,7 +10,7 @@ import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.persistence.QueryMeta;
 import tech.dobler.where2stream.persistence.QueryMetaRepository;
 import tech.dobler.where2stream.services.mappers.QueryResultMapper;
-import tech.dobler.where2stream.time.TimeService;
+import tech.dobler.where2stream.shared.time.TimeService;
 
 import java.time.Instant;
 import java.util.Collection;

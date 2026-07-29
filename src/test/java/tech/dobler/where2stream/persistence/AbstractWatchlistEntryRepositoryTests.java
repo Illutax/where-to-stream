@@ -8,7 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.domain.ImdbId;
 import tech.dobler.where2stream.domain.ReleaseYear;
 import tech.dobler.where2stream.domain.WatchlistDate;
-import tech.dobler.where2stream.domain.Role;
+import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.domain.AppUser;
+import tech.dobler.where2stream.accountaccess.domain.Role;
 
 import java.net.URI;
 import java.time.Instant;

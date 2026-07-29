@@ -8,9 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import tech.dobler.where2stream.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.domain.ImdbEntry;
 import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.domain.Role;
-import tech.dobler.where2stream.persistence.AppUser;
-import tech.dobler.where2stream.persistence.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.domain.Role;
+import tech.dobler.where2stream.accountaccess.domain.AppUser;
+import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
 import tech.dobler.where2stream.services.WatchlistCatalog;
 
 import java.io.ByteArrayInputStream;
