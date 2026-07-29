@@ -1,7 +1,7 @@
 package tech.dobler.where2stream.streamingavailability.application;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.streamingavailability.adapter.out.werstreamtes.WerStreamtProperties;
@@ -15,8 +15,10 @@ import tech.dobler.where2stream.shared.platform.time.TimeService;
 import tech.dobler.where2stream.shared.platform.observability.LogExecutionTime;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,20 +28,37 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class StreamInfoService {
     private final StreamAvailabilityPort streamProvider;
     private final QueryMetaRepository queryMetaRepository;
     private final WerStreamtProperties properties;
     private final TimeService timeService;
+    /**
+     * The bean's own proxy: {@link #resolveAll} fetches misses in parallel through it, so each
+     * fetch opens its own transaction on its own thread and no connection is held across the
+     * network call (same connection discipline as {@code PosterService}/{@code TitleMetaService},
+     * ADR-0011).
+     */
+    private final ObjectProvider<StreamInfoService> self;
+
+    public StreamInfoService(StreamAvailabilityPort streamProvider, QueryMetaRepository queryMetaRepository,
+                             WerStreamtProperties properties, TimeService timeService,
+                             ObjectProvider<StreamInfoService> self) {
+        this.streamProvider = streamProvider;
+        this.queryMetaRepository = queryMetaRepository;
+        this.properties = properties;
+        this.timeService = timeService;
+        this.self = self;
+    }
 
     // NOTE: both public resolve(...) overloads are annotated on purpose.
     // resolve(imdbId) delegates to resolve(imdbId, false) via self-invocation, which bypasses
     // the Spring proxy, so the transaction must already be open when either entry point is the
     // one called through the proxy.
-    // This is what makes parallelStream callers (PreCacheController, RefreshController) correct:
-    // each parallel call gets its own transaction on its own thread, instead of relying on a
-    // controller-level @Transactional that does not span ForkJoinPool worker threads.
+    // This is what makes parallelStream callers correct — RefreshService/PreCacheService calling
+    // in from outside, and resolveAll below calling back in through `self` — each parallel call
+    // gets its own transaction on its own thread, instead of relying on a wrapping @Transactional
+    // that does not span ForkJoinPool worker threads.
     @Transactional
     public List<QueryResult> resolve(ImdbId imdbId, boolean forceRefresh) {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
@@ -58,24 +77,36 @@ public class StreamInfoService {
 
     /**
      * Batch variant of {@link #resolve(String)}: reads the cached metadata for all given
-     * imdbIds with a single query (instead of one query per id) and only falls back to a
-     * remote fetch for the misses.
+     * imdbIds with a single query (instead of one query per id), then fetches the misses
+     * <strong>in parallel</strong> — each through the proxied {@link #resolve(ImdbId)} (via
+     * {@link #self}) rather than one at a time on the request thread, so a watchlist with
+     * several uncached/stale titles pays roughly one upstream round trip instead of the sum of
+     * all of them.
      * Returns the results keyed by imdbId, preserving the iteration order of {@code imdbIds}.
      */
-    @Transactional
     @LogExecutionTime
     public Map<ImdbId, List<QueryResult>> resolveAll(Collection<ImdbId> imdbIds) {
         final var now = timeService.now();
         final var latestFreshByImdbId = queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(imdbIds).stream()
                 .collect(Collectors.groupingBy(QueryMeta::getImdbId));
 
-        final var resolved = new LinkedHashMap<ImdbId, List<QueryResult>>();
+        final var cached = new HashMap<ImdbId, List<QueryResult>>();
+        final var misses = new ArrayList<ImdbId>();
         for (ImdbId imdbId : imdbIds) {
-            final var cached = latestFreshByImdbId.getOrDefault(imdbId, List.of()).stream()
+            latestFreshByImdbId.getOrDefault(imdbId, List.of()).stream()
                     .max(Comparator.comparing(QueryMeta::getCreationTime))
                     .filter(queryMeta -> isFresh(queryMeta, now))
-                    .map(StreamInfoService::toQueryResults);
-            resolved.put(imdbId, cached.orElseGet(() -> fetch(imdbId)));
+                    .map(StreamInfoService::toQueryResults)
+                    .ifPresentOrElse(result -> cached.put(imdbId, result), () -> misses.add(imdbId));
+        }
+
+        final var tx = self.getObject();
+        final var fetched = misses.parallelStream()
+                .collect(Collectors.toConcurrentMap(imdbId -> imdbId, tx::resolve));
+
+        final var resolved = new LinkedHashMap<ImdbId, List<QueryResult>>();
+        for (ImdbId imdbId : imdbIds) {
+            resolved.put(imdbId, cached.getOrDefault(imdbId, fetched.get(imdbId)));
         }
         return resolved;
     }

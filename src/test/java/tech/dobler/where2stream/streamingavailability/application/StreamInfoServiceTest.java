@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import tech.dobler.where2stream.streamingavailability.adapter.out.werstreamtes.WerStreamtProperties;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
@@ -21,7 +22,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -41,13 +44,18 @@ class StreamInfoServiceTest {
     private QueryMetaRepository queryMetaRepository;
     @Mock
     private TimeService timeService;
+    @Mock
+    private ObjectProvider<StreamInfoService> self;
 
     private StreamInfoService service;
 
+    // self.getObject() returns the service itself, so resolveAll's parallel-fetch calls (proxied
+    // in prod) run directly against the mocked collaborators in the test.
     @BeforeEach
     void setUp() {
         when(timeService.now()).thenReturn(NOW);
-        service = new StreamInfoService(streamProvider, queryMetaRepository, PROPS, timeService);
+        service = new StreamInfoService(streamProvider, queryMetaRepository, PROPS, timeService, self);
+        lenient().when(self.getObject()).thenReturn(service);
     }
 
     private static ImdbId id(String imdbId) {
@@ -124,5 +132,23 @@ class StreamInfoServiceTest {
         verify(queryMetaRepository).findByImdbIdInAndInvalidatedIsFalse(List.of(id("tt1"), id("tt2")));
         verify(streamProvider).query(id("tt2"));
         verify(streamProvider, never()).query(id("tt1"));
+    }
+
+    @Test
+    void resolveAllFetchesSeveralMissesInParallelWithoutLosingAny() {
+        final var misses = List.of(id("tt1"), id("tt2"), id("tt3"), id("tt4"), id("tt5"));
+        when(queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(misses)).thenReturn(List.of());
+        for (final var imdbId : misses) {
+            when(streamProvider.query(imdbId)).thenReturn(List.of(new QueryResult(imdbId, "Netflix", true, List.of(), null)));
+        }
+
+        final var result = service.resolveAll(misses);
+
+        assertThat(result.keySet()).containsExactlyInAnyOrderElementsOf(misses);
+        assertThat(misses).allSatisfy(imdbId -> {
+            assertThat(result.get(imdbId)).extracting(QueryResult::streamingServiceName).containsExactly("Netflix");
+            verify(streamProvider).query(imdbId);
+        });
+        verify(queryMetaRepository, times(misses.size())).save(any(QueryMeta.class));
     }
 }
