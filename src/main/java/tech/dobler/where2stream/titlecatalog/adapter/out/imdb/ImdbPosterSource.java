@@ -9,7 +9,7 @@ import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;
 import tech.dobler.where2stream.titlecatalog.application.TitleMetaService;
 import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
-import tech.dobler.where2stream.titlecatalog.port.out.PosterSource;
+import tech.dobler.where2stream.titlecatalog.port.out.PosterPort;
 
 import java.io.IOException;
 import java.net.URI;
@@ -20,7 +20,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * IMDb-backed {@link PosterSource} (the default):
+ * IMDb-backed {@link PosterPort} (the default):
  * the poster reference comes from the shared {@link TitleMetaService}
  * (one IMDb GraphQL fetch per title, reused by the age rating and the future localized title),
  * and the image bytes are downloaded pre-sized straight from Amazon's image CDN.
@@ -31,7 +31,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
-public class ImdbPosterSource implements PosterSource {
+public class ImdbPosterSource implements PosterPort {
 
     private static final String V1 = "_V1_";
 

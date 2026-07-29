@@ -29,7 +29,7 @@ import java.util.Optional;
  * and simpler than IMDb's GraphQL {@code mainSearch}
  * (unused elsewhere in this codebase, schema unverified).
  * Free-text discovery across IMDb's whole catalog has no local equivalent,
- * unlike per-id metadata lookups (see {@link ImdbTitleClient}),
+ * unlike per-id metadata lookups (see {@link ImdbTitleSource}),
  * which stay served from our own DB cache first and are never duplicated here.
  * The response mixes title ({@code tt…}), person ({@code nm…}) and company ({@code co…}) hits;
  * only titles are kept. Failures degrade to an empty list (logged).
@@ -37,7 +37,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
-public class ImdbSuggestionClient {
+public class ImdbSuggestionSource {
 
     /** A single title hit; {@code year} is {@code 0} ("not yet released"/unknown) when absent. */
     public record ImdbSuggestion(ImdbId imdbId, String name, ReleaseYear year) {
@@ -47,7 +47,7 @@ public class ImdbSuggestionClient {
     private final HttpClient httpClient;
     private final RateLimiter rateLimiter;
 
-    public ImdbSuggestionClient(ImdbSearchProperties properties, HttpClientFactory httpClientFactory) {
+    public ImdbSuggestionSource(ImdbSearchProperties properties, HttpClientFactory httpClientFactory) {
         this.properties = properties;
         this.httpClient = httpClientFactory.newClient();
         this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());

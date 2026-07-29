@@ -10,7 +10,7 @@ import tech.dobler.where2stream.titlecatalog.adapter.out.tmdb.TmdbProperties;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;
 import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
-import tech.dobler.where2stream.titlecatalog.port.out.PosterSource;
+import tech.dobler.where2stream.titlecatalog.port.out.PosterPort;
 
 import java.io.IOException;
 import java.net.URI;
@@ -23,14 +23,14 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * TMDB-backed {@link PosterSource}: resolves an IMDb id to a {@code poster_path} via the {@code /find} endpoint,
+ * TMDB-backed {@link PosterPort}: resolves an IMDb id to a {@code poster_path} via the {@code /find} endpoint,
  * then downloads the pre-sized image bytes from the TMDB image CDN.
  * One {@code find} call per title; images come from the CDN. All failures degrade to empty (logged).
  * Outbound requests are throttled (own {@link RateLimiter}, configured from {@code tmdb.rate-limit}).
  */
 @Slf4j
 @Service
-public class TmdbPosterSource implements PosterSource {
+public class TmdbPosterSource implements PosterPort {
 
     private final TmdbProperties properties;
     private final HttpClient httpClient;

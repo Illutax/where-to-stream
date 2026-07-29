@@ -34,7 +34,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
-public class ImdbTitleClient {
+public class ImdbTitleSource {
 
     /** The German FSK certificate lives under this country id; everything else is a fallback. */
     private static final String GERMANY = "DE";
@@ -52,7 +52,7 @@ public class ImdbTitleClient {
     private final HttpClient httpClient;
     private final RateLimiter rateLimiter;
 
-    public ImdbTitleClient(ImdbPosterProperties properties, HttpClientFactory httpClientFactory) {
+    public ImdbTitleSource(ImdbPosterProperties properties, HttpClientFactory httpClientFactory) {
         this.properties = properties;
         this.httpClient = httpClientFactory.newClient();
         this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());

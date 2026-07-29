@@ -7,7 +7,7 @@ import java.time.Duration;
 /**
  * Shared {@link HttpClient} construction for the outbound JSON/REST integrations
  * (the IMDb GraphQL client, the IMDb suggestion-search client, the TMDB poster source) —
- * not used by {@link WerStreamtEsApiClient}, which scrapes HTML via jsoup instead.
+ * not used by {@link WerStreamtEsSource}, which scrapes HTML via jsoup instead.
  * Java's {@code HttpClient} has no per-client default-header concept,
  * so the shared {@link #USER_AGENT} still has to be added per request by each caller;
  * only the builder configuration (proxy, timeout, redirects) is centralised here.

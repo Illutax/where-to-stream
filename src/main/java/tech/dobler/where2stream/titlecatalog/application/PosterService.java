@@ -10,7 +10,7 @@ import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
 import tech.dobler.where2stream.titlecatalog.domain.TitlePoster;
 import tech.dobler.where2stream.titlecatalog.port.in.TitleCacheMaintenancePort;
 import tech.dobler.where2stream.titlecatalog.port.out.TitlePosterRepository;
-import tech.dobler.where2stream.titlecatalog.port.out.PosterSource;
+import tech.dobler.where2stream.titlecatalog.port.out.PosterPort;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
@@ -23,7 +23,7 @@ import java.util.Optional;
  * The thumbnail is fetched on first view and the full image on first hover; both are then
  * stored so the source is queried at most once per title.
  * The concrete image source (IMDb by default, or TMDB) is selected at startup
- * and injected as a {@link PosterSource}; this service is agnostic to which.
+ * and injected as a {@link PosterPort}; this service is agnostic to which.
  *
  * <p><b>No DB connection is held across the network calls.</b>
  * A cold request runs as a fast transactional cache read,
@@ -41,13 +41,13 @@ import java.util.Optional;
 public class PosterService implements TitleCacheMaintenancePort {
 
     private final TitlePosterRepository repository;
-    private final PosterSource posterSource;
+    private final PosterPort posterSource;
     private final PosterProperties properties;
     private final TimeService timeService;
     /** The bean's own proxy, so the short read/write steps are each transactional. */
     private final ObjectProvider<PosterService> self;
 
-    public PosterService(TitlePosterRepository repository, PosterSource posterSource,
+    public PosterService(TitlePosterRepository repository, PosterPort posterSource,
                          PosterProperties properties, TimeService timeService,
                          ObjectProvider<PosterService> self) {
         this.repository = repository;

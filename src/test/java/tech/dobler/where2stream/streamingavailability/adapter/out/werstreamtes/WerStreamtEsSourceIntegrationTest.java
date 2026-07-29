@@ -18,11 +18,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * actual page structure — in particular a provider (Prime Video) that lists the same title
  * several times in different languages (the 3·N-columns bug).
  */
-class WerStreamtEsApiClientIntegrationTest {
+class WerStreamtEsSourceIntegrationTest {
 
     private static final ImdbId IMDB_ID = ImdbId.of("tt0822847");
 
-    private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(
+    private final WerStreamtEsSource client = new WerStreamtEsSource(
             new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)),
             new RealConnectionFactory());
 

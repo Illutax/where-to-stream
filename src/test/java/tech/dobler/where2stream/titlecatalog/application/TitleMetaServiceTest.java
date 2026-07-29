@@ -12,8 +12,8 @@ import tech.dobler.where2stream.titlecatalog.domain.AgeRating.RatingSystem;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.titlecatalog.domain.TitleMeta;
 import tech.dobler.where2stream.titlecatalog.port.out.TitleMetaRepository;
-import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleClient;
-import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleClient.ImdbTitleData;
+import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleSource;
+import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleSource.ImdbTitleData;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
@@ -37,7 +37,7 @@ class TitleMetaServiceTest {
     @Mock
     private TitleMetaRepository repository;
     @Mock
-    private ImdbTitleClient client;
+    private ImdbTitleSource imdbTitleSource;
     @Mock
     private TimeService timeService;
     @Mock
@@ -46,7 +46,7 @@ class TitleMetaServiceTest {
     private TitleMetaService service() {
         lenient().when(timeService.now()).thenReturn(NOW);
         lenient().when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        final var svc = new TitleMetaService(repository, client, new PosterProperties(14), timeService, self);
+        final var svc = new TitleMetaService(repository, imdbTitleSource, new PosterProperties(14), timeService, self);
         lenient().when(self.getObject()).thenReturn(svc);
         return svc;
     }
@@ -61,17 +61,17 @@ class TitleMetaServiceTest {
         assertThat(data).get()
                 .extracting(ImdbTitleData::posterUrl, ImdbTitleData::rating, ImdbTitleData::germanTitle)
                 .containsExactly("/p.jpg", AgeRating.fsk("16"), "Der Pate");
-        verifyNoInteractions(client);
+        verifyNoInteractions(imdbTitleSource);
     }
 
     @Test
     void onMissFetchesOnceAndStores() {
         when(repository.findByImdbId(TT)).thenReturn(Optional.empty());
         final var fetched = new ImdbTitleData("/p.jpg", AgeRating.fsk("12"), "Oben");
-        when(client.fetch(TT)).thenReturn(Optional.of(fetched));
+        when(imdbTitleSource.fetch(TT)).thenReturn(Optional.of(fetched));
 
         assertThat(service().get(TT)).contains(fetched);
-        verify(client).fetch(TT);
+        verify(imdbTitleSource).fetch(TT);
         verify(repository).save(any(TitleMeta.class));
     }
 
@@ -81,7 +81,7 @@ class TitleMetaServiceTest {
         when(repository.findByImdbId(TT)).thenReturn(Optional.of(TitleMeta.of(TT, null, null, null, "Oben", NOW)));
 
         assertThat(service().get(TT)).get().extracting(ImdbTitleData::germanTitle).isEqualTo("Oben");
-        verifyNoInteractions(client);
+        verifyNoInteractions(imdbTitleSource);
     }
 
     @Test
@@ -93,23 +93,23 @@ class TitleMetaServiceTest {
         final var data = service.get(TT);
         assertThat(data).isPresent();
         assertThat(data).get().extracting(ImdbTitleData::rating, ImdbTitleData::germanTitle).containsOnlyNulls();
-        verifyNoInteractions(client);
+        verifyNoInteractions(imdbTitleSource);
     }
 
     @Test
     void reFetchesAStaleNegative() {
         final var stale = TitleMeta.of(TT, null, null, null, null, NOW.minus(30, ChronoUnit.DAYS));
         when(repository.findByImdbId(TT)).thenReturn(Optional.of(stale));
-        when(client.fetch(TT)).thenReturn(Optional.of(new ImdbTitleData("/p.jpg", null, null)));
+        when(imdbTitleSource.fetch(TT)).thenReturn(Optional.of(new ImdbTitleData("/p.jpg", null, null)));
 
         assertThat(service().posterPath(TT)).contains("/p.jpg");
-        verify(client).fetch(TT);
+        verify(imdbTitleSource).fetch(TT);
     }
 
     @Test
     void doesNotCacheAHardFailure() {
         when(repository.findByImdbId(TT)).thenReturn(Optional.empty());
-        when(client.fetch(TT)).thenReturn(Optional.empty());
+        when(imdbTitleSource.fetch(TT)).thenReturn(Optional.empty());
 
         assertThat(service().get(TT)).isEmpty();
         verify(repository, never()).save(any());
@@ -120,7 +120,7 @@ class TitleMetaServiceTest {
         final var service = service();
         when(repository.findByImdbId(TT)).thenReturn(Optional.empty());
         final var fetched = new ImdbTitleData("/p.jpg", AgeRating.fsk("16"), "Der Pate");
-        when(client.fetch(TT)).thenReturn(Optional.of(fetched));
+        when(imdbTitleSource.fetch(TT)).thenReturn(Optional.of(fetched));
         when(repository.save(any())).thenThrow(new DataIntegrityViolationException("Duplicate entry for key 'imdb_id'"));
 
         assertThat(service.get(TT)).contains(fetched);

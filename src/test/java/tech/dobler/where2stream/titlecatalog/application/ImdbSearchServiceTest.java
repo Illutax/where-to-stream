@@ -9,8 +9,8 @@ import tech.dobler.where2stream.titlecatalog.application.dto.ImdbSearchResultDto
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
-import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbSuggestionClient;
-import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbSuggestionClient.ImdbSuggestion;
+import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbSuggestionSource;
+import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbSuggestionSource.ImdbSuggestion;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,7 +25,7 @@ class ImdbSearchServiceTest {
     private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @Mock
-    private ImdbSuggestionClient imdbSuggestionClient;
+    private ImdbSuggestionSource imdbSuggestionSource;
     @Mock
     private WatchlistCatalogPort watchlistCatalogPort;
     @InjectMocks
@@ -33,7 +33,7 @@ class ImdbSearchServiceTest {
 
     @Test
     void flagsHitsAlreadyOnTheUsersWatchlist() {
-        when(imdbSuggestionClient.search("matrix")).thenReturn(List.of(
+        when(imdbSuggestionSource.search("matrix")).thenReturn(List.of(
                 new ImdbSuggestion(ImdbId.of("tt0133093"), "The Matrix", ReleaseYear.of(1999)),
                 new ImdbSuggestion(ImdbId.of("tt10838180"), "The Matrix Resurrections", ReleaseYear.of(2021))));
         when(watchlistCatalogPort.isOnWatchlist(USER, ImdbId.of("tt0133093"))).thenReturn(true);
@@ -47,7 +47,7 @@ class ImdbSearchServiceTest {
 
     @Test
     void isEmptyWhenTheClientFindsNothing() {
-        when(imdbSuggestionClient.search("zzz")).thenReturn(List.of());
+        when(imdbSuggestionSource.search("zzz")).thenReturn(List.of());
 
         assertThat(service.search(USER, "zzz")).isEmpty();
     }

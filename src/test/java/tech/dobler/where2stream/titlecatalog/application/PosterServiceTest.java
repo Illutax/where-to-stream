@@ -11,7 +11,7 @@ import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
 import tech.dobler.where2stream.titlecatalog.domain.TitlePoster;
 import tech.dobler.where2stream.titlecatalog.port.out.TitlePosterRepository;
-import tech.dobler.where2stream.titlecatalog.port.out.PosterSource;
+import tech.dobler.where2stream.titlecatalog.port.out.PosterPort;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
@@ -34,7 +34,7 @@ class PosterServiceTest {
     @Mock
     private TitlePosterRepository repository;
     @Mock
-    private PosterSource posterSource;
+    private PosterPort posterSource;
     @Mock
     private TimeService timeService;
     @Mock

@@ -247,19 +247,51 @@ periodically a live `mvn spring-boot:run` boot smoke test.
 By the end of the shared kernel/platform split: 348 backend tests and 7 ArchUnit rules
 green, 180 frontend tests green, clean boot.
 
+## Step 6: naming consistency, resolved
+
+The last backlog item from the original plan, Provider/Source/ApiClient naming, turned out
+to be two separate questions once every context's `adapter/out/*` was visible side by side,
+not one.
+
+`ImdbTitleClient` and `ImdbSuggestionClient` had no port interface at all — application
+services depended on them directly, unlike `ImdbPosterSource`/`TmdbPosterSource`, which sit
+behind `PosterSource` (now `PosterPort`, see below) precisely because that port has two real
+implementations to choose between.
+Decision: leave them without a port.
+Each has exactly one implementation and nothing outside `titlecatalog` calls them — a port
+here would be ceremony without a boundary to protect, the same reasoning ADR-0014 already
+used to reject ports for same-context controller-to-service calls.
+
+For the suffix itself, the discussion revealed that "Source"/"Provider"/"ApiClient" weren't
+really three names for one role — `WerStreamtEsApiClient` implemented `StreamAvailabilityProvider`
+just like `ImdbPosterSource`/`TmdbPosterSource` implemented `PosterSource`, while
+`ImdbTitleClient`/`ImdbSuggestionClient` implemented no port at all.
+Resolved by converging all five outbound HTTP/scraping adapters on `...Source`
+(`WerStreamtEsApiClient` → `WerStreamtEsSource`, `ImdbTitleClient` → `ImdbTitleSource`,
+`ImdbSuggestionClient` → `ImdbSuggestionSource`; `ImdbPosterSource`/`TmdbPosterSource` were
+already there), and separately renaming the two bespoke port.out interfaces to match the
+`Port` suffix `port.in` already used consistently (`PosterSource` → `PosterPort`,
+`StreamAvailabilityProvider` → `StreamAvailabilityPort`) — deliberately **not** extending
+that rename to the six Spring Data repository interfaces, which keep their
+ecosystem-standard `...Repository` suffix (Framing A already established the repository
+interface *is* the port; renaming away from `Repository` would fight Spring Data's own
+convention for no real gain).
+
+One mechanical pitfall recurred here in a new shape: renaming a class's *file* (`git mv`)
+doesn't rename its *declaration* — four test classes (`WerStreamtEsApiClientTest`,
+`WerStreamtEsApiClientIntegrationTest`, `ImdbTitleClientTest`, `ImdbSuggestionClientTest`)
+kept their old `class` declarations after the file rename, invisible to both the compiler
+(package-private top-level classes don't require filename/classname match) and to the
+earlier word-boundary-safe `\bOldName\b` content replace (a class named `OldNameTest` has
+no word boundary between `OldName` and `Test`, so the regex correctly left it alone — just
+not in the way intended). Caught by grepping each renamed file's own `class` declaration
+after the fact, not by the test suite.
+
 ## What's still open
 
-Three topics were explicitly parked during this effort rather than resolved, and remain
+Two topics were explicitly parked during this effort rather than resolved, and remain
 backlog:
 
-- **Provider/Source/ApiClient naming.**
-  Outbound adapter classes currently use three different suffixes for the same
-  architectural role — `...Source` (`ImdbPosterSource`, `TmdbPosterSource`),
-  `...Provider` (the port name itself, `StreamAvailabilityProvider`), and `...ApiClient`
-  (`ImdbTitleClient`, `ImdbSuggestionClient`, `WerStreamtEsApiClient`).
-  Worth deciding, now that every context's `adapter/out/*` is visible side by side,
-  whether these should converge on one convention or whether the distinct names carry
-  real meaning worth keeping.
 - **`nativeQuery = true` vs. HQL/JPQL.**
   `WatchlistEntryRepository`'s distinct-imdbId queries (and `QueryMetaRepository`'s,
   once Streaming Availability migrated) use raw native SQL.

@@ -10,7 +10,7 @@ import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.streamingavailability.domain.QueryMeta;
 import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaRepository;
-import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityProvider;
+import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityPort;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResultDB;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
@@ -36,7 +36,7 @@ class StreamInfoServiceTest {
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
     @Mock
-    private StreamAvailabilityProvider streamProvider;
+    private StreamAvailabilityPort streamProvider;
     @Mock
     private QueryMetaRepository queryMetaRepository;
     @Mock

@@ -26,22 +26,22 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class WerStreamtEsApiClientTest {
+class WerStreamtEsSourceTest {
 
     private static final ImdbId IMDB_ID = ImdbId.of("tt0482571");
     private static final String MINUS = "<i class=\"fi-minus-circle\"></i>";
     private static final String CHECK = "<i class=\"fi-check\"></i>";
 
     // parse() does not hit the network, so the rate limiter is irrelevant here (disabled).
-    private final WerStreamtEsApiClient client = new WerStreamtEsApiClient(
+    private final WerStreamtEsSource client = new WerStreamtEsSource(
             new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)),
             new RealConnectionFactory());
 
     @Mock
     private Connection connection;
 
-    private static WerStreamtEsApiClient clientWithFakeConnection(Connection connection) {
-        return new WerStreamtEsApiClient(
+    private static WerStreamtEsSource clientWithFakeConnection(Connection connection) {
+        return new WerStreamtEsSource(
                 new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)),
                 uri -> connection);
     }
@@ -259,7 +259,7 @@ class WerStreamtEsApiClientTest {
     void toSearchResultParsesNameAndRelativeUrl() {
         final var listing = searchListing("<a href=\"the-matrix\"><strong>The Matrix</strong></a>");
 
-        final Optional<SearchResult> result = WerStreamtEsApiClient.toSearchResult(listing);
+        final Optional<SearchResult> result = WerStreamtEsSource.toSearchResult(listing);
 
         assertThat(result).contains(new SearchResult("The Matrix", URI.create("https://www.werstreamt.es/the-matrix")));
     }
@@ -268,30 +268,30 @@ class WerStreamtEsApiClientTest {
     void toSearchResultSkipsAListingWithoutATitle() {
         final var listing = searchListing("<a href=\"x\"></a>");
 
-        assertThat(WerStreamtEsApiClient.toSearchResult(listing)).isEmpty();
+        assertThat(WerStreamtEsSource.toSearchResult(listing)).isEmpty();
     }
 
     @Test
     void toSearchResultSkipsAnEmptyTitleElement() {
         final var listing = searchListing("<a href=\"x\"><strong></strong></a>");
 
-        assertThat(WerStreamtEsApiClient.toSearchResult(listing)).isEmpty();
+        assertThat(WerStreamtEsSource.toSearchResult(listing)).isEmpty();
     }
 
     @Test
     void toSearchResultSkipsAListingWithoutALink() {
         final var listing = searchListing("<strong>The Matrix</strong>");
 
-        assertThat(WerStreamtEsApiClient.toSearchResult(listing)).isEmpty();
+        assertThat(WerStreamtEsSource.toSearchResult(listing)).isEmpty();
     }
 
     @Test
     void capsLanguagesToTheColumnWidth() {
         final var normal = "Deutsch, Englisch (OV)";
-        assertThat(WerStreamtEsApiClient.capLanguages(normal)).isEqualTo(normal);
+        assertThat(WerStreamtEsSource.capLanguages(normal)).isEqualTo(normal);
 
-        final var tooLong = "x".repeat(WerStreamtEsApiClient.MAX_LANGUAGES_LENGTH + 50);
-        assertThat(WerStreamtEsApiClient.capLanguages(tooLong))
-                .hasSize(WerStreamtEsApiClient.MAX_LANGUAGES_LENGTH);
+        final var tooLong = "x".repeat(WerStreamtEsSource.MAX_LANGUAGES_LENGTH + 50);
+        assertThat(WerStreamtEsSource.capLanguages(tooLong))
+                .hasSize(WerStreamtEsSource.MAX_LANGUAGES_LENGTH);
     }
 }

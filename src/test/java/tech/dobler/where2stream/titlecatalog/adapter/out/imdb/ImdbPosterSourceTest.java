@@ -19,7 +19,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/** Network-free tests for the Amazon-CDN resizing helper. (Metadata parsing lives in ImdbTitleClient.) */
+/** Network-free tests for the Amazon-CDN resizing helper. (Metadata parsing lives in ImdbTitleSource.) */
 @ExtendWith(MockitoExtension.class)
 class ImdbPosterSourceTest {
 

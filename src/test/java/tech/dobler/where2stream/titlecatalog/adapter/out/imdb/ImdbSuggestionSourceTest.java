@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 
 /** Network-free tests for parsing IMDb's suggestion/typeahead JSON payload. */
 @ExtendWith(MockitoExtension.class)
-class ImdbSuggestionClientTest {
+class ImdbSuggestionSourceTest {
 
     @Mock
     private HttpClient httpClient;
@@ -38,18 +38,18 @@ class ImdbSuggestionClientTest {
         when(response.statusCode()).thenReturn(200);
         when(response.body()).thenReturn("""
                 {"d":[{"id":"tt0133093","l":"The Matrix","y":1999}]}""");
-        final var client = new ImdbSuggestionClient(properties(), () -> httpClient);
+        final var client = new ImdbSuggestionSource(properties(), () -> httpClient);
 
         final var results = client.search("matrix");
 
-        assertThat(results).extracting(ImdbSuggestionClient.ImdbSuggestion::imdbId).containsExactly(ImdbId.of("tt0133093"));
+        assertThat(results).extracting(ImdbSuggestionSource.ImdbSuggestion::imdbId).containsExactly(ImdbId.of("tt0133093"));
     }
 
     @Test
     void searchReturnsEmptyOnANon200Status() throws Exception {
         doReturn(response).when(httpClient).send(any(), any());
         when(response.statusCode()).thenReturn(500);
-        final var client = new ImdbSuggestionClient(properties(), () -> httpClient);
+        final var client = new ImdbSuggestionSource(properties(), () -> httpClient);
 
         assertThat(client.search("matrix")).isEmpty();
     }
@@ -57,7 +57,7 @@ class ImdbSuggestionClientTest {
     @Test
     void searchReturnsEmptyOnAnIOException() throws Exception {
         doThrow(new IOException("connection reset")).when(httpClient).send(any(), any());
-        final var client = new ImdbSuggestionClient(properties(), () -> httpClient);
+        final var client = new ImdbSuggestionSource(properties(), () -> httpClient);
 
         assertThat(client.search("matrix")).isEmpty();
     }
@@ -65,7 +65,7 @@ class ImdbSuggestionClientTest {
     @Test
     void searchRestoresTheInterruptFlagOnInterruptedException() throws Exception {
         doThrow(new InterruptedException()).when(httpClient).send(any(), any());
-        final var client = new ImdbSuggestionClient(properties(), () -> httpClient);
+        final var client = new ImdbSuggestionSource(properties(), () -> httpClient);
 
         try {
             assertThat(client.search("matrix")).isEmpty();
@@ -85,7 +85,7 @@ class ImdbSuggestionClientTest {
     @Test
     void buildUriNeverThrowsForAWkwardLeadingCharacters() {
         for (String query : new String[] { "%", "%20", "\"quoted\"", "back\\slash", " leading space", "?" }) {
-            assertThatCode(() -> ImdbSuggestionClient.buildUri("https://v2.sg.media-imdb.com/suggestion", query))
+            assertThatCode(() -> ImdbSuggestionSource.buildUri("https://v2.sg.media-imdb.com/suggestion", query))
                     .as("query starting with %s", query)
                     .doesNotThrowAnyException();
         }
@@ -93,14 +93,14 @@ class ImdbSuggestionClientTest {
 
     @Test
     void buildUriEncodesTheLeadingCharacterAndTheQuery() {
-        final var uri = ImdbSuggestionClient.buildUri("https://v2.sg.media-imdb.com/suggestion", "%matrix");
+        final var uri = ImdbSuggestionSource.buildUri("https://v2.sg.media-imdb.com/suggestion", "%matrix");
 
         assertThat(uri.toString()).isEqualTo("https://v2.sg.media-imdb.com/suggestion/%25/%25matrix.json");
     }
 
     @Test
     void buildUriLowercasesAPlainLeadingLetter() {
-        final var uri = ImdbSuggestionClient.buildUri("https://v2.sg.media-imdb.com/suggestion", "Matrix");
+        final var uri = ImdbSuggestionSource.buildUri("https://v2.sg.media-imdb.com/suggestion", "Matrix");
 
         assertThat(uri.toString()).isEqualTo("https://v2.sg.media-imdb.com/suggestion/m/Matrix.json");
     }
@@ -114,11 +114,11 @@ class ImdbSuggestionClientTest {
                   {"id":"co0012345","l":"Matrix Studios"}
                 ]}""";
 
-        final var results = ImdbSuggestionClient.parse(json, 10);
+        final var results = ImdbSuggestionSource.parse(json, 10);
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0))
-                .extracting(ImdbSuggestionClient.ImdbSuggestion::imdbId, ImdbSuggestionClient.ImdbSuggestion::name,
+                .extracting(ImdbSuggestionSource.ImdbSuggestion::imdbId, ImdbSuggestionSource.ImdbSuggestion::name,
                         s -> s.year().value())
                 .containsExactly(ImdbId.of("tt0133093"), "The Matrix", 1999);
     }
@@ -128,7 +128,7 @@ class ImdbSuggestionClientTest {
         final var json = """
                 {"d":[{"id":"tt31998838","l":"Matrix 5"}]}""";
 
-        final var results = ImdbSuggestionClient.parse(json, 10);
+        final var results = ImdbSuggestionSource.parse(json, 10);
 
         assertThat(results.get(0).year().value()).isZero();
     }
@@ -142,7 +142,7 @@ class ImdbSuggestionClientTest {
                   {"id":"tt0000003","l":"Three"}
                 ]}""";
 
-        assertThat(ImdbSuggestionClient.parse(json, 2)).hasSize(2);
+        assertThat(ImdbSuggestionSource.parse(json, 2)).hasSize(2);
     }
 
     @Test
@@ -150,12 +150,12 @@ class ImdbSuggestionClientTest {
         final var json = """
                 {"d":[{"id":"tt0000001"},{"l":"No id"},{"id":"tt0000002","l":""}]}""";
 
-        assertThat(ImdbSuggestionClient.parse(json, 10)).isEmpty();
+        assertThat(ImdbSuggestionSource.parse(json, 10)).isEmpty();
     }
 
     @Test
     void isEmptyForMalformedJsonOrAMissingDArray() {
-        assertThat(ImdbSuggestionClient.parse("not json", 10)).isEmpty();
-        assertThat(ImdbSuggestionClient.parse("{}", 10)).isEmpty();
+        assertThat(ImdbSuggestionSource.parse("not json", 10)).isEmpty();
+        assertThat(ImdbSuggestionSource.parse("{}", 10)).isEmpty();
     }
 }

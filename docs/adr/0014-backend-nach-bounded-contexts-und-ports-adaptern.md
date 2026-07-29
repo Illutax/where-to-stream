@@ -13,6 +13,24 @@
   — es ist kein Bounded Context, hat keinen eigenen Use-Case, und ein `port`/`adapter`-Split ohne
   etwas zu schützendes wäre reine Zeremonie. `TimeService`/`SystemTimeService` sind schon
   Port+Adapter, nur ohne die Ordner-Umbenennung — das genügt.
+- **Update (2026-07-29):** Namenskonsistenz zwischen Port-Interfaces und den Klassen, die sie
+  implementieren (Step 6 aus der ursprünglichen Migrationsplanung).
+  `PosterSource`/`StreamAvailabilityProvider` (die Interfaces) hießen anders als das, was `port.in`
+  längst konsequent macht (`CurrentUserPort`, `WatchlistCatalogPort`, `TitleCacheMaintenancePort`,
+  `PosterAttributionPort` — alle mit `Port`-Suffix).
+  Umbenannt zu `PosterPort`/`StreamAvailabilityPort`, damit **jedes** Port-Interface (`in` wie
+  `out`) am `Port`-Suffix erkennbar ist — mit einer bewussten Ausnahme: die sechs Spring-Data-
+  Repository-Interfaces (`WatchlistEntryRepository` etc.) behalten ihr `Repository`-Suffix, weil
+  das die sofort erkennbare Spring-Data-Konvention ist und Framing A ohnehin schon "das Repository-
+  Interface ist der Port" festgelegt hat — ein zusätzliches Umbenennen brächte keinen Erkenntnisgewinn,
+  nur Reibung mit dem Ökosystem.
+  Auf der Adapter-Seite wurde `Source` als einheitliches Suffix für alle fünf ausgehenden
+  HTTP/Scraping-Adapter gewählt (auch die, die kein Port-Interface haben) — `ImdbPosterSource`/
+  `TmdbPosterSource` blieben unverändert, `WerStreamtEsApiClient` → `WerStreamtEsSource`,
+  `ImdbTitleClient` → `ImdbTitleSource`, `ImdbSuggestionClient` → `ImdbSuggestionSource`.
+  Bewusst **kein** neues Port-Interface für die letzten beiden (siehe Alternative unten) — beide
+  haben genau eine Implementierung und nichts außerhalb von Title Catalog ruft sie auf, ein Port
+  wäre reine Zeremonie, exakt dieselbe Begründung wie beim `shared`-Split oben.
 
 ## Context
 

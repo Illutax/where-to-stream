@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 
 /** Network-free tests for parsing the one IMDb GraphQL response into poster URL + age rating. */
 @ExtendWith(MockitoExtension.class)
-class ImdbTitleClientTest {
+class ImdbTitleSourceTest {
 
     @Mock
     private HttpClient httpClient;
@@ -38,7 +38,7 @@ class ImdbTitleClientTest {
         when(response.statusCode()).thenReturn(200);
         when(response.body()).thenReturn("""
                 {"data":{"title":{"primaryImage":{"url":"%s"}}}}""".formatted(POSTER));
-        final var client = new ImdbTitleClient(properties(), () -> httpClient);
+        final var client = new ImdbTitleSource(properties(), () -> httpClient);
 
         final var result = client.fetch(ImdbId.of("tt0133093"));
 
@@ -50,7 +50,7 @@ class ImdbTitleClientTest {
     void fetchReturnsEmptyOnANon200Status() throws Exception {
         doReturn(response).when(httpClient).send(any(), any());
         when(response.statusCode()).thenReturn(500);
-        final var client = new ImdbTitleClient(properties(), () -> httpClient);
+        final var client = new ImdbTitleSource(properties(), () -> httpClient);
 
         assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();
     }
@@ -58,7 +58,7 @@ class ImdbTitleClientTest {
     @Test
     void fetchReturnsEmptyOnAnIOException() throws Exception {
         doThrow(new IOException("connection reset")).when(httpClient).send(any(), any());
-        final var client = new ImdbTitleClient(properties(), () -> httpClient);
+        final var client = new ImdbTitleSource(properties(), () -> httpClient);
 
         assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();
     }
@@ -66,7 +66,7 @@ class ImdbTitleClientTest {
     @Test
     void fetchRestoresTheInterruptFlagOnInterruptedException() throws Exception {
         doThrow(new InterruptedException()).when(httpClient).send(any(), any());
-        final var client = new ImdbTitleClient(properties(), () -> httpClient);
+        final var client = new ImdbTitleSource(properties(), () -> httpClient);
 
         try {
             assertThat(client.fetch(ImdbId.of("tt0133093"))).isEmpty();
@@ -87,9 +87,9 @@ class ImdbTitleClientTest {
                    {"node":{"rating":"12","country":{"id":"FR"}}},
                    {"node":{"rating":"16","country":{"id":"DE"}}}]}}}}""".formatted(POSTER);
 
-        final var data = ImdbTitleClient.parse(json);
+        final var data = ImdbTitleSource.parse(json);
 
-        assertThat(data).extracting(ImdbTitleClient.ImdbTitleData::posterUrl,
+        assertThat(data).extracting(ImdbTitleSource.ImdbTitleData::posterUrl,
                         d -> d.rating().system(), d -> d.rating().label())
                 .containsExactly(POSTER, RatingSystem.FSK, "16");
     }
@@ -100,7 +100,7 @@ class ImdbTitleClientTest {
                 {"data":{"title":{"primaryImage":{"url":"%s"},"certificate":{"rating":"PG-13"},
                  "certificates":{"edges":[{"node":{"rating":"14A","country":{"id":"CA"}}}]}}}}""".formatted(POSTER);
 
-        final var data = ImdbTitleClient.parse(json);
+        final var data = ImdbTitleSource.parse(json);
 
         assertThat(data).extracting(d -> d.rating().system(), d -> d.rating().label())
                 .containsExactly(RatingSystem.OTHER, "PG-13");
@@ -114,7 +114,7 @@ class ImdbTitleClientTest {
                    {"node":{"text":"Up","country":{"id":"GB"}}},
                    {"node":{"text":"Oben","country":{"id":"DE"}}}]}}}}""".formatted(POSTER);
 
-        assertThat(ImdbTitleClient.parse(json).germanTitle()).isEqualTo("Oben");
+        assertThat(ImdbTitleSource.parse(json).germanTitle()).isEqualTo("Oben");
     }
 
     @Test
@@ -122,7 +122,7 @@ class ImdbTitleClientTest {
         final var json = """
                 {"data":{"title":{"akas":{"edges":[{"node":{"text":"Up","country":{"id":"GB"}}}]}}}}""";
 
-        assertThat(ImdbTitleClient.parse(json).germanTitle()).isNull();
+        assertThat(ImdbTitleSource.parse(json).germanTitle()).isNull();
     }
 
     @Test
@@ -130,22 +130,22 @@ class ImdbTitleClientTest {
         final var json = """
                 {"data":{"title":{"primaryImage":{"url":"%s"},"certificate":null,"certificates":{"edges":[]}}}}""".formatted(POSTER);
 
-        final var data = ImdbTitleClient.parse(json);
+        final var data = ImdbTitleSource.parse(json);
 
-        assertThat(data).extracting(ImdbTitleClient.ImdbTitleData::posterUrl, ImdbTitleClient.ImdbTitleData::rating)
+        assertThat(data).extracting(ImdbTitleSource.ImdbTitleData::posterUrl, ImdbTitleSource.ImdbTitleData::rating)
                 .containsExactly(POSTER, null);
     }
 
     @Test
     void isAllNullForNoPosterUnknownTitleOrMalformedJson() {
-        assertThat(ImdbTitleClient.parse("""
+        assertThat(ImdbTitleSource.parse("""
                 {"data":{"title":{"primaryImage":null,"certificates":{"edges":[]}}}}""").posterUrl()).isNull();
-        assertThat(ImdbTitleClient.parse("""
+        assertThat(ImdbTitleSource.parse("""
                 {"data":{"title":null}}""").posterUrl()).isNull();
-        assertThat(ImdbTitleClient.parse("""
+        assertThat(ImdbTitleSource.parse("""
                 {"errors":[{"message":"boom"}]}""").rating()).isNull();
-        final var malformed = ImdbTitleClient.parse("not json");
-        assertThat(malformed).extracting(ImdbTitleClient.ImdbTitleData::posterUrl, ImdbTitleClient.ImdbTitleData::rating)
+        final var malformed = ImdbTitleSource.parse("not json");
+        assertThat(malformed).extracting(ImdbTitleSource.ImdbTitleData::posterUrl, ImdbTitleSource.ImdbTitleData::rating)
                 .containsOnlyNulls();
     }
 }

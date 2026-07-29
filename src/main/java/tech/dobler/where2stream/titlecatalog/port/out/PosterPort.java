@@ -12,7 +12,7 @@ import java.util.Optional;
  * Every method degrades to empty on any failure (missing key, no result, network/parse error) —
  * a poster is a nice-to-have.
  */
-public interface PosterSource {
+public interface PosterPort {
 
     /** The TMDB {@code poster_path} for an IMDb id, or empty if there is none / the source is off. */
     Optional<String> findPosterPath(ImdbId imdbId);

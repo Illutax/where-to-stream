@@ -11,8 +11,8 @@ import tech.dobler.where2stream.titlecatalog.domain.AgeRating.RatingSystem;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.titlecatalog.domain.TitleMeta;
 import tech.dobler.where2stream.titlecatalog.port.out.TitleMetaRepository;
-import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleClient;
-import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleClient.ImdbTitleData;
+import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleSource;
+import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleSource.ImdbTitleData;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
@@ -21,7 +21,7 @@ import java.util.Optional;
 
 /**
  * The single per-title IMDb metadata cache (poster reference + age rating; room for the localized title later):
- * one {@link ImdbTitleClient} fetch feeds every consumer,
+ * one {@link ImdbTitleSource} fetch feeds every consumer,
  * so a title's poster and rating cost <strong>one</strong> API call.
  * Same connection-discipline as {@code PosterService} (ADR-0011): a fast transactional cache read,
  * the HTTP fetch with <em>no transaction open</em>, a fast transactional store —
@@ -34,17 +34,17 @@ import java.util.Optional;
 public class TitleMetaService {
 
     private final TitleMetaRepository repository;
-    private final ImdbTitleClient client;
+    private final ImdbTitleSource imdbTitleSource;
     private final PosterProperties properties;
     private final TimeService timeService;
     /** The bean's own proxy, so the short read/store steps are each transactional. */
     private final ObjectProvider<TitleMetaService> self;
 
-    public TitleMetaService(TitleMetaRepository repository, ImdbTitleClient client,
+    public TitleMetaService(TitleMetaRepository repository, ImdbTitleSource imdbTitleSource,
                             PosterProperties properties, TimeService timeService,
                             ObjectProvider<TitleMetaService> self) {
         this.repository = repository;
-        this.client = client;
+        this.imdbTitleSource = imdbTitleSource;
         this.properties = properties;
         this.timeService = timeService;
         this.self = self;
@@ -59,7 +59,7 @@ public class TitleMetaService {
             return Optional.of(cached.data());
         }
         // Fetch with no transaction open, then persist in a short transaction.
-        final Optional<ImdbTitleData> fetched = client.fetch(imdbId);
+        final Optional<ImdbTitleData> fetched = imdbTitleSource.fetch(imdbId);
         fetched.ifPresent(data -> tryStore(imdbId, () -> tx.store(imdbId, data)));
         return fetched;
     }

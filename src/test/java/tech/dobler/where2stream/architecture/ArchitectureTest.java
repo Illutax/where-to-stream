@@ -126,7 +126,7 @@ class ArchitectureTest {
             )
             .because("other bounded contexts may depend on titlecatalog only through its published "
                     + "inbound port (TitleCacheMaintenancePort), not its internals — including its "
-                    + "own outbound ports (PosterSource, TitleMetaRepository, TitlePosterRepository)");
+                    + "own outbound ports (PosterPort, TitleMetaRepository, TitlePosterRepository)");
 
     /**
      * Same isolation rule again, for Streaming Availability.
@@ -150,7 +150,7 @@ class ArchitectureTest {
     /**
      * A Spring Data repository interface is itself the outbound port to the database: Spring Data
      * generates the adapter (a runtime proxy) directly from the interface, so there's no separate
-     * hand-written adapter class the way there is for e.g. {@code PosterSource}.
+     * hand-written adapter class the way there is for e.g. {@code PosterPort}.
      * All four bounded contexts have now migrated, so this applies everywhere (old flat
      * {@code persistence} classes are gone).
      */

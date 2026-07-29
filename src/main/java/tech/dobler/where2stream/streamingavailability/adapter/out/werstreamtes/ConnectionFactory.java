@@ -4,7 +4,7 @@ import org.jsoup.Connection;
 import org.springframework.web.util.UriComponents;
 
 /**
- * Produces a jsoup {@link Connection} for a given URI, for {@link WerStreamtEsApiClient}.
+ * Produces a jsoup {@link Connection} for a given URI, for {@link WerStreamtEsSource}.
  * Unlike {@link HttpClientFactory}, this is a genuine per-request factory:
  * a jsoup {@link Connection} is single-use and carries the target URI,
  * so there's no reusable client object to cache.

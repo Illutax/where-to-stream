@@ -9,7 +9,7 @@ import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.streamingavailability.domain.QueryMeta;
 import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaRepository;
-import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityProvider;
+import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityPort;
 import tech.dobler.where2stream.streamingavailability.adapter.out.persistence.QueryResultMapper;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class StreamInfoService {
-    private final StreamAvailabilityProvider streamProvider;
+    private final StreamAvailabilityPort streamProvider;
     private final QueryMetaRepository queryMetaRepository;
     private final WerStreamtProperties properties;
     private final TimeService timeService;

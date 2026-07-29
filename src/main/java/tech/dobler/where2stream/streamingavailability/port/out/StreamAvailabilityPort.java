@@ -11,7 +11,7 @@ import java.util.List;
  * {@code StreamInfoService} do not depend on the scraping implementation and can be tested
  * with a fake.
  */
-public interface StreamAvailabilityProvider {
+public interface StreamAvailabilityPort {
 
     List<QueryResult> query(ImdbId imdbId);
 }

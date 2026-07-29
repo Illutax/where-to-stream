@@ -15,7 +15,7 @@ import tech.dobler.where2stream.streamingavailability.domain.Availability;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 import tech.dobler.where2stream.streamingavailability.domain.SearchResult;
-import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityProvider;
+import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityPort;
 import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;
 
 import java.io.IOException;
@@ -30,12 +30,12 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
-public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
+public class WerStreamtEsSource implements StreamAvailabilityPort {
     private final URI baseUrl = URI.create("https://www.werstreamt.es/filme/");
     private final RateLimiter rateLimiter;
     private final ConnectionFactory connectionFactory;
 
-    public WerStreamtEsApiClient(WerStreamtProperties properties, ConnectionFactory connectionFactory) {
+    public WerStreamtEsSource(WerStreamtProperties properties, ConnectionFactory connectionFactory) {
         this.rateLimiter = new RateLimiter(properties.rateLimit().requestsPerSecond());
         this.connectionFactory = connectionFactory;
     }
@@ -48,7 +48,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
             rateLimiter.acquire();
             final var document = connect.get();
             return document.select(".results > ul > li[data-contentid]").stream()
-                    .map(WerStreamtEsApiClient::toSearchResult)
+                    .map(WerStreamtEsSource::toSearchResult)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .toList();
@@ -135,7 +135,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
     private List<Offering> parseOfferings(Element provider) {
         final var rows = provider.select(".panel.available");
         if (!rows.isEmpty()) {
-            return rows.stream().map(WerStreamtEsApiClient::parseOfferingRow).filter(Objects::nonNull).toList();
+            return rows.stream().map(WerStreamtEsSource::parseOfferingRow).filter(Objects::nonNull).toList();
         }
         // Fallback for the flat layout (no per-listing rows): chunk the columns into groups of 3.
         final var columns = provider.select(".columns.small-4");
@@ -177,7 +177,7 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
                 .findFirst()
                 .map(text -> text.substring(text.indexOf('|') + 1).trim())
                 .filter(languages -> !languages.isBlank())
-                .map(WerStreamtEsApiClient::capLanguages)
+                .map(WerStreamtEsSource::capLanguages)
                 .orElse(null);
     }
 
