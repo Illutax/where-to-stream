@@ -1,0 +1,275 @@
+# Restructuring the backend into bounded contexts
+
+This document tells the story of one restructuring effort: turning the backend from a
+purely technical layering (`api/` → `application/` → `services/` → `persistence/`) into
+four domain-first bounded contexts, each internally organised with pragmatic ports &
+adapters.
+It complements [ADR-0014](adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md),
+which records the *decision* in Nygard format.
+This document instead narrates the *journey*: why we started, the design questions that
+came up along the way, what we learned, and what tripped us up — the kind of context an
+ADR deliberately leaves out but that's worth keeping for anyone who wants to understand
+how the outcome was actually reached, or who's about to attempt something similar.
+
+## Why
+
+The architecture review (`docs/ARCHITECTURE_REVIEW.md`) had already flagged two concrete
+symptoms of the old layering, F3 and F8: four separate outbound HTTP-client/rate-limiter
+copies, and `PosterService` (`application/`) and `TitleMetaService` (`services/`)
+independently reinventing the same non-trivial "self-proxy short transaction, swallow a
+racing insert" idiom.
+Neither duplication was intentional — both arose because the package structure grouped
+code by technical role instead of by business capability, so two classes solving the same
+problem never ended up next to each other where the duplication would have been obvious.
+A "watchlist" was smeared across four packages
+(`domain/WatchlistEntry`, `application/WatchlistImportService`, `services/WatchlistCatalog`,
+`persistence/WatchlistEntryRepository`) with nothing in the package structure signalling
+that they belonged together.
+
+Alongside the restructuring, the Java package root `tech.dobler.werstreamt` (an old
+working-title pun, "wer streamt" = "who's streaming") was renamed to
+`tech.dobler.where2stream`, matching the project's already-established name (w2s /
+"where-to-stream" — already the Maven `artifactId`/`<name>`, only the Java package had
+lagged behind).
+
+## The approach: domain-first, pragmatic ports & adapters
+
+Four bounded contexts emerged from the domain: `accountaccess` (identity, auth, per-user
+preferences), `watchlist` (a user's personal list), `titlecatalog` (permanent per-title
+facts: poster, age rating, IMDb search) and `streamingavailability` (where a title
+streams: scraping, TTL cache, provider aggregation).
+Each got its own `domain → application → port → adapter` tree.
+
+"Pragmatic" was the deliberate counterweight to textbook hexagonal architecture, decided
+early and re-confirmed several times as real questions came up during migration.
+Three kinds of "port" exist in the codebase, but only one of them needed a genuinely new
+interface:
+
+1. **Outbound, to an external system** (HTTP/scraping) — already interfaces
+   (`PosterSource`, `StreamAvailabilityProvider`), unchanged, just repackaged.
+2. **Outbound, to the database** — a Spring Data repository interface *is* the port; JPA
+   supplies the adapter as an invisible runtime proxy.
+   No hand-written wrapper interface purely for ceremony (more on this below — it took a
+   real conversation to land here).
+3. **Inter-context** — the one genuine gap.
+   `CurrentUserService` and `WatchlistCatalog` were being consumed across context
+   boundaries as concrete classes; closing this meant introducing `CurrentUserPort`
+   (accountaccess) and `WatchlistCatalogPort` (watchlist), each implemented directly by
+   the existing concrete service.
+   Other contexts inject the *port* type, never the concrete class.
+
+No interface was introduced for a context's own controller-to-its-own-service calls —
+that would have been ceremony without a boundary to protect.
+
+## Design conversations along the way
+
+The plan wasn't executed blind — three points in the migration surfaced real design
+questions, and each one was worked through as a discussion before any code changed.
+That back-and-forth shaped the final design as much as the original plan did.
+
+**"Do we need both `/api` and `/web` controllers, and should port/adapter live inside
+`application`/`services` or as first-level siblings?"**
+Raised right at the start, alongside "the port implementation is called a *Service* —
+shouldn't it be called an *Adapter*?"
+The answer that held up: `adapter/in/api/` (authenticated, SPA-facing) vs.
+`adapter/in/web/` (unauthenticated — login, app shell, public status) is a
+security/audience boundary, not a rendering-format boundary — `StatusController` returns
+JSON too, it's just outside the auth gate.
+`port` and `adapter` became first-level siblings of `domain`/`application` in every
+context, split by direction: `port/out` (the context reaching *out*, genuinely
+implemented by an `adapter/out/*` class — infrastructure adapted to an interface the core
+defined) versus `port/in` (the context's own use case, *published* for something outside
+to call — implemented directly by the context's own application service, because nothing
+external is being adapted).
+`CurrentUserService implements CurrentUserPort` was correct as-is; renaming it to
+`CurrentUserAdapter` would have been wrong, because the fix needed was reclassifying the
+port, not renaming the service.
+The user's own reaction to this framework — *"I'm not totally convinced, but we can try
+this for now"* — was a fair one; it was accepted provisionally and re-examined at every
+subsequent step rather than treated as settled.
+
+**"Why are Spring repositories in `adapter.out` instead of `port.out`?"**
+This one was flagged explicitly as a "let's talk, don't just do what I suggest" moment,
+and rightly so — it's the crux of what "port" even means here.
+Two framings were compared side by side:
+
+- **Framing A** (chosen): the repository interface itself is the port; JPA supplies the
+  adapter as an invisible runtime proxy.
+  Not technology-neutral in the strict sense (the interface extends
+  `ListCrudRepository`, sometimes with `@Query(nativeQuery = ...)`), but it delivers what
+  was actually needed — mockability — without maintaining a second, hand-written,
+  framework-free port interface plus a delegating adapter for every repository.
+- **Framing B** (rejected): the repository is an *adapter* behind a separate,
+  hand-written port interface, giving full technology neutrality at roughly double the
+  maintenance cost for a persistence-technology swap this project will never make.
+
+Framing A won and is now an enforced ArchUnit rule
+(`spring_data_repositories_are_the_port_not_the_adapter`), not just a convention.
+One consequence had to be caught after the fact: the per-context isolation rules had to
+be narrowed to exempt only `..X.port.in..`, not all of `..X.port..` — otherwise a context
+could bypass its own published port and reach straight into another context's raw
+repository, since repositories now live in `port.out` too.
+
+**"The `shared` package looks unstructured next to the four contexts — should it follow
+the same architecture, or is there merit in keeping it different?"**
+Raised only after all four contexts had already settled into their
+domain/application/port/adapter shape, at which point `shared`'s flat
+`domain/time/outbound/api/web` packages (each added organically, one per step, whenever a
+context first needed it) stood out by contrast.
+The answer: `shared` isn't a bounded context and has no use case of its own to protect, so
+a `port`/`adapter` split would be ceremony without anything to guard.
+But "organically grouped by category" still didn't say *why* something lived there, so it
+split into `shared/kernel` (value types every context needs — `ImdbId`, `ReleaseYear` —
+plus their JPA/MVC adapters) and `shared/platform` (cross-cutting infrastructure several
+contexts use but that isn't shared *domain* material — `TimeService`, `RateLimiter`,
+`ApiExceptionHandler`, the status/SPA-shell endpoints).
+`TimeService`/`SystemTimeService` were already port+adapter in substance (ADR-0003); this
+split just made the reason for the rest of the folder's existence explicit without adding
+new ceremony.
+
+## Migration sequence
+
+Every step landed as its own commit, only once the full test suite (including
+`ArchitectureTest`) was green — no step was left half-done across a commit boundary, and
+no REST endpoint path or JSON response shape changed at any point.
+
+- **Step 0 — package rename.** `tech.dobler.werstreamt` → `tech.dobler.where2stream`
+  across ~214 files, done first and in isolation from any structural change.
+  Explicitly left untouched: `WerStreamtEsApiClient`/`WerStreamtProperties`, the
+  `wer-streamt.*` property prefix, `werstreamt.es` URL literals, the
+  `src/test/resources/werstreamt/` fixture folder — all of these name the external site
+  being scraped, not our own package.
+- **Step 1 — Account & Access.** Moved first because nothing else depends on it moving
+  first — every other context depends on it, never the reverse.
+  Introduced `CurrentUserPort`, establishing the pattern the next port would follow.
+- **Step 2 — Watchlist.** Depended only on Account & Access (already moved) plus the
+  shared kernel, which was extracted here for the first time (`ImdbId`/`ReleaseYear` +
+  their JPA converters), since Watchlist was the first context to need them.
+  Introduced `WatchlistCatalogPort`.
+- **Step 3 — Title Catalog** (absorbing IMDb search).
+  Depended on Account & Access, the shared kernel, and Watchlist's `isOnWatchlist` port
+  method.
+  Introduced `TitleCacheMaintenancePort`, absorbing the admin poster-warm-up loop that
+  used to sit directly in `CacheManagementService`.
+- **Step 4 — Streaming Availability** (absorbing the dissolved admin-ops streaming-side
+  logic).
+  Depended on Account & Access, the shared kernel, and Watchlist's distinct-imdbId port
+  methods.
+  No new port of its own, since tracing every caller confirmed nothing outside this
+  context calls into it.
+- **Step 5 — final cleanup.** The old flat packages were empty husks by this point and
+  were removed.
+  `layers_are_respected` was retired (superseded by the four context-isolation rules plus
+  the repository-placement rule); stale references were swept from the README, TODOs.md,
+  ADR-0003, a frontend DTO comment, and — found only by a broader sweep, not the original
+  dot-literal grep — an env-var-form leftover in `compose.yml`.
+  ADR-0014 was written at this point, documenting the settled shape.
+- **Shared kernel/platform split** (after Steps 0–5, following the `shared` discussion
+  above).
+  Pure package moves, no behavioural change; verified with the same full-suite-plus-boot
+  discipline as every other step.
+
+"Admin Operations" (`CacheManagementService`/`PreCacheService`/`RefreshService`) was
+deliberately *not* modelled as a fifth context — it was never a business capability of its
+own, just an admin view spanning Title Catalog and Streaming Availability.
+Modelling it as a context would have meant it needed ports into both of the others for no
+real benefit over simply dissolving it into Streaming Availability's own maintenance use
+case, reaching into Title Catalog through `TitleCacheMaintenancePort`.
+
+## Emerged knowledge
+
+A few things became clear only by doing the migration, not by planning it up front:
+
+- **ArchUnit's `..segment..` predicates match anywhere in the FQN.**
+  This meant the pre-existing layered-architecture rule kept passing throughout the
+  entire incremental migration without modification — `where2stream.watchlist.application.Foo`
+  still satisfies a bare `..application..` predicate — right up until the old flat
+  packages were fully empty and the rule could be removed outright.
+- **A port that returns a context-local value type publishes that type too.**
+  `WatchlistCatalogPort` returning `ImdbEntry`/`WatchlistDate` means the isolation rule
+  needs to exempt those types explicitly (`belongToAnyOf(...)`), the same way it exempts
+  the `port` package itself — otherwise the rule fights its own port's contract.
+- **Cross-context couplings only surface once *both* sides have moved.**
+  The isolation rule for a context can only catch a violation after that context's
+  packages exist; `MeApiController` (accountaccess) reading `TmdbProperties`
+  (titlecatalog) directly was a real, pre-existing bug that had nothing to do with this
+  migration's own changes, but it was invisible until titlecatalog got its own isolation
+  rule in Step 3.
+  Fixed with a new inbound port, `PosterAttributionPort`, with zero JSON contract change.
+  Worth remembering for future migrations of this kind: don't assume the isolation rules
+  are "done" checking a context just because migration finished — a new coupling can
+  surface at any later step, not just the step that "should" own the fix.
+- **What's genuinely shared is only visible once code actually moves.**
+  The original plan assumed `HttpClientFactory`/`RealHttpClientFactory`/`OutboundHttpClients`
+  were cross-context shared infrastructure; tracing the actual code showed they were
+  titlecatalog-only all along (their own javadocs already said so).
+  Only `RateLimiter` turned out to be genuinely shared, used by both titlecatalog's HTTP
+  clients and streaming availability's scraper.
+  This kind of thing isn't predictable from reading a plan — it only becomes visible while
+  moving the code.
+
+## Impediments
+
+Practical problems hit repeatedly during the mechanical parts of the migration, each
+worth naming so a future migration of this shape can watch for them from the start:
+
+- **Prefix collisions in bulk FQN renames.**
+  Renaming `AppUser` before `AppUserRepository` (or any short-name/long-name pair sharing
+  a prefix) corrupts the longer name mid-string if a naive `perl -pi -e 's/old/new/g'`
+  pass runs in the wrong order across a file list.
+  Fixed each time either by reordering the rename rules (longest names first) or with a
+  targeted post-hoc correction pass; the shared kernel/platform rename was explicitly
+  checked for this class of collision before running, and none turned up.
+- **A `ugrep`-based `grep` silently skips files it misclassifies as binary.**
+  One file (`AppUserDetailsService.java`) contains a UTF-8 em-dash and was invisible to
+  plain `grep -rl` calls throughout several migration steps, each time requiring a manual
+  fix once the compiler caught what the grep had missed.
+  The practice that emerged: use `-Z`/`--null-data` for file-discovery greps (routes to
+  real `grep`, not the binary-guessing wrapper), and run a `file`-based sweep after every
+  major rename to catch any other such files.
+- **Same-package-omission compile errors.**
+  Files relying on implicit same-package visibility (no explicit `import`, because two
+  classes happened to sit in the same flat package) broke silently the moment one of them
+  moved to a new package — this recurred at every migration step and was only fixed
+  file-by-file, from the compiler's own error output.
+- **A rule outliving its own layer.**
+  `layers_are_respected`'s "Services" layer became permanently empty once all four
+  contexts consolidated into single `application` packages (Step 4) — dropped from the
+  rule as an interim fix, then the whole rule was removed in Step 5 once it was fully
+  superseded by the per-context isolation rules.
+
+## Verification, every step
+
+The same discipline ran after every single step, not just at the end: full backend test
+suite including `ArchitectureTest` green, frontend test suite green (confirming zero
+REST/JSON contract drift — the frontend never needed a code change through any step), and
+periodically a live `mvn spring-boot:run` boot smoke test.
+By the end of the shared kernel/platform split: 348 backend tests and 7 ArchUnit rules
+green, 180 frontend tests green, clean boot.
+
+## What's still open
+
+Three topics were explicitly parked during this effort rather than resolved, and remain
+backlog:
+
+- **Provider/Source/ApiClient naming.**
+  Outbound adapter classes currently use three different suffixes for the same
+  architectural role — `...Source` (`ImdbPosterSource`, `TmdbPosterSource`),
+  `...Provider` (the port name itself, `StreamAvailabilityProvider`), and `...ApiClient`
+  (`ImdbTitleClient`, `ImdbSuggestionClient`, `WerStreamtEsApiClient`).
+  Worth deciding, now that every context's `adapter/out/*` is visible side by side,
+  whether these should converge on one convention or whether the distinct names carry
+  real meaning worth keeping.
+- **`nativeQuery = true` vs. HQL/JPQL.**
+  `WatchlistEntryRepository`'s distinct-imdbId queries (and `QueryMetaRepository`'s,
+  once Streaming Availability migrated) use raw native SQL.
+  Flagged during the Framing A/B discussion: does embedded native SQL sit awkwardly with
+  a repository interface now explicitly framed as *the* outbound port, more than it did
+  when the interface was "just an adapter"?
+- **CQRS instead of Requests and DTOs.**
+  Whether the current Request-object + DTO pattern should give way to explicit
+  commands/queries, raised as a parallel question to the bounded-context work rather than
+  settled within it.
+
+None of these block the restructuring described above — they're independent follow-ups,
+deliberately left for a separate discussion.
