@@ -19,5 +19,6 @@ zum `adr`-Skill der Team-Doku.
 | [0010](0010-optionals-nicht-auf-null-defaulten.md) | Optionals nicht auf `null` defaulten (funktional konsumieren) | Accepted |
 | [0011](0011-kein-open-session-in-view.md) | Kein Open-Session-in-View, kein Lazy Loading | Accepted |
 | [0012](0012-permanenter-titel-cache-vs-ttl-verfuegbarkeits-cache.md) | Permanenter Titel-Cache vs. TTL-basierter Verfügbarkeits-Cache | Accepted |
+| [0013](0013-effects-nur-fuer-laufende-synchronisation-nicht-fuer-einmal-bootstrap.md) | `effect()` nur für laufende Synchronisation, nicht für einmaliges Bootstrapping | Accepted |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.

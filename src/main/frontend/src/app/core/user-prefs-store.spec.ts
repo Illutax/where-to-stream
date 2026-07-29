@@ -104,13 +104,14 @@ describe('UserPrefsStore', () => {
   });
 
   /**
-   * Regression test for a real bug: app.ts calls init() from inside an effect() that's meant to
-   * depend only on the loaded principal. init() used to read this._prefs() (to re-apply the theme),
-   * which registered as a dependency of *whichever* reactive context called it — so any later
-   * setViewMode()/setTilesPerRow()/... triggered that effect to re-run and call init() again with
-   * the original (by then stale) prefs, silently reverting the just-made change a moment later.
-   * Reproduced here with the same shape (an effect that calls init() once a "principal" signal
-   * resolves), without needing app.ts itself.
+   * Regression test for a real bug: init() used to read this._prefs() (to re-apply the theme),
+   * which registered as a dependency of *whichever* reactive context called it. Called from
+   * inside an effect() — which app.ts no longer does for this (see ADR-0013: it subscribes to
+   * AuthStore.load() directly instead) — that turned any later setViewMode()/setTilesPerRow()/...
+   * into a trigger for the effect to re-run and call init() again with the original, by-then-stale
+   * prefs, silently reverting the just-made change a moment later. init() is wrapped in untracked()
+   * now, as a second line of defense: this test keeps that guarantee even if some *other* future
+   * caller reintroduces the same effect-based pattern app.ts used to use.
    */
   it('a later setX() is not reverted by an effect that once called init()', async () => {
     const principal = signal<{ tilesPerRow: number } | null>(null);

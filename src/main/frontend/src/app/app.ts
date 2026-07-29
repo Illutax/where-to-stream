@@ -71,15 +71,16 @@ export class App {
 
   constructor() {
     this.watchlistStore.load();
-    this.auth.load();
-    // Drive the active UI language off the user's preference (EN/DE -> en/de).
-    effect(() => this.transloco.setActiveLang(this.userPrefsStore.language().toLowerCase()));
-    // Adopt every preference once the principal (with its saved preferences) has loaded.
-    effect(() => {
-      const me = this.auth.me();
+    // One-shot: adopt the preferences once the principal loads, then never again automatically —
+    // not an ongoing sync, so it's a plain subscription rather than an effect() (ADR-0013).
+    this.auth.load().subscribe((me) => {
       if (me) {
         this.userPrefsStore.init(me);
       }
     });
+    // Drive the active UI language off the user's preference (EN/DE -> en/de). This one IS an
+    // ongoing sync (re-applies whenever the preference changes later), so effect() is the right
+    // tool here.
+    effect(() => this.transloco.setActiveLang(this.userPrefsStore.language().toLowerCase()));
   }
 }

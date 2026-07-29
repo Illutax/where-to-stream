@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { catchError, Observable, of, shareReplay, tap } from 'rxjs';
 import { AuthApi } from './api/auth-api';
 import { Me } from './models';
 
@@ -18,11 +19,21 @@ export class AuthStore {
   /** True when posters come from TMDB, so the SPA shows the required TMDB attribution footer. */
   readonly tmdbAttribution = computed(() => this._me()?.tmdbAttribution ?? false);
 
-  load(): void {
-    this.authApi.me().subscribe({
-      next: (me) => this._me.set(me),
-      error: () => this._me.set(null),
-    });
+  /**
+   * Fetches the principal and updates {@link me}. Returns the (shared) result so a caller that
+   * needs to run a one-shot action once loading completes (e.g. seeding {@code UserPrefsStore})
+   * can subscribe directly instead of watching {@link me} via `effect()` — see ADR-0013 for why
+   * that distinction matters. Callers that only need the side effect (updating this store) can
+   * ignore the return value, exactly as before.
+   */
+  load(): Observable<Me | null> {
+    const me$ = this.authApi.me().pipe(
+      catchError(() => of(null)),
+      tap((me) => this._me.set(me)),
+      shareReplay(1),
+    );
+    me$.subscribe();
+    return me$;
   }
 
   logout(): void {
