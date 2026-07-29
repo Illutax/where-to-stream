@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.watchlist.domain.WatchlistEntry;
-import tech.dobler.where2stream.watchlist.adapter.out.persistence.WatchlistEntryRepository;
+import tech.dobler.where2stream.watchlist.port.out.WatchlistEntryRepository;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.util.List;

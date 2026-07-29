@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.accountaccess.adapter.out.persistence;
+package tech.dobler.where2stream.accountaccess.port.out;
 
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.stereotype.Repository;

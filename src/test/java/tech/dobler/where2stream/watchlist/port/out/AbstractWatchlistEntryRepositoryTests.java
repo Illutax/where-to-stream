@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.watchlist.adapter.out.persistence;
+package tech.dobler.where2stream.watchlist.port.out;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,7 +9,7 @@ import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.shared.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 import tech.dobler.where2stream.watchlist.domain.WatchlistEntry;
-import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.domain.Role;
 

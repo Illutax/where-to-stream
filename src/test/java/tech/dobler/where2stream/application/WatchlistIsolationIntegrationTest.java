@@ -10,7 +10,7 @@ import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.accountaccess.domain.Role;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
-import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
 import tech.dobler.where2stream.watchlist.application.WatchlistCatalog;
 import tech.dobler.where2stream.watchlist.application.WatchlistImportService;
 

@@ -8,7 +8,7 @@ import tech.dobler.where2stream.accountaccess.domain.Theme;
 import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.domain.ViewMode;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
-import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
 
 import java.util.function.Consumer;
 

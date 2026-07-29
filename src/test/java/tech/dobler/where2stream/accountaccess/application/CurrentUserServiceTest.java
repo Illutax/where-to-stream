@@ -6,7 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
-import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
 
 import java.util.Optional;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.watchlist.adapter.out.persistence;
+package tech.dobler.where2stream.watchlist.port.out;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.ListCrudRepository;

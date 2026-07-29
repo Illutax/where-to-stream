@@ -10,7 +10,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import tech.dobler.where2stream.accountaccess.domain.AuthProvider;
 import tech.dobler.where2stream.accountaccess.domain.Role;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
-import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
 
 import java.time.Instant;
 import java.util.Optional;

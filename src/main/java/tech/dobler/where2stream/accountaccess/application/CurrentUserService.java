@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
-import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
 
 import java.util.UUID;
 

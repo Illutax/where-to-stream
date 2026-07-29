@@ -4,6 +4,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import org.springframework.data.repository.Repository;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
@@ -15,6 +16,7 @@ import java.util.Date;
 import static com.tngtech.archunit.base.DescribedPredicate.not;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.belongToAnyOf;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
@@ -56,11 +58,14 @@ class ArchitectureTest {
     /**
      * Bounded-context isolation: as each context is carved out of the old technical layering
      * (see {@code docs/adr} for the restructuring), classes outside {@code accountaccess} may
-     * depend on it only through its published port ({@code CurrentUserPort}), never through its
-     * domain/application/adapter internals directly. One such rule gets added per migrated
-     * context. {@code shared..} is exempt: {@code ApiExceptionHandler} deliberately maps every
-     * context's own exception types (a cross-cutting concern the shared kernel is meant to know
-     * about), which is a different thing from one bounded context depending on another's internals.
+     * depend on it only through its published inbound port ({@code CurrentUserPort}, under
+     * {@code port.in}), never through its domain/application/adapter internals directly — and
+     * NOT through {@code port.out} either: outbound ports (e.g. a Spring Data repository, see the
+     * rule below) are the context's own dependency on its database/external systems, not something
+     * other contexts are meant to call. One isolation rule gets added per migrated context.
+     * {@code shared..} is exempt: {@code ApiExceptionHandler} deliberately maps every context's own
+     * exception types (a cross-cutting concern the shared kernel is meant to know about), which is
+     * a different thing from one bounded context depending on another's internals.
      */
     @ArchTest
     static final ArchRule accountaccess_is_only_accessed_through_its_published_ports = noClasses()
@@ -68,17 +73,18 @@ class ArchitectureTest {
             .and().resideOutsideOfPackage("..shared..")
             .should().dependOnClassesThat(
                     resideInAPackage("..accountaccess..")
-                            .and(not(resideInAPackage("..accountaccess.port..")))
+                            .and(not(resideInAPackage("..accountaccess.port.in..")))
             )
             .because("other bounded contexts may depend on accountaccess only through its "
-                    + "published ports (e.g. CurrentUserPort), not its internals");
+                    + "published inbound port (CurrentUserPort), not its internals — including its "
+                    + "own outbound ports (e.g. AppUserRepository)");
 
     /**
      * Same isolation rule as above, for the Watchlist context (published port:
-     * {@code WatchlistCatalogPort}) — with one addition: {@link ImdbEntry}/{@link WatchlistDate}
-     * are the read-model value types {@code WatchlistCatalogPort}'s own methods return, so they're
-     * part of its published contract too, not internals like the {@code WatchlistEntry} JPA entity
-     * or watchlist's exceptions.
+     * {@code WatchlistCatalogPort}, under {@code port.in}) — with one addition:
+     * {@link ImdbEntry}/{@link WatchlistDate} are the read-model value types
+     * {@code WatchlistCatalogPort}'s own methods return, so they're part of its published contract
+     * too, not internals like the {@code WatchlistEntry} JPA entity or watchlist's exceptions.
      */
     @ArchTest
     static final ArchRule watchlist_is_only_accessed_through_its_published_ports = noClasses()
@@ -86,12 +92,29 @@ class ArchitectureTest {
             .and().resideOutsideOfPackage("..shared..")
             .should().dependOnClassesThat(
                     resideInAPackage("..watchlist..")
-                            .and(not(resideInAPackage("..watchlist.port..")))
+                            .and(not(resideInAPackage("..watchlist.port.in..")))
                             .and(not(belongToAnyOf(ImdbEntry.class, WatchlistDate.class)))
             )
             .because("other bounded contexts may depend on watchlist only through its published "
-                    + "ports (e.g. WatchlistCatalogPort) plus the read-model types those ports "
-                    + "return (ImdbEntry, WatchlistDate), not watchlist's other internals");
+                    + "inbound port (WatchlistCatalogPort) plus the read-model types it returns "
+                    + "(ImdbEntry, WatchlistDate) — not watchlist's other internals, including its "
+                    + "own outbound port (WatchlistEntryRepository)");
+
+    /**
+     * A Spring Data repository interface is itself the outbound port to the database: Spring Data
+     * generates the adapter (a runtime proxy) directly from the interface, so there's no separate
+     * hand-written adapter class the way there is for e.g. {@code PosterSource}. Scoped to
+     * already-migrated contexts for now — old flat {@code persistence} classes haven't moved yet;
+     * extend the package list as each further context migrates (finished in the final cleanup step).
+     */
+    @ArchTest
+    static final ArchRule spring_data_repositories_are_the_port_not_the_adapter = classes()
+            .that().areAssignableTo(Repository.class)
+            .and().resideInAnyPackage("..accountaccess..", "..watchlist..")
+            .should().resideInAPackage("..port.out..")
+            .because("the repository interface is the outbound port; JPA supplies the adapter as a "
+                    + "runtime proxy, so there is no separate adapter class for persistence "
+                    + "(see docs/adr for the framing-A-vs-B discussion)");
 
     /**
      * Layering: presentation (web/rest/api) → application → services → persistence, over the
