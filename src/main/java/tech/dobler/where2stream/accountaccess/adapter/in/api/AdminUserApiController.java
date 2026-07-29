@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.where2stream.accountaccess.application.UserAdminService;
-import tech.dobler.where2stream.accountaccess.application.dto.CreateUserRequest;
-import tech.dobler.where2stream.accountaccess.application.dto.ResetPasswordRequest;
-import tech.dobler.where2stream.accountaccess.application.dto.UpdateUserRequest;
+import tech.dobler.where2stream.accountaccess.application.command.CreateUserCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ResetPasswordCommand;
+import tech.dobler.where2stream.accountaccess.application.command.UpdateUserCommand;
 import tech.dobler.where2stream.accountaccess.application.dto.UserDto;
 
 import java.util.List;
@@ -40,13 +40,13 @@ public class AdminUserApiController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserDto create(@RequestBody CreateUserRequest request) {
-        return userAdminService.create(request);
+    public UserDto create(@RequestBody CreateUserCommand command) {
+        return userAdminService.create(command);
     }
 
     @PutMapping("/{id}")
     public UserDto update(@PathVariable UUID id, @RequestBody UpdateUserRequest request) {
-        return userAdminService.update(id, request);
+        return userAdminService.update(new UpdateUserCommand(id, request.email(), request.roles(), request.enabled()));
     }
 
     @DeleteMapping("/{id}")
@@ -58,6 +58,6 @@ public class AdminUserApiController {
     @PostMapping("/{id}/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void resetPassword(@PathVariable UUID id, @RequestBody ResetPasswordRequest request) {
-        userAdminService.resetPassword(id, request.newPassword());
+        userAdminService.resetPassword(new ResetPasswordCommand(id, request.newPassword()));
     }
 }

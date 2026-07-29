@@ -9,6 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.accountaccess.application.UserAdminService;
 import tech.dobler.where2stream.accountaccess.application.UserManagementException;
+import tech.dobler.where2stream.accountaccess.application.command.ResetPasswordCommand;
 import tech.dobler.where2stream.accountaccess.application.dto.UserDto;
 import org.springframework.http.HttpStatus;
 
@@ -16,7 +17,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -63,7 +63,7 @@ class AdminUserApiControllerTest {
     @Test
     void updateReturnsTheUpdatedUser() throws Exception {
         final var id = UUID.randomUUID();
-        when(userAdminService.update(eq(id), any())).thenReturn(dto(id.toString(), "bob"));
+        when(userAdminService.update(any())).thenReturn(dto(id.toString(), "bob"));
 
         mockMvc.perform(put("/api/admin/users/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -91,7 +91,7 @@ class AdminUserApiControllerTest {
                         .content("{\"newPassword\":\"new\"}"))
                 .andExpect(status().isNoContent());
 
-        verify(userAdminService).resetPassword(id, "new");
+        verify(userAdminService).resetPassword(new ResetPasswordCommand(id, "new"));
     }
 
     @Test

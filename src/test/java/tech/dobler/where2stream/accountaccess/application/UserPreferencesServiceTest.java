@@ -5,6 +5,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.where2stream.accountaccess.application.command.LanguageUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ShowAgeRatingsUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ShowGermanTitleUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ThemeUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.TilesPerRowUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.UsernameUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ViewModeUpdateCommand;
 import tech.dobler.where2stream.accountaccess.domain.Language;
 import tech.dobler.where2stream.accountaccess.domain.Role;
 import tech.dobler.where2stream.accountaccess.domain.Theme;
@@ -12,6 +19,7 @@ import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.domain.ViewMode;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
+import tech.dobler.where2stream.shared.platform.api.ValidationException;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -70,7 +78,7 @@ class UserPreferencesServiceTest {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
-        service.updateTheme("alice", Theme.LIGHT);
+        service.updateTheme(new ThemeUpdateCommand("alice", Theme.LIGHT));
 
         assertThat(user.getTheme()).isEqualTo(Theme.LIGHT);
         verify(users).save(user);
@@ -80,7 +88,7 @@ class UserPreferencesServiceTest {
     void updateThemeThrowsForAnUnknownUser() {
         when(users.findByUsername("ghost")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.updateTheme("ghost", Theme.DARK))
+        assertThatThrownBy(() -> service.updateTheme(new ThemeUpdateCommand("ghost", Theme.DARK)))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -89,7 +97,7 @@ class UserPreferencesServiceTest {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
-        service.updateShowAgeRatings("alice", false);
+        service.updateShowAgeRatings(new ShowAgeRatingsUpdateCommand("alice", false));
 
         assertThat(user.isShowAgeRatings()).isFalse();
         verify(users).save(user);
@@ -100,7 +108,7 @@ class UserPreferencesServiceTest {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
-        service.updateLanguage("alice", Language.DE);
+        service.updateLanguage(new LanguageUpdateCommand("alice", Language.DE));
 
         assertThat(user.getLanguage()).isEqualTo(Language.DE);
         verify(users).save(user);
@@ -111,7 +119,7 @@ class UserPreferencesServiceTest {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
-        service.updateShowGermanTitle("alice", true);
+        service.updateShowGermanTitle(new ShowGermanTitleUpdateCommand("alice", true));
 
         assertThat(user.isShowGermanTitle()).isTrue();
         verify(users).save(user);
@@ -122,7 +130,7 @@ class UserPreferencesServiceTest {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
-        service.updateViewMode("alice", ViewMode.LIST);
+        service.updateViewMode(new ViewModeUpdateCommand("alice", ViewMode.LIST));
 
         assertThat(user.getViewMode()).isEqualTo(ViewMode.LIST);
         verify(users).save(user);
@@ -133,37 +141,40 @@ class UserPreferencesServiceTest {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
-        service.updateTilesPerRow("alice", 3);
+        service.updateTilesPerRow(new TilesPerRowUpdateCommand("alice", 3));
 
         assertThat(user.getTilesPerRow()).isEqualTo(3);
         verify(users).save(user);
     }
 
     @Test
-    void usernameIsAvailableWhenFreeOrOwnedByTheSameUser() {
-        when(users.findByUsername("free")).thenReturn(Optional.empty());
-        when(users.findByUsername("alice")).thenReturn(Optional.of(alice()));
-
-        assertThat(service.usernameAvailable("free", "alice")).isTrue();  // free
-        assertThat(service.usernameAvailable("alice", "alice")).isTrue(); // their own name
-    }
-
-    @Test
-    void usernameIsUnavailableWhenTakenBySomeoneElse() {
-        final var bob = AppUser.local("bob", "{noop}x", null, Set.of(Role.USER), Instant.parse("2026-01-01T00:00:00Z"));
-        when(users.findByUsername("bob")).thenReturn(Optional.of(bob));
-
-        assertThat(service.usernameAvailable("bob", "alice")).isFalse();
-    }
-
-    @Test
     void updateUsernameRenamesAndSavesTheUser() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(users.findByUsername("alice2")).thenReturn(Optional.empty());
 
-        service.updateUsername("alice", "alice2");
+        service.updateUsername(new UsernameUpdateCommand("alice", "alice2"));
 
         assertThat(user.getUsername()).isEqualTo("alice2");
         verify(users).save(user);
+    }
+
+    @Test
+    void updateUsernameAllowsRenamingToOwnCurrentName() {
+        final var user = alice();
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateUsername(new UsernameUpdateCommand("alice", "alice"));
+
+        verify(users).save(user);
+    }
+
+    @Test
+    void updateUsernameRejectsANameTakenBySomeoneElse() {
+        final var bob = AppUser.local("bob", "{noop}x", null, Set.of(Role.USER), Instant.parse("2026-01-01T00:00:00Z"));
+        when(users.findByUsername("bob")).thenReturn(Optional.of(bob));
+
+        assertThatThrownBy(() -> service.updateUsername(new UsernameUpdateCommand("alice", "bob")))
+                .isInstanceOf(ValidationException.class);
     }
 }

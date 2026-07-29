@@ -1,14 +1,20 @@
 package tech.dobler.where2stream.accountaccess.application;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.dobler.where2stream.accountaccess.domain.Language;
-import tech.dobler.where2stream.accountaccess.domain.Theme;
+import tech.dobler.where2stream.accountaccess.application.command.LanguageUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ShowAgeRatingsUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ShowGermanTitleUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ThemeUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.TilesPerRowUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.UsernameUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ViewModeUpdateCommand;
 import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
-import tech.dobler.where2stream.accountaccess.domain.ViewMode;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
+import tech.dobler.where2stream.shared.platform.api.ValidationException;
 
 import java.util.function.Consumer;
 
@@ -39,46 +45,45 @@ public class UserPreferencesService {
     }
 
     @Transactional
-    public void updateTheme(String username, Theme theme) {
-        update(username, user -> user.changeTheme(theme));
+    public void updateTheme(ThemeUpdateCommand command) {
+        update(command.username(), user -> user.changeTheme(command.theme()));
     }
 
     @Transactional
-    public void updateShowAgeRatings(String username, boolean show) {
-        update(username, user -> user.changeShowAgeRatings(show));
+    public void updateShowAgeRatings(ShowAgeRatingsUpdateCommand command) {
+        update(command.username(), user -> user.changeShowAgeRatings(command.showAgeRatings()));
     }
 
     @Transactional
-    public void updateLanguage(String username, Language language) {
-        update(username, user -> user.changeLanguage(language));
+    public void updateLanguage(LanguageUpdateCommand command) {
+        update(command.username(), user -> user.changeLanguage(command.language()));
     }
 
     @Transactional
-    public void updateShowGermanTitle(String username, boolean show) {
-        update(username, user -> user.changeShowGermanTitle(show));
+    public void updateShowGermanTitle(ShowGermanTitleUpdateCommand command) {
+        update(command.username(), user -> user.changeShowGermanTitle(command.showGermanTitle()));
     }
 
     @Transactional
-    public void updateViewMode(String username, ViewMode viewMode) {
-        update(username, user -> user.changeViewMode(viewMode));
+    public void updateViewMode(ViewModeUpdateCommand command) {
+        update(command.username(), user -> user.changeViewMode(command.viewMode()));
     }
 
     @Transactional
-    public void updateTilesPerRow(String username, int tilesPerRow) {
-        update(username, user -> user.changeTilesPerRow(tilesPerRow));
+    public void updateTilesPerRow(TilesPerRowUpdateCommand command) {
+        update(command.username(), user -> user.changeTilesPerRow(command.tilesPerRow()));
     }
 
-    /** Whether {@code newUsername} may be taken by {@code currentUsername} (free, or their own name). */
-    public boolean usernameAvailable(String newUsername, String currentUsername) {
-        return users.findByUsername(newUsername)
-                .map(existing -> existing.getUsername().equals(currentUsername))
+    /** Renames the login username. 409 if {@code newUsername} is already taken by someone else. */
+    @Transactional
+    public void updateUsername(UsernameUpdateCommand command) {
+        final boolean available = users.findByUsername(command.newUsername())
+                .map(existing -> existing.getUsername().equals(command.currentUsername()))
                 .orElse(true);
-    }
-
-    /** Renames the login username. The caller must have checked {@link #usernameAvailable}. */
-    @Transactional
-    public void updateUsername(String currentUsername, String newUsername) {
-        update(currentUsername, user -> user.rename(newUsername));
+        if (!available) {
+            throw new ValidationException(HttpStatus.CONFLICT, "That username is already taken.");
+        }
+        update(command.currentUsername(), user -> user.rename(command.newUsername()));
     }
 
     private void update(String username, Consumer<AppUser> mutator) {

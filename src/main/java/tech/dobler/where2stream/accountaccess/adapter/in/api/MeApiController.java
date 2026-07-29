@@ -13,9 +13,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import tech.dobler.where2stream.accountaccess.application.command.LanguageUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ShowAgeRatingsUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ShowGermanTitleUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ThemeUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.TilesPerRowUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.UsernameUpdateCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ViewModeUpdateCommand;
 import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.application.UserPreferencesService;
-import tech.dobler.where2stream.shared.platform.api.ValidationException;
 import tech.dobler.where2stream.accountaccess.application.dto.MeDto;
 import tech.dobler.where2stream.titlecatalog.port.in.PosterAttributionPort;
 
@@ -58,63 +64,45 @@ public class MeApiController {
     @PutMapping("/theme")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateTheme(Authentication authentication, @RequestBody ThemeUpdateRequest request) {
-        if (request == null || request.theme() == null) {
-            throw new ValidationException("A theme is required.");
-        }
-        userPreferencesService.updateTheme(authentication.getName(), request.theme());
+        userPreferencesService.updateTheme(new ThemeUpdateCommand(authentication.getName(), request.theme()));
     }
 
     /** Updates the current user's own age-rating-badge preference. */
     @PutMapping("/show-age-ratings")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateShowAgeRatings(Authentication authentication, @RequestBody ShowAgeRatingsUpdateRequest request) {
-        if (request == null || request.showAgeRatings() == null) {
-            throw new ValidationException("A showAgeRatings flag is required.");
-        }
-        userPreferencesService.updateShowAgeRatings(authentication.getName(), request.showAgeRatings());
+        userPreferencesService.updateShowAgeRatings(
+                new ShowAgeRatingsUpdateCommand(authentication.getName(), request.showAgeRatings()));
     }
 
     /** Updates the current user's own UI language. */
     @PutMapping("/language")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateLanguage(Authentication authentication, @RequestBody LanguageUpdateRequest request) {
-        if (request == null || request.language() == null) {
-            throw new ValidationException("A language is required.");
-        }
-        userPreferencesService.updateLanguage(authentication.getName(), request.language());
+        userPreferencesService.updateLanguage(new LanguageUpdateCommand(authentication.getName(), request.language()));
     }
 
     /** Updates the current user's own German-title preference. */
     @PutMapping("/show-german-title")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateShowGermanTitle(Authentication authentication, @RequestBody ShowGermanTitleUpdateRequest request) {
-        if (request == null || request.showGermanTitle() == null) {
-            throw new ValidationException("A showGermanTitle flag is required.");
-        }
-        userPreferencesService.updateShowGermanTitle(authentication.getName(), request.showGermanTitle());
+        userPreferencesService.updateShowGermanTitle(
+                new ShowGermanTitleUpdateCommand(authentication.getName(), request.showGermanTitle()));
     }
 
     /** Updates the current user's own library layout preference (list vs. poster grid). */
     @PutMapping("/view-mode")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateViewMode(Authentication authentication, @RequestBody ViewModeUpdateRequest request) {
-        if (request == null || request.viewMode() == null) {
-            throw new ValidationException("A viewMode is required.");
-        }
-        userPreferencesService.updateViewMode(authentication.getName(), request.viewMode());
+        userPreferencesService.updateViewMode(new ViewModeUpdateCommand(authentication.getName(), request.viewMode()));
     }
 
     /** Updates the current user's own tiles-per-row preference (2-6) for the grid view. */
     @PutMapping("/tiles-per-row")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateTilesPerRow(Authentication authentication, @RequestBody TilesPerRowUpdateRequest request) {
-        if (request == null || request.tilesPerRow() == null) {
-            throw new ValidationException("A tilesPerRow is required.");
-        }
-        if (request.tilesPerRow() < 2 || request.tilesPerRow() > 6) {
-            throw new ValidationException("tilesPerRow must be between 2 and 6.");
-        }
-        userPreferencesService.updateTilesPerRow(authentication.getName(), request.tilesPerRow());
+        userPreferencesService.updateTilesPerRow(
+                new TilesPerRowUpdateCommand(authentication.getName(), request.tilesPerRow()));
     }
 
     /**
@@ -126,15 +114,8 @@ public class MeApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateUsername(Authentication authentication, @RequestBody UsernameUpdateRequest request,
                                HttpServletRequest httpRequest) {
-        if (request == null || request.username() == null || request.username().isBlank()) {
-            throw new ValidationException("A username is required.");
-        }
-        final var currentUsername = authentication.getName();
-        final var newUsername = request.username().trim();
-        if (!userPreferencesService.usernameAvailable(newUsername, currentUsername)) {
-            throw new ValidationException(HttpStatus.CONFLICT, "That username is already taken.");
-        }
-        userPreferencesService.updateUsername(currentUsername, newUsername);
+        userPreferencesService.updateUsername(
+                new UsernameUpdateCommand(authentication.getName(), request.username()));
         // Force re-authentication as the new name.
         final var session = httpRequest.getSession(false);
         if (session != null) {

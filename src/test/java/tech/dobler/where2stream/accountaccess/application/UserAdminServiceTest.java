@@ -7,13 +7,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
-import tech.dobler.where2stream.accountaccess.application.dto.CreateUserRequest;
-import tech.dobler.where2stream.accountaccess.application.dto.UpdateUserRequest;
+import tech.dobler.where2stream.accountaccess.application.command.CreateUserCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ResetPasswordCommand;
+import tech.dobler.where2stream.accountaccess.application.command.UpdateUserCommand;
 import tech.dobler.where2stream.accountaccess.application.dto.UserDto;
 import tech.dobler.where2stream.accountaccess.domain.AuthProvider;
 import tech.dobler.where2stream.accountaccess.domain.Role;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
+import tech.dobler.where2stream.shared.platform.api.ValidationException;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
@@ -59,7 +61,7 @@ class UserAdminServiceTest {
         when(passwordEncoder.encode("secret")).thenReturn("{bcrypt}enc");
         when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        final var dto = service.create(new CreateUserRequest("bob", "secret", "bob@x", List.of(Role.USER)));
+        final var dto = service.create(new CreateUserCommand("bob", "secret", "bob@x", List.of(Role.USER)));
 
         assertThat(dto).extracting(UserDto::username, UserDto::roles).containsExactly("bob", List.of("USER"));
         verify(passwordEncoder).encode("secret");
@@ -72,7 +74,7 @@ class UserAdminServiceTest {
         when(passwordEncoder.encode("secret")).thenReturn("{bcrypt}enc");
         when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        final var dto = service.create(new CreateUserRequest("bob", "secret", null, List.of()));
+        final var dto = service.create(new CreateUserCommand("bob", "secret", null, List.of()));
 
         assertThat(dto.roles()).containsExactly("USER");
     }
@@ -84,7 +86,7 @@ class UserAdminServiceTest {
         when(passwordEncoder.encode("secret")).thenReturn("{bcrypt}enc");
         when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        final var dto = service.create(new CreateUserRequest("bob", "secret", null, null));
+        final var dto = service.create(new CreateUserCommand("bob", "secret", null, null));
 
         assertThat(dto.roles()).containsExactly("USER");
     }
@@ -93,17 +95,15 @@ class UserAdminServiceTest {
     void createRejectsADuplicateUsername() {
         when(users.existsByUsername("bob")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create(new CreateUserRequest("bob", "secret", null, List.of())))
+        assertThatThrownBy(() -> service.create(new CreateUserCommand("bob", "secret", null, List.of())))
                 .isInstanceOf(UserManagementException.class);
         verify(users, never()).save(any());
     }
 
     @Test
     void createRejectsABlankPassword() {
-        when(users.existsByUsername("bob")).thenReturn(false);
-
-        assertThatThrownBy(() -> service.create(new CreateUserRequest("bob", "  ", null, List.of())))
-                .isInstanceOf(UserManagementException.class);
+        assertThatThrownBy(() -> new CreateUserCommand("bob", "  ", null, List.of()))
+                .isInstanceOf(ValidationException.class);
     }
 
     @Test
@@ -125,9 +125,8 @@ class UserAdminServiceTest {
 
     @Test
     void createRejectsANullUsername() {
-        assertThatThrownBy(() -> service.create(new CreateUserRequest(null, "secret", null, List.of())))
-                .isInstanceOf(UserManagementException.class);
-        verify(users, never()).save(any());
+        assertThatThrownBy(() -> new CreateUserCommand(null, "secret", null, List.of()))
+                .isInstanceOf(ValidationException.class);
     }
 
     @Test
@@ -137,7 +136,7 @@ class UserAdminServiceTest {
         when(users.findById(id)).thenReturn(Optional.of(admin));
         when(users.findAll()).thenReturn(List.of(admin)); // the only admin
 
-        assertThatThrownBy(() -> service.update(id, new UpdateUserRequest("admin@x", List.of(Role.USER), true)))
+        assertThatThrownBy(() -> service.update(new UpdateUserCommand(id, "admin@x", List.of(Role.USER), true)))
                 .isInstanceOf(UserManagementException.class);
         verify(users, never()).save(any());
     }
@@ -151,7 +150,7 @@ class UserAdminServiceTest {
         when(users.findAll()).thenReturn(List.of(admin, other));
         when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        final var dto = service.update(id, new UpdateUserRequest("admin@x", List.of(Role.USER), true));
+        final var dto = service.update(new UpdateUserCommand(id, "admin@x", List.of(Role.USER), true));
 
         assertThat(dto.roles()).containsExactly("USER");
     }
@@ -163,7 +162,7 @@ class UserAdminServiceTest {
         when(users.findById(id)).thenReturn(Optional.of(admin));
         when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        final var dto = service.update(id, new UpdateUserRequest("new@x", List.of(Role.ADMIN), true));
+        final var dto = service.update(new UpdateUserCommand(id, "new@x", List.of(Role.ADMIN), true));
 
         assertThat(dto.roles()).containsExactly("ADMIN");
         verify(users, never()).findAll(); // losesAdmin short-circuits false; isLastEnabledAdmin never runs
@@ -176,7 +175,7 @@ class UserAdminServiceTest {
         when(users.findById(id)).thenReturn(Optional.of(admin));
         when(users.findAll()).thenReturn(List.of(admin)); // the only admin
 
-        assertThatThrownBy(() -> service.update(id, new UpdateUserRequest("admin@x", List.of(Role.ADMIN), false)))
+        assertThatThrownBy(() -> service.update(new UpdateUserCommand(id, "admin@x", List.of(Role.ADMIN), false)))
                 .isInstanceOf(UserManagementException.class);
         verify(users, never()).save(any());
     }
@@ -222,7 +221,7 @@ class UserAdminServiceTest {
         final var id = (UUID) ReflectionTestUtils.getField(google, "id");
         when(users.findById(id)).thenReturn(Optional.of(google));
 
-        assertThatThrownBy(() -> service.resetPassword(id, "new"))
+        assertThatThrownBy(() -> service.resetPassword(new ResetPasswordCommand(id, "new")))
                 .isInstanceOf(UserManagementException.class);
     }
 
@@ -234,7 +233,7 @@ class UserAdminServiceTest {
         when(passwordEncoder.encode("new")).thenReturn("{bcrypt}new");
         when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.resetPassword(id, "new");
+        service.resetPassword(new ResetPasswordCommand(id, "new"));
 
         assertThat(local.getPasswordHash()).isEqualTo("{bcrypt}new");
     }

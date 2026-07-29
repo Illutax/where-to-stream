@@ -5,8 +5,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.dobler.where2stream.accountaccess.application.dto.CreateUserRequest;
-import tech.dobler.where2stream.accountaccess.application.dto.UpdateUserRequest;
+import tech.dobler.where2stream.accountaccess.application.command.CreateUserCommand;
+import tech.dobler.where2stream.accountaccess.application.command.ResetPasswordCommand;
+import tech.dobler.where2stream.accountaccess.application.command.UpdateUserCommand;
 import tech.dobler.where2stream.accountaccess.application.dto.UserDto;
 import tech.dobler.where2stream.accountaccess.domain.AuthProvider;
 import tech.dobler.where2stream.accountaccess.domain.Role;
@@ -17,7 +18,6 @@ import tech.dobler.where2stream.shared.platform.time.TimeService;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -48,28 +48,26 @@ public class UserAdminService {
     }
 
     @Transactional
-    public UserDto create(CreateUserRequest request) {
-        final var username = requireText(request.username(), "username");
-        if (users.existsByUsername(username)) {
-            throw UserManagementException.duplicateUsername(username);
+    public UserDto create(CreateUserCommand command) {
+        if (users.existsByUsername(command.username())) {
+            throw UserManagementException.duplicateUsername(command.username());
         }
-        final var password = requireText(request.password(), "password");
-        final var saved = users.save(AppUser.local(
-                username, passwordEncoder.encode(password), request.email(), roles(request.roles()), timeService.now()));
+        final var saved = users.save(AppUser.local(command.username(), passwordEncoder.encode(command.password()),
+                command.email(), EnumSet.copyOf(command.roles()), timeService.now()));
         return toDto(saved);
     }
 
     @Transactional
-    public UserDto update(UUID id, UpdateUserRequest request) {
-        final var user = require(id);
-        final var newRoles = roles(request.roles());
-        final boolean losesAdmin = !newRoles.contains(Role.ADMIN) || !request.enabled();
+    public UserDto update(UpdateUserCommand command) {
+        final var user = require(command.id());
+        final var newRoles = EnumSet.copyOf(command.roles());
+        final boolean losesAdmin = !newRoles.contains(Role.ADMIN) || !command.enabled();
         if (losesAdmin && isLastEnabledAdmin(user)) {
             throw UserManagementException.lastAdmin();
         }
-        user.setEmail(request.email());
+        user.setEmail(command.email());
         user.setRoles(newRoles);
-        user.setEnabled(request.enabled());
+        user.setEnabled(command.enabled());
         return toDto(users.save(user));
     }
 
@@ -83,12 +81,12 @@ public class UserAdminService {
     }
 
     @Transactional
-    public void resetPassword(UUID id, String newPassword) {
-        final var user = require(id);
+    public void resetPassword(ResetPasswordCommand command) {
+        final var user = require(command.id());
         if (user.getProvider() != AuthProvider.LOCAL) {
             throw UserManagementException.badRequest("Cannot set a password on a " + user.getProvider() + " account.");
         }
-        user.changePassword(passwordEncoder.encode(requireText(newPassword, "password")));
+        user.changePassword(passwordEncoder.encode(command.newPassword()));
         users.save(user);
     }
 
@@ -106,17 +104,6 @@ public class UserAdminService {
                 .filter(u -> u.getRoles().contains(Role.ADMIN))
                 .count();
         return enabledAdmins <= 1;
-    }
-
-    private static Set<Role> roles(List<Role> roles) {
-        return roles == null || roles.isEmpty() ? EnumSet.of(Role.USER) : EnumSet.copyOf(roles);
-    }
-
-    private static String requireText(String value, String field) {
-        if (value == null || value.isBlank()) {
-            throw UserManagementException.badRequest(field + " must not be blank");
-        }
-        return value.trim();
     }
 
     private static UserDto toDto(AppUser user) {
