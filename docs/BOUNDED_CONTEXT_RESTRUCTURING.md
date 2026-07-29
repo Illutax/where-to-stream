@@ -312,14 +312,43 @@ The lesson: a workaround with a code comment explaining *why* is worth re-examin
 its assumptions are actually tested, not just trusted — the fix here removed a class instead
 of just relocating the same complexity.
 
-## What's still open
+## CQRS instead of Requests and DTOs: resolved as self-validating Commands
 
-One topic remains, explicitly parked during this effort rather than resolved:
+The question wasn't really "full CQRS or not" — a single-database app with no scaling
+pressure has no case for separate read/write models or event sourcing, and that option was
+ruled out almost immediately.
+The actual, concrete problem the research surfaced was narrower: thirteen `*Request` records
+with zero Bean Validation anywhere in the codebase, the same `if (request == null || ...)
+throw new ValidationException(...)` block repeated near-verbatim across nine controller
+methods, and two competing calling conventions into the application layer — some services
+took a whole Request object (`UserAdminService.create(CreateUserRequest)`), others took the
+same payload unpacked into three or four loose parameters
+(`WatchlistImportService.addOne(UUID, ImdbId, String, ReleaseYear)`).
 
-- **CQRS instead of Requests and DTOs.**
-  Whether the current Request-object + DTO pattern should give way to explicit
-  commands/queries, raised as a parallel question to the bounded-context work rather than
-  settled within it.
+Resolved by introducing `*Command` records in a new `application/command/` package per
+context, mirroring `application/dto/`'s existing role for output.
+Wire-only `*Request` records stay exactly as dumb as before, bound by `@RequestBody`; a
+Command bundles the wire payload together with whatever context the controller resolves
+separately (`Authentication`, `@PathVariable`), and validates itself in its own compact
+constructor — the same pattern `ImdbId` already uses for its `tt\w+` format, just for
+required fields and ranges instead. Every application service method now takes exactly one
+Command parameter; the two competing calling conventions collapsed into one.
 
-This doesn't block the restructuring described above — it's an independent follow-up,
-deliberately left for a separate discussion.
+One assumption got tested before it shaped the design: does a `ValidationException` thrown
+from inside a record's compact constructor, invoked by Jackson while deserializing a
+`@RequestBody`, still surface as a clean 400 through the existing `ApiExceptionHandler`? It
+does — Spring unwraps `HttpMessageNotReadableException`'s cause chain to find a matching
+`@ExceptionHandler`, so the response status, `application/problem+json` content type, and
+exact `detail`/`title` text are all unchanged from the old controller-side check. That
+finding is what made collapsing a Request directly into its Command safe wherever no extra
+context needed folding in (`CreateUserCommand`, `InvalidateCommand`).
+
+A second, smaller improvement fell out of unifying the calling convention:
+`UserPreferencesService.updateUsername`'s conflict check used to be split across the
+controller (call `usernameAvailable()`, inspect the result, throw 409) and the service (do
+the actual rename). It now lives entirely in the service, which owns the business rule
+end to end — the same shape `UserAdminService.create`'s duplicate-username check already had.
+
+See ADR-0015 for the full decision record, including what didn't make the cut (an
+overloaded constructor per Command for wire-type conversion; wrapping every single-value
+service call in a Command even where there's nothing to validate).

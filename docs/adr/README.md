@@ -21,5 +21,6 @@ analog zum `adr`-Skill der Team-Doku.
 | [0012](0012-permanenter-titel-cache-vs-ttl-verfuegbarkeits-cache.md) | Permanenter Titel-Cache vs. TTL-basierter Verfügbarkeits-Cache | Accepted |
 | [0013](0013-effects-nur-fuer-laufende-synchronisation-nicht-fuer-einmal-bootstrap.md) | `effect()` nur für laufende Synchronisation, nicht für einmaliges Bootstrapping | Accepted |
 | [0014](0014-backend-nach-bounded-contexts-und-ports-adaptern.md) | Backend nach Bounded Contexts, mit pragmatischen Ports & Adaptern | Accepted |
+| [0015](0015-selbstvalidierende-commands-statt-verstreuter-request-validierung.md) | Selbstvalidierende Commands statt verstreuter Request-Validierung | Accepted |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.
