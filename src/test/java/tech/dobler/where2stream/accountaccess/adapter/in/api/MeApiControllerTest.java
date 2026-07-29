@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.accountaccess.adapter.in.web;
+package tech.dobler.where2stream.accountaccess.adapter.in.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

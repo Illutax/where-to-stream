@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.shared.web;
+package tech.dobler.where2stream.shared.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

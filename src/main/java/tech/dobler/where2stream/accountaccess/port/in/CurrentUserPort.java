@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.accountaccess.application.port.out;
+package tech.dobler.where2stream.accountaccess.port.in;
 
 import java.util.UUID;
 

@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.shared.web;
+package tech.dobler.where2stream.shared.api;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;

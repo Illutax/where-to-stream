@@ -5,7 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
+import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.application.dto.WatchlistDto;
 import tech.dobler.where2stream.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.domain.ImdbEntry;

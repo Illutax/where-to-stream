@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.accountaccess.adapter.in.web;
+package tech.dobler.where2stream.accountaccess.adapter.in.api;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

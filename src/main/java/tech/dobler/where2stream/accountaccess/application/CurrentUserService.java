@@ -2,7 +2,7 @@ package tech.dobler.where2stream.accountaccess.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
+import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.adapter.out.persistence.AppUserRepository;
 

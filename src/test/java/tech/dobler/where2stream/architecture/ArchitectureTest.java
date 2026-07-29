@@ -65,7 +65,7 @@ class ArchitectureTest {
             .and().resideOutsideOfPackage("..shared..")
             .should().dependOnClassesThat(
                     resideInAPackage("..accountaccess..")
-                            .and(not(resideInAPackage("..accountaccess.application.port..")))
+                            .and(not(resideInAPackage("..accountaccess.port..")))
             )
             .because("other bounded contexts may depend on accountaccess only through its "
                     + "published ports (e.g. CurrentUserPort), not its internals");

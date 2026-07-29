@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
+import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.application.ImdbSearchService;
 import tech.dobler.where2stream.shared.api.ValidationException;
 import tech.dobler.where2stream.application.dto.ImdbSearchResultDto;

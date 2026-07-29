@@ -8,7 +8,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.application.CatalogOverviewService;
-import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
+import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.application.dto.OverviewEntryDto;
 import tech.dobler.where2stream.domain.ImdbId;
 import tech.dobler.where2stream.domain.ReleaseYear;

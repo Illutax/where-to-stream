@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.dobler.where2stream.accountaccess.application.port.out.CurrentUserPort;
+import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.application.dto.WatchlistDto;
 import tech.dobler.where2stream.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.domain.ImdbEntry;

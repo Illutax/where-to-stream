@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.accountaccess.adapter.in.web;
+package tech.dobler.where2stream.accountaccess.adapter.in.api;
 
 import tech.dobler.where2stream.accountaccess.domain.ViewMode;
 
