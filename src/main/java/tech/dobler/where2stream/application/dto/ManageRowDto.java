@@ -1,6 +1,6 @@
 package tech.dobler.where2stream.application.dto;
 
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 
 /** One row of the cache-management table. {@code needsScrape} = currently missing/invalidated cache. */
 public record ManageRowDto(

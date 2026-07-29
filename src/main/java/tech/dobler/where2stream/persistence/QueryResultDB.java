@@ -3,7 +3,7 @@ package tech.dobler.where2stream.persistence;
 import jakarta.persistence.*;
 import lombok.*;
 import tech.dobler.where2stream.domain.Availability;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 
 import java.util.ArrayList;
 import java.util.List;

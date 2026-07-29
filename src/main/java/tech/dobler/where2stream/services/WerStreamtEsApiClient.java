@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.where2stream.configurations.WerStreamtProperties;
 import tech.dobler.where2stream.domain.AvailabilityType;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.Price;
 import tech.dobler.where2stream.domain.Availability;
 import tech.dobler.where2stream.domain.QueryResult;

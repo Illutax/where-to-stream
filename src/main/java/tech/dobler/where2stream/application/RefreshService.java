@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.application.dto.RefreshResultDto;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.services.StreamInfoService;
 
 import java.util.List;
@@ -28,15 +28,15 @@ import java.util.List;
 @PreAuthorize("hasRole('ADMIN')")
 public class RefreshService {
 
-    private final WatchlistEntryRepository watchlistEntryRepository;
+    private final WatchlistCatalogPort watchlistCatalogPort;
     private final StreamInfoService streamInfoService;
 
     public RefreshResultDto refreshSeen() {
-        return refresh(watchlistEntryRepository.findDistinctImdbIdsRated());
+        return refresh(watchlistCatalogPort.allDistinctRatedImdbIds());
     }
 
     public RefreshResultDto refreshAll() {
-        return refresh(watchlistEntryRepository.findDistinctImdbIds());
+        return refresh(watchlistCatalogPort.allDistinctImdbIds());
     }
 
     private RefreshResultDto refresh(List<ImdbId> imdbIds) {

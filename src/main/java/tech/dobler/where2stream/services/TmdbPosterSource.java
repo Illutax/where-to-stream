@@ -5,7 +5,7 @@ import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.where2stream.configurations.TmdbProperties;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.PosterSize;
 
 import java.io.IOException;

@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import tech.dobler.where2stream.domain.AgeRating.RatingSystem;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 
 import java.time.Instant;
 

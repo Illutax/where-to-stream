@@ -6,11 +6,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.domain.Availability;
-import tech.dobler.where2stream.domain.ImdbEntry;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.domain.ReleaseYear;
-import tech.dobler.where2stream.domain.WatchlistDate;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 import tech.dobler.where2stream.domain.QueryResult;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.net.URI;
 import java.util.List;
@@ -27,7 +28,7 @@ class AggregateServiceTest {
     private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @Mock
-    private WatchlistCatalog watchlistCatalog;
+    private WatchlistCatalogPort watchlistCatalogPort;
     @Mock
     private StreamInfoService streamInfoService;
     @InjectMocks
@@ -52,7 +53,7 @@ class AggregateServiceTest {
 
     /** Catalogue of tt1 (Netflix flatrate, two language variants), tt2 (Netflix paid), tt3 (Disney+ flatrate). */
     private void givenCatalogue() {
-        when(watchlistCatalog.findAll(USER)).thenReturn(List.of(entry("tt1", "A"), entry("tt2", "B"), entry("tt3", "C")));
+        when(watchlistCatalogPort.findAll(USER)).thenReturn(List.of(entry("tt1", "A"), entry("tt2", "B"), entry("tt3", "C")));
         when(streamInfoService.resolveAll(List.of(id("tt1"), id("tt2"), id("tt3")))).thenReturn(Map.of(
                 id("tt1"), List.of(flatrate("tt1", "Netflix", "Deutsch"), flatrate("tt1", "Netflix", "English")),
                 id("tt2"), List.of(paid("tt2", "Netflix")),
@@ -62,7 +63,7 @@ class AggregateServiceTest {
     @Test
     void includedReturnsFlatrateTitlesForTheServiceDeduplicatedAcrossLanguageVariants() {
         givenCatalogue();
-        when(watchlistCatalog.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(entry("tt1", "A")));
+        when(watchlistCatalogPort.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(entry("tt1", "A")));
 
         // tt1 is on Netflix flatrate in two languages -> distinct() collapses it to one entry.
         assertThat(service.included("Netflix", USER)).extracting(ImdbEntry::imdbId).containsExactly(id("tt1"));
@@ -78,7 +79,7 @@ class AggregateServiceTest {
     @Test
     void contentForDerivesBothListsFromASingleResolve() {
         givenCatalogue();
-        when(watchlistCatalog.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(entry("tt1", "A")));
+        when(watchlistCatalogPort.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(entry("tt1", "A")));
 
         final var content = service.contentFor("Netflix", USER);
 

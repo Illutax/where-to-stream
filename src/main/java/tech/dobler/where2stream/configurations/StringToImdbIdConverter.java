@@ -2,7 +2,7 @@ package tech.dobler.where2stream.configurations;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 
 /**
  * Binds a request parameter / path variable string to an {@link ImdbId} (e.g.

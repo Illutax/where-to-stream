@@ -1,10 +1,10 @@
 package tech.dobler.where2stream.application.dto;
 
 import tech.dobler.where2stream.application.AvailabilityFormatter;
-import tech.dobler.where2stream.domain.ImdbEntry;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.QueryResult;
-import tech.dobler.where2stream.domain.WatchlistDate;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 /**
  * A title that is (only) purchasable / rentable on a streaming service. The year is rendered for

@@ -5,10 +5,10 @@ import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.application.dto.FlatrateEntryDto;
 import tech.dobler.where2stream.application.dto.PaidEntryDto;
 import tech.dobler.where2stream.application.dto.ProviderPageDto;
-import tech.dobler.where2stream.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.services.AggregateService;
-import tech.dobler.where2stream.services.WatchlistCatalog;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.util.Comparator;
 import java.util.List;
@@ -24,7 +24,7 @@ import java.util.UUID;
 public class ProviderPageService {
 
     private final AggregateService aggregateService;
-    private final WatchlistCatalog watchlistCatalog;
+    private final WatchlistCatalogPort watchlistCatalogPort;
 
     public ProviderPageDto pageFor(StreamingProvider provider, UUID userId) {
         if (provider == StreamingProvider.AMAZON) {
@@ -53,7 +53,7 @@ public class ProviderPageService {
 
     private List<PaidEntryDto> paidDtos(List<QueryResult> paid, UUID userId) {
         return paid.stream()
-                .map(it -> PaidEntryDto.from(it, watchlistCatalog.findByImdb(userId, it.imdbId()).orElseThrow()))
+                .map(it -> PaidEntryDto.from(it, watchlistCatalogPort.findByImdb(userId, it.imdbId()).orElseThrow()))
                 .sorted(Comparator.comparing(PaidEntryDto::added))
                 .toList();
     }

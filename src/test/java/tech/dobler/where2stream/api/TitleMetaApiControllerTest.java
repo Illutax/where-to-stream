@@ -11,7 +11,7 @@ import tech.dobler.where2stream.application.TitleInfoService;
 import tech.dobler.where2stream.application.dto.MetaDto;
 import tech.dobler.where2stream.configurations.StringToImdbIdConverter;
 import tech.dobler.where2stream.domain.AgeRating;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 
 import java.util.Optional;
 

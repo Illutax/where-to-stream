@@ -3,7 +3,7 @@ package tech.dobler.where2stream.application;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.application.dto.ImdbSearchResultDto;
-import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.services.ImdbSuggestionClient;
 
 import java.util.List;
@@ -21,12 +21,12 @@ import java.util.UUID;
 public class ImdbSearchService {
 
     private final ImdbSuggestionClient imdbSuggestionClient;
-    private final WatchlistEntryRepository watchlistEntries;
+    private final WatchlistCatalogPort watchlistCatalogPort;
 
     public List<ImdbSearchResultDto> search(UUID userId, String query) {
         return imdbSuggestionClient.search(query).stream()
                 .map(hit -> new ImdbSearchResultDto(hit.imdbId(), hit.name(), hit.year(),
-                        watchlistEntries.existsByUserIdAndImdbId(userId, hit.imdbId())))
+                        watchlistCatalogPort.isOnWatchlist(userId, hit.imdbId())))
                 .toList();
     }
 }

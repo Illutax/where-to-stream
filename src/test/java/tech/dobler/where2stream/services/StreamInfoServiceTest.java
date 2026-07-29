@@ -6,7 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.configurations.WerStreamtProperties;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.persistence.QueryMeta;
 import tech.dobler.where2stream.persistence.QueryMetaRepository;

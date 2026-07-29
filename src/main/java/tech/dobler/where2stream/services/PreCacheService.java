@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.persistence.QueryMetaRepository;
-import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.util.Collection;
 import java.util.List;
@@ -22,12 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class PreCacheService {
     private final StreamInfoService streamInfoService;
-    private final WatchlistEntryRepository watchlistEntryRepository;
+    private final WatchlistCatalogPort watchlistCatalogPort;
     private final QueryMetaRepository queryMetaRepository;
 
     /** Resolves every known title (across all users) and returns how many were processed. */
     public int cacheAll() {
-        return cache(watchlistEntryRepository.findDistinctImdbIds());
+        return cache(watchlistCatalogPort.allDistinctImdbIds());
     }
 
     /** Resolves the given titles (populating the cache) and returns how many were processed. */
@@ -66,7 +66,7 @@ public class PreCacheService {
 
     /** The distinct titles (across all users) that currently have no valid cached query result. */
     public List<ImdbId> findUncachedImdbIds() {
-        return watchlistEntryRepository.findDistinctImdbIds().parallelStream()
+        return watchlistCatalogPort.allDistinctImdbIds().parallelStream()
                 .filter(imdbId -> queryMetaRepository
                         .findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId)
                         .isEmpty())

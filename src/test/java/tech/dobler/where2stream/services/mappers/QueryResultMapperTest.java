@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import tech.dobler.where2stream.domain.AvailabilityType;
 import tech.dobler.where2stream.domain.Price;
 import tech.dobler.where2stream.domain.Availability;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.persistence.QueryResultDB;
 

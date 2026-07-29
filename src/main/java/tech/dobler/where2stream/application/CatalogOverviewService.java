@@ -3,9 +3,9 @@ package tech.dobler.where2stream.application;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.application.dto.OverviewEntryDto;
-import tech.dobler.where2stream.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.services.StreamInfoService;
-import tech.dobler.where2stream.services.WatchlistCatalog;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.util.Comparator;
 import java.util.List;
@@ -19,11 +19,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CatalogOverviewService {
 
-    private final WatchlistCatalog watchlistCatalog;
+    private final WatchlistCatalogPort watchlistCatalogPort;
     private final StreamInfoService streamInfoService;
 
     public List<OverviewEntryDto> overview(UUID userId) {
-        final var entries = watchlistCatalog.findAll(userId);
+        final var entries = watchlistCatalogPort.findAll(userId);
         // Resolve all entries in a single batch instead of one query per entry (avoids N+1).
         final var resolved = streamInfoService.resolveAll(entries.stream().map(ImdbEntry::imdbId).toList());
         return entries.stream()

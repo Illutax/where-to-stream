@@ -8,13 +8,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.application.dto.OverviewEntryDto;
 import tech.dobler.where2stream.domain.Availability;
-import tech.dobler.where2stream.domain.ImdbEntry;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.domain.ReleaseYear;
-import tech.dobler.where2stream.domain.WatchlistDate;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.services.StreamInfoService;
-import tech.dobler.where2stream.services.WatchlistCatalog;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.net.URI;
 import java.util.Collection;
@@ -34,7 +34,7 @@ class CatalogOverviewServiceTest {
     private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @Mock
-    private WatchlistCatalog watchlistCatalog;
+    private WatchlistCatalogPort watchlistCatalogPort;
     @Mock
     private StreamInfoService streamInfoService;
     @InjectMocks
@@ -57,7 +57,7 @@ class CatalogOverviewServiceTest {
     void overviewBatchResolvesAllEntriesOnceAndSortsByName() {
         final var zebra = entry("tt2", "Zebra");
         final var apple = entry("tt1", "Apple");
-        when(watchlistCatalog.findAll(USER)).thenReturn(List.of(zebra, apple));
+        when(watchlistCatalogPort.findAll(USER)).thenReturn(List.of(zebra, apple));
         when(streamInfoService.resolveAll(List.of(id("tt2"), id("tt1")))).thenReturn(Map.of(
                 id("tt1"), List.of(flatrate("tt1", "Netflix")),
                 id("tt2"), List.<QueryResult>of()));
@@ -78,7 +78,7 @@ class CatalogOverviewServiceTest {
     @Test
     void overviewJoinsMultipleServiceLabelsWithLanguages() {
         final var e = entry("tt1", "Movie");
-        when(watchlistCatalog.findAll(USER)).thenReturn(List.of(e));
+        when(watchlistCatalogPort.findAll(USER)).thenReturn(List.of(e));
         when(streamInfoService.resolveAll(List.of(id("tt1")))).thenReturn(Map.of(id("tt1"), List.of(
                 new QueryResult(id("tt1"), "Netflix", true, List.of(), null),
                 new QueryResult(id("tt1"), "Prime Video", true, List.of(), "Deutsch"))));

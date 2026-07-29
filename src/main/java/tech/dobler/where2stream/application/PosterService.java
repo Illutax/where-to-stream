@@ -6,7 +6,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.configurations.PosterProperties;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.PosterSize;
 import tech.dobler.where2stream.persistence.TitlePoster;
 import tech.dobler.where2stream.persistence.TitlePosterRepository;

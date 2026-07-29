@@ -5,7 +5,7 @@ import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.configurations.ImdbPosterProperties;
 import tech.dobler.where2stream.domain.AgeRating;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 
 import java.io.IOException;
 import java.net.URI;

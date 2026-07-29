@@ -6,15 +6,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.application.dto.ManageRowDto;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.domain.ReleaseYear;
-import tech.dobler.where2stream.domain.WatchlistDate;
-import tech.dobler.where2stream.persistence.WatchlistEntry;
-import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.services.PreCacheService;
 
 import java.net.URI;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,10 +26,9 @@ import static org.mockito.Mockito.when;
 class CacheManagementServiceTest {
 
     private static final UUID USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    private static final Instant CREATED = Instant.parse("2026-01-01T00:00:00Z");
 
     @Mock
-    private WatchlistEntryRepository watchlistEntryRepository;
+    private WatchlistCatalogPort watchlistCatalogPort;
     @Mock
     private PreCacheService preCacheService;
     @Mock
@@ -42,16 +40,16 @@ class CacheManagementServiceTest {
         return ImdbId.of(imdbId);
     }
 
-    private static WatchlistEntry entry(String imdbId, String name, boolean rated) {
-        return WatchlistEntry.of(USER, id(imdbId), name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
-                WatchlistDate.of("2020-01-01"), rated, ReleaseYear.of(2020), CREATED);
+    private static ImdbEntry entry(String imdbId, String name, boolean rated) {
+        return new ImdbEntry(name, URI.create("https://www.imdb.com/title/" + imdbId + "/"),
+                WatchlistDate.of("2020-01-01"), rated, ReleaseYear.of(2020), id(imdbId));
     }
 
     @Test
     void managePageSortsByNameAndFlagsUncached() {
         final var zebra = entry("tt2", "Zebra", false);
         final var apple = entry("tt1", "Apple", false);
-        when(watchlistEntryRepository.findAll()).thenReturn(List.of(zebra, apple));
+        when(watchlistCatalogPort.findAll()).thenReturn(List.of(zebra, apple));
         when(preCacheService.findUncachedImdbIds()).thenReturn(List.of(id("tt2")));
 
         final var page = service.managePage();
@@ -64,7 +62,7 @@ class CacheManagementServiceTest {
     @Test
     void managePageMergesDuplicateTitlesAcrossUsersRatedIfAnyUserRated() {
         // Same imdbId on two users' watchlists: one rated, one not -> merged, rated = true.
-        when(watchlistEntryRepository.findAll()).thenReturn(List.of(
+        when(watchlistCatalogPort.findAll()).thenReturn(List.of(
                 entry("tt1", "Movie", false), entry("tt1", "Movie", true)));
         when(preCacheService.findUncachedImdbIds()).thenReturn(List.of());
 
@@ -78,7 +76,7 @@ class CacheManagementServiceTest {
     void managePageMergeShortCircuitsWhenTheFirstSeenEntryIsAlreadyRated() {
         // Opposite order from the test above: the first-seen entry (the merge's "a") is already
         // rated, so a.rated() || b.rated() short-circuits without evaluating b.rated() at all.
-        when(watchlistEntryRepository.findAll()).thenReturn(List.of(
+        when(watchlistCatalogPort.findAll()).thenReturn(List.of(
                 entry("tt1", "Movie", true), entry("tt1", "Movie", false)));
         when(preCacheService.findUncachedImdbIds()).thenReturn(List.of());
 
@@ -91,7 +89,7 @@ class CacheManagementServiceTest {
     @Test
     void managePageMergeStaysUnratedWhenNeitherEntryIsRated() {
         // a.rated() is false (evaluated), forcing b.rated() to be evaluated too (also false).
-        when(watchlistEntryRepository.findAll()).thenReturn(List.of(
+        when(watchlistCatalogPort.findAll()).thenReturn(List.of(
                 entry("tt1", "Movie", false), entry("tt1", "Movie", false)));
         when(preCacheService.findUncachedImdbIds()).thenReturn(List.of());
 
@@ -117,7 +115,7 @@ class CacheManagementServiceTest {
     void scrapeUncachedDelegates() {
         when(preCacheService.cacheUncached()).thenReturn(5);
         assertThat(service.scrapeUncached().scraped()).isEqualTo(5);
-        verifyNoInteractions(watchlistEntryRepository);
+        verifyNoInteractions(watchlistCatalogPort);
     }
 
     @Test

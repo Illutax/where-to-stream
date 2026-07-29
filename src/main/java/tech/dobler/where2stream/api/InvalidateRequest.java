@@ -1,6 +1,6 @@
 package tech.dobler.where2stream.api;
 
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 
 import java.util.List;
 

@@ -4,6 +4,8 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -11,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.belongToAnyOf;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
@@ -69,6 +72,26 @@ class ArchitectureTest {
             )
             .because("other bounded contexts may depend on accountaccess only through its "
                     + "published ports (e.g. CurrentUserPort), not its internals");
+
+    /**
+     * Same isolation rule as above, for the Watchlist context (published port:
+     * {@code WatchlistCatalogPort}) — with one addition: {@link ImdbEntry}/{@link WatchlistDate}
+     * are the read-model value types {@code WatchlistCatalogPort}'s own methods return, so they're
+     * part of its published contract too, not internals like the {@code WatchlistEntry} JPA entity
+     * or watchlist's exceptions.
+     */
+    @ArchTest
+    static final ArchRule watchlist_is_only_accessed_through_its_published_ports = noClasses()
+            .that().resideOutsideOfPackage("..watchlist..")
+            .and().resideOutsideOfPackage("..shared..")
+            .should().dependOnClassesThat(
+                    resideInAPackage("..watchlist..")
+                            .and(not(resideInAPackage("..watchlist.port..")))
+                            .and(not(belongToAnyOf(ImdbEntry.class, WatchlistDate.class)))
+            )
+            .because("other bounded contexts may depend on watchlist only through its published "
+                    + "ports (e.g. WatchlistCatalogPort) plus the read-model types those ports "
+                    + "return (ImdbEntry, WatchlistDate), not watchlist's other internals");
 
     /**
      * Layering: presentation (web/rest/api) → application → services → persistence, over the

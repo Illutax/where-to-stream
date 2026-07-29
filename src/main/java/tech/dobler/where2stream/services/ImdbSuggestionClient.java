@@ -4,8 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.configurations.ImdbSearchProperties;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ReleaseYear;
 
 import java.io.IOException;
 import java.net.URI;

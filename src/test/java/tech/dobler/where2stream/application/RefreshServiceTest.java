@@ -5,8 +5,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.services.StreamInfoService;
 
 import java.util.List;
@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
 class RefreshServiceTest {
 
     @Mock
-    private WatchlistEntryRepository watchlistEntryRepository;
+    private WatchlistCatalogPort watchlistCatalogPort;
     @Mock
     private StreamInfoService streamInfoService;
     @InjectMocks
@@ -31,7 +31,7 @@ class RefreshServiceTest {
 
     @Test
     void refreshSeenForceRefreshesEverySeenTitle() {
-        when(watchlistEntryRepository.findDistinctImdbIdsRated()).thenReturn(List.of(id("tt1"), id("tt2")));
+        when(watchlistCatalogPort.allDistinctRatedImdbIds()).thenReturn(List.of(id("tt1"), id("tt2")));
 
         assertThat(service.refreshSeen().refreshed()).isEqualTo(2);
         // force-refresh: resolve must be called with forceRefresh=true
@@ -41,7 +41,7 @@ class RefreshServiceTest {
 
     @Test
     void refreshAllForceRefreshesEveryTitle() {
-        when(watchlistEntryRepository.findDistinctImdbIds()).thenReturn(List.of(id("tt1"), id("tt2"), id("tt3")));
+        when(watchlistCatalogPort.allDistinctImdbIds()).thenReturn(List.of(id("tt1"), id("tt2"), id("tt3")));
 
         assertThat(service.refreshAll().refreshed()).isEqualTo(3);
         verify(streamInfoService).resolve(id("tt3"), true);

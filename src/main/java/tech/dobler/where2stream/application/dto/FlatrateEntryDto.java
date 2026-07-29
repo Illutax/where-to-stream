@@ -1,9 +1,9 @@
 package tech.dobler.where2stream.application.dto;
 
-import tech.dobler.where2stream.domain.ImdbEntry;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.domain.ReleaseYear;
-import tech.dobler.where2stream.domain.WatchlistDate;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 /**
  * A title available in the flatrate ("included") of a streaming service. Field names mirror

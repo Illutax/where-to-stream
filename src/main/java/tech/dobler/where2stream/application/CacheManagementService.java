@@ -9,9 +9,9 @@ import tech.dobler.where2stream.application.dto.ManagePageDto;
 import tech.dobler.where2stream.application.dto.ManageRowDto;
 import tech.dobler.where2stream.application.dto.ScrapeResultDto;
 import tech.dobler.where2stream.application.dto.UncachedCountDto;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.persistence.WatchlistEntry;
-import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.services.PreCacheService;
 
 import java.util.Comparator;
@@ -39,7 +39,7 @@ import java.util.Set;
 @PreAuthorize("hasRole('ADMIN')")
 public class CacheManagementService {
 
-    private final WatchlistEntryRepository watchlistEntryRepository;
+    private final WatchlistCatalogPort watchlistCatalogPort;
     private final PreCacheService preCacheService;
     private final PosterService posterService;
 
@@ -51,8 +51,8 @@ public class CacheManagementService {
 
         // Distinct titles across all users, merging "rated" (rated by anyone).
         final Map<ImdbId, TitleAgg> byImdbId = new LinkedHashMap<>();
-        for (WatchlistEntry w : watchlistEntryRepository.findAll()) {
-            byImdbId.merge(w.getImdbId(), new TitleAgg(w.getName(), w.isRated()),
+        for (ImdbEntry e : watchlistCatalogPort.findAll()) {
+            byImdbId.merge(e.imdbId(), new TitleAgg(e.name(), e.isRated()),
                     (a, b) -> new TitleAgg(a.name(), a.rated() || b.rated()));
         }
 
@@ -86,7 +86,7 @@ public class CacheManagementService {
      * active (IMDb by default, or TMDB).
      */
     private void warmPosterThumbnails() {
-        watchlistEntryRepository.findDistinctImdbIds().parallelStream().forEach(posterService::thumb);
+        watchlistCatalogPort.allDistinctImdbIds().parallelStream().forEach(posterService::thumb);
     }
 
     public UncachedCountDto uncachedCount() {

@@ -1,8 +1,8 @@
 package tech.dobler.where2stream.application.dto;
 
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.domain.ReleaseYear;
-import tech.dobler.where2stream.domain.WatchlistDate;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 /**
  * One row of the catalogue overview page, exposed by the {@code /api/catalog} JSON endpoint.

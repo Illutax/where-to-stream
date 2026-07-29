@@ -1,5 +1,7 @@
 package tech.dobler.where2stream.domain;
 
+import tech.dobler.where2stream.shared.domain.ImdbId;
+
 import java.util.List;
 
 public record QueryResult(

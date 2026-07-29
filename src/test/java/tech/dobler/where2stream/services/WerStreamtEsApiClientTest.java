@@ -10,7 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.configurations.WerStreamtProperties;
 import tech.dobler.where2stream.domain.AvailabilityType;
 import tech.dobler.where2stream.domain.Availability;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.domain.ScrapingException;
 import tech.dobler.where2stream.domain.SearchResult;

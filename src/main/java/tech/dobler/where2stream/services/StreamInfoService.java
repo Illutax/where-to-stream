@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.configurations.WerStreamtProperties;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.persistence.QueryMeta;
 import tech.dobler.where2stream.persistence.QueryMetaRepository;

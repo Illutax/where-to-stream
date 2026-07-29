@@ -8,13 +8,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.application.dto.FlatrateEntryDto;
 import tech.dobler.where2stream.application.dto.PaidEntryDto;
 import tech.dobler.where2stream.domain.Availability;
-import tech.dobler.where2stream.domain.ImdbEntry;
-import tech.dobler.where2stream.domain.ImdbId;
-import tech.dobler.where2stream.domain.ReleaseYear;
-import tech.dobler.where2stream.domain.WatchlistDate;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 import tech.dobler.where2stream.domain.QueryResult;
 import tech.dobler.where2stream.services.AggregateService;
-import tech.dobler.where2stream.services.WatchlistCatalog;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.net.URI;
 import java.util.List;
@@ -33,7 +33,7 @@ class ProviderPageServiceTest {
     @Mock
     private AggregateService aggregateService;
     @Mock
-    private WatchlistCatalog watchlistCatalog;
+    private WatchlistCatalogPort watchlistCatalogPort;
     @InjectMocks
     private ProviderPageService service;
 
@@ -57,7 +57,7 @@ class ProviderPageServiceTest {
         final var paidEntry = entry("tt3", "Paid", "2022-02-02", 2022);
         when(aggregateService.contentFor("Prime Video", USER)).thenReturn(
                 new AggregateService.ServiceContent(List.of(later, earlier), List.of(paid("tt3", "Prime Video"))));
-        when(watchlistCatalog.findByImdb(USER, id("tt3"))).thenReturn(Optional.of(paidEntry));
+        when(watchlistCatalogPort.findByImdb(USER, id("tt3"))).thenReturn(Optional.of(paidEntry));
 
         final var page = service.pageFor(StreamingProvider.AMAZON, USER);
 
@@ -82,8 +82,8 @@ class ProviderPageServiceTest {
         final var e1 = entry("tt1", "Alpha", "2021-05-05", 2021);
         final var e2 = entry("tt2", "Beta", "2020-01-01", 0);
         when(aggregateService.paid("YouTube Store", USER)).thenReturn(List.of(paid("tt1", "YouTube Store"), paid("tt2", "YouTube Store")));
-        when(watchlistCatalog.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(e1));
-        when(watchlistCatalog.findByImdb(USER, id("tt2"))).thenReturn(Optional.of(e2));
+        when(watchlistCatalogPort.findByImdb(USER, id("tt1"))).thenReturn(Optional.of(e1));
+        when(watchlistCatalogPort.findByImdb(USER, id("tt2"))).thenReturn(Optional.of(e2));
 
         final var page = service.pageFor(StreamingProvider.YOUTUBE, USER);
 
@@ -98,6 +98,6 @@ class ProviderPageServiceTest {
         when(aggregateService.paid("YouTube Store", USER)).thenReturn(List.of());
         final var page = service.pageFor(StreamingProvider.YOUTUBE, USER);
         assertThat(page.included()).isEmpty();
-        verifyNoInteractions(watchlistCatalog);
+        verifyNoInteractions(watchlistCatalogPort);
     }
 }

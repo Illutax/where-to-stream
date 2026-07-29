@@ -5,10 +5,10 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import tech.dobler.where2stream.application.InvalidImportException;
-import tech.dobler.where2stream.application.NoSuchWatchlistEntryException;
+import tech.dobler.where2stream.watchlist.domain.InvalidImportException;
+import tech.dobler.where2stream.watchlist.domain.NoSuchWatchlistEntryException;
 import tech.dobler.where2stream.accountaccess.application.UserManagementException;
-import tech.dobler.where2stream.application.WatchlistEntryAlreadyExistsException;
+import tech.dobler.where2stream.watchlist.domain.WatchlistEntryAlreadyExistsException;
 import tech.dobler.where2stream.domain.ScrapingException;
 
 /**

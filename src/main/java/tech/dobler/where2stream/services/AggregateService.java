@@ -2,8 +2,9 @@ package tech.dobler.where2stream.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import tech.dobler.where2stream.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.domain.QueryResult;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.util.List;
 import java.util.UUID;
@@ -13,7 +14,7 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 public class AggregateService {
-    private final WatchlistCatalog watchlistCatalog;
+    private final WatchlistCatalogPort watchlistCatalogPort;
     private final StreamInfoService streamInfoService;
 
     /** Flatrate ("included") + paid offerings of a service, resolved from a single getAll(). */
@@ -40,7 +41,7 @@ public class AggregateService {
     private List<ImdbEntry> includedFrom(List<QueryResult> all, String serviceName, UUID userId) {
         return all.stream()
                 .filter(on(serviceName).and(QueryResult::flatrate))
-                .map(e -> watchlistCatalog.findByImdb(userId, e.imdbId())
+                .map(e -> watchlistCatalogPort.findByImdb(userId, e.imdbId())
                         .orElseThrow(() -> new IllegalStateException(
                                 "Catalogue entry missing for " + e.imdbId())))
                 .distinct() // a film is "in the flatrate" once per provider, even with language variants
@@ -59,7 +60,7 @@ public class AggregateService {
 
     /** All resolved query results across the user's watchlist (one batched lookup). */
     public List<QueryResult> getAll(UUID userId) {
-        final var imdbIds = watchlistCatalog.findAll(userId).stream().map(ImdbEntry::imdbId).toList();
+        final var imdbIds = watchlistCatalogPort.findAll(userId).stream().map(ImdbEntry::imdbId).toList();
         return streamInfoService.resolveAll(imdbIds).values().stream()
                 .flatMap(List::stream)
                 .toList();

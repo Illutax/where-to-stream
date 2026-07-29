@@ -1,6 +1,7 @@
 package tech.dobler.where2stream.domain;
 
 import org.junit.jupiter.api.Test;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 
 import java.util.List;
 

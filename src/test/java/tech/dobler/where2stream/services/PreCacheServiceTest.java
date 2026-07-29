@@ -5,10 +5,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.dobler.where2stream.domain.ImdbId;
+import tech.dobler.where2stream.shared.domain.ImdbId;
 import tech.dobler.where2stream.persistence.QueryMeta;
 import tech.dobler.where2stream.persistence.QueryMetaRepository;
-import tech.dobler.where2stream.persistence.WatchlistEntryRepository;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,7 +26,7 @@ class PreCacheServiceTest {
     @Mock
     private StreamInfoService streamInfoService;
     @Mock
-    private WatchlistEntryRepository watchlistEntryRepository;
+    private WatchlistCatalogPort watchlistCatalogPort;
     @Mock
     private QueryMetaRepository queryMetaRepository;
     @InjectMocks
@@ -38,7 +38,7 @@ class PreCacheServiceTest {
 
     @Test
     void cacheAllResolvesEveryDistinctTitleAndReturnsCount() {
-        when(watchlistEntryRepository.findDistinctImdbIds()).thenReturn(List.of(id("tt1"), id("tt2"), id("tt3")));
+        when(watchlistCatalogPort.allDistinctImdbIds()).thenReturn(List.of(id("tt1"), id("tt2"), id("tt3")));
 
         final int count = preCacheService.cacheAll();
 
@@ -50,7 +50,7 @@ class PreCacheServiceTest {
 
     @Test
     void findUncachedReturnsTitlesWithoutCachedResult() {
-        when(watchlistEntryRepository.findDistinctImdbIds()).thenReturn(List.of(id("tt1"), id("tt2")));
+        when(watchlistCatalogPort.allDistinctImdbIds()).thenReturn(List.of(id("tt1"), id("tt2")));
         when(queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(id("tt1")))
                 .thenReturn(Optional.of(QueryMeta.of(id("tt1"), Instant.parse("2026-01-01T00:00:00Z"), List.of())));
         when(queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(id("tt2")))
@@ -61,7 +61,7 @@ class PreCacheServiceTest {
 
     @Test
     void cacheUncachedResolvesOnlyUncachedTitles() {
-        when(watchlistEntryRepository.findDistinctImdbIds()).thenReturn(List.of(id("tt1"), id("tt2")));
+        when(watchlistCatalogPort.allDistinctImdbIds()).thenReturn(List.of(id("tt1"), id("tt2")));
         when(queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(id("tt1")))
                 .thenReturn(Optional.of(QueryMeta.of(id("tt1"), Instant.parse("2026-01-01T00:00:00Z"), List.of())));
         when(queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(id("tt2")))
