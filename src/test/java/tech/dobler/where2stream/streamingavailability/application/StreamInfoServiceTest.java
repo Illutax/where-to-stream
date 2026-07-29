@@ -6,13 +6,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.streamingavailability.adapter.out.werstreamtes.WerStreamtProperties;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.streamingavailability.domain.QueryMeta;
 import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaRepository;
 import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityProvider;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResultDB;
-import tech.dobler.where2stream.shared.time.TimeService;
+import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

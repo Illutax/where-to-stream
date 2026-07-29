@@ -1,6 +1,6 @@
 package tech.dobler.where2stream.titlecatalog.port.out;
 
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
 
 import java.util.Optional;

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import tech.dobler.where2stream.streamingavailability.application.SearchService;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 
 import java.util.List;

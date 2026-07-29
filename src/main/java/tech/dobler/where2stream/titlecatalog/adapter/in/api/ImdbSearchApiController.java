@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.titlecatalog.application.ImdbSearchService;
-import tech.dobler.where2stream.shared.api.ValidationException;
+import tech.dobler.where2stream.shared.platform.api.ValidationException;
 import tech.dobler.where2stream.titlecatalog.application.dto.ImdbSearchResultDto;
 
 import java.util.List;

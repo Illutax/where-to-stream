@@ -5,13 +5,13 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
 import tech.dobler.where2stream.titlecatalog.domain.TitlePoster;
 import tech.dobler.where2stream.titlecatalog.port.in.TitleCacheMaintenancePort;
 import tech.dobler.where2stream.titlecatalog.port.out.TitlePosterRepository;
 import tech.dobler.where2stream.titlecatalog.port.out.PosterSource;
-import tech.dobler.where2stream.shared.time.TimeService;
+import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

@@ -12,7 +12,7 @@ import tech.dobler.where2stream.accountaccess.domain.AuthProvider;
 import tech.dobler.where2stream.accountaccess.domain.Role;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
-import tech.dobler.where2stream.shared.time.TimeService;
+import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.util.Comparator;
 import java.util.EnumSet;

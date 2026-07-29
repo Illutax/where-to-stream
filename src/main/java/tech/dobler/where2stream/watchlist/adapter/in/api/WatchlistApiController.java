@@ -16,12 +16,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tech.dobler.where2stream.watchlist.domain.InvalidImportException;
-import tech.dobler.where2stream.shared.api.ValidationException;
+import tech.dobler.where2stream.shared.platform.api.ValidationException;
 import tech.dobler.where2stream.watchlist.application.WatchlistImportService;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistDto;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistImportResultDto;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 
 import java.io.IOException;
 

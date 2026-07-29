@@ -3,8 +3,11 @@
 Spring Boot 4 / Java 25 backend + Angular 22 SPA frontend.
 Backend is organised by bounded context first, ports & adapters second (see ADR-0014):
 `accountaccess`, `watchlist`, `titlecatalog`, `streamingavailability`, each with its own
-`domain` → `application` → `port` → `adapter` tree, plus a minimal `shared` kernel
-(`ImdbId`, `ReleaseYear`, `TimeService`, `ApiExceptionHandler`).
+`domain` → `application` → `port` → `adapter` tree.
+`shared` is not itself a bounded context (no `port`/`adapter` split — nothing to protect there),
+and splits instead into `shared/kernel` (`ImdbId`, `ReleaseYear` + their adapters — value types
+every context needs) and `shared/platform` (`TimeService`, `RateLimiter`, `ApiExceptionHandler`,
+the status/SPA-shell endpoints — cross-cutting but not shared *domain* types).
 One context may depend on another only through its published `port.in` interface
 (e.g. `CurrentUserPort`, `WatchlistCatalogPort`) — enforced per-context by `ArchitectureTest`.
 

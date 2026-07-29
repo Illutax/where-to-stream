@@ -1,8 +1,8 @@
 package tech.dobler.where2stream.streamingavailability.application.dto;
 
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 /**

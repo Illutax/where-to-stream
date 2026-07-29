@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 import java.net.URI;

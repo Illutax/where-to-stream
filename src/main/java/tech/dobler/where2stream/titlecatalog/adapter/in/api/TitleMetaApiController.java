@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.where2stream.titlecatalog.application.TitleInfoService;
 import tech.dobler.where2stream.titlecatalog.application.dto.MetaDto;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 
 import java.time.Duration;
 

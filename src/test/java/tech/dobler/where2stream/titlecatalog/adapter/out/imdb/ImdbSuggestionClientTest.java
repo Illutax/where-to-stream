@@ -5,7 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbSearchProperties;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 
 import java.io.IOException;
 import java.net.http.HttpClient;

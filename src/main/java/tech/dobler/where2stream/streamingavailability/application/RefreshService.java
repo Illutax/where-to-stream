@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.streamingavailability.application.dto.RefreshResultDto;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.streamingavailability.application.StreamInfoService;
 

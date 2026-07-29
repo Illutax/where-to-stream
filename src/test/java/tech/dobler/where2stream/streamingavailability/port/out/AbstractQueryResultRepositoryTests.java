@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.streamingavailability.domain.AvailabilityType;
 import tech.dobler.where2stream.streamingavailability.domain.Price;
 import tech.dobler.where2stream.streamingavailability.domain.Availability;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResultDB;
 
 import java.util.List;

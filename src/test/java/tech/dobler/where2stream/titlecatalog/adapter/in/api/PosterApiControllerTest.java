@@ -10,8 +10,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.titlecatalog.application.PosterService;
 import tech.dobler.where2stream.titlecatalog.application.PosterService.Poster;
-import tech.dobler.where2stream.shared.web.StringToImdbIdConverter;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.adapter.StringToImdbIdConverter;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 
 import java.util.Optional;
 

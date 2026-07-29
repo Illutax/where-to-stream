@@ -12,7 +12,7 @@ import tech.dobler.where2stream.streamingavailability.application.dto.Invalidate
 import tech.dobler.where2stream.streamingavailability.application.dto.ManagePageDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.ManageRowDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.ScrapeResultDto;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 
 import java.util.List;
 

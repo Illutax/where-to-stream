@@ -9,14 +9,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.where2stream.streamingavailability.adapter.out.werstreamtes.WerStreamtProperties;
 import tech.dobler.where2stream.streamingavailability.domain.AvailabilityType;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.Price;
 import tech.dobler.where2stream.streamingavailability.domain.Availability;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 import tech.dobler.where2stream.streamingavailability.domain.SearchResult;
 import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityProvider;
-import tech.dobler.where2stream.shared.outbound.RateLimiter;
+import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;
 
 import java.io.IOException;
 import java.net.URI;

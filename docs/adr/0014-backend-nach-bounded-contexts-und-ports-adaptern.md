@@ -2,6 +2,17 @@
 
 - **Date**: 2026-07-29
 - **Status**: Accepted
+- **Update (2026-07-29):** `shared` selbst ist in `shared/kernel/` (die fachlichen Wert-Typen
+  `ImdbId`/`ReleaseYear` plus ihre Adapter: JPA-`AttributeConverter`, Spring-MVC-`Converter`) und
+  `shared/platform/` (`time/`, `outbound/`, `api/`, `web/` — unverändert, nur umgezogen) unterteilt
+  worden. Grund: `shared` war rein technisch nach Kategorie sortiert (organisch gewachsen, ein
+  Ordner pro Schritt, sobald ein Context ihn zuerst brauchte), ohne dass ersichtlich war, *warum*
+  eine Klasse dort liegt. Die Zweiteilung macht das explizit: "jeder Context braucht genau diesen
+  Wert-Typ" (Kernel) vs. "nichts davon ist fachlich genug für einen eigenen Context, aber mehrere
+  Contexts brauchen es" (Platform). **Kein** volles `domain/application/port/adapter` für `shared`
+  — es ist kein Bounded Context, hat keinen eigenen Use-Case, und ein `port`/`adapter`-Split ohne
+  etwas zu schützendes wäre reine Zeremonie. `TimeService`/`SystemTimeService` sind schon
+  Port+Adapter, nur ohne die Ordner-Umbenennung — das genügt.
 
 ## Context
 
@@ -37,7 +48,9 @@ plus einem bewusst minimalen `shared`-Kernel:
 
 ```
 tech.dobler.where2stream/
-  shared/                    -- ImdbId, ReleaseYear, TimeService-Facade, ApiExceptionHandler, ...
+  shared/
+    kernel/                  -- ImdbId, ReleaseYear + ihre Adapter (JPA-Converter, MVC-Converter)
+    platform/                -- time/, outbound/ (RateLimiter), api/ (ApiExceptionHandler), web/
   accountaccess/             -- Identität, Auth, Admin-Nutzerverwaltung, Nutzer-Preferences
   watchlist/                 -- die persönliche Liste eines Nutzers
   titlecatalog/               -- permanente Titel-Metadaten (Poster, FSK) + IMDb-Suche

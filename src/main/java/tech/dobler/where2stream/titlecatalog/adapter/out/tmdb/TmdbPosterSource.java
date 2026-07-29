@@ -7,8 +7,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import tech.dobler.where2stream.titlecatalog.adapter.out.HttpClientFactory;
 import tech.dobler.where2stream.titlecatalog.adapter.out.OutboundHttpClients;
 import tech.dobler.where2stream.titlecatalog.adapter.out.tmdb.TmdbProperties;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.outbound.RateLimiter;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;
 import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
 import tech.dobler.where2stream.titlecatalog.port.out.PosterSource;
 

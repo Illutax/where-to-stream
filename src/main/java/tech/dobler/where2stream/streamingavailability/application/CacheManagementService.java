@@ -9,7 +9,7 @@ import tech.dobler.where2stream.streamingavailability.application.dto.ManagePage
 import tech.dobler.where2stream.streamingavailability.application.dto.ManageRowDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.ScrapeResultDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.UncachedCountDto;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.titlecatalog.port.in.TitleCacheMaintenancePort;

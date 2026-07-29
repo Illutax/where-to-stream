@@ -6,8 +6,8 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 import java.io.IOException;

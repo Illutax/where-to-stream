@@ -3,7 +3,7 @@ package tech.dobler.where2stream.watchlist.port.out;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.stereotype.Repository;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.watchlist.domain.WatchlistEntry;
 
 import java.time.Instant;

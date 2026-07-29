@@ -15,9 +15,9 @@ import tech.dobler.where2stream.watchlist.domain.WatchlistEntryAlreadyExistsExce
 import tech.dobler.where2stream.watchlist.application.WatchlistImportService;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistDto;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistImportResultDto;
-import tech.dobler.where2stream.shared.web.StringToImdbIdConverter;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.kernel.adapter.StringToImdbIdConverter;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;

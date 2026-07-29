@@ -8,12 +8,12 @@ import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.titlecatalog.application.PosterProperties;
 import tech.dobler.where2stream.titlecatalog.domain.AgeRating;
 import tech.dobler.where2stream.titlecatalog.domain.AgeRating.RatingSystem;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.titlecatalog.domain.TitleMeta;
 import tech.dobler.where2stream.titlecatalog.port.out.TitleMetaRepository;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleClient;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleClient.ImdbTitleData;
-import tech.dobler.where2stream.shared.time.TimeService;
+import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

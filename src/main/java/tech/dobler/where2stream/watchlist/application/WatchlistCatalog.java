@@ -3,7 +3,7 @@ package tech.dobler.where2stream.watchlist.application;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.watchlist.domain.WatchlistEntry;
 import tech.dobler.where2stream.watchlist.port.out.WatchlistEntryRepository;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;

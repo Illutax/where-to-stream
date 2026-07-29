@@ -9,15 +9,15 @@ import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistDto;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.InvalidImportException;
 import tech.dobler.where2stream.watchlist.domain.NoSuchWatchlistEntryException;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 import tech.dobler.where2stream.watchlist.domain.WatchlistEntry;
 import tech.dobler.where2stream.watchlist.domain.WatchlistEntryAlreadyExistsException;
 import tech.dobler.where2stream.watchlist.port.out.WatchlistEntryRepository;
-import tech.dobler.where2stream.shared.time.TimeService;
+import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;

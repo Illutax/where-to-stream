@@ -2,7 +2,7 @@ package tech.dobler.where2stream.streamingavailability.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.streamingavailability.application.StreamInfoService;
 

@@ -13,8 +13,8 @@ import tech.dobler.where2stream.streamingavailability.domain.StreamingProvider;
 import tech.dobler.where2stream.streamingavailability.application.dto.FlatrateEntryDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.PaidEntryDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.ProviderPageDto;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 import java.util.List;

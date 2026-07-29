@@ -5,13 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.streamingavailability.adapter.out.werstreamtes.WerStreamtProperties;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.streamingavailability.domain.QueryMeta;
 import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaRepository;
 import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityProvider;
 import tech.dobler.where2stream.streamingavailability.adapter.out.persistence.QueryResultMapper;
-import tech.dobler.where2stream.shared.time.TimeService;
+import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
 import java.util.Collection;

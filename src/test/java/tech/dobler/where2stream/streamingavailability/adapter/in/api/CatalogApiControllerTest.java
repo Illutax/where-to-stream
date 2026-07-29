@@ -10,8 +10,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.streamingavailability.application.CatalogOverviewService;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.streamingavailability.application.dto.OverviewEntryDto;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 import java.util.List;

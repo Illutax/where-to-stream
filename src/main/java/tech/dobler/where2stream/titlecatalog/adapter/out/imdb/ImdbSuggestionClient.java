@@ -6,9 +6,9 @@ import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.titlecatalog.adapter.out.HttpClientFactory;
 import tech.dobler.where2stream.titlecatalog.adapter.out.OutboundHttpClients;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbSearchProperties;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.domain.ReleaseYear;
-import tech.dobler.where2stream.shared.outbound.RateLimiter;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;
 
 import java.io.IOException;
 import java.net.URI;

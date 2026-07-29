@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.titlecatalog.application.dto.MetaDto;
 import tech.dobler.where2stream.titlecatalog.domain.AgeRating;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbTitleClient.ImdbTitleData;
 import tech.dobler.where2stream.titlecatalog.application.TitleMetaService;
 

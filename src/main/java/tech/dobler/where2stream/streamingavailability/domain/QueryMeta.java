@@ -2,7 +2,7 @@ package tech.dobler.where2stream.streamingavailability.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 
 import java.time.Instant;
 import java.util.List;

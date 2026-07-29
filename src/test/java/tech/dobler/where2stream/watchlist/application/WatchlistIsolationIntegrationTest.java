@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.accountaccess.domain.Role;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;

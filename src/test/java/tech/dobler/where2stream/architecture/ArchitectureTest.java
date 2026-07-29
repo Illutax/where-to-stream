@@ -40,7 +40,7 @@ class ArchitectureTest {
      */
     @ArchTest
     static final ArchRule time_is_read_only_through_the_facade = noClasses()
-            .that().doNotHaveFullyQualifiedName("tech.dobler.where2stream.shared.time.SystemTimeService")
+            .that().doNotHaveFullyQualifiedName("tech.dobler.where2stream.shared.platform.time.SystemTimeService")
             .should().callMethod(Instant.class, "now")
             .orShould().callMethod(LocalDate.class, "now")
             .orShould().callMethod(LocalDateTime.class, "now")

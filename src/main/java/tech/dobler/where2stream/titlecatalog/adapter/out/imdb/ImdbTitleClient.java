@@ -7,8 +7,8 @@ import tech.dobler.where2stream.titlecatalog.adapter.out.HttpClientFactory;
 import tech.dobler.where2stream.titlecatalog.adapter.out.OutboundHttpClients;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbPosterProperties;
 import tech.dobler.where2stream.titlecatalog.domain.AgeRating;
-import tech.dobler.where2stream.shared.domain.ImdbId;
-import tech.dobler.where2stream.shared.outbound.RateLimiter;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;
 
 import java.io.IOException;
 import java.net.URI;

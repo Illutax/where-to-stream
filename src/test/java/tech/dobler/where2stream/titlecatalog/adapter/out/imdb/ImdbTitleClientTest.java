@@ -6,7 +6,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbPosterProperties;
 import tech.dobler.where2stream.titlecatalog.domain.AgeRating.RatingSystem;
-import tech.dobler.where2stream.shared.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
