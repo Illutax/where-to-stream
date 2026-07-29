@@ -10,9 +10,10 @@ import tech.dobler.where2stream.titlecatalog.adapter.out.tmdb.TmdbPosterSource;
 import tech.dobler.where2stream.titlecatalog.adapter.out.tmdb.TmdbProperties;
 
 /**
- * Selects the active {@link PosterSource} at startup: TMDB when it is enabled and configured (see
- * {@link TmdbProperties#active()}), otherwise IMDb (the default). A misconfigured TMDB (flag on, key
- * missing) falls back to IMDb so posters keep working.
+ * Selects the active {@link PosterSource} at startup:
+ * TMDB when it is enabled and configured (see {@link TmdbProperties#active()}),
+ * otherwise IMDb (the default).
+ * A misconfigured TMDB (flag on, key missing) falls back to IMDb so posters keep working.
  */
 @Slf4j
 @Configuration

@@ -9,8 +9,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * The same watchlist repository behaviour against a real MariaDB (Testcontainers). Tagged
- * {@code testcontainers}, excluded from the default build; run with {@code mvn -Ptestcontainers test}.
+ * The same watchlist repository behaviour against a real MariaDB (Testcontainers).
+ * Tagged {@code testcontainers}, excluded from the default build;
+ * run with {@code mvn -Ptestcontainers test}.
  */
 @Tag("testcontainers")
 @DataJpaTest

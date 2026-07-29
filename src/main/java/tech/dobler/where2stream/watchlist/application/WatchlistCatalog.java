@@ -14,8 +14,9 @@ import java.util.UUID;
 
 /**
  * Read access to a user's watchlist, backed by the database (replaces the former global,
- * in-memory {@code ImdbCatalog}). Most methods are scoped to a {@code userId}; the werstreamt.es
- * availability cache stays global and is not touched here.
+ * in-memory {@code ImdbCatalog}).
+ * Most methods are scoped to a {@code userId};
+ * the werstreamt.es availability cache stays global and is not touched here.
  */
 @Service
 @RequiredArgsConstructor

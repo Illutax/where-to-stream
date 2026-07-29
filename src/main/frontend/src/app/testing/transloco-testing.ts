@@ -2,8 +2,8 @@ import { TranslocoTestingModule, TranslocoTestingOptions } from '@jsverse/transl
 import en from '../../i18n/en.json';
 
 /**
- * Provides Transloco to component specs with the real English translations preloaded, so specs that
- * assert on rendered text keep asserting the English strings.
+ * Provides Transloco to component specs with the real English translations preloaded,
+ * so specs that assert on rendered text keep asserting the English strings.
  */
 export function translocoTesting(options: TranslocoTestingOptions = {}) {
   return TranslocoTestingModule.forRoot({

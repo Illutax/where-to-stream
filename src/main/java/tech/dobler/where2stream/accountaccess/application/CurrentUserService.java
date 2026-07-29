@@ -9,9 +9,10 @@ import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
 import java.util.UUID;
 
 /**
- * Resolves an authenticated username to its user id. This is the one place the application layer
- * bridges "who is logged in" (a username string handed down from the presentation layer) to the
- * {@code userId} used to scope watchlist queries — the layers below never see Spring Security.
+ * Resolves an authenticated username to its user id.
+ * This is the one place the application layer bridges "who is logged in" (a username string
+ * handed down from the presentation layer) to the {@code userId} used to scope watchlist
+ * queries — the layers below never see Spring Security.
  */
 @Service
 @RequiredArgsConstructor

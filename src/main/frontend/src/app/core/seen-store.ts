@@ -9,9 +9,9 @@ const HIGHLIGHT_MS = 4000;
 /**
  * Orchestrates the lightweight "mark as seen" toggle so accidental marking is noticeable and
  * reversible: it applies the change optimistically (via a caller-supplied `applyLocally`),
- * highlights the just-changed title, persists it, and offers an "Undo" snackbar. On a server error
- * it rolls the optimistic change back. Shared by the overview and provider pages (which own the
- * lists being mutated).
+ * highlights the just-changed title, persists it, and offers an "Undo" snackbar.
+ * On a server error it rolls the optimistic change back.
+ * Shared by the overview and provider pages (which own the lists being mutated).
  */
 @Injectable({ providedIn: 'root' })
 export class SeenStore {
@@ -23,8 +23,9 @@ export class SeenStore {
   readonly recentlyChanged = this._recentlyChanged.asReadonly();
 
   /**
-   * Toggle a title's seen flag. `applyLocally(seen)` flips the flag in the caller's own list
-   * signal (optimistic update / rollback / undo all go through it).
+   * Toggle a title's seen flag.
+   * `applyLocally(seen)` flips the flag in the caller's own list signal (optimistic update /
+   * rollback / undo all go through it).
    */
   toggle(imdbId: ImdbId, seen: boolean, applyLocally: (seen: boolean) => void): void {
     applyLocally(seen);

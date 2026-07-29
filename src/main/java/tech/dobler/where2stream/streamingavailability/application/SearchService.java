@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Look up stream availability for a single title by IMDb id (from the global cache). User-agnostic
- * — the werstreamt.es cache is shared across users.
+ * Look up stream availability for a single title by IMDb id (from the global cache).
+ * User-agnostic — the werstreamt.es cache is shared across users.
  */
 @Service
 @RequiredArgsConstructor

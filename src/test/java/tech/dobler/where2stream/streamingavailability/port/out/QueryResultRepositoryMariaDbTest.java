@@ -9,9 +9,10 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Runs the same repository behaviour against a real MariaDB started by Testcontainers. Tagged
- * {@code testcontainers} and excluded from the default build; run with
- * {@code mvn -Ptestcontainers test}. Also skipped where no Docker is found.
+ * Runs the same repository behaviour against a real MariaDB started by Testcontainers.
+ * Tagged {@code testcontainers} and excluded from the default build;
+ * run with {@code mvn -Ptestcontainers test}.
+ * Also skipped where no Docker is found.
  */
 @Tag("testcontainers")
 @DataJpaTest

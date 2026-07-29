@@ -10,9 +10,9 @@ import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Verifies HTTP sessions are persisted in the database (Spring Session JDBC) so a login survives
- * an application restart: the active {@link SessionRepository} is the JDBC-backed one, and the
- * Liquibase-created SPRING_SESSION schema round-trips a saved session.
+ * Verifies HTTP sessions are persisted in the database (Spring Session JDBC)
+ * so a login survives an application restart: the active {@link SessionRepository} is the
+ * JDBC-backed one, and the Liquibase-created SPRING_SESSION schema round-trips a saved session.
  */
 @SpringBootTest
 class SessionPersistenceTest {

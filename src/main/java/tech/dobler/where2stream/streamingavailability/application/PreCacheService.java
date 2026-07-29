@@ -13,9 +13,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Pre-resolves stream availability so later page views hit the cache. Operates on the union of
- * every user's watchlist titles (distinct imdbIds), since the werstreamt.es cache is global — the
- * global (ADMIN) cache maintenance and the per-import targeted pre-cache both use this service.
+ * Pre-resolves stream availability so later page views hit the cache.
+ * Operates on the union of every user's watchlist titles (distinct imdbIds), since the
+ * werstreamt.es cache is global — the global (ADMIN) cache maintenance and the per-import
+ * targeted pre-cache both use this service.
  */
 @Slf4j
 @Service
@@ -51,8 +52,9 @@ public class PreCacheService {
     }
 
     /**
-     * Marks the cached results of the given titles as invalidated so they are refetched on the
-     * next resolve / {@link #cacheUncached()} run. Returns the number of cache rows affected.
+     * Marks the cached results of the given titles as invalidated so they are refetched on the next
+     * resolve / {@link #cacheUncached()} run.
+     * Returns the number of cache rows affected.
      */
     @Transactional
     public int invalidate(Collection<ImdbId> imdbIds) {

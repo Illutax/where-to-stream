@@ -16,8 +16,8 @@ import java.time.Duration;
 /**
  * Serves a title's row metadata for the FSK badge + German-title toggle:
  * {@code {"rating":{"system":"FSK","label":"16"},"germanTitle":"Oben"}} (either field may be null).
- * Backed by the shared IMDb metadata cache — the same one fetch as the poster. 404 only when the
- * title is unknown / the fetch failed. Auth is inherited (like the poster endpoints).
+ * Backed by the shared IMDb metadata cache — the same one fetch as the poster.
+ * 404 only when the title is unknown / the fetch failed. Auth is inherited (like the poster endpoints).
  */
 @RestController
 @RequestMapping("/api/titles")

@@ -17,8 +17,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Exercises the real {@link SecurityConfig} filter chain: authentication requirement, the ADMIN
- * gate on mutations/administration, the JSON-401-vs-redirect split, and CSRF. Uses the
- * {@code user()}/{@code csrf()} request post-processors so the mock auth reliably reaches MockMvc.
+ * gate on mutations/administration, the JSON-401-vs-redirect split, and CSRF.
+ * Uses the {@code user()}/{@code csrf()} request post-processors so the mock auth reliably
+ * reaches MockMvc.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -61,9 +62,10 @@ class SecurityRulesTest {
 
     @Test
     void anyAuthenticatedUserCanReadTheirOwnWatchlist() throws Exception {
-        // The watchlist is per-user (not ADMIN-gated). The principal name must match a real
-        // account (the seeded "admin") since the endpoint resolves the username to a user id,
-        // but a plain USER role is enough — proving the endpoint is not behind the ADMIN gate.
+        // The watchlist is per-user (not ADMIN-gated).
+        // The principal name must match a real account (the seeded "admin") since the endpoint
+        // resolves the username to a user id, but a plain USER role is enough — proving the
+        // endpoint is not behind the ADMIN gate.
         mockMvc.perform(get("/api/watchlist").with(user("admin").roles("USER")))
                 .andExpect(status().isOk());
     }

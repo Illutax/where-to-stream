@@ -30,8 +30,8 @@ public class AggregateService {
     }
 
     /**
-     * Resolves the catalogue once and derives both the flatrate and the paid offerings of a
-     * service from it (the Amazon page needs both, so this avoids resolving everything twice).
+     * Resolves the catalogue once and derives both the flatrate and the paid offerings of a service
+     * from it (the Amazon page needs both, so this avoids resolving everything twice).
      */
     public ServiceContent contentFor(String serviceName, UUID userId) {
         final var all = getAll(userId);

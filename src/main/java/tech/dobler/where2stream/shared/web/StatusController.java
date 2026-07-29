@@ -7,9 +7,10 @@ import tech.dobler.where2stream.shared.web.StatusService;
 import tech.dobler.where2stream.shared.web.StatusDto;
 
 /**
- * Public health/status probe (version + server start time) as JSON. Unauthenticated on purpose
- * (matched by {@code /public/**} in the security config) so external monitoring can reach it; the
- * authenticated SPA reads the same data from {@code /api/status}.
+ * Public health/status probe (version + server start time) as JSON.
+ * Unauthenticated on purpose (matched by {@code /public/**} in the security config)
+ * so external monitoring can reach it; the authenticated SPA reads the same data from
+ * {@code /api/status}.
  */
 @RestController
 @RequiredArgsConstructor

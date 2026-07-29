@@ -11,8 +11,8 @@ export interface ConfirmDialogData {
 }
 
 /**
- * A generic yes/no confirmation dialog for destructive actions. Closes with {@code true} on
- * confirm, {@code false} on cancel/backdrop-dismiss.
+ * A generic yes/no confirmation dialog for destructive actions.
+ * Closes with {@code true} on confirm, {@code false} on cancel/backdrop-dismiss.
  */
 @Component({
   selector: 'app-confirm-dialog',

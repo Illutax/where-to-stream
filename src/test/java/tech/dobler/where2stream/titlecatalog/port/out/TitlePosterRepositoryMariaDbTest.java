@@ -9,9 +9,10 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Runs the poster repository behaviour against a real MariaDB started by Testcontainers, proving
- * the BLOB columns round-trip on the production database. Tagged {@code testcontainers} and
- * excluded from the default build; run with {@code mvn -Ptestcontainers test}.
+ * Runs the poster repository behaviour against a real MariaDB started by Testcontainers,
+ * proving the BLOB columns round-trip on the production database.
+ * Tagged {@code testcontainers} and excluded from the default build;
+ * run with {@code mvn -Ptestcontainers test}.
  */
 @Tag("testcontainers")
 @DataJpaTest

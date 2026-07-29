@@ -26,12 +26,13 @@ import java.util.UUID;
  * Application security: form + HTTP Basic + (optional) Google OIDC login over a database-backed
  * user store, with role-based authorization.
  *
- * <p>The only UI is the Angular SPA at {@code /app/**}; the sole server-rendered page is the login
- * page (the OIDC-ready auth entry). Everything requires authentication except the login page and
- * the public status probe; the user administration and the cache-management / refresh API require
- * {@code ADMIN}. CSRF uses a cookie repository so the SPA (session cookie) is protected;
- * {@code /api/**} returns 401 instead of a login redirect so the SPA can react, while other
- * (browser) requests are redirected to {@code /login}.
+ * <p>The only UI is the Angular SPA at {@code /app/**};
+ * the sole server-rendered page is the login page (the OIDC-ready auth entry).
+ * Everything requires authentication except the login page and the public status probe;
+ * the user administration and the cache-management / refresh API require {@code ADMIN}.
+ * CSRF uses a cookie repository so the SPA (session cookie) is protected;
+ * {@code /api/**} returns 401 instead of a login redirect so the SPA can react,
+ * while other (browser) requests are redirected to {@code /login}.
  */
 @Configuration
 @EnableWebSecurity
@@ -92,9 +93,10 @@ public class SecurityConfig {
     }
 
     /**
-     * The stable remember-me secret. If none is configured, a transient one is generated per
-     * startup (so remember-me resets on each restart) and a warning is logged — set
-     * {@code w2s.security.remember-me.key} to keep users logged in across restarts.
+     * The stable remember-me secret.
+     * If none is configured, a transient one is generated per startup (so remember-me resets
+     * on each restart) and a warning is logged — set {@code w2s.security.remember-me.key} to
+     * keep users logged in across restarts.
      */
     private String rememberMeKey(SecurityProperties securityProperties) {
         final String key = securityProperties.rememberMe().key();

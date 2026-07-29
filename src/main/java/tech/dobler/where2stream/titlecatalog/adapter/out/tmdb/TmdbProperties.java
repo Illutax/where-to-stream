@@ -5,10 +5,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 import tech.dobler.where2stream.titlecatalog.port.in.PosterAttributionPort;
 
 /**
- * Binding for the {@code tmdb.*} configuration (poster images via The Movie Database API). TMDB is
- * an <strong>opt-in alternative</strong> poster source: by default posters are scraped from IMDb
- * (see {@link ImdbPosterProperties}). Set {@link #enabled()} <em>and</em> an {@link #apiKey()} to
- * source posters from TMDB instead (which also shows the required TMDB attribution footer).
+ * Binding for the {@code tmdb.*} configuration (poster images via The Movie Database API).
+ * TMDB is an <strong>opt-in alternative</strong> poster source:
+ * by default posters are scraped from IMDb (see {@link ImdbPosterProperties}).
+ * Set {@link #enabled()} <em>and</em> an {@link #apiKey()} to source posters from TMDB instead
+ * (which also shows the required TMDB attribution footer).
  *
  * @param enabled       feature flag: use TMDB as the poster source (requires an API key)
  * @param apiKey        TMDB v3 API key; without it TMDB stays inactive even when {@code enabled}

@@ -3,16 +3,18 @@ import { ChangeDetectionStrategy, Component, input, signal, viewChild } from '@a
 import { ImdbId, posterFullUrl, posterUrl } from '../../core/domain';
 
 /**
- * A small lazy-loaded poster thumbnail for a title. Missing posters (404 → the endpoint has none,
- * or the feature is off) hide the image gracefully. On hover it shows the high-resolution poster in
- * a CDK overlay (rendered at the document root, so it is not clipped by the tables' horizontal
- * scroll); the hi-res image is only requested while the overlay is open (fetched on demand).
+ * A small lazy-loaded poster thumbnail for a title.
+ * Missing posters (404 → the endpoint has none, or the feature is off) hide the image gracefully.
+ * On hover it shows the high-resolution poster in a CDK overlay (rendered at the document root,
+ * so it is not clipped by the tables' horizontal scroll); the hi-res image is only requested while
+ * the overlay is open (fetched on demand).
  *
  * CDK positions the overlay as soon as it opens, before the (not-yet-cached) hi-res image has
  * loaded — at that point it has no intrinsic size, so the position is computed against a
- * near-empty box. Once the image loads and grows to its real size, we explicitly ask CDK to
- * recompute the position; otherwise it stays put until the next scroll/resize and can hang off
- * the edge of the viewport in the meantime.
+ * near-empty box.
+ * Once the image loads and grows to its real size, we explicitly ask CDK to recompute the
+ * position; otherwise it stays put until the next scroll/resize and can hang off the edge of
+ * the viewport in the meantime.
  */
 @Component({
   selector: 'app-poster-thumb',
@@ -62,9 +64,9 @@ export class PosterThumb {
     this.overlay()?.overlayRef.updatePosition();
   }
 
-  // Prefer the hi-res preview to the right of the thumbnail, falling back to the left; and prefer
-  // aligning to the thumbnail's top, falling back to its bottom so a poster hovered near the
-  // bottom of the viewport flips upward instead of running off the bottom edge.
+  // Prefer the hi-res preview to the right of the thumbnail, falling back to the left; and
+  // prefer aligning to the thumbnail's top, falling back to its bottom so a poster hovered
+  // near the bottom of the viewport flips upward instead of running off the bottom edge.
   protected readonly positions: ConnectedPosition[] = [
     { originX: 'end', originY: 'top', overlayX: 'start', overlayY: 'top', offsetX: 8 },
     { originX: 'start', originY: 'top', overlayX: 'end', overlayY: 'top', offsetX: -8 },

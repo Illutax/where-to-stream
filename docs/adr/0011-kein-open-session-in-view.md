@@ -8,14 +8,15 @@
 Spring Boot aktiviert **Open-Session-in-View (OSIV)** standardmäßig
 (`spring.jpa.open-in-view=true`) und warnt beim Start, man solle die Einstellung explizit setzen.
 OSIV bindet einen `EntityManager` für die **gesamte** Request-Dauer an den Thread (bis die Antwort
-gerendert ist), damit Lazy-Associations auch außerhalb der Service-Schicht (z. B. beim Rendern)
-nachgeladen werden können, ohne `LazyInitializationException`.
+gerendert ist),
+damit Lazy-Associations auch außerhalb der Service-Schicht (z. B. beim Rendern) nachgeladen werden
+können, ohne `LazyInitializationException`.
 
 Für diese Anwendung passt das nicht:
 
-- Seit ADR-0008 ist das UI eine **SPA mit JSON-API** — es gibt kein serverseitiges View-Rendering,
-  Controller liefern **DTOs**, nie Entities. Die JSON-Serialisierung fasst den Persistence-Context
-  also nie an.
+- Seit ADR-0008 ist das UI eine **SPA mit JSON-API** — es gibt kein serverseitiges
+  View-Rendering, Controller liefern **DTOs**, nie Entities.
+  Die JSON-Serialisierung fasst den Persistence-Context also nie an.
 - Alle Associations sind bereits **`FetchType.EAGER`** (`AppUser`-Rollen, `QueryResultDB`,
   `QueryMeta.getQueries()`) — es gibt nichts, was lazy nachzuladen wäre.
 - OSIV hält Persistence-Context (und potenziell eine DB-Connection) länger als nötig am Request.
@@ -27,11 +28,12 @@ Für diese Anwendung passt das nicht:
 
 **`spring.jpa.open-in-view=false`** (explizit gesetzt).
 
-Dazu die Design-Regel: **Kein Lazy Loading.** Associations sind `EAGER` (oder werden im Query
-explizit per Fetch-Join geladen); jeder DB-Zugriff geschieht innerhalb einer `@Transactional`
-Service-Methode; Entities werden **nicht** über die Schichtgrenze/an die Serialisierung gereicht —
-die Presentation-Schicht sieht nur DTOs. Was eine Antwort braucht, wird in der Service-Schicht
-vollständig geladen und als DTO herausgegeben.
+Dazu die Design-Regel: **Kein Lazy Loading.**
+Associations sind `EAGER` (oder werden im Query explizit per Fetch-Join geladen); jeder
+DB-Zugriff geschieht innerhalb einer `@Transactional` Service-Methode; Entities werden **nicht**
+über die Schichtgrenze/an die Serialisierung gereicht — die Presentation-Schicht sieht nur DTOs.
+Was eine Antwort braucht, wird in der Service-Schicht vollständig geladen und als DTO
+herausgegeben.
 
 ## Consequences
 
@@ -47,10 +49,12 @@ vollständig geladen und als DTO herausgegeben.
 **Schwieriger / Nachteile:**
 
 - Man muss in der Service-Schicht **bewusst alles laden**, was das DTO braucht (kein bequemes
-  Nachladen „später"). Bei den aktuellen, kleinen EAGER-Collections ist das unkritisch.
-- `EAGER` überall lädt immer die ganze Association mit. Solange die Collections klein bleiben
-  (Rollen, Query-Ergebnisse pro Titel), ist das in Ordnung; wächst eine Association stark, ist die
-  richtige Antwort ein gezielter Fetch-Join im Repository — **nicht** OSIV wieder einzuschalten.
+  Nachladen „später").
+  Bei den aktuellen, kleinen EAGER-Collections ist das unkritisch.
+- `EAGER` überall lädt immer die ganze Association mit.
+  Solange die Collections klein bleiben (Rollen, Query-Ergebnisse pro Titel), ist das in Ordnung;
+  wächst eine Association stark, ist die richtige Antwort ein gezielter Fetch-Join im Repository —
+  **nicht** OSIV wieder einzuschalten.
 
 ## Alternatives Considered
 
@@ -59,4 +63,5 @@ vollständig geladen und als DTO herausgegeben.
   versehentliche DB-Zugriffe außerhalb von Transaktionen.
 - **Lazy Loading einführen + auf OSIV stützen:** verworfen — koppelt das Laden an das Rendering und
   reicht Entity-Proxies bis in die Serialisierung; wir wollen die Ladelogik explizit in der
-  Service-Schicht. Wächst eine Collection, wird gezielt per Fetch-Join geladen.
+  Service-Schicht.
+  Wächst eine Collection, wird gezielt per Fetch-Join geladen.

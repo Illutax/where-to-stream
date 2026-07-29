@@ -16,8 +16,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * A user account. Either local (with a BCrypt {@code passwordHash}) or provisioned from an
- * external OIDC provider ({@code passwordHash == null}, {@code provider != LOCAL}).
+ * A user account.
+ * Either local (with a BCrypt {@code passwordHash})
+ * or provisioned from an external OIDC provider ({@code passwordHash == null}, {@code provider != LOCAL}).
  */
 @Entity
 @Table(name = "app_user")

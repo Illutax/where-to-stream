@@ -105,11 +105,12 @@ public class WerStreamtEsApiClient implements StreamAvailabilityProvider {
 
     /**
      * Parses a provider block into one {@link QueryResult} per <em>distinct</em> listing.
-     * A provider may list the same title several times (e.g. different languages); identical
-     * listings (same flatrate + prices + languages) are merged. When more than one distinct
-     * listing remains, each keeps its {@code languages} so callers can tell them apart;
-     * a single listing keeps {@code languages == null} (no differentiator needed). Malformed
-     * markup is logged and skipped so one bad provider never aborts the whole parse.
+     * A provider may list the same title several times (e.g. different languages);
+     * identical listings (same flatrate + prices + languages) are merged.
+     * When more than one distinct listing remains,
+     * each keeps its {@code languages} so callers can tell them apart;
+     * a single listing keeps {@code languages == null} (no differentiator needed).
+     * Malformed markup is logged and skipped so one bad provider never aborts the whole parse.
      */
     private List<QueryResult> parseProvider(Element provider, ImdbId imdbId) {
         final var name = provider.attr("data-ext-provider-name");

@@ -14,8 +14,8 @@ import java.util.List;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 /**
- * Repository behaviour for {@link QueryMetaRepository}, run against both H2 and a Testcontainers
- * MariaDB via the concrete subclasses.
+ * Repository behaviour for {@link QueryMetaRepository},
+ * run against both H2 and a Testcontainers MariaDB via the concrete subclasses.
  */
 public abstract class AbstractQueryMetaRepositoryTests {
     @Autowired

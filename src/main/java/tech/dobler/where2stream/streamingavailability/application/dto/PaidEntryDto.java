@@ -7,8 +7,9 @@ import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
 /**
- * A title that is (only) purchasable / rentable on a streaming service. The year is rendered for
- * display (the "Not yet released" placeholder comes from {@code ReleaseYear.display()}).
+ * A title that is (only) purchasable / rentable on a streaming service.
+ * The year is rendered for display (the "Not yet released" placeholder comes from
+ * {@code ReleaseYear.display()}).
  */
 public record PaidEntryDto(
         String name,

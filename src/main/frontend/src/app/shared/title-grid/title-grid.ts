@@ -13,11 +13,12 @@ import { TitleTile } from '../title-tile/title-tile';
 const TILE_COUNT_OPTIONS = [2, 3, 4, 5, 6] as const;
 
 /**
- * Presentational poster-tile grid: the alternative to the sortable Material tables. Sorting reuses
- * the exact same {@link sortRows} function the tables use, so seen/name/year/added semantics are
- * identical across both views. Tiles-per-row and the fixed dark-scrim-over-artwork tile styling
- * live in {@link TitleTile}; this component only owns the toolbar (sort, per-row, watched count)
- * and the responsive grid layout.
+ * Presentational poster-tile grid: the alternative to the sortable Material tables.
+ * Sorting reuses the exact same {@link sortRows} function the tables use, so
+ * seen/name/year/added semantics are identical across both views.
+ * Tiles-per-row and the fixed dark-scrim-over-artwork tile styling live in {@link TitleTile};
+ * this component only owns the toolbar (sort, per-row, watched count) and the responsive grid
+ * layout.
  */
 @Component({
   selector: 'app-title-grid',

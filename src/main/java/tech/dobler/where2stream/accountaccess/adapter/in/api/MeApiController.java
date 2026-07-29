@@ -119,7 +119,8 @@ public class MeApiController {
 
     /**
      * Renames the current user's login username, then invalidates the session so they must log in
-     * again as the new name (the current session principal still holds the old one). 409 if taken.
+     * again as the new name (the current session principal still holds the old one).
+     * 409 if taken.
      */
     @PutMapping("/username")
     @ResponseStatus(HttpStatus.NO_CONTENT)

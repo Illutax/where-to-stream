@@ -22,10 +22,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Global (ADMIN) cache-management use cases: view the manage table, invalidate titles, (re-)scrape
- * missing ones, pre-cache all, count uncached. The manage table lists the distinct titles across
- * ALL users' watchlists (the werstreamt.es cache is global); a title counts as "rated" if any user
- * rated it.
+ * Global (ADMIN) cache-management use cases: view the manage table, invalidate titles,
+ * (re-)scrape missing ones, pre-cache all, count uncached.
+ * The manage table lists the distinct titles across ALL users' watchlists
+ * (the werstreamt.es cache is global); a title counts as "rated" if any user rated it.
  *
  * <p>Deliberately not {@code @Transactional}: {@link PreCacheService} fans out over a
  * {@code parallelStream} relying on per-thread transactions from the proxied

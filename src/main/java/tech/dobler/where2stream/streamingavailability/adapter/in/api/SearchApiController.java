@@ -14,8 +14,9 @@ import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import java.util.List;
 
 /**
- * Resolve stream availability for a single title by IMDb id ({@code ?imdbId=tt…}) from the shared
- * cache. 404 when nothing is available.
+ * Resolve stream availability for a single title by IMDb id ({@code ?imdbId=tt…}) from the
+ * shared cache.
+ * 404 when nothing is available.
  */
 @RestController
 @RequestMapping("/api/search")

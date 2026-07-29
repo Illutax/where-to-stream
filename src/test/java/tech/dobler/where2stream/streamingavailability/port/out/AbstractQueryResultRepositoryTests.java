@@ -18,8 +18,8 @@ import java.util.Objects;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 /**
- * Repository behaviour for {@link QueryResultRepository}, run against both H2 and a Testcontainers
- * MariaDB via the concrete subclasses.
+ * Repository behaviour for {@link QueryResultRepository},
+ * run against both H2 and a Testcontainers MariaDB via the concrete subclasses.
  */
 @Slf4j
 public abstract class AbstractQueryResultRepositoryTests {
@@ -77,8 +77,9 @@ public abstract class AbstractQueryResultRepositoryTests {
     @Test
     @Transactional
     void saveAndLoadALongLanguagesValue() {
-        // Regression: some titles list many language variants; the languages column must hold
-        // more than the original varchar(255) (on MariaDB the old width threw "Data too long").
+        // Regression: some titles list many language variants;
+        // the languages column must hold more than the original varchar(255)
+        // (on MariaDB the old width threw "Data too long").
         final var imdbId = ImdbId.of("tt2194499");
         final var longLanguages = "Deutsch, Englisch (OV), ".repeat(20).trim(); // ~460 chars
         final var queryResult = new QueryResultDB(imdbId, "Prime Video", false, List.of(), longLanguages);

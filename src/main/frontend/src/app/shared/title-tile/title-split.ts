@@ -1,7 +1,7 @@
 /**
- * Splits a title into a main title and subtitle on its first " - ", " – " or ": " separator (the
- * design's own heuristic, since neither TMDB nor IMDb expose a separate subtitle field here). No
- * separator → the whole title is the main title, with no subtitle.
+ * Splits a title into a main title and subtitle on its first " - ", " – " or ": " separator
+ * (the design's own heuristic, since neither TMDB nor IMDb expose a separate subtitle field here).
+ * No separator → the whole title is the main title, with no subtitle.
  */
 export function splitTitle(title: string): { main: string; sub: string } {
   const parts = title.split(/\s+[-–:]\s+/);
@@ -9,8 +9,9 @@ export function splitTitle(title: string): { main: string; sub: string } {
 }
 
 /**
- * The poster-tile main-title auto-shrinks by character count instead of truncating — nothing is
- * ever clipped, but a very long title renders smaller. The subtitle steps down alongside it.
+ * The poster-tile main-title auto-shrinks by character count instead of truncating —
+ * nothing is ever clipped, but a very long title renders smaller.
+ * The subtitle steps down alongside it.
  */
 export function titleSizeSteps(mainLength: number): { mainSize: number; mainLineHeight: number; subSize: number } {
   const mainSize = mainLength <= 14 ? 20 : mainLength <= 22 ? 17 : mainLength <= 32 ? 14 : mainLength <= 44 ? 12 : 11;

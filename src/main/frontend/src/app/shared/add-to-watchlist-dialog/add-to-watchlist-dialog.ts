@@ -11,19 +11,21 @@ import { AgeBadge } from '../age-badge/age-badge';
 
 export interface AddToWatchlistDialogData extends ImdbSearchResult {
   /**
-   * Performs the actual "add to watchlist" mutation. Owned and constructed by the caller (the
-   * smart `ImdbSearchBox`, which already injects `WatchlistApi`) — this dialog only triggers it
-   * and reflects busy/error state, it never talks to `WatchlistApi` itself.
+   * Performs the actual "add to watchlist" mutation.
+   * Owned and constructed by the caller (the smart `ImdbSearchBox`, which already injects
+   * `WatchlistApi`) — this dialog only triggers it and reflects busy/error state,
+   * it never talks to `WatchlistApi` itself.
    */
   submit: () => Observable<void>;
 }
 
 /**
- * Confirms adding a search hit to the watchlist. Fetches nothing from IMDb directly: the poster
- * and meta (age rating, German title) come from the app's own DB-cache-first
- * {@code /api/titles/{id}/poster} and {@code /meta} endpoints (via {@link injectTitleMeta}), same
- * as everywhere else in the app (the same established exception `TitleCell`/`TitleTile` already
- * use — a component fetching its own per-row metadata isn't the same thing as owning a mutation).
+ * Confirms adding a search hit to the watchlist.
+ * Fetches nothing from IMDb directly: the poster and meta (age rating, German title) come from
+ * the app's own DB-cache-first {@code /api/titles/{id}/poster} and {@code /meta} endpoints (via
+ * {@link injectTitleMeta}), same as everywhere else in the app (the same established exception
+ * `TitleCell`/`TitleTile` already use — a component fetching its own per-row metadata isn't
+ * the same thing as owning a mutation).
  * Closes with {@code true} once the title is actually added, so the caller (the search box) can
  * flip that result's `onWatchlist` state locally.
  */

@@ -17,8 +17,9 @@ import java.util.UUID;
 
 /**
  * Builds the per-provider page (flatrate "included" and/or paid "kaufbar" titles) uniformly for
- * all five providers, scoped to a user's watchlist. Delegates the catalogue resolution to
- * {@link AggregateService} (which batches the lookups); this service only shapes the DTOs.
+ * all five providers, scoped to a user's watchlist.
+ * Delegates the catalogue resolution to {@link AggregateService} (which batches the lookups);
+ * this service only shapes the DTOs.
  */
 @Service
 @RequiredArgsConstructor

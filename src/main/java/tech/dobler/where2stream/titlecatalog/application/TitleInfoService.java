@@ -9,8 +9,8 @@ import tech.dobler.where2stream.titlecatalog.application.TitleMetaService;
 import java.util.Optional;
 
 /**
- * Per-title display metadata (age rating + German title) for a table row, from the shared IMDb
- * metadata cache ({@link TitleMetaService}) — the same one fetch per title as the poster.
+ * Per-title display metadata (age rating + German title) for a table row,
+ * from the shared IMDb metadata cache ({@link TitleMetaService}) — the same one fetch per title as the poster.
  * Application-layer facade so the presentation layer stays off the services layer.
  */
 @Service

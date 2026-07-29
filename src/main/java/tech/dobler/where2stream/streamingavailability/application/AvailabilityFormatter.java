@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
  * Formats a list of {@link Availability}s into the human-readable German price string used on
  * the paid ("kaufbar") pages, e.g. {@code "kaufen: HD: 9,99 € , leihen: HD: 3,99 €"}.
  *
- * <p>Formatting lives on the server (not in a template or the Angular client) so both UIs show
- * the identical string.
+ * <p>Formatting lives on the server (not in a template or the Angular client)
+ * so both UIs show the identical string.
  */
 public final class AvailabilityFormatter {
 

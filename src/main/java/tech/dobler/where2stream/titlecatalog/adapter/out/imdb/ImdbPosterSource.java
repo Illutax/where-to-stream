@@ -20,13 +20,14 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * IMDb-backed {@link PosterSource} (the default): the poster reference comes from the shared
- * {@link TitleMetaService} (one IMDb GraphQL fetch per title, reused by the age rating and the
- * future localized title), and the image bytes are downloaded pre-sized straight from Amazon's image
- * CDN. The CDN resizes and re-compresses on the fly via URL params (the {@code _V1_} transform), so
- * a small thumbnail and a larger hover image are two requests against the same base URL — no
- * server-side image processing. All failures degrade to empty (logged). Downloads are throttled
- * (own {@link RateLimiter}, default 10 req/s) to stay polite.
+ * IMDb-backed {@link PosterSource} (the default):
+ * the poster reference comes from the shared {@link TitleMetaService}
+ * (one IMDb GraphQL fetch per title, reused by the age rating and the future localized title),
+ * and the image bytes are downloaded pre-sized straight from Amazon's image CDN.
+ * The CDN resizes and re-compresses on the fly via URL params (the {@code _V1_} transform),
+ * so a small thumbnail and a larger hover image are two requests against the same base URL —
+ * no server-side image processing. All failures degrade to empty (logged).
+ * Downloads are throttled (own {@link RateLimiter}, default 10 req/s) to stay polite.
  */
 @Slf4j
 @Service
@@ -81,9 +82,10 @@ public class ImdbPosterSource implements PosterSource {
     }
 
     /**
-     * Rebuilds an Amazon media URL with resizer params (target width + JPEG quality), replacing any
-     * transform already on it. The CDN serves the image pre-sized, so no server-side image
-     * processing is needed. A URL without the {@code _V1_} marker is returned unchanged.
+     * Rebuilds an Amazon media URL with resizer params (target width + JPEG quality),
+     * replacing any transform already on it.
+     * The CDN serves the image pre-sized, so no server-side image processing is needed.
+     * A URL without the {@code _V1_} marker is returned unchanged.
      */
     static String sizedUrl(String base, int width, int quality) {
         final int idx = base.indexOf(V1);

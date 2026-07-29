@@ -1,8 +1,9 @@
 import { InjectionToken } from '@angular/core';
 
 /**
- * Base path of the REST API as a **relative** URL (`../api/`). It is resolved by the browser
- * against the document base href, so it stays correct in every deployment without rebuilds:
+ * Base path of the REST API as a **relative** URL (`../api/`).
+ * It is resolved by the browser against the document base href, so it stays correct in every
+ * deployment without rebuilds:
  *
  *  - dev (ng serve at "/")            -> /api/…            (proxied to the backend)
  *  - local jar (served at "/app/")    -> /api/…

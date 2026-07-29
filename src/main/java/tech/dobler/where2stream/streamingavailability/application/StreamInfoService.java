@@ -32,13 +32,13 @@ public class StreamInfoService {
     private final WerStreamtProperties properties;
     private final TimeService timeService;
 
-    // NOTE: both public resolve(...) overloads are annotated on purpose. resolve(imdbId)
-    // delegates to resolve(imdbId, false) via self-invocation, which bypasses the Spring
-    // proxy, so the transaction must already be open when either entry point is the one
-    // called through the proxy. This is what makes parallelStream callers (PreCacheController,
-    // RefreshController) correct: each parallel call gets its own transaction on its own
-    // thread, instead of relying on a controller-level @Transactional that does not span
-    // ForkJoinPool worker threads.
+    // NOTE: both public resolve(...) overloads are annotated on purpose.
+    // resolve(imdbId) delegates to resolve(imdbId, false) via self-invocation, which bypasses
+    // the Spring proxy, so the transaction must already be open when either entry point is the
+    // one called through the proxy.
+    // This is what makes parallelStream callers (PreCacheController, RefreshController) correct:
+    // each parallel call gets its own transaction on its own thread, instead of relying on a
+    // controller-level @Transactional that does not span ForkJoinPool worker threads.
     @Transactional
     public List<QueryResult> resolve(ImdbId imdbId, boolean forceRefresh) {
         final var result = queryMetaRepository.findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(imdbId);
@@ -58,8 +58,8 @@ public class StreamInfoService {
     /**
      * Batch variant of {@link #resolve(String)}: reads the cached metadata for all given
      * imdbIds with a single query (instead of one query per id) and only falls back to a
-     * remote fetch for the misses. Returns the results keyed by imdbId, preserving the
-     * iteration order of {@code imdbIds}.
+     * remote fetch for the misses.
+     * Returns the results keyed by imdbId, preserving the iteration order of {@code imdbIds}.
      */
     @Transactional
     public Map<ImdbId, List<QueryResult>> resolveAll(Collection<ImdbId> imdbIds) {

@@ -23,8 +23,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Repository behaviour for {@link WatchlistEntryRepository}, run against both H2 and a
- * Testcontainers MariaDB via the concrete subclasses. Watchlist rows FK to {@code app_user}, so a
- * user is seeded first.
+ * Testcontainers MariaDB via the concrete subclasses.
+ * Watchlist rows FK to {@code app_user}, so a user is seeded first.
  */
 @Transactional
 public abstract class AbstractWatchlistEntryRepositoryTests {

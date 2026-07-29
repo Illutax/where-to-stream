@@ -7,8 +7,8 @@ import tech.dobler.where2stream.shared.domain.ReleaseYear;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The two shared-kernel {@code AttributeConverter}s share the same null-safe shape (null in, null
- * out; value in, mapped value out) — covered together since each branch is otherwise a one-liner.
+ * The two shared-kernel {@code AttributeConverter}s share the same null-safe shape (null in, null out;
+ * value in, mapped value out) — covered together since each branch is otherwise a one-liner.
  */
 class ConvertersTest {
 

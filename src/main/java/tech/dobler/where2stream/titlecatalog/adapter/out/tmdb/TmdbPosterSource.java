@@ -23,11 +23,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * TMDB-backed {@link PosterSource}: resolves an IMDb id to a {@code poster_path} via the
- * {@code /find} endpoint, then downloads the pre-sized image bytes from the TMDB image CDN. One
- * {@code find} call per title; images come from the CDN. All failures degrade to empty (logged).
- * Outbound requests are throttled (own {@link RateLimiter}, configured from
- * {@code tmdb.rate-limit}).
+ * TMDB-backed {@link PosterSource}: resolves an IMDb id to a {@code poster_path} via the {@code /find} endpoint,
+ * then downloads the pre-sized image bytes from the TMDB image CDN.
+ * One {@code find} call per title; images come from the CDN. All failures degrade to empty (logged).
+ * Outbound requests are throttled (own {@link RateLimiter}, configured from {@code tmdb.rate-limit}).
  */
 @Slf4j
 @Service
@@ -108,8 +107,8 @@ public class TmdbPosterSource implements PosterSource {
 
     /**
      * The first movie (or TV) {@code poster_path} in a TMDB {@code /find} response, or empty.
-     * Network-free (unit-testable). Uses Spring Boot's {@code JsonParser} so it is agnostic to the
-     * JSON library on the classpath.
+     * Network-free (unit-testable).
+     * Uses Spring Boot's {@code JsonParser} so it is agnostic to the JSON library on the classpath.
      */
     static Optional<String> parsePosterPath(String json) {
         try {

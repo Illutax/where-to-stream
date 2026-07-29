@@ -8,11 +8,12 @@ import { splitTitle, titleSizeSteps } from './title-split';
 
 /**
  * A poster tile for the grid view: the poster art with a bottom scrim, the (auto-shrinking, never
- * truncated) title, a year/age-rating badge stack, an added-date chip revealed on hover/focus, and
- * a watched toggle. The chrome sitting directly on top of the poster artwork (scrim, hairline,
- * title, chips) uses fixed dark-scrim/light-ink colors for legibility regardless of the app's
- * light/dark theme — like a photo app's caption overlay; only the watched-toggle's *watched* state
- * (an opaque chip, not translucent-over-art) is mapped to the Material theme.
+ * truncated) title, a year/age-rating badge stack, an added-date chip revealed on hover/focus,
+ * and a watched toggle.
+ * The chrome sitting directly on top of the poster artwork (scrim, hairline, title, chips) uses
+ * fixed dark-scrim/light-ink colors for legibility regardless of the app's light/dark theme —
+ * like a photo app's caption overlay; only the watched-toggle's *watched* state (an opaque chip,
+ * not translucent-over-art) is mapped to the Material theme.
  */
 @Component({
   selector: 'app-title-tile',

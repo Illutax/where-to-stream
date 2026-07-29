@@ -17,8 +17,9 @@ import java.util.UUID;
 
 /**
  * Bootstraps an initial ADMIN account when the user table is empty, so a fresh deployment is
- * usable. The password comes from {@code w2s.security.initial-admin.password}; if unset, a strong
- * one is generated and logged once (à la Spring Boot's default user) and must be changed.
+ * usable.
+ * The password comes from {@code w2s.security.initial-admin.password}; if unset, a strong one
+ * is generated and logged once (à la Spring Boot's default user) and must be changed.
  */
 @Component
 @RequiredArgsConstructor

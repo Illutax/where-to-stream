@@ -29,7 +29,8 @@ import java.util.stream.Collectors;
 
 /**
  * Manages a user's own watchlist: imports an IMDb CSV export (a full sync — add/update/remove),
- * reports status, and clears it. Replaces the former global {@code ListSelectionService}.
+ * reports status, and clears it.
+ * Replaces the former global {@code ListSelectionService}.
  *
  * <p>Titles are resolved lazily against the shared cache on first page view, so the import stays a
  * fast, DB-only operation (no scraping while holding the transaction).
@@ -59,8 +60,8 @@ public class WatchlistImportService {
     }
 
     /**
-     * Toggle a single title's "seen" flag for the user (the lightweight in-app marking). Throws
-     * {@link NoSuchWatchlistEntryException} when the title is not on the user's list.
+     * Toggle a single title's "seen" flag for the user (the lightweight in-app marking).
+     * Throws {@link NoSuchWatchlistEntryException} when the title is not on the user's list.
      */
     @Transactional
     public void markSeen(UUID userId, ImdbId imdbId, boolean seen) {
@@ -123,10 +124,10 @@ public class WatchlistImportService {
     }
 
     /**
-     * Adds a single title found via search to the user's watchlist. Throws
-     * {@link WatchlistEntryAlreadyExistsException} if it's already there. {@code url} is left
-     * unset (null) — unlike a CSV import, there is no export-provided URL, and the frontend already
-     * derives the canonical IMDb link from the id itself.
+     * Adds a single title found via search to the user's watchlist.
+     * Throws {@link WatchlistEntryAlreadyExistsException} if it's already there.
+     * {@code url} is left unset (null) — unlike a CSV import, there is no export-provided URL, and
+     * the frontend already derives the canonical IMDb link from the id itself.
      */
     @Transactional
     public void addOne(UUID userId, ImdbId imdbId, String name, ReleaseYear year) {

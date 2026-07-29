@@ -25,9 +25,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Full-stack proof that watchlists are isolated per user: an import for one user never leaks into
- * another's list, and per-user operations (re-import full-sync, clear) touch only that user. Runs
- * the real {@link WatchlistImportService} against H2 (imports are DB-only — no scraping — so this
- * needs no network), then reads back through {@link WatchlistCatalog}.
+ * another's list, and per-user operations (re-import full-sync, clear) touch only that user.
+ * Runs the real {@link WatchlistImportService} against H2 (imports are DB-only — no scraping — so
+ * this needs no network), then reads back through {@link WatchlistCatalog}.
  */
 @SpringBootTest
 class WatchlistIsolationIntegrationTest {

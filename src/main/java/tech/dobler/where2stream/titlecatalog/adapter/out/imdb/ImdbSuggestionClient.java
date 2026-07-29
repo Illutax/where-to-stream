@@ -24,14 +24,16 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Title search against IMDb's public suggestion/typeahead endpoint — the same JSON API IMDb's own
- * site search box uses, verified reachable and stable, and simpler than IMDb's GraphQL
- * {@code mainSearch} (unused elsewhere in this codebase, schema unverified). Free-text discovery
- * across IMDb's whole catalog has no local equivalent, unlike per-id metadata lookups (see
- * {@link ImdbTitleClient}), which stay served from our own DB cache first and are never duplicated
- * here. The response mixes title ({@code tt…}), person ({@code nm…}) and company ({@code co…}) hits;
- * only titles are kept. Failures degrade to an empty list (logged). Outbound requests are throttled
- * (own {@link RateLimiter}, configured from {@code imdb-search.rate-limit}).
+ * Title search against IMDb's public suggestion/typeahead endpoint —
+ * the same JSON API IMDb's own site search box uses, verified reachable and stable,
+ * and simpler than IMDb's GraphQL {@code mainSearch}
+ * (unused elsewhere in this codebase, schema unverified).
+ * Free-text discovery across IMDb's whole catalog has no local equivalent,
+ * unlike per-id metadata lookups (see {@link ImdbTitleClient}),
+ * which stay served from our own DB cache first and are never duplicated here.
+ * The response mixes title ({@code tt…}), person ({@code nm…}) and company ({@code co…}) hits;
+ * only titles are kept. Failures degrade to an empty list (logged).
+ * Outbound requests are throttled (own {@link RateLimiter}, configured from {@code imdb-search.rate-limit}).
  */
 @Slf4j
 @Service
@@ -82,11 +84,12 @@ public class ImdbSuggestionClient {
     }
 
     /**
-     * Builds the suggestion-endpoint URI for a (non-blank) query. Both the leading-character path
-     * segment and the query itself are percent-encoded, so a query starting with a character that
-     * would otherwise break the URI (a bare {@code %}, a quote, a backslash, a space, …) degrades
-     * to a harmless encoded segment instead of making {@link URI#create} throw. Network-free
-     * (unit-testable).
+     * Builds the suggestion-endpoint URI for a (non-blank) query.
+     * Both the leading-character path segment and the query itself are percent-encoded,
+     * so a query starting with a character that would otherwise break the URI
+     * (a bare {@code %}, a quote, a backslash, a space, …)
+     * degrades to a harmless encoded segment instead of making {@link URI#create} throw.
+     * Network-free (unit-testable).
      */
     static URI buildUri(String apiUrl, String query) {
         final var firstChar = URLEncoder.encode(String.valueOf(Character.toLowerCase(query.charAt(0))), StandardCharsets.UTF_8);
@@ -94,9 +97,9 @@ public class ImdbSuggestionClient {
     }
 
     /**
-     * Parses the {@code {"d":[...]}} suggestion payload, keeping only real title hits (a failed
-     * {@link ImdbId} construction marks a person/company id, silently skipped). Network-free
-     * (unit-testable).
+     * Parses the {@code {"d":[...]}} suggestion payload, keeping only real title hits
+     * (a failed {@link ImdbId} construction marks a person/company id, silently skipped).
+     * Network-free (unit-testable).
      */
     static List<ImdbSuggestion> parse(String json, int maxResults) {
         try {

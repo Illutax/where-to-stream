@@ -4,8 +4,9 @@ import { Observable } from 'rxjs';
 import { API_BASE } from '../api-base';
 
 /**
- * Renames the current user's login username (PUT /api/me/username). The server invalidates the
- * session on success, so the caller must send the user back to the login page afterwards.
+ * Renames the current user's login username (PUT /api/me/username).
+ * The server invalidates the session on success, so the caller must send the user back to the
+ * login page afterwards.
  */
 @Injectable({ providedIn: 'root' })
 export class UsernameApi {

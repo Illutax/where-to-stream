@@ -13,8 +13,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * One title on a user's personal watchlist. Keyed by {@code (user_id, imdb_id)}; the mutable
- * fields (name/url/added/rated/year) are refreshed on re-import.
+ * One title on a user's personal watchlist.
+ * Keyed by {@code (user_id, imdb_id)};
+ * the mutable fields (name/url/added/rated/year) are refreshed on re-import.
  */
 @Entity
 @Table(name = "watchlist_entry")
@@ -78,8 +79,9 @@ public class WatchlistEntry {
     }
 
     /**
-     * Mark this title as seen / not seen (the in-app toggle). Note a later full-sync CSV re-import
-     * is the source of truth and can overwrite this via {@link #update}.
+     * Mark this title as seen / not seen (the in-app toggle).
+     * Note a later full-sync CSV re-import is the source of truth and can overwrite this via
+     * {@link #update}.
      */
     public void markSeen(boolean seen) {
         this.rated = seen;

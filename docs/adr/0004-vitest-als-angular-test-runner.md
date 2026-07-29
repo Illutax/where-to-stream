@@ -5,8 +5,9 @@
 
 ## Context
 
-Der Angular-22-Client (`src/main/frontend`) braucht Unit-/Component-Tests. Der bisherige
-Angular-Default Karma+Jasmine ist deprecated und in Angular 22 nicht mehr das Gerüst der Wahl.
+Der Angular-22-Client (`src/main/frontend`) braucht Unit-/Component-Tests.
+Der bisherige Angular-Default Karma+Jasmine ist deprecated und in Angular 22 nicht mehr das
+Gerüst der Wahl.
 Angular 22 bringt den Builder `@angular/build:unit-test`, der standardmäßig **Vitest** (mit
 jsdom-Umgebung) verwendet; das CLI-Scaffolding legt entsprechend `vitest` als devDependency an.
 
@@ -15,7 +16,8 @@ Die App ist standalone, **zoneless** und Signal-basiert; die UI nutzt Angular Ma
 ## Decision
 
 Tests laufen über **Vitest** via `@angular/build:unit-test` (jsdom), so wie vom Angular-22-CLI
-vorgegeben. Konkrete Festlegungen:
+vorgegeben.
+Konkrete Festlegungen:
 
 - Test-Ziel in `angular.json`: `@angular/build:unit-test`; `tsconfig.spec.json` mit
   `types: ["vitest/globals"]`.
@@ -39,17 +41,20 @@ vorgegeben. Konkrete Festlegungen:
 **Schwieriger / Nachteile:**
 
 - jsdom ist kein echter Browser: Layout und CDK-Overlays (z. B. `mat-select`-Overlay,
-  Snackbar-Container) sind eingeschränkt. Gegenmaßnahmen: natives `<select matNativeControl>`
-  statt `mat-select`, Harnesses statt DOM-Interna, keine Assertions, die echtes Layout brauchen.
+  Snackbar-Container) sind eingeschränkt.
+  Gegenmaßnahmen: natives `<select matNativeControl>` statt `mat-select`, Harnesses statt
+  DOM-Interna, keine Assertions, die echtes Layout brauchen.
 - Zwei getrennte Test-Toolchains (Vitest vorne, JUnit hinten) — bewusst in Kauf genommen, da
   Frontend und Backend getrennte Build-Schritte sind.
 
 ## Alternatives Considered
 
 - **Karma + Jasmine**: bisheriger Angular-Default, aber deprecated und in Angular 22 nicht mehr
-  vorgesehen. Verworfen.
-- **Jest**: verbreitet, aber für Angular ein Extra-Setup (`jest-preset-angular`, ESM-/Transform-
-  Konfiguration) und nicht mehr der Angular-Default. Mehr Reibung ohne Mehrwert gegenüber Vitest.
+  vorgesehen.
+  Verworfen.
+- **Jest**: verbreitet, aber für Angular ein Extra-Setup (`jest-preset-angular`,
+  ESM-/Transform-Konfiguration) und nicht mehr der Angular-Default.
+  Mehr Reibung ohne Mehrwert gegenüber Vitest.
 - **Web Test Runner / Playwright Component Testing**: echter Browser, höhere Treue, aber deutlich
-  schwerer und langsamer als für diese interne App nötig. Bei Bedarf an echten Browser-/E2E-Tests
-  später ergänzbar, nicht als Ersatz für die Unit-Ebene.
+  schwerer und langsamer als für diese interne App nötig.
+  Bei Bedarf an echten Browser-/E2E-Tests später ergänzbar, nicht als Ersatz für die Unit-Ebene.

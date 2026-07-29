@@ -7,8 +7,8 @@ import tech.dobler.where2stream.shared.time.TimeService;
 import java.time.Instant;
 
 /**
- * Exposes build/runtime status: the application version (from the JAR manifest) and the server
- * start time (captured once at bean creation, via {@link TimeService}).
+ * Exposes build/runtime status: the application version (from the JAR manifest)
+ * and the server start time (captured once at bean creation, via {@link TimeService}).
  */
 @Service
 public class StatusService {

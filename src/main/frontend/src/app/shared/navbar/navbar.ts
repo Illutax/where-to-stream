@@ -7,10 +7,11 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { PROVIDERS } from '../../core/models';
 
 /**
- * Presentational navigation drawer (Material nav-list). Renders the provider links, the current
- * user's watchlist size, admin-only links, a Settings link, and emits a logout request. Emits
- * {@code navigate} on every link tap so the shell can close the drawer on small screens. Holds no
- * data-loading logic.
+ * Presentational navigation drawer (Material nav-list).
+ * Renders the provider links, the current user's watchlist size, admin-only links,
+ * a Settings link, and emits a logout request.
+ * Emits {@code navigate} on every link tap so the shell can close the drawer on small screens.
+ * Holds no data-loading logic.
  */
 @Component({
   selector: 'app-navbar',

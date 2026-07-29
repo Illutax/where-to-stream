@@ -7,10 +7,11 @@ import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
 /**
  * Binding for the {@code imdb-poster.*} configuration — the <strong>default</strong> poster source,
  * which looks a title's poster URL up via IMDb's GraphQL API and serves it from Amazon's image CDN.
- * The CDN resizes on the fly via URL params, so both sizes are requested pre-sized (no server-side
- * image processing): the thumbnail is small and aggressively compressed, the hover image larger.
- * Outbound requests are throttled (default 10 req/s) to stay polite — the GraphQL API and the
- * Amazon image CDN both tolerate this comfortably.
+ * The CDN resizes on the fly via URL params,
+ * so both sizes are requested pre-sized (no server-side image processing):
+ * the thumbnail is small and aggressively compressed, the hover image larger.
+ * Outbound requests are throttled (default 10 req/s) to stay polite —
+ * the GraphQL API and the Amazon image CDN both tolerate this comfortably.
  *
  * @param apiUrl       the IMDb GraphQL endpoint ({@code title(id).primaryImage.url} lookup)
  * @param rateLimit    outbound throttle for the API lookups and image downloads

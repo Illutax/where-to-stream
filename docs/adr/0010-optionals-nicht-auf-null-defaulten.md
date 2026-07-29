@@ -6,10 +6,11 @@
 ## Context
 
 `Optional` gibt es, damit „kein Wert" **nicht** wieder als `null` (oder als geworfene Exception)
-durch den Code wandert. Ein `Optional` entsteht an vielen Stellen — Repository-Lookups
-(`findByImdbId`), Quell-Abfragen (`PosterSource.findPosterPath` / `download`), Domänen-Helfer
-(`toAvailableServiceNames`), Stream-Operationen (`findFirst`) —, und die Regel soll für **alle**
-gelten, unabhängig von der Herkunft.
+durch den Code wandert.
+Ein `Optional` entsteht an vielen Stellen — Repository-Lookups (`findByImdbId`), Quell-Abfragen
+(`PosterSource.findPosterPath` / `download`), Domänen-Helfer (`toAvailableServiceNames`),
+Stream-Operationen (`findFirst`) —, und die Regel soll für **alle** gelten, unabhängig von der
+Herkunft.
 
 Ausgelöst hat das ADR ein konkreter Verstoß im `PosterService`:
 
@@ -23,10 +24,11 @@ if (row == null || (row.getPosterPath() == null && !isNegativeFresh(row, now))) 
 Zwei Ausprägungen desselben Grundproblems tauchen in Codebasen typisch auf:
 
 - **`.orElse(null)` + `null`-Verzweigung.** Das `Optional` wird sofort eingeebnet und danach mit
-  `if (x == null)` verzweigt — also genau das, was `Optional` vermeiden soll. Im `PosterService`
-  hat dieses Muster zusätzlich einen Nebenläufigkeitsfehler verdeckt: Das „`null` → also neu
-  anlegen"-`save` war nicht rennsicher, `title_poster.imdb_id` ist `unique`, und zwei parallele
-  Erstzugriffe (Thumbnail + Hover) liefen beim Commit in `Duplicate entry '…' for key 'imdb_id'`.
+  `if (x == null)` verzweigt — also genau das, was `Optional` vermeiden soll.
+  Im `PosterService` hat dieses Muster zusätzlich einen Nebenläufigkeitsfehler verdeckt: Das
+  „`null` → also neu anlegen"-`save` war nicht rennsicher, `title_poster.imdb_id` ist `unique`,
+  und zwei parallele Erstzugriffe (Thumbnail + Hover) liefen beim Commit in
+  `Duplicate entry '…' for key 'imdb_id'`.
 - **Unsichere Entnahme.** `optional.get()` ohne Prüfung bzw. `isPresent()` + `get()` wirft bei
   Abwesenheit statt den Fall zu behandeln — die Kehrseite derselben Medaille.
 
@@ -62,24 +64,26 @@ Umgesetzt:
 
 **Abgrenzung (bewusst erlaubt):** Ein *absichtlich nullbarer Datenwert* ist kein Verstoß — ein
 nullbares DTO-Feld (`WatchlistDto.lastImportedAt == null` = „nie importiert",
-`OverviewEntryDto.services == null` = „N/A", `QueryResult.languages == null`) oder der persistierte
-Negativ-Cache-Marker (`title_poster.poster_path == null` = „kein Poster"). Verboten ist `null` als
-**Sentinel für „nicht gefunden"** mit anschließender Verzweigung, nicht ein Feld, dessen Domänenwert
-legitim „keiner" ist. `Optional` selbst wird **nicht** als Feld- oder DTO-/JSON-Typ verwendet.
+`OverviewEntryDto.services == null` = „N/A", `QueryResult.languages == null`) oder der
+persistierte Negativ-Cache-Marker (`title_poster.poster_path == null` = „kein Poster").
+Verboten ist `null` als **Sentinel für „nicht gefunden"** mit anschließender Verzweigung, nicht
+ein Feld, dessen Domänenwert legitim „keiner" ist.
+`Optional` selbst wird **nicht** als Feld- oder DTO-/JSON-Typ verwendet.
 
 ## Consequences
 
 **Einfacher / besser:**
 
 - Kein `null` im Kontrollfluss und keine ungeprüfte Entnahme mehr; die Methoden lesen sich als
-  Pipeline. Einheitlich mit `StreamInfoService`.
+  Pipeline.
+  Einheitlich mit `StreamInfoService`.
 - Der Duplicate-Key-Bug ist behoben und die Rennbehandlung ist benannt statt zufällig.
 
 **Schwieriger / Nachteile:**
 
-- **Nicht maschinell erzwungen.** ArchUnit sieht Typen/Methoden, nicht den Ausdruck `.orElse(null)`
-  bzw. `.get()` an einer `Optional`-Rückgabe; die Regel ist eine Review-Konvention (die ADRs halten
-  *warum* fest, nicht *wie*).
+- **Nicht maschinell erzwungen.** ArchUnit sieht Typen/Methoden, nicht den Ausdruck
+  `.orElse(null)` bzw. `.get()` an einer `Optional`-Rückgabe; die Regel ist eine Review-Konvention
+  (die ADRs halten *warum* fest, nicht *wie*).
 - Der Retry im `PosterService` braucht einen Selbst-Proxy (`ObjectProvider<PosterService>`), weil
   ein direkter Selbstaufruf den transaktionalen Proxy umginge.
 
@@ -88,7 +92,8 @@ legitim „keiner" ist. `Optional` selbst wird **nicht** als Feld- oder DTO-/JSO
 - **Regel auf Repository-Optionals beschränken:** verworfen — das Grundproblem hängt nicht an der
   Herkunft; ein `Optional` aus einer Quelle oder einem Stream verdient dieselbe Behandlung.
 - **`.orElse(null)` / `.get()` beibehalten:** verworfen — bringt `null` in den Kontrollfluss zurück
-  bzw. wirft unkontrolliert; ersteres hatte hier sogar den Nebenläufigkeitsfehler verdeckt.
+  bzw. wirft unkontrolliert;
+  ersteres hatte hier sogar den Nebenläufigkeitsfehler verdeckt.
 - **DTO-Felder als `Optional` modellieren:** verworfen — `Optional` als Feld/JSON-Wert ist ein
-  Anti-Pattern und bräche den bestehenden JSON-Vertrag (`lastImportedAt: null`). Ein nullbarer Wert
-  bleibt der richtige Ausdruck für „legitim keiner".
+  Anti-Pattern und bräche den bestehenden JSON-Vertrag (`lastImportedAt: null`).
+  Ein nullbarer Wert bleibt der richtige Ausdruck für „legitim keiner".

@@ -25,10 +25,12 @@ const MIN_QUERY_LENGTH = 2;
 
 /**
  * The navbar search: a magnifying-glass icon that expands into a text field, debounced (see
- * {@link DEBOUNCE_MS}) against IMDb. The only smart piece of the feature — owns the HTTP call and
- * the results list; rendering is delegated to the dumb {@link ImdbSearchResults}, and picking a
- * result opens {@link AddToWatchlistDialog}. On a successful add, patches that one result's
- * `onWatchlist` flag locally rather than re-searching.
+ * {@link DEBOUNCE_MS}) against IMDb.
+ * The only smart piece of the feature — owns the HTTP call and the results list;
+ * rendering is delegated to the dumb {@link ImdbSearchResults}, and picking a result opens
+ * {@link AddToWatchlistDialog}.
+ * On a successful add,
+ * patches that one result's `onWatchlist` flag locally rather than re-searching.
  */
 @Component({
   selector: 'app-imdb-search-box',

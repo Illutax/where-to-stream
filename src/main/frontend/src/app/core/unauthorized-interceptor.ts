@@ -2,8 +2,8 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 
 /**
- * On a 401 (expired/absent session) send the browser to the server-rendered login page. The SPA
- * is session-authenticated, so recovering means re-authenticating there.
+ * On a 401 (expired/absent session) send the browser to the server-rendered login page.
+ * The SPA is session-authenticated, so recovering means re-authenticating there.
  */
 export const unauthorizedInterceptor: HttpInterceptorFn = (req, next) =>
   next(req).pipe(

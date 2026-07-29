@@ -17,7 +17,8 @@ assertThat(first.year()).isEqualTo(2006);
 
 When `id()` is wrong you re-run, fix it, and only then discover `year()` is also off.
 Extracting all the fields and comparing them against one expected value reports **every**
-discrepancy in a single run, and reads as one intent ("this object equals this").
+discrepancy in a single run,
+and reads as one intent ("this object equals this").
 
 ## The pattern
 
@@ -74,16 +75,16 @@ field values side by side.
 
 ## When NOT to apply
 
-Keep assertions separate when they check **different kinds** of properties rather than a
-tuple of field values — e.g. identity (`isNotSameAs`), presence (`isNotNull`),
-containment (`contains`), or emptiness on unrelated objects. Forcing those into one
-`extracting` chain hurts readability instead of helping. The pattern is for "several
-field values of one object/row", not "several unrelated facts".
+Keep assertions separate when they check **different kinds** of properties rather than a tuple
+of field values — e.g. identity (`isNotSameAs`), presence (`isNotNull`), containment
+(`contains`), or emptiness on unrelated objects.
+Forcing those into one `extracting` chain hurts readability instead of helping.
+The pattern is for "several field values of one object/row", not "several unrelated facts".
 
 ## Caveats
 
-- Use exact expected values for deterministic fixtures. If a value is environment- or
-  whitespace-sensitive and you can't pin it down, normalize it inside the extractor
-  (e.g. `.trim()`) rather than falling back to many `contains(...)` calls.
-- Boxing: `int`/`boolean` getters extract to `Integer`/`Boolean`; put plain `1` / `true`
-  in the expected list — autoboxing and `equals` line up.
+- Use exact expected values for deterministic fixtures.
+  If a value is environment- or whitespace-sensitive and you can't pin it down, normalize it
+  inside the extractor (e.g. `.trim()`) rather than falling back to many `contains(...)` calls.
+- Boxing: `int`/`boolean` getters extract to `Integer`/`Boolean`;
+  put plain `1` / `true` in the expected list — autoboxing and `equals` line up.

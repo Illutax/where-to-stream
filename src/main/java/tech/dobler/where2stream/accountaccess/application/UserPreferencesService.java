@@ -14,9 +14,10 @@ import java.util.function.Consumer;
 
 /**
  * Reads and updates a user's own UI preferences (theme, language, age-rating badges, German
- * titles, library view mode, tiles-per-row). Keyed by the authenticated username handed down from
- * the presentation layer — the SPA loads every preference in one {@code GET /api/me} and changes
- * one at a time via {@code PUT /api/me/<preference>}.
+ * titles, library view mode, tiles-per-row).
+ * Keyed by the authenticated username handed down from the presentation layer — the SPA loads
+ * every preference in one {@code GET /api/me}
+ * and changes one at a time via {@code PUT /api/me/<preference>}.
  *
  * <p>One {@link #preferencesFor} read replaces what used to be six separate {@code xFor(username)}
  * getters (one DB round-trip instead of up to six); the six {@code updateX} methods stay separate

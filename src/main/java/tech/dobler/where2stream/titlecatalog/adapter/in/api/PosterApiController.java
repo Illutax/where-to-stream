@@ -17,9 +17,9 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * Serves the cached poster images for a title: the small thumbnail (row) and the larger hover
- * image. Bytes are served with long, public cache headers + an ETag so each browser fetches a
- * poster once. 404 when there is no poster (or the feature is off) — the SPA hides the image.
+ * Serves the cached poster images for a title: the small thumbnail (row) and the larger hover image.
+ * Bytes are served with long, public cache headers + an ETag so each browser fetches a poster once.
+ * 404 when there is no poster (or the feature is off) — the SPA hides the image.
  */
 @RestController
 @RequestMapping("/api/titles")

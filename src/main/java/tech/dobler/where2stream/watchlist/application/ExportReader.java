@@ -79,9 +79,9 @@ public class ExportReader {
         final var year = ReleaseYear.of(yearString.isBlank() ? 0 : Integer.parseInt(yearString));
         final var isRated = !record.get("Your Rating").isBlank();
         final var imdbId = extractImdbId(record.get("URL"));
-        // Build the stored URL from the validated imdbId (tt\w+) rather than keeping the raw CSV
-        // field: the raw value is attacker-controlled and unused by the API/UI, so canonicalising
-        // it here removes any chance of persisting a non-IMDb payload (e.g. a javascript: URL).
+        // Build the stored URL from the validated imdbId (tt\w+) rather than keeping the raw CSV field:
+        // the raw value is attacker-controlled and unused by the API/UI,
+        // so canonicalising it here removes any chance of persisting a non-IMDb payload (e.g. a javascript: URL).
         return new ImdbEntry(name, canonicalUrl(imdbId), created, isRated, year, imdbId);
     }
 

@@ -4,8 +4,8 @@ import { AuthApi } from './api/auth-api';
 import { Me } from './models';
 
 /**
- * Holds the current principal for the SPA (navbar, admin guard, admin-only UI). Loaded once on
- * app start via {@code GET /api/me}.
+ * Holds the current principal for the SPA (navbar, admin guard, admin-only UI).
+ * Loaded once on app start via {@code GET /api/me}.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
@@ -20,11 +20,12 @@ export class AuthStore {
   readonly tmdbAttribution = computed(() => this._me()?.tmdbAttribution ?? false);
 
   /**
-   * Fetches the principal and updates {@link me}. Returns the (shared) result so a caller that
-   * needs to run a one-shot action once loading completes (e.g. seeding {@code UserPrefsStore})
-   * can subscribe directly instead of watching {@link me} via `effect()` — see ADR-0013 for why
-   * that distinction matters. Callers that only need the side effect (updating this store) can
-   * ignore the return value, exactly as before.
+   * Fetches the principal and updates {@link me}.
+   * Returns the (shared) result so a caller that needs to run a one-shot action once loading
+   * completes (e.g. seeding {@code UserPrefsStore}) can subscribe directly instead of watching
+   * {@link me} via `effect()` — see ADR-0013 for why that distinction matters.
+   * Callers that only need the side effect (updating this store) can ignore the return value,
+   * exactly as before.
    */
   load(): Observable<Me | null> {
     const me$ = this.authApi.me().pipe(

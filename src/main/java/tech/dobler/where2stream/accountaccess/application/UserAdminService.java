@@ -21,9 +21,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * User administration use cases (list/create/update/delete/reset-password). ADMIN-only (enforced
- * both by URL rules and {@link PreAuthorize} here as defense in depth). Refuses changes that would
- * remove the last enabled admin, to prevent locking the system out.
+ * User administration use cases (list/create/update/delete/reset-password).
+ * ADMIN-only (enforced both by URL rules and {@link PreAuthorize} here as defense in depth).
+ * Refuses changes that would remove the last enabled admin, to prevent locking the system out.
  */
 @Service
 @RequiredArgsConstructor

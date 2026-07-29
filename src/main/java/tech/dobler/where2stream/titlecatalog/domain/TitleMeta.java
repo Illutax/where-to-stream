@@ -18,10 +18,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Cached IMDb metadata for a title, keyed by {@code imdbId} and shared across all users — the single
- * result of one IMDb GraphQL fetch: the poster reference and the age rating (room for the localized
- * title later). A fetched row with all-null data is a negative-cache entry. The heavy poster image
- * bytes live separately in {@link TitlePoster}; this table is small text.
+ * Cached IMDb metadata for a title, keyed by {@code imdbId} and shared across all users — the
+ * single result of one IMDb GraphQL fetch: the poster reference and the age rating (room for the
+ * localized title later). A fetched row with all-null data is a negative-cache entry. The heavy
+ * poster image bytes live separately in {@link TitlePoster}; this table is small text.
  */
 @Entity
 @Table(name = "title_meta")

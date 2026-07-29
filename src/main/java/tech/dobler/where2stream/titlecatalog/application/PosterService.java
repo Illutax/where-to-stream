@@ -19,19 +19,22 @@ import java.util.Collection;
 import java.util.Optional;
 
 /**
- * Resolves a title's poster image, caching it per {@code imdbId} in the DB (global, shared). The
- * thumbnail is fetched on first view and the full image on first hover; both are then stored so the
- * source is queried at most once per title. The concrete image source (IMDb by default, or TMDB) is
- * selected at startup and injected as a {@link PosterSource}; this service is agnostic to which.
+ * Resolves a title's poster image, caching it per {@code imdbId} in the DB (global, shared).
+ * The thumbnail is fetched on first view and the full image on first hover; both are then
+ * stored so the source is queried at most once per title.
+ * The concrete image source (IMDb by default, or TMDB) is selected at startup
+ * and injected as a {@link PosterSource}; this service is agnostic to which.
  *
- * <p><b>No DB connection is held across the network calls.</b> A cold request runs as a fast
- * transactional cache read, then the (throttled) HTTP lookup/download with <em>no transaction
- * open</em>, then a fast transactional write. Holding the connection across the I/O previously
- * pinned a Hikari connection for the whole slow fetch and exhausted the pool under a burst of
- * poster requests. The short transactions run through the bean's own proxy (self-invocation would
- * bypass it). {@code title_poster.imdb_id} is unique, so a concurrent first-time insert can trip the
- * constraint; such a write is swallowed ({@link #tryStore}) — the bytes are still returned and the
- * row self-heals on the next request.
+ * <p><b>No DB connection is held across the network calls.</b>
+ * A cold request runs as a fast transactional cache read,
+ * then the (throttled) HTTP lookup/download with <em>no transaction open</em>,
+ * then a fast transactional write.
+ * Holding the connection across the I/O previously pinned a Hikari connection for the whole slow fetch
+ * and exhausted the pool under a burst of poster requests.
+ * The short transactions run through the bean's own proxy (self-invocation would bypass it).
+ * {@code title_poster.imdb_id} is unique, so a concurrent first-time insert can trip the constraint;
+ * such a write is swallowed ({@link #tryStore}) — the bytes are still returned and the row
+ * self-heals on the next request.
  */
 @Slf4j
 @Service
@@ -110,8 +113,9 @@ public class PosterService implements TitleCacheMaintenancePort {
     }
 
     /**
-     * Fast, read-only cache lookup: serve the cached bytes, report a fresh negative, or report that
-     * the path/bytes must be fetched. Reads the {@code @Lob} bytes inside the transaction.
+     * Fast, read-only cache lookup: serve the cached bytes, report a fresh negative,
+     * or report that the path/bytes must be fetched.
+     * Reads the {@code @Lob} bytes inside the transaction.
      */
     @Transactional(readOnly = true)
     public Cached readCached(ImdbId imdbId, PosterSize size) {
@@ -157,8 +161,8 @@ public class PosterService implements TitleCacheMaintenancePort {
 
     /**
      * Runs a short write step, swallowing the unique-constraint violation from a concurrent
-     * first-time insert of the same title (the competitor stored the same data; this request still
-     * returns its bytes and the row self-heals on the next request).
+     * first-time insert of the same title (the competitor stored the same data;
+     * this request still returns its bytes and the row self-heals on the next request).
      */
     private void tryStore(ImdbId imdbId, Runnable write) {
         try {

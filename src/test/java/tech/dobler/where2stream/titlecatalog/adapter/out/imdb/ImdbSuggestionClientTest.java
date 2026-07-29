@@ -76,10 +76,11 @@ class ImdbSuggestionClientTest {
     }
 
     /**
-     * A query starting with a character that isn't safe unescaped in a URI path segment (a bare
-     * "%", a quote, a backslash, a space, …) used to make {@code URI.create} throw
-     * {@code IllegalArgumentException} — reproduced directly here, not just indirectly via
-     * {@code search()}'s catch-all, so a future regression fails loudly at the source.
+     * A query starting with a character that isn't safe unescaped in a URI path segment
+     * (a bare "%", a quote, a backslash, a space, …)
+     * used to make {@code URI.create} throw {@code IllegalArgumentException} —
+     * reproduced directly here, not just indirectly via {@code search()}'s catch-all,
+     * so a future regression fails loudly at the source.
      */
     @Test
     void buildUriNeverThrowsForAWkwardLeadingCharacters() {

@@ -5,9 +5,9 @@ import jakarta.persistence.Converter;
 import tech.dobler.where2stream.shared.domain.ImdbId;
 
 /**
- * Maps {@link ImdbId} to its {@code varchar} column and back. {@code autoApply = true} so every
- * {@code ImdbId} entity attribute uses it without per-field annotations — the columns stay plain
- * strings.
+ * Maps {@link ImdbId} to its {@code varchar} column and back.
+ * {@code autoApply = true} so every {@code ImdbId} entity attribute uses it
+ * without per-field annotations — the columns stay plain strings.
  */
 @Converter(autoApply = true)
 public class ImdbIdConverter implements AttributeConverter<ImdbId, String> {

@@ -25,8 +25,9 @@ public record SecurityProperties(
 
     /**
      * @param key          stable secret for the remember-me token; MUST be set in production so
-     *                     tokens survive restarts. If blank, a random one is generated and logged
-     *                     (which means remember-me resets on every restart).
+     *                     tokens survive restarts.
+     *                     If blank, a random one is generated and logged (which means remember-me
+     *                     resets on every restart).
      * @param validityDays how long the remember-me login stays valid (default 14 days)
      */
     public record RememberMe(String key, @DefaultValue("14") int validityDays) {

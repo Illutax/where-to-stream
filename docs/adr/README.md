@@ -1,9 +1,9 @@
 # Architecture Decision Records (ADRs)
 
 Diese ADRs halten fest, **warum** bestimmte Architekturentscheidungen so getroffen wurden
-(Kontext, Optionen, Trade-offs) — nicht **wie** das System implementiert ist. Format:
-[Nygard-ADR](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions), analog
-zum `adr`-Skill der Team-Doku.
+(Kontext, Optionen, Trade-offs) — nicht **wie** das System implementiert ist.
+Format: [Nygard-ADR](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions),
+analog zum `adr`-Skill der Team-Doku.
 
 | Nr. | Titel | Status |
 | --- | --- | --- |

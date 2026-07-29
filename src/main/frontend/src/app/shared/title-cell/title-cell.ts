@@ -8,8 +8,9 @@ import { PosterThumb } from '../poster-thumb/poster-thumb';
 /**
  * A table title cell: the poster thumbnail, the title link (in German when the user's German-title
  * preference is on and a German title exists, otherwise the original name), and the FSK age badge.
- * The per-title metadata (rating + German title) is fetched **once** from {@code /api/titles/{id}/meta}
- * — and only while at least one of those two preferences is on, so it costs nothing when both are off.
+ * The per-title metadata (rating + German title) is fetched **once** from
+ * {@code /api/titles/{id}/meta} — and only while at least one of those two preferences is on,
+ * so it costs nothing when both are off.
  */
 @Component({
   selector: 'app-title-cell',

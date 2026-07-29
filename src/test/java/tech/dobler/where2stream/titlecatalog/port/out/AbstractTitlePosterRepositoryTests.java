@@ -13,9 +13,10 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Repository behaviour for {@link TitlePosterRepository}, run against both H2 and a Testcontainers
- * MariaDB via the concrete subclasses. Proves the BLOB columns round-trip image bytes on the
- * production database (where BLOB handling differs from H2).
+ * Repository behaviour for {@link TitlePosterRepository},
+ * run against both H2 and a Testcontainers MariaDB via the concrete subclasses.
+ * Proves the BLOB columns round-trip image bytes on the production database
+ * (where BLOB handling differs from H2).
  */
 @Transactional
 public abstract class AbstractTitlePosterRepositoryTests {

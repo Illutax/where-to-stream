@@ -12,8 +12,8 @@ import tech.dobler.where2stream.watchlist.domain.WatchlistEntryAlreadyExistsExce
 import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 
 /**
- * Translates application exceptions into RFC-7807 {@link ProblemDetail} responses. Scoped to
- * {@link RestController @RestController}-annotated classes so it never intercepts the
+ * Translates application exceptions into RFC-7807 {@link ProblemDetail} responses.
+ * Scoped to {@link RestController @RestController}-annotated classes so it never intercepts the
  * Thymeleaf/redirect-based controllers' error handling — this way it keeps applying to every
  * bounded context's REST controllers regardless of which package they live in.
  */

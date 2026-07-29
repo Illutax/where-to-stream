@@ -4,9 +4,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * The streaming providers w2s knows about. Maps a stable, URL-friendly key
- * (e.g. {@code "amazon"}) to the werstreamt.es service name (e.g. {@code "Prime Video"}) and
- * records which kinds of offering the provider page shows.
+ * The streaming providers w2s knows about.
+ * Maps a stable, URL-friendly key (e.g. {@code "amazon"}) to the werstreamt.es service name
+ * (e.g. {@code "Prime Video"}) and records which kinds of offering the provider page shows.
  *
  * <p>{@code hasFlatrate}/{@code hasPaid} let a single {@code ProviderPageService} render all
  * five pages uniformly: Amazon shows both, Disney+/Netflix/WOW only the flatrate, YouTube Store

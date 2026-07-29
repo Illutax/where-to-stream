@@ -20,13 +20,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 /**
- * The single per-title IMDb metadata cache (poster reference + age rating; room for the localized
- * title later): one {@link ImdbTitleClient} fetch feeds every consumer, so a title's poster and
- * rating cost <strong>one</strong> API call. Same connection-discipline as {@code PosterService}
- * (ADR-0011): a fast transactional cache read, the HTTP fetch with <em>no transaction open</em>, a
- * fast transactional store — never a DB connection held across the network. A positive result is
- * permanent; a "no data" result is negative-cached with a TTL; a hard fetch failure is not cached
- * (retried next time).
+ * The single per-title IMDb metadata cache (poster reference + age rating; room for the localized title later):
+ * one {@link ImdbTitleClient} fetch feeds every consumer,
+ * so a title's poster and rating cost <strong>one</strong> API call.
+ * Same connection-discipline as {@code PosterService} (ADR-0011): a fast transactional cache read,
+ * the HTTP fetch with <em>no transaction open</em>, a fast transactional store —
+ * never a DB connection held across the network.
+ * A positive result is permanent; a "no data" result is negative-cached with a TTL;
+ * a hard fetch failure is not cached (retried next time).
  */
 @Slf4j
 @Service

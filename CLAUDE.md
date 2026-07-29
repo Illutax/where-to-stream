@@ -1,36 +1,50 @@
 # w2s (where-to-stream)
 
-Spring Boot 4 / Java 25 backend + Angular 22 SPA frontend. Backend is organised by bounded
-context first, ports & adapters second (see ADR-0014): `accountaccess`, `watchlist`,
-`titlecatalog`, `streamingavailability`, each with its own `domain` → `application` → `port` →
-`adapter` tree, plus a minimal `shared` kernel (`ImdbId`, `ReleaseYear`, `TimeService`,
-`ApiExceptionHandler`). One context may depend on another only through its published `port.in`
-interface (e.g. `CurrentUserPort`, `WatchlistCatalogPort`) — enforced per-context by
-`ArchitectureTest`.
+Spring Boot 4 / Java 25 backend + Angular 22 SPA frontend.
+Backend is organised by bounded context first, ports & adapters second (see ADR-0014):
+`accountaccess`, `watchlist`, `titlecatalog`, `streamingavailability`, each with its own
+`domain` → `application` → `port` → `adapter` tree, plus a minimal `shared` kernel
+(`ImdbId`, `ReleaseYear`, `TimeService`, `ApiExceptionHandler`).
+One context may depend on another only through its published `port.in` interface
+(e.g. `CurrentUserPort`, `WatchlistCatalogPort`) — enforced per-context by `ArchitectureTest`.
 
 ## Before writing or reviewing code
 
-- **Check `docs/adr/README.md`** for existing architecture decisions before making a
-  design, stack, or convention call the project may have already settled (time handling,
-  Optionals, domain value objects, OSIV, test libraries, …). Don't re-litigate a decision
-  that already has an ADR — extend it if it turns out to be wrong, don't just diverge.
-- **Check `.claude/skills/`** for a skill matching the task before writing it a different
-  way. In particular: **when writing or reviewing a test that checks several fields of the
-  same object with multiple sequential `assertThat(...)` calls, load and apply the
-  `consolidate-test-assertions` skill** (`.claude/skills/consolidate-test-assertions/SKILL.md`)
-  — collapse them into one `extracting(...).isEqualTo(...)` / `containsExactly(...)` assertion
-  per ADR-0005, instead of a run of single-value checks that hides everything after the first
-  failure. This applies whether the test is brand new or already exists and is being touched
-  for another reason.
+- **Check `docs/adr/README.md`** for existing architecture decisions before making a design,
+  stack, or convention call the project may have already settled (time handling, Optionals,
+  domain value objects, OSIV, test libraries, …).
+  Don't re-litigate a decision that already has an ADR — extend it if it turns out to be wrong,
+  don't just diverge.
+- **Check `.claude/skills/`** for a skill matching the task before writing it a different way.
+  In particular: **when writing or reviewing a test that checks several fields of the same object with multiple sequential `assertThat(...)` calls, load and apply the `consolidate-test-assertions` skill**
+  (`.claude/skills/consolidate-test-assertions/SKILL.md`) — collapse them into one
+  `extracting(...).isEqualTo(...)` / `containsExactly(...)` assertion per ADR-0005, instead of a
+  run of single-value checks that hides everything after the first failure.
+  This applies whether the test is brand new or already exists and is being touched for another
+  reason.
 - Neither of these is automatically enforced (no lint rule or pre-commit hook greps for the
   anti-patterns yet) — actively check both before considering test/review work done, don't
   wait for a reminder.
 
+## Prose formatting (Markdown docs and code comments)
+
+- **Semantic line breaks**: wrap prose at sentence ends (or clause boundaries for long
+  sentences), not at a fixed column width.
+  One sentence per line where reasonable; break a long sentence at its commas/clauses rather
+  than mid-clause.
+  This keeps diffs to the sentence that actually changed instead of reflowing an entire
+  paragraph.
+- Applies everywhere prose appears: Markdown docs (`README.md`, `TODOs.md`, `docs/adr/*.md`,
+  this file) and multi-line Java/TypeScript comments (Javadoc, JSDoc, block comments).
+  Don't break inside inline code spans, `{@code}`/`{@link}`, or Markdown links.
+- Code itself (statements, expressions) keeps its normal formatting — this rule is about prose only.
+
 ## Testing
 
-- Backend: AssertJ + Mockito + JUnit 5 only (ADR-0005). No Hamcrest, no JUnit `Assertions.*`
-  in test bodies — both are structurally still on the classpath (Testcontainers needs
-  `junit:junit`'s `TestRule` interface at class-load time; Spring's `jsonPath(...).value(...)`
-  needs `org.hamcrest.Matcher` resolvable at compile time for its overload set) but neither is
-  meant to be used directly; see ADR-0005 for why removing them outright breaks the build.
+- Backend: AssertJ + Mockito + JUnit 5 only (ADR-0005).
+  No Hamcrest, no JUnit `Assertions.*` in test bodies — both are structurally still on the
+  classpath (Testcontainers needs `junit:junit`'s `TestRule` interface at class-load time;
+  Spring's `jsonPath(...).value(...)` needs `org.hamcrest.Matcher` resolvable at compile time
+  for its overload set) but neither is meant to be used directly;
+  see ADR-0005 for why removing them outright breaks the build.
 - Frontend: Vitest (ADR-0004).

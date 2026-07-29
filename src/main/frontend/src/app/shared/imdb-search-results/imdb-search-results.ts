@@ -6,8 +6,9 @@ import { PosterThumb } from '../poster-thumb/poster-thumb';
 
 /**
  * The IMDb search results dropdown: purely presentational, renders whatever `results` it's given
- * and emits `resultSelected` on a click — no HTTP, no dialog. The parent decides when to mount this (so an
- * empty `results` array here always means "searched, found nothing", never "haven't searched yet").
+ * and emits `resultSelected` on a click — no HTTP, no dialog.
+ * The parent decides when to mount this (so an empty `results` array here always means
+ * "searched, found nothing", never "haven't searched yet").
  */
 @Component({
   selector: 'app-imdb-search-results',

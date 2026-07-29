@@ -16,9 +16,10 @@ import { ViewToggleButton } from '../../shared/view-toggle-button/view-toggle-bu
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 /**
- * Container for all five provider pages. Reacts to the {@code :key} route param (the same
- * component instance is reused when navigating between providers) and renders the flatrate
- * and/or paid tables (or their grid equivalents) depending on what the server returns.
+ * Container for all five provider pages.
+ * Reacts to the {@code :key} route param (the same component instance is reused when navigating
+ * between providers) and renders the flatrate and/or paid tables (or their grid equivalents)
+ * depending on what the server returns.
  */
 @Component({
   selector: 'app-provider-page',

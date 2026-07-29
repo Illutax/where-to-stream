@@ -1,10 +1,12 @@
 /**
  * Client-side domain value types mirroring the backend value objects (ImdbId, ReleaseYear,
- * WatchlistDate). They are TypeScript *branded* types: a branded value is still a plain string /
- * number at runtime (so the JSON parsed by HttpClient needs no conversion), but the brand stops
- * a raw string or number being used where a domain value is expected. The smart constructors are
- * the one place a raw value becomes a domain value, and this module also owns the small pieces of
- * domain logic (the canonical IMDb URL, the "Not yet released" rendering).
+ * WatchlistDate).
+ * They are TypeScript *branded* types: a branded value is still a plain string / number at
+ * runtime (so the JSON parsed by HttpClient needs no conversion), but the brand stops a raw
+ * string or number being used where a domain value is expected.
+ * The smart constructors are the one place a raw value becomes a domain value, and this module
+ * also owns the small pieces of domain logic (the canonical IMDb URL, the "Not yet released"
+ * rendering).
  */
 
 export type ImdbId = string & { readonly __brand: 'ImdbId' };

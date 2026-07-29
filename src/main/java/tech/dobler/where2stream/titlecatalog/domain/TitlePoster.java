@@ -17,11 +17,11 @@ import java.util.UUID;
 
 /**
  * Cached poster for a title, keyed by {@code imdbId} and shared across all users (like the
- * werstreamt.es availability cache). Holds a source-specific {@code posterPath} (a TMDB path or an
- * IMDb/Amazon image URL) plus the small thumbnail and the larger hover image as BLOBs — both fetched
- * lazily (thumbnail on first view, full on first hover) and stored here so the source is hit at most
- * once per title. A {@code null posterPath} is a negative cache entry (no poster), re-checked only
- * after a TTL.
+ * werstreamt.es availability cache). Holds a source-specific {@code posterPath} (a TMDB path or
+ * an IMDb/Amazon image URL) plus the small thumbnail and the larger hover image as BLOBs — both
+ * fetched lazily (thumbnail on first view, full on first hover) and stored here so the source is
+ * hit at most once per title. A {@code null posterPath} is a negative cache entry (no poster),
+ * re-checked only after a TTL.
  */
 @Entity
 @Table(name = "title_poster")

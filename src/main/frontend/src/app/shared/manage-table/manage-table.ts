@@ -7,8 +7,9 @@ import { ImdbId } from '../../core/domain';
 import { ManageRow } from '../../core/models';
 
 /**
- * Presentational cache-management table. Holds only local selection (view) state; the actual
- * invalidate/scrape work is emitted to the smart parent, which calls the API.
+ * Presentational cache-management table.
+ * Holds only local selection (view) state;
+ * the actual invalidate/scrape work is emitted to the smart parent, which calls the API.
  */
 @Component({
   selector: 'app-manage-table',

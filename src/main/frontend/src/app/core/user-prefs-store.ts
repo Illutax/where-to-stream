@@ -25,9 +25,10 @@ const DEFAULTS: UserPrefs = {
  * Holds and persists every one of the user's own UI preferences — theme, language, age-rating
  * badges, German titles, and the library view mode + tiles-per-row — behind one store instead of
  * one store/api pair per preference (they're all populated from the same `/api/me` response and
- * were previously six near-identical `init()`/`set()` pairs). Loaded from the account on app start
- * (`init()`, no persist) and persisted individually on change (each `setX` fires its own PUT, so
- * changing one preference never bundles an unrelated one into the same request).
+ * were previously six near-identical `init()`/`set()` pairs).
+ * Loaded from the account on app start (`init()`, no persist) and persisted individually on
+ * change (each `setX` fires its own PUT, so changing one preference never bundles an unrelated
+ * one into the same request).
  */
 @Injectable({ providedIn: 'root' })
 export class UserPrefsStore {
@@ -48,11 +49,12 @@ export class UserPrefsStore {
    * `app.ts` calls this from inside an `effect()` that's meant to depend only on the loaded
    * principal, not on this store's own state — but reading `_prefs()` below (to pick up `theme`
    * after the update) would otherwise register as a dependency of *whichever* reactive context
-   * happens to call `init()`. That turned every later `setViewMode`/`setTilesPerRow`/… call into
-   * a trigger for that effect to re-run and call `init()` again with the original (by then stale)
-   * `prefs`, silently reverting the just-made change a moment later. Wrapping the read in
-   * `untracked` keeps `init()`'s internals from leaking as an accidental dependency, regardless of
-   * what calls it.
+   * happens to call `init()`.
+   * That turned every later `setViewMode`/`setTilesPerRow`/… call into a trigger for that effect
+   * to re-run and call `init()` again with the original (by then stale) `prefs`, silently
+   * reverting the just-made change a moment later.
+   * Wrapping the read in `untracked` keeps `init()`'s internals from leaking as an accidental
+   * dependency, regardless of what calls it.
    */
   init(prefs: Partial<UserPrefs>): void {
     untracked(() => {

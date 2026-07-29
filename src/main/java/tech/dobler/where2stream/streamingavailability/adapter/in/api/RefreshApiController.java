@@ -17,7 +17,8 @@ public class RefreshApiController {
     private final RefreshService refreshService;
 
     /**
-     * @param scope {@code seen} (default) refreshes only rated titles; {@code all} refreshes everything.
+     * @param scope {@code seen} (default) refreshes only rated titles;
+     *              {@code all} refreshes everything.
      */
     @PostMapping
     public RefreshResultDto refresh(@RequestParam(name = "scope", defaultValue = "seen") String scope) {

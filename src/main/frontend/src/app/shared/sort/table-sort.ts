@@ -9,10 +9,10 @@ interface SortableRow {
 }
 
 /**
- * Returns a new array of `rows` ordered by the active Material sort column and direction. The
- * sortable columns are `rated` (by the seen flag), `title` (by name), `year` and `added`. An empty
- * direction — the third click on a header — restores the original input order. Non-mutating and
- * stable.
+ * Returns a new array of `rows` ordered by the active Material sort column and direction.
+ * The sortable columns are `rated` (by the seen flag), `title` (by name), `year` and `added`.
+ * An empty direction — the third click on a header — restores the original input order.
+ * Non-mutating and stable.
  */
 export function sortRows<T extends SortableRow>(rows: readonly T[], sort: Sort): T[] {
   const copy = [...rows];

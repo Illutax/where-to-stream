@@ -12,7 +12,8 @@ import java.io.IOException;
 /**
  * Eagerly loads the {@link CsrfToken} so its cookie is written on every response — otherwise the
  * {@code XSRF-TOKEN} cookie the SPA needs would only appear lazily, after the first protected
- * request. Part of the Spring Security SPA CSRF pattern.
+ * request.
+ * Part of the Spring Security SPA CSRF pattern.
  */
 final class CsrfCookieFilter extends OncePerRequestFilter {
 

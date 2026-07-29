@@ -6,9 +6,11 @@ import tech.dobler.where2stream.titlecatalog.domain.PosterSize;
 import java.util.Optional;
 
 /**
- * Looks up a title's poster. Abstracts the concrete source (currently the TMDB API) so callers like
- * {@code PosterService} do not depend on it and can be tested with a fake. Every method degrades to
- * empty on any failure (missing key, no result, network/parse error) — a poster is a nice-to-have.
+ * Looks up a title's poster.
+ * Abstracts the concrete source (currently the TMDB API) so callers like {@code PosterService}
+ * do not depend on it and can be tested with a fake.
+ * Every method degrades to empty on any failure (missing key, no result, network/parse error) —
+ * a poster is a nice-to-have.
  */
 public interface PosterSource {
 

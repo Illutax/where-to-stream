@@ -21,13 +21,16 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The single IMDb GraphQL data access for a title: <strong>one</strong> request returns everything
- * we cache per title — the poster URL and the age rating (and, later, the localized title) — so we
- * never hit the API more than once per film. All failures degrade to empty (logged); a parsed
- * response with no poster/rating is a valid result with null fields. Outbound requests are throttled
- * (own {@link RateLimiter}, configured from {@code imdb-poster.rate-limit}). The HTML title page is
- * unusable server-side ({@code www.imdb.com} returns an empty {@code 202} to datacenter IPs), hence
- * the GraphQL API; the data is IMDb's under their terms (limited non-commercial use).
+ * The single IMDb GraphQL data access for a title:
+ * <strong>one</strong> request returns everything we cache per title —
+ * the poster URL and the age rating (and, later, the localized title) —
+ * so we never hit the API more than once per film.
+ * All failures degrade to empty (logged);
+ * a parsed response with no poster/rating is a valid result with null fields.
+ * Outbound requests are throttled (own {@link RateLimiter}, configured from {@code imdb-poster.rate-limit}).
+ * The HTML title page is unusable server-side
+ * ({@code www.imdb.com} returns an empty {@code 202} to datacenter IPs), hence the GraphQL API;
+ * the data is IMDb's under their terms (limited non-commercial use).
  */
 @Slf4j
 @Service
@@ -93,9 +96,10 @@ public class ImdbTitleClient {
     }
 
     /**
-     * Parses the GraphQL response into {@link ImdbTitleData} (poster URL + age rating), tolerating
-     * missing fields / {@code errors} (→ null fields). Network-free (unit-testable). Uses Spring
-     * Boot's {@code JsonParser} so it is agnostic to the JSON library on the classpath.
+     * Parses the GraphQL response into {@link ImdbTitleData} (poster URL + age rating),
+     * tolerating missing fields / {@code errors} (→ null fields).
+     * Network-free (unit-testable).
+     * Uses Spring Boot's {@code JsonParser} so it is agnostic to the JSON library on the classpath.
      */
     static ImdbTitleData parse(String json) {
         try {

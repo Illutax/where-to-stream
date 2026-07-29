@@ -5,8 +5,9 @@ import { UserPrefsStore } from '../../core/user-prefs-store';
 
 /**
  * A single icon button that flips the library layout between the poster grid and the list view —
- * the "opt-out" control for the grid-by-default preference. One instance per page is enough since
- * `viewMode` is one global preference shared by every table/grid on the page.
+ * the "opt-out" control for the grid-by-default preference.
+ * One instance per page is enough since `viewMode` is one global preference shared by every
+ * table/grid on the page.
  */
 @Component({
   selector: 'app-view-toggle-button',
