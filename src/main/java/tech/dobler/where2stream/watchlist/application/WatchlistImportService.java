@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
+import tech.dobler.where2stream.watchlist.application.command.AddWatchlistEntryCommand;
+import tech.dobler.where2stream.watchlist.application.command.MarkSeenCommand;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistDto;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
@@ -64,10 +66,10 @@ public class WatchlistImportService {
      * Throws {@link NoSuchWatchlistEntryException} when the title is not on the user's list.
      */
     @Transactional
-    public void markSeen(UUID userId, ImdbId imdbId, boolean seen) {
-        final var entry = repository.findByUserIdAndImdbId(userId, imdbId)
-                .orElseThrow(() -> new NoSuchWatchlistEntryException(imdbId));
-        entry.markSeen(seen);
+    public void markSeen(MarkSeenCommand command) {
+        final var entry = repository.findByUserIdAndImdbId(command.userId(), command.imdbId())
+                .orElseThrow(() -> new NoSuchWatchlistEntryException(command.imdbId()));
+        entry.markSeen(command.seen());
         repository.save(entry);
     }
 
@@ -130,12 +132,13 @@ public class WatchlistImportService {
      * the frontend already derives the canonical IMDb link from the id itself.
      */
     @Transactional
-    public void addOne(UUID userId, ImdbId imdbId, String name, ReleaseYear year) {
-        if (repository.existsByUserIdAndImdbId(userId, imdbId)) {
-            throw new WatchlistEntryAlreadyExistsException(imdbId);
+    public void addOne(AddWatchlistEntryCommand command) {
+        if (repository.existsByUserIdAndImdbId(command.userId(), command.imdbId())) {
+            throw new WatchlistEntryAlreadyExistsException(command.imdbId());
         }
-        repository.save(WatchlistEntry.of(userId, imdbId, name, null,
-                WatchlistDate.of(timeService.today().toString()), false, year, timeService.now()));
+        repository.save(WatchlistEntry.of(command.userId(), command.imdbId(), command.name(), null,
+                WatchlistDate.of(timeService.today().toString()), false, ReleaseYear.of(command.year()),
+                timeService.now()));
     }
 
     private static boolean differs(WatchlistEntry current, ImdbEntry incoming) {

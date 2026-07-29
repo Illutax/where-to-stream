@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import tech.dobler.where2stream.watchlist.application.command.AddWatchlistEntryCommand;
+import tech.dobler.where2stream.watchlist.application.command.MarkSeenCommand;
 import tech.dobler.where2stream.watchlist.domain.InvalidImportException;
-import tech.dobler.where2stream.shared.platform.api.ValidationException;
 import tech.dobler.where2stream.watchlist.application.WatchlistImportService;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistDto;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
-import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 
 import java.io.IOException;
 
@@ -68,11 +68,8 @@ public class WatchlistApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void addOne(Authentication authentication, @PathVariable ImdbId imdbId,
                        @RequestBody AddWatchlistEntryRequest request) {
-        if (request == null || request.name() == null || request.name().isBlank() || request.year() == null) {
-            throw new ValidationException("A name and year are required.");
-        }
         final var userId = watchlistImportService.resolveUserId(authentication.getName());
-        watchlistImportService.addOne(userId, imdbId, request.name(), ReleaseYear.of(request.year()));
+        watchlistImportService.addOne(new AddWatchlistEntryCommand(userId, imdbId, request.name(), request.year()));
     }
 
     /** Toggle a single title's "seen" flag for the current user (the lightweight in-app marking). */
@@ -81,10 +78,7 @@ public class WatchlistApiController {
     public void markSeen(Authentication authentication,
                          @PathVariable ImdbId imdbId,
                          @RequestBody SeenUpdateRequest request) {
-        if (request == null || request.seen() == null) {
-            throw new ValidationException("A 'seen' flag is required.");
-        }
         final var userId = watchlistImportService.resolveUserId(authentication.getName());
-        watchlistImportService.markSeen(userId, imdbId, request.seen());
+        watchlistImportService.markSeen(new MarkSeenCommand(userId, imdbId, request.seen()));
     }
 }

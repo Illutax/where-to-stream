@@ -13,11 +13,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.watchlist.domain.NoSuchWatchlistEntryException;
 import tech.dobler.where2stream.watchlist.domain.WatchlistEntryAlreadyExistsException;
 import tech.dobler.where2stream.watchlist.application.WatchlistImportService;
+import tech.dobler.where2stream.watchlist.application.command.AddWatchlistEntryCommand;
+import tech.dobler.where2stream.watchlist.application.command.MarkSeenCommand;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistDto;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.shared.kernel.adapter.StringToImdbIdConverter;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
-import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -118,7 +119,7 @@ class WatchlistApiControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"The Matrix\",\"year\":1999}"))
                 .andExpect(status().isNoContent());
 
-        verify(watchlistImportService).addOne(USER, ImdbId.of("tt0133093"), "The Matrix", ReleaseYear.of(1999));
+        verify(watchlistImportService).addOne(new AddWatchlistEntryCommand(USER, ImdbId.of("tt0133093"), "The Matrix", 1999));
     }
 
     @Test
@@ -129,14 +130,14 @@ class WatchlistApiControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
 
-        verify(watchlistImportService, never()).addOne(any(), any(), any(), any());
+        verify(watchlistImportService, never()).addOne(any());
     }
 
     @Test
     void addOneForATitleAlreadyOnTheListReturns409() throws Exception {
         when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
         doThrow(new WatchlistEntryAlreadyExistsException(ImdbId.of("tt0133093")))
-                .when(watchlistImportService).addOne(USER, ImdbId.of("tt0133093"), "The Matrix", ReleaseYear.of(1999));
+                .when(watchlistImportService).addOne(new AddWatchlistEntryCommand(USER, ImdbId.of("tt0133093"), "The Matrix", 1999));
 
         mockMvc.perform(post("/api/watchlist/tt0133093").principal(alice())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"The Matrix\",\"year\":1999}"))
@@ -151,7 +152,7 @@ class WatchlistApiControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"seen\":true}"))
                 .andExpect(status().isNoContent());
 
-        verify(watchlistImportService).markSeen(USER, ImdbId.of("tt0482571"), true);
+        verify(watchlistImportService).markSeen(new MarkSeenCommand(USER, ImdbId.of("tt0482571"), true));
     }
 
     @Test
@@ -162,7 +163,7 @@ class WatchlistApiControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
 
-        verify(watchlistImportService, never()).markSeen(any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+        verify(watchlistImportService, never()).markSeen(any());
     }
 
     @Test
@@ -176,7 +177,7 @@ class WatchlistApiControllerTest {
     void markSeenForATitleNotOnTheListReturns404() throws Exception {
         when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
         doThrow(new NoSuchWatchlistEntryException(ImdbId.of("tt9999999")))
-                .when(watchlistImportService).markSeen(USER, ImdbId.of("tt9999999"), true);
+                .when(watchlistImportService).markSeen(new MarkSeenCommand(USER, ImdbId.of("tt9999999"), true));
 
         mockMvc.perform(put("/api/watchlist/tt9999999/seen").principal(alice())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"seen\":true}"))

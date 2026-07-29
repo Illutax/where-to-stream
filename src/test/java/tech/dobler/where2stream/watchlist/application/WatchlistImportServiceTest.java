@@ -6,6 +6,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
+import tech.dobler.where2stream.watchlist.application.command.AddWatchlistEntryCommand;
+import tech.dobler.where2stream.watchlist.application.command.MarkSeenCommand;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistDto;
 import tech.dobler.where2stream.watchlist.application.dto.WatchlistImportResultDto;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
@@ -238,7 +240,7 @@ class WatchlistImportServiceTest {
         when(timeService.today()).thenReturn(java.time.LocalDate.parse("2026-01-01"));
         when(repository.existsByUserIdAndImdbId(USER, id("tt1"))).thenReturn(false);
 
-        newService().addOne(USER, id("tt1"), "The Matrix", ReleaseYear.of(1999));
+        newService().addOne(new AddWatchlistEntryCommand(USER, id("tt1"), "The Matrix", 1999));
 
         final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
         verify(repository).save(saved.capture());
@@ -253,7 +255,7 @@ class WatchlistImportServiceTest {
         when(repository.existsByUserIdAndImdbId(USER, id("tt1"))).thenReturn(true);
 
         final var service = newService();
-        assertThatThrownBy(() -> service.addOne(USER, id("tt1"), "The Matrix", ReleaseYear.of(1999)))
+        assertThatThrownBy(() -> service.addOne(new AddWatchlistEntryCommand(USER, id("tt1"), "The Matrix", 1999)))
                 .isInstanceOf(WatchlistEntryAlreadyExistsException.class);
         verify(repository, never()).save(any());
     }
@@ -270,7 +272,7 @@ class WatchlistImportServiceTest {
         final var entry = stored("tt1", "The Prestige", false);
         when(repository.findByUserIdAndImdbId(USER, id("tt1"))).thenReturn(Optional.of(entry));
 
-        newService().markSeen(USER, id("tt1"), true);
+        newService().markSeen(new MarkSeenCommand(USER, id("tt1"), true));
 
         assertThat(entry.isRated()).isTrue();
         verify(repository).save(entry);
@@ -281,7 +283,7 @@ class WatchlistImportServiceTest {
         final var entry = stored("tt1", "The Prestige", true);
         when(repository.findByUserIdAndImdbId(USER, id("tt1"))).thenReturn(Optional.of(entry));
 
-        newService().markSeen(USER, id("tt1"), false);
+        newService().markSeen(new MarkSeenCommand(USER, id("tt1"), false));
 
         assertThat(entry.isRated()).isFalse();
         verify(repository).save(entry);
@@ -292,7 +294,7 @@ class WatchlistImportServiceTest {
         when(repository.findByUserIdAndImdbId(USER, id("tt9"))).thenReturn(Optional.empty());
 
         final var service = newService();
-        assertThatThrownBy(() -> service.markSeen(USER, id("tt9"), true))
+        assertThatThrownBy(() -> service.markSeen(new MarkSeenCommand(USER, id("tt9"), true)))
                 .isInstanceOf(NoSuchWatchlistEntryException.class);
         verify(repository, never()).save(any());
     }
