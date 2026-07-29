@@ -12,6 +12,7 @@ import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaReposito
 import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityPort;
 import tech.dobler.where2stream.streamingavailability.adapter.out.persistence.QueryResultMapper;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
+import tech.dobler.where2stream.shared.platform.observability.LogExecutionTime;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -62,6 +63,7 @@ public class StreamInfoService {
      * Returns the results keyed by imdbId, preserving the iteration order of {@code imdbIds}.
      */
     @Transactional
+    @LogExecutionTime
     public Map<ImdbId, List<QueryResult>> resolveAll(Collection<ImdbId> imdbIds) {
         final var now = timeService.now();
         final var latestFreshByImdbId = queryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(imdbIds).stream()

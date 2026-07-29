@@ -6,6 +6,7 @@ import tech.dobler.where2stream.streamingavailability.application.dto.OverviewEn
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.streamingavailability.application.StreamInfoService;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
+import tech.dobler.where2stream.shared.platform.observability.LogExecutionTime;
 
 import java.util.Comparator;
 import java.util.List;
@@ -22,6 +23,7 @@ public class CatalogOverviewService {
     private final WatchlistCatalogPort watchlistCatalogPort;
     private final StreamInfoService streamInfoService;
 
+    @LogExecutionTime
     public List<OverviewEntryDto> overview(UUID userId) {
         final var entries = watchlistCatalogPort.findAll(userId);
         // Resolve all entries in a single batch instead of one query per entry (avoids N+1).

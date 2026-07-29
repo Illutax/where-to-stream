@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.where2stream.streamingavailability.application.CatalogOverviewService;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.streamingavailability.application.dto.OverviewEntryDto;
+import tech.dobler.where2stream.shared.platform.observability.LogExecutionTime;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class CatalogApiController {
     private final CurrentUserPort currentUserPort;
 
     @GetMapping
+    @LogExecutionTime
     public List<OverviewEntryDto> catalog(Authentication authentication) {
         return catalogOverviewService.overview(currentUserPort.resolveId(authentication.getName()));
     }

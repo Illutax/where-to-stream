@@ -17,6 +17,7 @@ import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 import tech.dobler.where2stream.streamingavailability.domain.SearchResult;
 import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityPort;
 import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;
+import tech.dobler.where2stream.shared.platform.observability.LogExecutionTime;
 
 import java.io.IOException;
 import java.net.URI;
@@ -75,6 +76,7 @@ public class WerStreamtEsSource implements StreamAvailabilityPort {
     }
 
     @Override
+    @LogExecutionTime
     public List<QueryResult> query(ImdbId imdbId) {
         log.info("Query with id: {}", imdbId);
 
