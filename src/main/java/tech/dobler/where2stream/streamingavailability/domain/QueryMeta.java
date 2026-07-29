@@ -21,7 +21,8 @@ public class QueryMeta {
     @Column(name = "id")
     @EqualsAndHashCode.Include
     private final UUID id;
-    @Column(name = "imdbId")
+    @Embedded
+    @AttributeOverride(name = "value", column = @Column(name = "imdbId"))
     private final ImdbId imdbId;
     @Column(name = "creationTime")
     private final Instant creationTime;

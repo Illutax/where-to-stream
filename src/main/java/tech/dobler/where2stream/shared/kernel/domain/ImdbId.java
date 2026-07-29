@@ -2,6 +2,7 @@ package tech.dobler.where2stream.shared.kernel.domain;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import jakarta.persistence.Embeddable;
 
 import java.util.regex.Pattern;
 
@@ -12,8 +13,10 @@ import java.util.regex.Pattern;
  * and can't be confused with an arbitrary string.
  *
  * <p>Serialises to/from a plain JSON string ({@link JsonValue} / {@link JsonCreator}) and maps to a
- * {@code varchar} column via {@code ImdbIdConverter}, so the JSON and DB contracts are unchanged.
+ * single {@code varchar} column as a JPA {@link Embeddable} (each entity overrides the column name
+ * to its own, e.g. {@code imdb_id}), so the JSON and DB contracts are unchanged.
  */
+@Embeddable
 public record ImdbId(String value) {
 
     private static final Pattern VALID = Pattern.compile("tt\\w+");

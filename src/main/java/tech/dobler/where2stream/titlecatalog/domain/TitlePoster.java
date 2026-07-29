@@ -1,6 +1,8 @@
 package tech.dobler.where2stream.titlecatalog.domain;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -35,7 +37,8 @@ public class TitlePoster {
     private UUID id;
 
     // Value objects can't be converted on an @Id, so imdbId is a unique column with a surrogate id.
-    @Column(name = "imdb_id", nullable = false, unique = true)
+    @Embedded
+    @AttributeOverride(name = "value", column = @Column(name = "imdb_id", nullable = false, unique = true))
     private ImdbId imdbId;
 
     @Column(name = "poster_path")

@@ -31,7 +31,8 @@ public class WatchlistEntry {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name = "imdb_id", nullable = false)
+    @Embedded
+    @AttributeOverride(name = "value", column = @Column(name = "imdb_id", nullable = false))
     private ImdbId imdbId;
 
     @Column(name = "name", nullable = false)

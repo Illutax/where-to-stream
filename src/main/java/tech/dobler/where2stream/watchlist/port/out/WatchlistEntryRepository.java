@@ -28,23 +28,12 @@ public interface WatchlistEntryRepository extends ListCrudRepository<WatchlistEn
 
     long deleteByUserIdAndRatedTrue(UUID userId);
 
-    // Selected as the raw column (native) rather than JPQL `select w.imdbId`: a single-path JPQL
-    // projection onto the ImdbId value type makes Spring Data attempt a DTO constructor expression
-    // (`new ImdbId(...)`), which fails. The default methods below wrap the strings back into ImdbId.
-    @Query(value = "select distinct imdb_id from watchlist_entry", nativeQuery = true)
-    List<String> distinctImdbIdValues();
-
-    @Query(value = "select distinct imdb_id from watchlist_entry where is_rated = true", nativeQuery = true)
-    List<String> distinctRatedImdbIdValues();
-
     /** All distinct titles across every user's watchlist — for the global (ADMIN) cache maintenance. */
-    default List<ImdbId> findDistinctImdbIds() {
-        return distinctImdbIdValues().stream().map(ImdbId::of).toList();
-    }
+    @Query("select distinct w.imdbId from WatchlistEntry w")
+    List<ImdbId> findDistinctImdbIds();
 
-    default List<ImdbId> findDistinctImdbIdsRated() {
-        return distinctRatedImdbIdValues().stream().map(ImdbId::of).toList();
-    }
+    @Query("select distinct w.imdbId from WatchlistEntry w where w.rated = true")
+    List<ImdbId> findDistinctImdbIdsRated();
 
     @Query("select max(w.createdAt) from WatchlistEntry w where w.userId = :userId")
     Optional<Instant> findLastImportedAt(UUID userId);

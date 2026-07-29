@@ -2,6 +2,24 @@
 
 - **Date**: 2026-07-25
 - **Status**: Accepted
+- **Update (2026-07-29):** Der unten beschriebene JPQL-Fallstrick ist behoben, nicht mehr nur
+  umgangen.
+  `ImdbId` ist jetzt `@Embeddable` statt per `@Converter(autoApply = true)` auf eine Basis-Spalte
+  gemappt; jedes Entity-Feld überschreibt den Spaltennamen einzeln
+  (`@Embedded @AttributeOverride(name = "value", column = @Column(name = "imdb_id"))`).
+  Grund: Hibernates JPQL-Übersetzung wirft bei einer Basic-Type-Projektion
+  (`select w.imdbId` mit `@Converter`) einen impliziten Konstruktor-Ausdruck
+  (`new ImdbId(...)`) auf, den es bei `@Embeddable`-Typen nicht tut — die sind ein bekannter
+  Komposit-Typ, kein zu erratender DTO-Rückgabewert.
+  Empirisch verifiziert: `select distinct w.imdbId from WatchlistEntry w` mit Rückgabetyp
+  `List<ImdbId>` funktioniert jetzt direkt, erzeugt exakt dasselbe SQL wie die vorherige native
+  Query, und `ImdbIdConverter` (samt seiner beiden Tests) entfällt komplett.
+  Kein neues Muster: `Price`/`Availability` in `streamingavailability` sind schon länger
+  `@Embeddable` in genau dieser Form.
+  Einziger Mehrpreis: jedes der fünf Entity-Felder (`WatchlistEntry`, `TitleMeta`, `TitlePoster`,
+  `QueryMeta`, `QueryResultDB`) braucht jetzt zwei Annotationen statt einer — `autoApply = true`
+  deckte bisher jedes Feld ohne Wiederholung ab, ein zukünftiges sechstes Feld muss die
+  `@Embedded`/`@AttributeOverride`-Zeile selbst mitbringen.
 
 ## Context
 

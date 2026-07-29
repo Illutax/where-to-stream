@@ -287,21 +287,39 @@ no word boundary between `OldName` and `Test`, so the regex correctly left it al
 not in the way intended). Caught by grepping each renamed file's own `class` declaration
 after the fact, not by the test suite.
 
+## `nativeQuery = true` vs. HQL/JPQL: resolved by fixing the actual cause
+
+Flagged during the Framing A/B discussion: `WatchlistEntryRepository`'s two distinct-imdbId
+queries used raw native SQL, which sits awkwardly with a repository interface now explicitly
+framed as *the* outbound port (see ADR-0009's original "JPQL-Fallstrick" consequence).
+The instinct was to just swap `nativeQuery = true` for JPQL text while keeping the existing
+`List<String>` + `.map(ImdbId::of)` wrapper — a same-shape, lower-risk change.
+
+Trying it surfaced the real question, though: *why* did the original JPQL attempt
+(`select w.imdbId` returning `List<ImdbId>` directly) fail in the first place?
+Reproducing the failure showed Hibernate rewriting the query into an implicit constructor
+expression (`new ImdbId(w.imdbId)`) that doesn't match `ImdbId`'s actual constructor — a
+rough edge specific to *basic/converted* scalar types, not to JPQL as such.
+Making `ImdbId` `@Embeddable` (matching the pattern `Price`/`Availability` already use
+elsewhere in the codebase) sidesteps that rewrite entirely, because Hibernate treats
+embeddables as a known composite type rather than a projection to guess at.
+Verified empirically: the direct `List<ImdbId>` projection now works, produces the exact
+same generated SQL as the old native query, and let `ImdbIdConverter` — the whole class,
+plus its two tests — be deleted outright.
+See ADR-0009's 2026-07-29 update for the full before/after.
+
+The lesson: a workaround with a code comment explaining *why* is worth re-examining once
+its assumptions are actually tested, not just trusted — the fix here removed a class instead
+of just relocating the same complexity.
+
 ## What's still open
 
-Two topics were explicitly parked during this effort rather than resolved, and remain
-backlog:
+One topic remains, explicitly parked during this effort rather than resolved:
 
-- **`nativeQuery = true` vs. HQL/JPQL.**
-  `WatchlistEntryRepository`'s distinct-imdbId queries (and `QueryMetaRepository`'s,
-  once Streaming Availability migrated) use raw native SQL.
-  Flagged during the Framing A/B discussion: does embedded native SQL sit awkwardly with
-  a repository interface now explicitly framed as *the* outbound port, more than it did
-  when the interface was "just an adapter"?
 - **CQRS instead of Requests and DTOs.**
   Whether the current Request-object + DTO pattern should give way to explicit
   commands/queries, raised as a parallel question to the bounded-context work rather than
   settled within it.
 
-None of these block the restructuring described above — they're independent follow-ups,
+This doesn't block the restructuring described above — it's an independent follow-up,
 deliberately left for a separate discussion.
