@@ -5,9 +5,9 @@ import { UserPrefsStore } from '../../core/user-prefs-store';
 import { OverviewEntry } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { overviewToTile } from '../../core/tile-entry';
+import { CatalogSkeleton } from '../../shared/catalog-skeleton/catalog-skeleton';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
-import { Loading } from '../../shared/loading/loading';
 import { TitleGrid } from '../../shared/title-grid/title-grid';
 import { ViewToggleButton } from '../../shared/view-toggle-button/view-toggle-button';
 import { TranslocoService } from '@jsverse/transloco';
@@ -16,12 +16,12 @@ import { TranslocoService } from '@jsverse/transloco';
 @Component({
   selector: 'app-overview-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CatalogTable, TitleGrid, ViewToggleButton, Loading, ErrorAlert],
+  imports: [CatalogTable, TitleGrid, ViewToggleButton, CatalogSkeleton, ErrorAlert],
   template: `
     <h1>Where 2 Stream</h1>
     <app-view-toggle-button />
     @if (loading()) {
-      <app-loading />
+      <app-catalog-skeleton [viewMode]="userPrefs.viewMode()" [tilesPerRow]="userPrefs.tilesPerRow()" />
     } @else if (error()) {
       <app-error-alert [message]="error()" />
     } @else if (userPrefs.viewMode() === 'GRID') {
