@@ -5,7 +5,6 @@ import { UserPrefsStore } from '../../core/user-prefs-store';
 import { OverviewEntry } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { overviewToTile } from '../../core/tile-entry';
-import { CatalogSkeleton } from '../../shared/catalog-skeleton/catalog-skeleton';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { TitleGrid } from '../../shared/title-grid/title-grid';
@@ -16,22 +15,22 @@ import { TranslocoService } from '@jsverse/transloco';
 @Component({
   selector: 'app-overview-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CatalogTable, TitleGrid, ViewToggleButton, CatalogSkeleton, ErrorAlert],
+  imports: [CatalogTable, TitleGrid, ViewToggleButton, ErrorAlert],
   template: `
     <h1>Where 2 Stream</h1>
     <app-view-toggle-button />
-    @if (loading()) {
-      <app-catalog-skeleton [viewMode]="userPrefs.viewMode()" [tilesPerRow]="userPrefs.tilesPerRow()" />
-    } @else if (error()) {
+    @if (error()) {
       <app-error-alert [message]="error()" />
     } @else if (userPrefs.viewMode() === 'GRID') {
       <app-title-grid
         [entries]="tileEntries()"
+        [loading]="loading()"
         [recentlyChangedId]="seenStore.recentlyChanged()"
         (seenToggle)="onSeenToggle($event)" />
     } @else {
       <app-catalog-table
         [entries]="entries()"
+        [loading]="loading()"
         [recentlyChangedId]="seenStore.recentlyChanged()"
         (seenToggle)="onSeenToggle($event)" />
     }

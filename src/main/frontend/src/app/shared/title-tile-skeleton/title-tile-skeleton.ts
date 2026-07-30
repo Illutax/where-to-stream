@@ -17,7 +17,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     }
     @media (prefers-reduced-motion: no-preference) {
       .title-tile-skeleton {
-        animation: skeleton-pulse 1.4s ease-in-out infinite;
+        animation: skeleton-pulse 1.1s ease-in-out infinite;
       }
     }
     @keyframes skeleton-pulse {
@@ -26,7 +26,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
         opacity: 1;
       }
       50% {
-        opacity: 0.55;
+        opacity: 0.4;
       }
     }
   `,

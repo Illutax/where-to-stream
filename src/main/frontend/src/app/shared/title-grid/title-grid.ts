@@ -8,9 +8,12 @@ import { UserPrefsStore } from '../../core/user-prefs-store';
 import { sortRows } from '../sort/table-sort';
 import { TileEntry } from '../../core/tile-entry';
 import { TitleTile } from '../title-tile/title-tile';
+import { TitleTileSkeleton } from '../title-tile-skeleton/title-tile-skeleton';
 
 /** Tiles-per-row choices the segmented control offers (mirrors the design's 2-6 range). */
 const TILE_COUNT_OPTIONS = [2, 3, 4, 5, 6] as const;
+/** Skeleton rows shown per {@link TitleGrid.loading} — enough to fill an initial viewport. */
+const SKELETON_ROWS = 3;
 
 /**
  * Presentational poster-tile grid: the alternative to the sortable Material tables.
@@ -23,7 +26,7 @@ const TILE_COUNT_OPTIONS = [2, 3, 4, 5, 6] as const;
 @Component({
   selector: 'app-title-grid',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatButtonToggleModule, TitleTile, TranslocoPipe],
+  imports: [MatButtonModule, MatButtonToggleModule, TitleTile, TitleTileSkeleton, TranslocoPipe],
   template: `
     <div class="grid-toolbar">
       <mat-button-toggle-group
@@ -60,21 +63,29 @@ const TILE_COUNT_OPTIONS = [2, 3, 4, 5, 6] as const;
         }
       </mat-button-toggle-group>
 
-      <span class="watched-counter">{{ 'grid.watchedOf' | transloco: { watched: watchedCount(), total: total() } }}</span>
+      @if (!loading()) {
+        <span class="watched-counter">{{ 'grid.watchedOf' | transloco: { watched: watchedCount(), total: total() } }}</span>
+      }
     </div>
 
     <div class="tile-grid" [style.--tiles-per-row]="userPrefs.tilesPerRow()">
-      @for (entry of sorted(); track entry.imdbId) {
-        <app-title-tile
-          [imdbId]="entry.imdbId"
-          [name]="entry.name"
-          [year]="entry.year"
-          [added]="entry.added"
-          [isRated]="entry.isRated"
-          [recentlyChanged]="entry.imdbId === recentlyChangedId()"
-          (seenToggle)="seenToggle.emit($event)" />
-      } @empty {
-        <p class="text-muted">{{ 'table.noEntries' | transloco }}</p>
+      @if (loading()) {
+        @for (i of skeletonPlaceholders(); track i) {
+          <app-title-tile-skeleton />
+        }
+      } @else {
+        @for (entry of sorted(); track entry.imdbId) {
+          <app-title-tile
+            [imdbId]="entry.imdbId"
+            [name]="entry.name"
+            [year]="entry.year"
+            [added]="entry.added"
+            [isRated]="entry.isRated"
+            [recentlyChanged]="entry.imdbId === recentlyChangedId()"
+            (seenToggle)="seenToggle.emit($event)" />
+        } @empty {
+          <p class="text-muted">{{ 'table.noEntries' | transloco }}</p>
+        }
       }
     </div>
   `,
@@ -121,6 +132,8 @@ const TILE_COUNT_OPTIONS = [2, 3, 4, 5, 6] as const;
 export class TitleGrid {
   readonly entries = input.required<TileEntry[]>();
   readonly recentlyChangedId = input<ImdbId | null>(null);
+  /** While true, renders placeholder tiles instead of {@link entries} (still loading). */
+  readonly loading = input(false);
   readonly seenToggle = output<{ imdbId: ImdbId; seen: boolean }>();
 
   protected readonly userPrefs = inject(UserPrefsStore);
@@ -130,6 +143,9 @@ export class TitleGrid {
   protected readonly sorted = computed(() => sortRows(this.entries(), this.sort()));
   protected readonly watchedCount = computed(() => this.entries().filter((e) => e.isRated).length);
   protected readonly total = computed(() => this.entries().length);
+  protected readonly skeletonPlaceholders = computed(() =>
+    Array.from({ length: this.userPrefs.tilesPerRow() * SKELETON_ROWS }, (_, i) => i),
+  );
 
   protected setSortField(active: string): void {
     this.sort.update((s) => ({ active, direction: s.direction || 'asc' }));

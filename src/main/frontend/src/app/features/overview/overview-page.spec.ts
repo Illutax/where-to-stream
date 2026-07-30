@@ -46,27 +46,30 @@ describe('OverviewPage', () => {
     httpMock.verify();
   });
 
-  it('shows the catalogue skeleton until the catalogue resolves', () => {
+  it('shows the table header and skeleton rows (not a spinner) until the catalogue resolves', () => {
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('app-catalog-skeleton')).not.toBeNull();
+
+    // Header/column labels render immediately (they don't depend on the fetch) ...
+    expect(fixture.nativeElement.querySelectorAll('th').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.textContent).toContain('Title');
+    // ... while the body shows placeholder bars instead of real rows.
+    expect(fixture.nativeElement.querySelectorAll('.skeleton-bar').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
+
     httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush([]);
   });
 
-  it('sizes the skeleton for the table view (LIST is set in beforeEach)', () => {
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('app-catalog-skeleton .row-skeleton').length).toBeGreaterThan(0);
-    expect(fixture.nativeElement.querySelector('app-catalog-skeleton .tile-grid')).toBeNull();
-    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush([]);
-  });
-
-  it('sizes the skeleton for the grid view, matching tilesPerRow', () => {
+  it('shows the grid toolbar and skeleton tiles sized to tilesPerRow until the catalogue resolves', () => {
     TestBed.inject(UserPrefsStore).init({ viewMode: 'GRID', tilesPerRow: 4 });
     fixture.detectChanges();
 
-    const grid = fixture.nativeElement.querySelector('app-catalog-skeleton .tile-grid') as HTMLElement;
-    expect(grid).not.toBeNull();
+    // The sort/tiles-per-row toolbar renders immediately (it doesn't depend on the fetch) ...
+    expect(fixture.nativeElement.querySelector('.grid-toolbar')).not.toBeNull();
+    // ... while the grid itself shows placeholder tiles sized to the user's tilesPerRow.
+    const grid = fixture.nativeElement.querySelector('.tile-grid') as HTMLElement;
     expect(grid.style.getPropertyValue('--tiles-per-row')).toBe('4');
     expect(fixture.nativeElement.querySelectorAll('app-title-tile-skeleton').length).toBe(4 * 3);
+
     httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush([]);
   });
 
@@ -77,7 +80,7 @@ describe('OverviewPage', () => {
     httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('app-catalog-skeleton')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.skeleton-bar')).toHaveLength(0);
     expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(1);
     expect(fixture.nativeElement.textContent).toContain('Movie');
   });
