@@ -146,7 +146,8 @@
     "dev": "dev"
   },
   "app": {
-    "toggleNav": "Navigation umschalten"
+    "toggleNav": "Navigation umschalten",
+    "tmdbAttribution": "Dieses Produkt verwendet die TMDB-API, wird jedoch nicht von TMDB unterstützt oder zertifiziert."
   },
   "common": {
     "dismiss": "Schließen",

@@ -49,7 +49,7 @@ import { Navbar } from './shared/navbar/navbar';
             <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">
               <img class="tmdb-logo" src="tmdb.svg" alt="The Movie Database (TMDB)" />
             </a>
-            <span>This product uses the TMDB API but is not endorsed or certified by TMDB.</span>
+            <span>{{ 'app.tmdbAttribution' | transloco }}</span>
           </footer>
         }
       </mat-sidenav-content>

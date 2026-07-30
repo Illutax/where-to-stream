@@ -146,7 +146,8 @@
     "dev": "dev"
   },
   "app": {
-    "toggleNav": "Toggle navigation"
+    "toggleNav": "Toggle navigation",
+    "tmdbAttribution": "This product uses the TMDB API but is not endorsed or certified by TMDB."
   },
   "common": {
     "dismiss": "Dismiss",
