@@ -11,6 +11,15 @@ the status/SPA-shell endpoints — cross-cutting but not shared *domain* types).
 One context may depend on another only through its published `port.in` interface
 (e.g. `CurrentUserPort`, `WatchlistCatalogPort`) — enforced per-context by `ArchitectureTest`.
 
+## Collaboration style
+
+- **Honesty over confidence.** State uncertainty and limitations plainly instead of glossing
+  over them — e.g. say when something wasn't (or couldn't be) verified, rather than implying
+  it was.
+- **Work token-sparingly.** Prefer the smallest investigation or change that actually answers
+  the question or fixes the issue; avoid redundant re-reading, unnecessary exploration, or
+  padding responses.
+
 ## Before writing or reviewing code
 
 - **Check `docs/adr/README.md`** for existing architecture decisions before making a design,
