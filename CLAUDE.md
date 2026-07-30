@@ -51,3 +51,21 @@ One context may depend on another only through its published `port.in` interface
   for its overload set) but neither is meant to be used directly;
   see ADR-0005 for why removing them outright breaks the build.
 - Frontend: Vitest (ADR-0004).
+
+## Frontend loading state
+
+- **Prefer a loading skeleton over a generic "Lädt…"/"Loading…" spinner.**
+  When a page fetches data, show placeholder content shaped like the real thing — skeleton
+  tiles/rows with a left-to-right shimmer — instead of swapping the whole page body for a
+  spinner: a spinner-to-full-page swap is a large, jarring layout jump once the fetch resolves,
+  a skeleton isn't.
+- Static chrome that doesn't depend on the fetch (page headings, table column headers, toolbar/
+  sort controls, forms) should render immediately; only the data-shaped content itself gates on
+  a `loading` input/signal and shows placeholders in its place. Concretely: push a `loading`
+  input down into the presentational table/grid component rather than branching the whole page
+  between a spinner and the real content.
+- Reuse the existing building blocks instead of inventing new ones: the `.skeleton-bar` /
+  `.skeleton-bar--narrow` / `.skeleton-rated` CSS classes (`styles.scss`) for table-cell-shaped
+  placeholders, and `TitleTileSkeleton` for poster-tile-shaped placeholders.
+  `TitleGrid`, `CatalogTable`, `ManageTable`, `FlatrateTable`, and `PaidTable` are reference
+  implementations of the `loading` input pattern.
