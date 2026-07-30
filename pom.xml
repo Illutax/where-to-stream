@@ -50,6 +50,17 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- AOP: method-level execution-time logging (shared.platform.observability), for
+             diagnosing slow requests such as /api/catalog. spring-aop + aspectjweaver already
+             came in transitively (via spring-boot-starter-security / spring-boot-starter-data-jpa),
+             but @Aspect/@Around is something this project directly depends on now, so it's declared
+             explicitly rather than left implicit. Formerly named spring-boot-starter-aop; renamed
+             to spring-boot-starter-aspectj in this Spring Boot version. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
+        </dependency>
+
         <!-- SECURITY: form/basic login, method security, and OAuth2/OIDC login (Google). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
