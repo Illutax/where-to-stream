@@ -15,16 +15,16 @@ services:
       - SERVER_SERVLET_SESSION_TIMEOUT=${W2S_SESSION_TIMEOUT:-30m}
       # NOTE: property is initial-admin.USERNAME -> env must be ...INITIALADMIN_USERNAME.
       - W2S_SECURITY_INITIALADMIN_USERNAME=${W2S_ADMIN_USER:-admin}
-      - W2S_SECURITY_INITIALADMIN_PASSWORD=${W2S_ADMIN_PASSWORD}
       # Stable secret so remember-me / persistent login survives restarts (see .env.example).
       - W2S_SECURITY_REMEMBERME_KEY=${W2S_REMEMBER_ME_KEY}
       # Posters come from IMDb by default. Set TMDB_ENABLED=true + a key to use TMDB instead.
       - TMDB_ENABLED=${TMDB_ENABLED:-false}
-      - TMDB_API_KEY=${TMDB_API_KEY:-}
       # Uncomment to log every poster resource fetched (lookup URL + image CDN URL).
       # Dotted form matches the DispatcherServlet example above; canonical env form is
 #      - LOGGING_LEVEL_TECH_DOBLER_WHERE2STREAM_TITLECATALOG=DEBUG.
 #      - logging.level.tech.dobler.where2stream.titlecatalog=DEBUG
+      - logging.level.org.hibernate.SQL=debug 
+    env_file: .env
     depends_on:
       - db
     networks:
