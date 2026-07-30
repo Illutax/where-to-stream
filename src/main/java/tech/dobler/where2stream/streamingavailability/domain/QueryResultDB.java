@@ -2,6 +2,7 @@ package tech.dobler.where2stream.streamingavailability.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import tech.dobler.where2stream.streamingavailability.domain.Availability;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 
@@ -31,9 +32,13 @@ public final class QueryResultDB {
     private final boolean flatrate;
     @Column(name = "languages")
     private final String languages;
+    // Same N+1-under-EAGER as QueryMeta.queries (see its comment) — one QueryResultDB row per
+    // streaming provider, each with its own availabilities collection, so this compounds with
+    // that one: a watchlist of M titles with K providers each was M*K individual round trips.
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "query_result_availabilities", joinColumns = @JoinColumn(name = "query_result_id"))
     @Column(name = "availabilities")
+    @BatchSize(size = 50)
     @AttributeOverrides({
             @AttributeOverride(name = "type", column = @Column(name = "type")),
             @AttributeOverride(name = "sd", column = @Column(name = "sd")),

@@ -2,6 +2,7 @@ package tech.dobler.where2stream.streamingavailability.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 
 import java.time.Instant;
@@ -28,8 +29,13 @@ public class QueryMeta {
     private final Instant creationTime;
     @Column(name = "invalidated")
     private final boolean invalidated;
+    // EAGER without batching means Hibernate issues one SELECT per QueryMeta row to load this
+    // collection (default FetchMode.SELECT) — fine over embedded H2, but N round trips to a real
+    // networked DB add up fast for a watchlist with many cached titles. @BatchSize groups those
+    // into WHERE query_meta_id IN (...) chunks instead, still fully eager (ADR-0011: no OSIV).
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JoinColumn(name = "query_meta_id")
+    @BatchSize(size = 50)
     private final List<QueryResultDB> queries;
 
     public static QueryMeta of(ImdbId imdbId, Instant creationTime, List<QueryResultDB> queries) {
