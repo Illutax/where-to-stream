@@ -161,16 +161,24 @@ export interface UpdateUserRequest {
   enabled: boolean;
 }
 
-/** Static provider metadata for the navbar and provider page (keys match StreamingProvider). */
+/**
+ * Static provider metadata for the navbar and provider page (keys match StreamingProvider).
+ * hasFlatrate/hasPaid mirror the backend enum (StreamingProvider.java) — the API only returns
+ * which titles a provider actually has (empty lists either way), not which section types it
+ * supports, so the provider page's loading skeleton needs its own copy to know which section(s)
+ * to show before the fetch resolves.
+ */
 export interface ProviderInfo {
   key: string;
   label: string;
+  hasFlatrate: boolean;
+  hasPaid: boolean;
 }
 
 export const PROVIDERS: ProviderInfo[] = [
-  { key: 'disney', label: 'Disney+' },
-  { key: 'amazon', label: 'Amazon Prime' },
-  { key: 'youtube', label: 'YouTube Store' },
-  { key: 'netflix', label: 'Netflix' },
-  { key: 'wow', label: 'Sky WOW' },
+  { key: 'disney', label: 'Disney+', hasFlatrate: true, hasPaid: false },
+  { key: 'amazon', label: 'Amazon Prime', hasFlatrate: true, hasPaid: true },
+  { key: 'youtube', label: 'YouTube Store', hasFlatrate: false, hasPaid: true },
+  { key: 'netflix', label: 'Netflix', hasFlatrate: true, hasPaid: false },
+  { key: 'wow', label: 'Sky WOW', hasFlatrate: true, hasPaid: false },
 ];

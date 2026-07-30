@@ -57,17 +57,37 @@ describe('ProviderPage', () => {
     ...over,
   });
 
-  it('shows the heading and skeleton tables immediately, until the provider resolves', () => {
+  it('shows only the flatrate skeleton for a flatrate-only provider (Netflix)', () => {
     setup('netflix');
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Netflix');
     expect(fixture.nativeElement.querySelector('app-flatrate-table')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('app-paid-table')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-paid-table')).toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.skeleton-bar').length).toBeGreaterThan(0);
     expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
 
     httpMock.expectOne((r) => r.url.endsWith('/api/providers/netflix')).flush(page({}));
+  });
+
+  it('shows only the paid skeleton for a paid-only provider (YouTube Store)', () => {
+    setup('youtube');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-flatrate-table')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-paid-table')).not.toBeNull();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/providers/youtube')).flush(page({ provider: 'youtube' }));
+  });
+
+  it('shows both skeletons for a provider offering both (Amazon Prime)', () => {
+    setup('amazon');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-flatrate-table')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-paid-table')).not.toBeNull();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/providers/amazon')).flush(page({ provider: 'amazon' }));
   });
 
   it('loads the provider named by the route param and shows its label', () => {

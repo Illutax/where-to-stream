@@ -30,19 +30,25 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     @if (error()) {
       <app-error-alert [message]="error()" />
     } @else if (loading()) {
-      <!-- Which section(s) will actually have data isn't known until the fetch resolves, so show
-           both as skeletons; whichever ends up empty just disappears once real data arrives. -->
-      <h2>{{ 'provider.included' | transloco }}</h2>
-      @if (userPrefs.viewMode() === 'GRID') {
-        <app-title-grid [entries]="[]" [loading]="true" />
-      } @else {
-        <app-flatrate-table [entries]="[]" [loading]="true" />
+      <!-- Which section(s) this provider has is static (PROVIDERS.hasFlatrate/hasPaid), even
+           though the actual titles aren't known until the fetch resolves — so only the
+           section(s) this provider will actually show get a skeleton (e.g. Netflix never shows
+           a phantom "Buy/Rent" skeleton that then disappears once real data arrives). -->
+      @if (hasFlatrate()) {
+        <h2>{{ 'provider.included' | transloco }}</h2>
+        @if (userPrefs.viewMode() === 'GRID') {
+          <app-title-grid [entries]="[]" [loading]="true" />
+        } @else {
+          <app-flatrate-table [entries]="[]" [loading]="true" />
+        }
       }
-      <h2>{{ 'provider.buyRent' | transloco }}</h2>
-      @if (userPrefs.viewMode() === 'GRID') {
-        <app-title-grid [entries]="[]" [loading]="true" />
-      } @else {
-        <app-paid-table [entries]="[]" [loading]="true" />
+      @if (hasPaid()) {
+        <h2>{{ 'provider.buyRent' | transloco }}</h2>
+        @if (userPrefs.viewMode() === 'GRID') {
+          <app-title-grid [entries]="[]" [loading]="true" />
+        } @else {
+          <app-paid-table [entries]="[]" [loading]="true" />
+        }
       }
     } @else if (page(); as p) {
       @if (p.included.length > 0) {
@@ -90,6 +96,11 @@ export class ProviderPage {
   protected readonly includedTiles = computed(() => this.page()?.included.map(flatrateToTile) ?? []);
   protected readonly paidTiles = computed(() => this.page()?.paid.map(paidToTile) ?? []);
   protected readonly label = signal<string>('');
+  /** Which section(s) the current provider has, known statically (see PROVIDERS) so the loading
+   * skeleton can show only the applicable section(s) before the fetch resolves. Defaults to
+   * both — safe since an unrecognized key 404s once the fetch actually runs. */
+  protected readonly hasFlatrate = signal(true);
+  protected readonly hasPaid = signal(true);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
@@ -120,7 +131,10 @@ export class ProviderPage {
     this.loading.set(true);
     this.error.set(null);
     this.page.set(null);
-    this.label.set(PROVIDERS.find((p) => p.key === key)?.label ?? key);
+    const info = PROVIDERS.find((p) => p.key === key);
+    this.label.set(info?.label ?? key);
+    this.hasFlatrate.set(info?.hasFlatrate ?? true);
+    this.hasPaid.set(info?.hasPaid ?? true);
     this.api.getProvider(key).subscribe({
       next: (page) => {
         this.page.set(page);
