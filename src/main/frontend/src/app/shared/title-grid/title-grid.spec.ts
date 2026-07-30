@@ -60,6 +60,17 @@ describe('TitleGrid', () => {
     expect(fixture.nativeElement.querySelector('.watched-counter').textContent).toContain('1 of 3 watched');
   });
 
+  it('shows skeleton tiles and a skeleton watched-counter while loading', () => {
+    fixture.componentRef.setInput('entries', []);
+    fixture.componentRef.setInput('loading', true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('app-title-tile-skeleton').length).toBeGreaterThan(0);
+    expect(tiles()).toHaveLength(0);
+    expect(fixture.nativeElement.querySelector('.watched-counter')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.skeleton-bar')).not.toBeNull();
+  });
+
   it('emits a seen toggle bubbled up from a tile', () => {
     fixture.componentRef.setInput('entries', [entry({ imdbId: imdbId('tt10'), isRated: false })]);
     fixture.detectChanges();

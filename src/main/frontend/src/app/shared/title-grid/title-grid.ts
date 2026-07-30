@@ -63,7 +63,9 @@ const SKELETON_ROWS = 3;
         }
       </mat-button-toggle-group>
 
-      @if (!loading()) {
+      @if (loading()) {
+        <span class="skeleton-bar skeleton-bar--narrow"></span>
+      } @else {
         <span class="watched-counter">{{ 'grid.watchedOf' | transloco: { watched: watchedCount(), total: total() } }}</span>
       }
     </div>
