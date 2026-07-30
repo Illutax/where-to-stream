@@ -19,6 +19,10 @@ One context may depend on another only through its published `port.in` interface
 - **Work token-sparingly.** Prefer the smallest investigation or change that actually answers
   the question or fixes the issue; avoid redundant re-reading, unnecessary exploration, or
   padding responses.
+- **Look up, don't guess — where it's warranted.** We keep the ADRs maintained precisely so
+  architecture/convention questions don't have to be guessed and only a handful of specifics
+  ever need looking up. Architecture over sprawl: check `docs/adr/README.md` (see below) and
+  follow what's documented instead of improvising a parallel approach.
 
 ## Before writing or reviewing code
 
