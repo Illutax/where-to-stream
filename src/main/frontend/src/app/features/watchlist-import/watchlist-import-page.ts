@@ -10,13 +10,12 @@ import { WatchlistStore } from '../../core/watchlist-store';
 import { WatchlistStatus } from '../../core/models';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
-import { Loading } from '../../shared/loading/loading';
 
 /** Container: view the current user's watchlist status and import an IMDb CSV export (full sync). */
 @Component({
   selector: 'app-watchlist-import-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatCardModule, MatButtonModule, MatMenuModule, Loading, ErrorAlert, TranslocoPipe],
+  imports: [MatCardModule, MatButtonModule, MatMenuModule, ErrorAlert, TranslocoPipe],
   template: `
     <div class="watchlist-heading">
       <h1>{{ 'watchlist.title' | transloco }}</h1>
@@ -28,7 +27,11 @@ import { Loading } from '../../shared/loading/loading';
     <app-error-alert [message]="error()" />
 
     @if (loading()) {
-      <app-loading />
+      <mat-card>
+        <mat-card-content>
+          <p><span class="skeleton-bar skeleton-bar--narrow"></span></p>
+        </mat-card-content>
+      </mat-card>
     } @else if (status(); as s) {
       <mat-card>
         <mat-card-content>
@@ -40,7 +43,11 @@ import { Loading } from '../../shared/loading/loading';
           </p>
         </mat-card-content>
       </mat-card>
+    }
 
+    <!-- The form/clear-button chrome doesn't depend on the fetch, so it renders (disabled) during
+         loading too — only hidden on a failed load, when we don't know the current watchlist state. -->
+    @if (loading() || status()) {
       <h2>{{ 'watchlist.importHeading' | transloco }}</h2>
       <p class="text-muted">
         {{ 'watchlist.importHelp' | transloco }}
@@ -50,12 +57,12 @@ import { Loading } from '../../shared/loading/loading';
           type="file"
           accept=".csv"
           (change)="onFilePicked($any($event.target).files)"
-          [disabled]="busy()" />
-        <button matButton="filled" type="submit" [disabled]="busy() || !file()">{{ 'watchlist.import' | transloco }}</button>
+          [disabled]="busy() || loading()" />
+        <button matButton="filled" type="submit" [disabled]="busy() || loading() || !file()">{{ 'watchlist.import' | transloco }}</button>
       </form>
 
       <div class="watchlist-clear">
-        <button matButton="outlined" (click)="onClear()" [disabled]="busy() || s.count === 0">
+        <button matButton="outlined" (click)="onClear()" [disabled]="loading() || busy() || (status()?.count ?? 0) === 0">
           {{ 'watchlist.clear' | transloco }}
         </button>
       </div>

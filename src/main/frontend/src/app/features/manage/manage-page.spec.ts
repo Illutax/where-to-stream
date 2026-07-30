@@ -35,6 +35,16 @@ describe('ManagePage', () => {
 
   const table = () => fixture.debugElement.query(By.directive(ManageTable)).componentInstance as ManageTable;
 
+  it('renders the table immediately, in a loading state, until the page resolves', () => {
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.directive(ManageTable))).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.skeleton-bar')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/manage') && r.method === 'GET').flush(dto());
+  });
+
   it('loads the manage page and renders the table', () => {
     flushInitialLoad();
     expect(fixture.debugElement.query(By.directive(ManageTable))).not.toBeNull();

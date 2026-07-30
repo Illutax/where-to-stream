@@ -57,6 +57,19 @@ describe('ProviderPage', () => {
     ...over,
   });
 
+  it('shows the heading and skeleton tables immediately, until the provider resolves', () => {
+    setup('netflix');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Netflix');
+    expect(fixture.nativeElement.querySelector('app-flatrate-table')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-paid-table')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.skeleton-bar').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/providers/netflix')).flush(page({}));
+  });
+
   it('loads the provider named by the route param and shows its label', () => {
     setup('netflix');
     httpMock

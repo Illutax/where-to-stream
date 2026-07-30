@@ -31,6 +31,17 @@ describe('AdminUsersPage', () => {
     fixture.detectChanges();
   }
 
+  it('shows the table header and create form immediately, with skeleton rows, until loaded', () => {
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('th').length).toBeGreaterThan(0);
+    expect(fixture.debugElement.query(By.directive(UserCreateForm))).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.skeleton-bar').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/admin/users') && r.method === 'GET').flush([]);
+  });
+
   it('loads and renders the users', () => {
     flushList([user({ id: '1', username: 'admin' }), user({ id: '2', username: 'bob', roles: ['USER'] })]);
     expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(2);

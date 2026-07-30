@@ -5,24 +5,22 @@ import { ManageApi } from '../../core/api/manage-api';
 import { ImdbId } from '../../core/domain';
 import { ManagePage as ManagePageDto } from '../../core/models';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
-import { Loading } from '../../shared/loading/loading';
 import { ManageTable } from '../../shared/manage-table/manage-table';
 
 /** Container: loads the cache-management table and performs invalidate/scrape actions. */
 @Component({
   selector: 'app-manage-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ManageTable, Loading, ErrorAlert, TranslocoPipe],
+  imports: [ManageTable, ErrorAlert, TranslocoPipe],
   template: `
     <h1>{{ 'manage.title' | transloco }}</h1>
-    @if (loading()) {
-      <app-loading />
-    } @else if (error()) {
+    @if (error()) {
       <app-error-alert [message]="error()" />
-    } @else if (page(); as p) {
+    } @else {
       <app-manage-table
-        [rows]="p.rows"
-        [needsScrapeCount]="p.needsScrapeCount"
+        [rows]="page()?.rows ?? []"
+        [needsScrapeCount]="page()?.needsScrapeCount ?? 0"
+        [loading]="loading()"
         (invalidate)="onInvalidate($event)"
         (scrape)="onScrape()" />
     }

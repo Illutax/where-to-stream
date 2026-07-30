@@ -1,10 +1,18 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ImdbId } from '../../core/domain';
+import { ImdbId, imdbId } from '../../core/domain';
 import { ManageRow } from '../../core/models';
+
+/** Placeholder rows shown while loading (see {@link ManageTable.loading}) — never rendered as real data. */
+const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
+  imdbId: imdbId(`tt_skeleton_${i}`),
+  name: '',
+  isRated: false,
+  needsScrape: false,
+}));
 
 /**
  * Presentational cache-management table.
@@ -18,37 +26,59 @@ import { ManageRow } from '../../core/models';
   template: `
     <form (submit)="onScrape($event)" class="scrape-form">
       <p>
-        <span>{{ needsScrapeCount() }}</span> {{ 'manage.needScraping' | transloco }}
+        @if (loading()) {
+          <span class="skeleton-bar skeleton-bar--narrow"></span>
+        } @else {
+          <span>{{ needsScrapeCount() }}</span> {{ 'manage.needScraping' | transloco }}
+        }
       </p>
-      <button matButton="filled" type="submit">{{ 'manage.scrapeButton' | transloco }}</button>
+      <button matButton="filled" type="submit" [disabled]="loading()">{{ 'manage.scrapeButton' | transloco }}</button>
     </form>
 
     <h2>{{ 'manage.invalidateHeading' | transloco }}</h2>
     <form (submit)="onInvalidate($event)">
       <div class="table-scroll">
-      <table mat-table [dataSource]="rows()" [trackBy]="trackByImdbId">
+      <table mat-table [dataSource]="displayRows()" [trackBy]="trackByImdbId">
         <ng-container matColumnDef="select">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let row">
-            <mat-checkbox [checked]="selected().has(row.imdbId)" (change)="toggle(row.imdbId)"
-                          [aria-label]="'manage.select' | transloco: { name: row.name }" />
+            @if (loading()) {
+              <span class="skeleton-bar skeleton-rated"></span>
+            } @else {
+              <mat-checkbox [checked]="selected().has(row.imdbId)" (change)="toggle(row.imdbId)"
+                            [aria-label]="'manage.select' | transloco: { name: row.name }" />
+            }
           </td>
         </ng-container>
 
         <ng-container matColumnDef="title">
           <th mat-header-cell *matHeaderCellDef>{{ 'manage.columnTitle' | transloco }}</th>
-          <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+          <td mat-cell *matCellDef="let row">
+            @if (loading()) {
+              <span class="skeleton-bar"></span>
+            } @else {
+              {{ row.name }}
+            }
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="imdbId">
           <th mat-header-cell *matHeaderCellDef>{{ 'manage.columnImdbId' | transloco }}</th>
-          <td mat-cell *matCellDef="let row">{{ row.imdbId }}</td>
+          <td mat-cell *matCellDef="let row">
+            @if (loading()) {
+              <span class="skeleton-bar skeleton-bar--narrow"></span>
+            } @else {
+              {{ row.imdbId }}
+            }
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>{{ 'manage.columnStatus' | transloco }}</th>
           <td mat-cell *matCellDef="let row">
-            @if (row.needsScrape) {
+            @if (loading()) {
+              <span class="skeleton-bar skeleton-bar--narrow"></span>
+            } @else if (row.needsScrape) {
               <span class="status-pill status-pill--needs-scrape">{{ 'manage.statusNeedsScrape' | transloco }}</span>
             } @else {
               <span class="status-pill status-pill--cached">{{ 'manage.statusCached' | transloco }}</span>
@@ -64,7 +94,7 @@ import { ManageRow } from '../../core/models';
       </table>
       </div>
 
-      <button matButton="filled" type="submit" class="invalidate-button" [disabled]="selected().size === 0">
+      <button matButton="filled" type="submit" class="invalidate-button" [disabled]="loading() || selected().size === 0">
         {{ 'manage.invalidateSelected' | transloco }}
       </button>
     </form>
@@ -84,6 +114,8 @@ import { ManageRow } from '../../core/models';
 export class ManageTable {
   readonly rows = input.required<ManageRow[]>();
   readonly needsScrapeCount = input.required<number>();
+  /** While true, renders placeholder rows instead of {@link rows} (still loading). */
+  readonly loading = input(false);
 
   readonly invalidate = output<ImdbId[]>();
   readonly scrape = output<void>();
@@ -91,6 +123,7 @@ export class ManageTable {
   protected readonly displayedColumns = ['select', 'title', 'imdbId', 'status'];
   protected readonly trackByImdbId = (_: number, row: ManageRow) => row.imdbId;
   protected readonly selected = signal<ReadonlySet<ImdbId>>(new Set());
+  protected readonly displayRows = computed(() => (this.loading() ? SKELETON_ROWS : this.rows()));
 
   protected toggle(imdbId: ImdbId): void {
     const next = new Set(this.selected());

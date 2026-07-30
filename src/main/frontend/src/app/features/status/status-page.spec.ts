@@ -19,6 +19,16 @@ describe('StatusPage', () => {
 
   afterEach(() => httpMock.verify());
 
+  it('shows the status card immediately with skeleton content until loaded', () => {
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-status-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.skeleton-bar')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/status')).flush({ version: '1.2.3', serverStart: '2026-01-01T00:00:00Z' });
+  });
+
   it('loads the status and renders the card with version and start time', () => {
     httpMock
       .expectOne((r) => r.url.endsWith('/api/status'))

@@ -46,6 +46,16 @@ describe('PaidTable', () => {
     expect(rows()[0].textContent).toContain('Nothing here');
   });
 
+  it('shows skeleton rows while loading, ignoring entries', () => {
+    fixture.componentRef.setInput('entries', []);
+    fixture.componentRef.setInput('loading', true);
+    fixture.detectChanges();
+
+    expect(rows().length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelectorAll('.skeleton-bar').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelector('.seen-toggle')).toBeNull();
+  });
+
   it('emits a seen toggle when the ✅/⭕ is clicked', () => {
     fixture.componentRef.setInput('entries', [entry({ imdbId: imdbId('tt10'), isRated: false })]);
     fixture.detectChanges();

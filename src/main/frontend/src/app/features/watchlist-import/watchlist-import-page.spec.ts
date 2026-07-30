@@ -47,6 +47,18 @@ describe('WatchlistImportPage', () => {
     return file;
   }
 
+  it('shows the card and form immediately, in a loading/disabled state, until the status resolves', () => {
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('mat-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.skeleton-bar')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
+    expect((fixture.nativeElement.querySelector('input[type=file]') as HTMLInputElement).disabled).toBe(true);
+    expect((fixture.nativeElement.querySelector('.watchlist-clear button') as HTMLButtonElement).disabled).toBe(true);
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/watchlist') && r.method === 'GET').flush(status());
+  });
+
   it('loads and renders the watchlist status', () => {
     flushInitialLoad(status(5));
     expect(fixture.nativeElement.textContent).toContain('5');

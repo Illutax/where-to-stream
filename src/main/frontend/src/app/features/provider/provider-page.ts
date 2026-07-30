@@ -9,7 +9,6 @@ import { SeenStore } from '../../core/seen-store';
 import { flatrateToTile, paidToTile } from '../../core/tile-entry';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { FlatrateTable } from '../../shared/flatrate-table/flatrate-table';
-import { Loading } from '../../shared/loading/loading';
 import { PaidTable } from '../../shared/paid-table/paid-table';
 import { TitleGrid } from '../../shared/title-grid/title-grid';
 import { ViewToggleButton } from '../../shared/view-toggle-button/view-toggle-button';
@@ -24,14 +23,27 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 @Component({
   selector: 'app-provider-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FlatrateTable, PaidTable, TitleGrid, ViewToggleButton, Loading, ErrorAlert, TranslocoPipe],
+  imports: [FlatrateTable, PaidTable, TitleGrid, ViewToggleButton, ErrorAlert, TranslocoPipe],
   template: `
     <h1>{{ label() }}</h1>
     <app-view-toggle-button />
-    @if (loading()) {
-      <app-loading />
-    } @else if (error()) {
+    @if (error()) {
       <app-error-alert [message]="error()" />
+    } @else if (loading()) {
+      <!-- Which section(s) will actually have data isn't known until the fetch resolves, so show
+           both as skeletons; whichever ends up empty just disappears once real data arrives. -->
+      <h2>{{ 'provider.included' | transloco }}</h2>
+      @if (userPrefs.viewMode() === 'GRID') {
+        <app-title-grid [entries]="[]" [loading]="true" />
+      } @else {
+        <app-flatrate-table [entries]="[]" [loading]="true" />
+      }
+      <h2>{{ 'provider.buyRent' | transloco }}</h2>
+      @if (userPrefs.viewMode() === 'GRID') {
+        <app-title-grid [entries]="[]" [loading]="true" />
+      } @else {
+        <app-paid-table [entries]="[]" [loading]="true" />
+      }
     } @else if (page(); as p) {
       @if (p.included.length > 0) {
         <h2>{{ 'provider.included' | transloco }}</h2>

@@ -73,6 +73,18 @@ describe('ManageTable', () => {
     expect(emitted).toEqual([]);
   });
 
+  it('shows skeleton rows and disables actions while loading', () => {
+    fixture.componentRef.setInput('rows', []);
+    fixture.componentRef.setInput('loading', true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelectorAll('.skeleton-bar').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelector('mat-checkbox')).toBeNull();
+    expect(invalidateButton().disabled).toBe(true);
+    expect((fixture.nativeElement.querySelector('.scrape-form button') as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('emits scrape when the scrape form is submitted', () => {
     let scraped = 0;
     component.scrape.subscribe(() => scraped++);

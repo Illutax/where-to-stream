@@ -3,22 +3,19 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { StatusApi } from '../../core/api/status-api';
 import { Status } from '../../core/models';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
-import { Loading } from '../../shared/loading/loading';
 import { StatusCard } from '../../shared/status-card/status-card';
 
 /** Container: loads build/runtime status. */
 @Component({
   selector: 'app-status-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [StatusCard, Loading, ErrorAlert, TranslocoPipe],
+  imports: [StatusCard, ErrorAlert, TranslocoPipe],
   template: `
     <h1>{{ 'status.title' | transloco }}</h1>
-    @if (loading()) {
-      <app-loading />
-    } @else if (error()) {
+    @if (error()) {
       <app-error-alert [message]="error()" />
-    } @else if (status(); as s) {
-      <app-status-card [status]="s" />
+    } @else {
+      <app-status-card [status]="status()" [loading]="loading()" />
     }
   `,
 })
