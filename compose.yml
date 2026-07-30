@@ -23,7 +23,7 @@ services:
       # Dotted form matches the DispatcherServlet example above; canonical env form is
 #      - LOGGING_LEVEL_TECH_DOBLER_WHERE2STREAM_TITLECATALOG=DEBUG.
 #      - logging.level.tech.dobler.where2stream.titlecatalog=DEBUG
-      - logging.level.org.hibernate.SQL=debug 
+#      - logging.level.org.hibernate.SQL=debug 
     env_file: .env
     depends_on:
       - db
