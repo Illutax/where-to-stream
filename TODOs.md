@@ -550,6 +550,45 @@ Ebenso keine Prüfung für das initiale Admin-Passwort (`w2s.security.initial-ad
   mit erklärendem Kommentar zur Relaxed-Binding-Eigenheit). Nur die fehlende
   Längen-/Komplexitätsprüfung selbst bleibt offen.
 
+## Geplant: Async Cache-Refresh statt synchronem Dashboard-Reload (2026-07-30)
+
+Vollständiger Plan: [`docs/CACHE_REFRESH_PLAN.md`](docs/CACHE_REFRESH_PLAN.md),
+Entscheidung: [ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md).
+Auslöser: die „Cache Verwalten"-Seite (`/manage`) hat aktuell keinen beobachtbaren Effekt, weil
+`StreamInfoService.resolveAll(...)` (Dashboard/Provider-Seiten) invalidierte/abgelaufene Einträge
+synchron im selben Request nachlädt — ein einziger Dashboard-Aufruf hebt jede manuelle
+Invalidierung sofort wieder auf, bevor die Manage-Seite etwas zu tun hätte.
+
+### ⬜ TODO-43 — Manage-Tabelle: Zeitstempel statt reinem „gecacht"-Boolean
+`ManageRowDto`/`ManageTable` zeigen nur `needsScrape` (ja/nein), keinen Zeitpunkt.
+- **Akzeptanzkriterium:** Pro Titel wird der Zeitpunkt des letzten Scrapes angezeigt (oder „nie"),
+  nicht mehr nur ein binärer Pill; ein invalidierter Titel zeigt weiterhin „muss gescrapt werden".
+- Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 1.
+
+### ⬜ TODO-44 — `resolveAll` liefert veraltete Daten sofort + Refresh im Hintergrund
+`StreamInfoService.resolveAll(...)` blockiert den Request auf jedem invalidierten/abgelaufenen
+Treffer, statt die vorhandenen Werte sofort zu liefern und asynchron nachzuladen.
+- **Akzeptanzkriterium:** Ein vorhandener, aber veralteter Cache-Eintrag wird sofort (mit
+  `stale = true`) zurückgegeben; der Refresh läuft dedupliziert im Hintergrund (`@Async`). Nur ein
+  nie gecachter Titel bleibt synchron. Neue Spalte `due_for_refresh_at` (Jitter, beim Schreiben
+  gewürfelt) legt den Grundstein für TODO-46.
+- Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 2.
+
+### ⬜ TODO-45 — „Veraltet"-Banner auf Dashboard und Provider-Seiten
+Es gibt aktuell keine Kennzeichnung, wenn angezeigte Streaming-Verfügbarkeiten veraltet sind.
+- **Akzeptanzkriterium:** Ein kleiner, seitenweiter Hinweis-Banner (kein Fehler) erscheint, wenn
+  mind. ein angezeigter Titel `stale` ist (kein Per-Zeile-Flag, YAGNI).
+- Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 3. Abhängig von TODO-44.
+
+### ⬜ TODO-46 — Scheduled Job für proaktives, gestaffeltes Nachladen
+Titel, die niemand ansieht, veralten unbegrenzt, bis sie zufällig wieder aufgerufen werden.
+- **Akzeptanzkriterium:** Ein täglicher (konfigurierbarer) Job aktualisiert nur fällige Titel
+  (invalidiert, oder TTL × Jitter-Faktor 1,5–2,0 verstrichen) unter den aktuell gewatchlisteten
+  Titeln — kein Effekt, wenn nichts fällig ist (keine unnötige Last bei Nichtnutzung).
+- Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 4. Abhängig von TODO-44 (Spalte/Tracker).
+
+---
+
 ### ✅ F12 — Controller umgehen `ApiExceptionHandler` via rohem `ResponseStatusException`
 `MeApiController` (6×), `WatchlistApiController` (2×) und `ImdbSearchApiController` (1×) warfen
 `ResponseStatusException` direkt statt einer gemappten Exception, wodurch die Fehlermeldung ohne
