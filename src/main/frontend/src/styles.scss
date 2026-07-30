@@ -5,6 +5,11 @@
 // inside the fat jar.
 html {
   color-scheme: light dark;
+  // Reserve the vertical scrollbar's width up front, whether or not content currently overflows.
+  // Without this, a page whose skeleton fits the viewport but whose real content (once loaded)
+  // doesn't causes the scrollbar to appear only after loading — narrowing the content area and
+  // reflowing everything (grid columns included), which reads as a late layout jump.
+  scrollbar-gutter: stable;
 
   @include mat.theme(
     (
@@ -55,6 +60,12 @@ app-root {
   // Let the flex child shrink below its content so mat-drawer-content scrolls, not the whole page.
   .app-sidenav-container {
     min-height: 0;
+  }
+
+  // mat-sidenav-content (not html/body, see scrollbar-gutter above) is what scrolls at this
+  // width — reserve its scrollbar's width up front too, for the same reason.
+  mat-sidenav-content {
+    scrollbar-gutter: stable;
   }
 }
 
