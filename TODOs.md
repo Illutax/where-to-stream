@@ -550,42 +550,63 @@ Ebenso keine Prüfung für das initiale Admin-Passwort (`w2s.security.initial-ad
   mit erklärendem Kommentar zur Relaxed-Binding-Eigenheit). Nur die fehlende
   Längen-/Komplexitätsprüfung selbst bleibt offen.
 
-## Geplant: Async Cache-Refresh statt synchronem Dashboard-Reload (2026-07-30)
+## Async Cache-Refresh statt synchronem Dashboard-Reload (2026-07-30/31)
 
 Vollständiger Plan: [`docs/CACHE_REFRESH_PLAN.md`](docs/CACHE_REFRESH_PLAN.md),
 Entscheidung: [ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md).
-Auslöser: die „Cache Verwalten"-Seite (`/manage`) hat aktuell keinen beobachtbaren Effekt, weil
+Auslöser: die „Cache Verwalten"-Seite (`/manage`) hatte keinen beobachtbaren Effekt, weil
 `StreamInfoService.resolveAll(...)` (Dashboard/Provider-Seiten) invalidierte/abgelaufene Einträge
-synchron im selben Request nachlädt — ein einziger Dashboard-Aufruf hebt jede manuelle
+synchron im selben Request nachlud — ein einziger Dashboard-Aufruf hob jede manuelle
 Invalidierung sofort wieder auf, bevor die Manage-Seite etwas zu tun hätte.
 
-### ⬜ TODO-43 — Manage-Tabelle: Zeitstempel statt reinem „gecacht"-Boolean
-`ManageRowDto`/`ManageTable` zeigen nur `needsScrape` (ja/nein), keinen Zeitpunkt.
+### ✅ TODO-43 — Manage-Tabelle: Zeitstempel statt reinem „gecacht"-Boolean
+`ManageRowDto`/`ManageTable` zeigten nur `needsScrape` (ja/nein), keinen Zeitpunkt.
 - **Akzeptanzkriterium:** Pro Titel wird der Zeitpunkt des letzten Scrapes angezeigt (oder „nie"),
   nicht mehr nur ein binärer Pill; ein invalidierter Titel zeigt weiterhin „muss gescrapt werden".
-- Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 1.
+- **Erledigt:** `QueryMetaRepository.findByImdbIdIn(...)` (ohne Invalidiert-Filter) + `ManageRowDto.lastScrapedAt`;
+  `manage-table.ts` zeigt bei `needsScrape=false` den formatierten Zeitpunkt (Angular `DatePipe`)
+  statt der bisherigen „gecacht"-Pill (`manage.statusCached` entfernt).
+  Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 1.
 
-### ⬜ TODO-44 — `resolveAll` liefert veraltete Daten sofort + Refresh im Hintergrund
-`StreamInfoService.resolveAll(...)` blockiert den Request auf jedem invalidierten/abgelaufenen
+### ✅ TODO-44 — `resolveAll` liefert veraltete Daten sofort + Refresh im Hintergrund
+`StreamInfoService.resolveAll(...)` blockierte den Request auf jedem invalidierten/abgelaufenen
 Treffer, statt die vorhandenen Werte sofort zu liefern und asynchron nachzuladen.
 - **Akzeptanzkriterium:** Ein vorhandener, aber veralteter Cache-Eintrag wird sofort (mit
   `stale = true`) zurückgegeben; der Refresh läuft dedupliziert im Hintergrund (`@Async`). Nur ein
   nie gecachter Titel bleibt synchron. Neue Spalte `due_for_refresh_at` (Jitter, beim Schreiben
   gewürfelt) legt den Grundstein für TODO-46.
-- Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 2.
+- **Erledigt:** `resolveAll` liefert `Map<ImdbId, ResolvedEntry>` (`results`, `stale`); ein
+  vorhandener invalidierter/abgelaufener Eintrag wird sofort mit `stale=true` zurückgegeben und
+  löst `StreamInfoService.refreshInBackground(imdbId)` (`@Async("cacheRefreshExecutor")`,
+  aufgerufen über den bestehenden `self`-Proxy) an, dedupliziert über die neue
+  `RefreshInFlightTracker`-Komponente (`shared/platform/concurrency`); ein nie gecachter Titel
+  bleibt synchron. Liquibase `015-query-meta-due-for-refresh-at.xml` ergänzt `due_for_refresh_at`;
+  `StreamInfoService.fetch(...)` würfelt ihn beim Schreiben (`wer-streamt.invalidate.jitter-min-factor`/
+  `-max-factor`, Default 1.5/2.0). Neue `AsyncConfig` (`@EnableAsync`, `cacheRefreshExecutor`,
+  Pool-Größe 2 — der bestehende `RateLimiter` drosselt ohnehin).
+  Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 2.
 
-### ⬜ TODO-45 — „Veraltet"-Banner auf Dashboard und Provider-Seiten
-Es gibt aktuell keine Kennzeichnung, wenn angezeigte Streaming-Verfügbarkeiten veraltet sind.
+### ✅ TODO-45 — „Veraltet"-Banner auf Dashboard und Provider-Seiten
+Es gab keine Kennzeichnung, wenn angezeigte Streaming-Verfügbarkeiten veraltet sind.
 - **Akzeptanzkriterium:** Ein kleiner, seitenweiter Hinweis-Banner (kein Fehler) erscheint, wenn
   mind. ein angezeigter Titel `stale` ist (kein Per-Zeile-Flag, YAGNI).
-- Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 3. Abhängig von TODO-44.
+- **Erledigt:** `CatalogPageDto` (`entries` + `hasStaleEntries`) und `ProviderPageDto.hasStaleEntries`;
+  neue `StaleDataBanner`-Komponente (Vorlage `ErrorAlert`, eigenes Token
+  `--mat-sys-secondary-container`) auf Dashboard und Provider-Seite eingebunden.
+  Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 3.
 
-### ⬜ TODO-46 — Scheduled Job für proaktives, gestaffeltes Nachladen
+### ✅ TODO-46 — Scheduled Job für proaktives, gestaffeltes Nachladen
 Titel, die niemand ansieht, veralten unbegrenzt, bis sie zufällig wieder aufgerufen werden.
 - **Akzeptanzkriterium:** Ein täglicher (konfigurierbarer) Job aktualisiert nur fällige Titel
   (invalidiert, oder TTL × Jitter-Faktor 1,5–2,0 verstrichen) unter den aktuell gewatchlisteten
   Titeln — kein Effekt, wenn nichts fällig ist (keine unnötige Last bei Nichtnutzung).
-- Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 4. Abhängig von TODO-44 (Spalte/Tracker).
+- **Erledigt:** `BackgroundCacheRefreshService.refreshDueEntries()` (batch-lädt wie
+  `CacheManagementService.managePage()` und reduziert auf die jeweils neueste `QueryMeta`-Zeile pro
+  Titel, statt einer eigenen `@Query`) + `adapter/in/scheduled/CacheRefreshScheduler`
+  (`@Scheduled(cron = "${wer-streamt.background-refresh.cron:0 0 4 * * *}")`,
+  `wer-streamt.background-refresh.enabled` als Not-Aus). Teilt sich `RefreshInFlightTracker` und
+  `StreamInfoService.refreshInBackground(...)` mit dem bedarfsgetriebenen Pfad aus TODO-44.
+  Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 4.
 
 ---
 

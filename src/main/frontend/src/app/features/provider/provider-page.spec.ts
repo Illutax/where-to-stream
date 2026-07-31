@@ -54,6 +54,7 @@ describe('ProviderPage', () => {
     provider: 'netflix',
     included: [],
     paid: [],
+    hasStaleEntries: false,
     ...over,
   });
 
@@ -167,5 +168,21 @@ describe('ProviderPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nothing available');
+  });
+
+  it('shows the stale-data banner when the response has stale entries', () => {
+    setup('netflix');
+    httpMock.expectOne((r) => r.url.endsWith('/api/providers/netflix')).flush(page({ hasStaleEntries: true }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.stale-data-banner')).not.toBeNull();
+  });
+
+  it('hides the stale-data banner when nothing is stale', () => {
+    setup('netflix');
+    httpMock.expectOne((r) => r.url.endsWith('/api/providers/netflix')).flush(page({}));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.stale-data-banner')).toBeNull();
   });
 });

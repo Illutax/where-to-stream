@@ -21,6 +21,6 @@ describe('ProviderApi', () => {
     api.getProvider('netflix').subscribe();
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/providers/netflix'));
     expect(req.request.method).toBe('GET');
-    req.flush({ provider: 'netflix', included: [], paid: [] });
+    req.flush({ provider: 'netflix', included: [], paid: [], hasStaleEntries: false });
   });
 });

@@ -34,7 +34,7 @@ class WerStreamtEsSourceTest {
 
     // parse() does not hit the network, so the rate limiter is irrelevant here (disabled).
     private final WerStreamtEsSource client = new WerStreamtEsSource(
-            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)),
+            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0), new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *")),
             new RealConnectionFactory());
 
     @Mock
@@ -42,7 +42,7 @@ class WerStreamtEsSourceTest {
 
     private static WerStreamtEsSource clientWithFakeConnection(Connection connection) {
         return new WerStreamtEsSource(
-                new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)),
+                new WerStreamtProperties(new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0), new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *")),
                 uri -> connection);
     }
 

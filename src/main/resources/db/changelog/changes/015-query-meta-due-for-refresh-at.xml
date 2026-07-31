@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="015-query-meta-due-for-refresh-at" author="vdobler">
+        <comment>
+            ADR-0016: staggered background refresh needs a per-row due date so many titles cached
+            around the same time don't all become due for re-scraping at once (thundering herd).
+            Nullable: existing rows get one on their next scrape.
+        </comment>
+        <addColumn tableName="query_meta">
+            <column name="due_for_refresh_at" type="TIMESTAMP"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

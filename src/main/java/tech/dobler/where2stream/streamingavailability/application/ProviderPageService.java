@@ -29,12 +29,14 @@ public class ProviderPageService {
     private final WatchlistCatalogPort watchlistCatalogPort;
 
     public ProviderPageDto pageFor(StreamingProvider provider, UUID userId) {
+        final boolean hasStaleEntries = aggregateService.hasStaleEntries(userId);
         if (provider == StreamingProvider.AMAZON) {
             // Amazon needs both lists; contentFor resolves the catalogue once for both.
             final var content = aggregateService.contentFor(provider.serviceName(), userId);
             return new ProviderPageDto(provider.key(),
                     includedDtos(content.included()),
-                    paidDtos(content.paid(), userId));
+                    paidDtos(content.paid(), userId),
+                    hasStaleEntries);
         }
 
         final var included = provider.hasFlatrate()
@@ -43,7 +45,7 @@ public class ProviderPageService {
         final var paid = provider.hasPaid()
                 ? paidDtos(aggregateService.paid(provider.serviceName(), userId), userId)
                 : List.<PaidEntryDto>of();
-        return new ProviderPageDto(provider.key(), included, paid);
+        return new ProviderPageDto(provider.key(), included, paid, hasStaleEntries);
     }
 
     private static List<FlatrateEntryDto> includedDtos(List<ImdbEntry> entries) {

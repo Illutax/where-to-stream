@@ -69,6 +69,15 @@ class ProviderPageServiceTest {
     }
 
     @Test
+    void pageForCarriesHasStaleEntriesFromAggregateService() {
+        when(aggregateService.contentFor("Prime Video", USER)).thenReturn(
+                new AggregateService.ServiceContent(List.of(), List.of()));
+        when(aggregateService.hasStaleEntries(USER)).thenReturn(true);
+
+        assertThat(service.pageFor(StreamingProvider.AMAZON, USER).hasStaleEntries()).isTrue();
+    }
+
+    @Test
     void flatrateOnlyProviderHasNoPaidAndNeverQueriesPaid() {
         when(aggregateService.included("Disney+", USER)).thenReturn(List.of(entry("tt1", "Movie", "2020-01-01", 2020)));
 

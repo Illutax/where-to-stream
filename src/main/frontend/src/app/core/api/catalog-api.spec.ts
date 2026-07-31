@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { CatalogApi } from './catalog-api';
 import { imdbId, releaseYear, watchlistDate } from '../domain';
-import { OverviewEntry } from '../models';
+import { CatalogPage } from '../models';
 
 describe('CatalogApi', () => {
   let api: CatalogApi;
@@ -20,12 +20,15 @@ describe('CatalogApi', () => {
   afterEach(() => httpMock.verify());
 
   it('requests the catalogue from the "../api/"-derived base and returns the body', () => {
-    const payload: OverviewEntry[] = [
-      { isRated: true, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
-    ];
+    const payload: CatalogPage = {
+      entries: [
+        { isRated: true, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
+      ],
+      hasStaleEntries: false,
+    };
 
-    let received: OverviewEntry[] | undefined;
-    api.getCatalog().subscribe((entries) => (received = entries));
+    let received: CatalogPage | undefined;
+    api.getCatalog().subscribe((page) => (received = page));
 
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/catalog'));
     expect(req.request.method).toBe('GET');

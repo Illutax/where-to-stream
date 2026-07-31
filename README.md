@@ -39,6 +39,10 @@ and presents each user's list as per-provider web pages (Netflix, Prime Video, D
    and considered stale after a configurable number of days.
    The cache is **global** (keyed by IMDb id, shared across users);
    outbound requests are rate-limited to stay polite.
+   A stale or invalidated title is still served immediately from cache while its refresh runs
+   **in the background** (`hasStaleEntries` on the catalogue/provider pages flags this to the UI);
+   only a title with no cached entry at all blocks the request.
+   A scheduled job proactively refreshes titles nobody is actively viewing (see [ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md)).
 4. The Angular SPA renders each user's aggregated availability per streaming service.
 
 ## Prerequisites
@@ -255,8 +259,11 @@ Key properties (`src/main/resources/application.properties`):
 | Property | Default | Description |
 | --- | --- | --- |
 | `server.port` | `8001` | HTTP port (Docker overrides to `8080`) |
-| `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is refetched |
+| `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is considered stale |
+| `wer-streamt.invalidate.jitter-min-factor` / `-max-factor` | `1.5` / `2.0` | Staggering window (as a multiple of `after-days`) for the background refresh due date, so titles cached together don't all become due at once (ADR-0016) |
 | `wer-streamt.rate-limit.requests-per-second` | `2` | Outbound throttle for werstreamt.es (`<= 0` disables) |
+| `wer-streamt.background-refresh.enabled` | `true` | Not-off switch for the proactive scheduled cache-refresh job (ADR-0016) |
+| `wer-streamt.background-refresh.cron` | `0 0 4 * * *` | When the scheduled cache-refresh job runs |
 | `imdb-poster.rate-limit.requests-per-second` | `2` | Outbound throttle for the IMDb poster scraper (`<= 0` disables) |
 | `poster.negative-cache-days` | `14` | How long a "no poster" result is cached before re-checking |
 | `tmdb.enabled` | `false` | Use TMDB (not IMDb) as the poster source; also needs `tmdb.api-key` |

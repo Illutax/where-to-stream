@@ -59,15 +59,16 @@ class CatalogOverviewServiceTest {
         final var apple = entry("tt1", "Apple");
         when(watchlistCatalogPort.findAll(USER)).thenReturn(List.of(zebra, apple));
         when(streamInfoService.resolveAll(List.of(id("tt2"), id("tt1")))).thenReturn(Map.of(
-                id("tt1"), List.of(flatrate("tt1", "Netflix")),
-                id("tt2"), List.<QueryResult>of()));
+                id("tt1"), new ResolvedEntry(List.of(flatrate("tt1", "Netflix")), false),
+                id("tt2"), new ResolvedEntry(List.of(), false)));
 
-        final List<OverviewEntryDto> overview = service.overview(USER);
+        final var page = service.overviewPage(USER);
 
         // sorted by name: Apple before Zebra; available services rendered for the resolved entry,
         // null for the unavailable one.
-        assertThat(overview).extracting(OverviewEntryDto::name, OverviewEntryDto::services)
+        assertThat(page.entries()).extracting(OverviewEntryDto::name, OverviewEntryDto::services)
                 .containsExactly(tuple("Apple", "Netflix"), tuple("Zebra", null));
+        assertThat(page.hasStaleEntries()).isFalse();
 
         // single batched lookup (no N+1)
         final ArgumentCaptor<Collection<ImdbId>> captor = ArgumentCaptor.captor();
@@ -79,10 +80,20 @@ class CatalogOverviewServiceTest {
     void overviewJoinsMultipleServiceLabelsWithLanguages() {
         final var e = entry("tt1", "Movie");
         when(watchlistCatalogPort.findAll(USER)).thenReturn(List.of(e));
-        when(streamInfoService.resolveAll(List.of(id("tt1")))).thenReturn(Map.of(id("tt1"), List.of(
+        when(streamInfoService.resolveAll(List.of(id("tt1")))).thenReturn(Map.of(id("tt1"), new ResolvedEntry(List.of(
                 new QueryResult(id("tt1"), "Netflix", true, List.of(), null),
-                new QueryResult(id("tt1"), "Prime Video", true, List.of(), "Deutsch"))));
+                new QueryResult(id("tt1"), "Prime Video", true, List.of(), "Deutsch")), false)));
 
-        assertThat(service.overview(USER).get(0).services()).isEqualTo("Netflix, Prime Video (Deutsch)");
+        assertThat(service.overviewPage(USER).entries().get(0).services()).isEqualTo("Netflix, Prime Video (Deutsch)");
+    }
+
+    @Test
+    void overviewPageReportsHasStaleEntriesWhenAnyResolvedEntryIsStale() {
+        final var e = entry("tt1", "Movie");
+        when(watchlistCatalogPort.findAll(USER)).thenReturn(List.of(e));
+        when(streamInfoService.resolveAll(List.of(id("tt1"))))
+                .thenReturn(Map.of(id("tt1"), new ResolvedEntry(List.of(flatrate("tt1", "Netflix")), true)));
+
+        assertThat(service.overviewPage(USER).hasStaleEntries()).isTrue();
     }
 }

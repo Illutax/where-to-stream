@@ -37,7 +37,7 @@ public abstract class AbstractQueryMetaRepositoryTests {
 //        final var timestamp = Instant.parse("2024-06-17T10:00:00Z");
         final var imdbId = ImdbId.of("tt0123755");
         final var timestamp = Instant.now();
-        final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
+        final var entry = new QueryMeta(null, imdbId, timestamp, null, false, List.of());
 
         // Act
         final var saveResult = sut.save(entry);
@@ -55,7 +55,7 @@ public abstract class AbstractQueryMetaRepositoryTests {
         // Arrange
         final var imdbId = ImdbId.of("tt0123755");
         final var timestamp = Instant.now();
-        final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
+        final var entry = new QueryMeta(null, imdbId, timestamp, null, false, List.of());
 
         // Act
         sut.save(entry);
@@ -73,10 +73,10 @@ public abstract class AbstractQueryMetaRepositoryTests {
         // Arrange
         final var imdbId = ImdbId.of("tt0123755");
         final var timestamp = Instant.parse("2024-06-15T10:15:30Z");
-        final var entry = new QueryMeta(null, imdbId, timestamp, false, List.of());
-        final var entry2 = new QueryMeta(null, imdbId, timestamp.plusSeconds(15), false, List.of());
-        final var entry3 = new QueryMeta(null, imdbId, timestamp.plusSeconds(20), true, List.of());
-        final var entry4 = new QueryMeta(null, imdbId, timestamp.minusSeconds(15), false, List.of());
+        final var entry = new QueryMeta(null, imdbId, timestamp, null, false, List.of());
+        final var entry2 = new QueryMeta(null, imdbId, timestamp.plusSeconds(15), null, false, List.of());
+        final var entry3 = new QueryMeta(null, imdbId, timestamp.plusSeconds(20), null, true, List.of());
+        final var entry4 = new QueryMeta(null, imdbId, timestamp.minusSeconds(15), null, false, List.of());
 
         // Act
         sut.saveAll(List.of(entry, entry2, entry3, entry4));
@@ -94,7 +94,7 @@ public abstract class AbstractQueryMetaRepositoryTests {
         // Arrange
         final var imdbId = ImdbId.of("tt0123755");
         final var timestamp = Instant.now();
-        final var entry = new QueryMeta(null, imdbId, timestamp, true, List.of());
+        final var entry = new QueryMeta(null, imdbId, timestamp, null, true, List.of());
 
         // Act
         sut.save(entry);
@@ -106,11 +106,29 @@ public abstract class AbstractQueryMetaRepositoryTests {
 
     @Test
     @Transactional
+    void findByImdbIdIn_includesInvalidatedRows() {
+        // Arrange: tt1 has a valid row, tt2 only an invalidated one — findByImdbIdIn (unlike the
+        // AndInvalidatedIsFalse variant) must still surface tt2 (e.g. for "last scraped at").
+        final var timestamp = Instant.now();
+        sut.save(new QueryMeta(null, ImdbId.of("tt1"), timestamp, null, false, List.of()));
+        sut.save(new QueryMeta(null, ImdbId.of("tt2"), timestamp, null, true, List.of()));
+        entityManager.flush();
+        entityManager.clear();
+
+        // Act
+        final var found = sut.findByImdbIdIn(List.of(ImdbId.of("tt1"), ImdbId.of("tt2")));
+
+        // Assert
+        assertThat(found).extracting(QueryMeta::getImdbId).containsExactlyInAnyOrder(ImdbId.of("tt1"), ImdbId.of("tt2"));
+    }
+
+    @Test
+    @Transactional
     void invalidateByImdbIds_marksRowsAndHidesThem() {
         // Arrange
         final var timestamp = Instant.now();
-        sut.save(new QueryMeta(null, ImdbId.of("tt1"), timestamp, false, List.of()));
-        sut.save(new QueryMeta(null, ImdbId.of("tt2"), timestamp, false, List.of()));
+        sut.save(new QueryMeta(null, ImdbId.of("tt1"), timestamp, null, false, List.of()));
+        sut.save(new QueryMeta(null, ImdbId.of("tt2"), timestamp, null, false, List.of()));
         entityManager.flush();
         entityManager.clear();
 

@@ -2,14 +2,18 @@ package tech.dobler.where2stream.streamingavailability.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tech.dobler.where2stream.streamingavailability.application.dto.CatalogPageDto;
 import tech.dobler.where2stream.streamingavailability.application.dto.OverviewEntryDto;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.streamingavailability.application.StreamInfoService;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.shared.platform.observability.LogExecutionTime;
+import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -24,20 +28,27 @@ public class CatalogOverviewService {
     private final StreamInfoService streamInfoService;
 
     @LogExecutionTime
-    public List<OverviewEntryDto> overview(UUID userId) {
+    public CatalogPageDto overviewPage(UUID userId) {
         final var entries = watchlistCatalogPort.findAll(userId);
         // Resolve all entries in a single batch instead of one query per entry (avoids N+1).
         final var resolved = streamInfoService.resolveAll(entries.stream().map(ImdbEntry::imdbId).toList());
-        return entries.stream()
+        final var overview = entries.stream()
                 .map(entry -> new OverviewEntryDto(
                         entry.isRated(),
                         entry.name(),
                         entry.imdbId(),
                         entry.year(),
                         entry.added(),
-                        StreamInfoService.toAvailableServiceNames(resolved.getOrDefault(entry.imdbId(), List.of()))
+                        StreamInfoService.toAvailableServiceNames(resultsOf(resolved, entry.imdbId()))
                                 .orElse(null)))
                 .sorted(Comparator.comparing(OverviewEntryDto::name))
                 .toList();
+        final var hasStaleEntries = resolved.values().stream().anyMatch(ResolvedEntry::stale);
+        return new CatalogPageDto(overview, hasStaleEntries);
+    }
+
+    private static List<QueryResult> resultsOf(Map<ImdbId, ResolvedEntry> resolved, ImdbId imdbId) {
+        final var entry = resolved.get(imdbId);
+        return entry == null ? List.of() : entry.results();
     }
 }

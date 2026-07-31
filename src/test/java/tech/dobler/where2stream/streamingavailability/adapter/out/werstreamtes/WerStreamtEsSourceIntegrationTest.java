@@ -23,7 +23,7 @@ class WerStreamtEsSourceIntegrationTest {
     private static final ImdbId IMDB_ID = ImdbId.of("tt0822847");
 
     private final WerStreamtEsSource client = new WerStreamtEsSource(
-            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28), new WerStreamtProperties.RateLimit(0)),
+            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0), new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *")),
             new RealConnectionFactory());
 
     private List<QueryResult> parseFixture() throws Exception {

@@ -49,13 +49,15 @@ class ProviderApiControllerTest {
         when(providerPageService.pageFor(eq(StreamingProvider.AMAZON), eq(USER))).thenReturn(new ProviderPageDto(
                 "amazon",
                 List.of(new FlatrateEntryDto(true, "Incl", ImdbId.of("tt1"), ReleaseYear.of(2020), WatchlistDate.of("2020-01-01"))),
-                List.of(new PaidEntryDto("Paid", ImdbId.of("tt2"), "kaufen: HD: 9,99 ", WatchlistDate.of("2021-01-01"), false, "2021", "Deutsch"))));
+                List.of(new PaidEntryDto("Paid", ImdbId.of("tt2"), "kaufen: HD: 9,99 ", WatchlistDate.of("2021-01-01"), false, "2021", "Deutsch")),
+                true));
 
         mockMvc.perform(get("/api/providers/amazon").principal(alice()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provider").value("amazon"))
                 .andExpect(jsonPath("$.included[0].name").value("Incl"))
-                .andExpect(jsonPath("$.paid[0].price").value("kaufen: HD: 9,99 "));
+                .andExpect(jsonPath("$.paid[0].price").value("kaufen: HD: 9,99 "))
+                .andExpect(jsonPath("$.hasStaleEntries").value(true));
     }
 
     @Test

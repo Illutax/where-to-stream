@@ -13,7 +13,7 @@ describe('ManagePage', () => {
   let httpMock: HttpTestingController;
 
   const dto = (needsScrapeCount = 1): ManagePageDto => ({
-    rows: [{ imdbId: imdbId('tt1'), name: 'Alpha', isRated: true, needsScrape: true }],
+    rows: [{ imdbId: imdbId('tt1'), name: 'Alpha', isRated: true, needsScrape: true, lastScrapedAt: null }],
     needsScrapeCount,
   });
 

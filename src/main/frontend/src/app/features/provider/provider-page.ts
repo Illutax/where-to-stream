@@ -10,6 +10,7 @@ import { flatrateToTile, paidToTile } from '../../core/tile-entry';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
 import { FlatrateTable } from '../../shared/flatrate-table/flatrate-table';
 import { PaidTable } from '../../shared/paid-table/paid-table';
+import { StaleDataBanner } from '../../shared/stale-data-banner/stale-data-banner';
 import { TitleGrid } from '../../shared/title-grid/title-grid';
 import { ViewToggleButton } from '../../shared/view-toggle-button/view-toggle-button';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -23,64 +24,67 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 @Component({
   selector: 'app-provider-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FlatrateTable, PaidTable, TitleGrid, ViewToggleButton, ErrorAlert, TranslocoPipe],
+  imports: [FlatrateTable, PaidTable, TitleGrid, ViewToggleButton, ErrorAlert, StaleDataBanner, TranslocoPipe],
   template: `
     <h1>{{ label() }}</h1>
     <app-view-toggle-button />
     @if (error()) {
       <app-error-alert [message]="error()" />
-    } @else if (loading()) {
-      <!-- Which section(s) this provider has is static (PROVIDERS.hasFlatrate/hasPaid), even
-           though the actual titles aren't known until the fetch resolves — so only the
-           section(s) this provider will actually show get a skeleton (e.g. Netflix never shows
-           a phantom "Buy/Rent" skeleton that then disappears once real data arrives). -->
-      @if (hasFlatrate()) {
-        <h2>{{ 'provider.included' | transloco }}</h2>
-        @if (userPrefs.viewMode() === 'GRID') {
-          <app-title-grid [entries]="[]" [loading]="true" />
-        } @else {
-          <app-flatrate-table [entries]="[]" [loading]="true" />
+    } @else {
+      <app-stale-data-banner [visible]="hasStaleEntries()" />
+      @if (loading()) {
+        <!-- Which section(s) this provider has is static (PROVIDERS.hasFlatrate/hasPaid), even
+             though the actual titles aren't known until the fetch resolves — so only the
+             section(s) this provider will actually show get a skeleton (e.g. Netflix never shows
+             a phantom "Buy/Rent" skeleton that then disappears once real data arrives). -->
+        @if (hasFlatrate()) {
+          <h2>{{ 'provider.included' | transloco }}</h2>
+          @if (userPrefs.viewMode() === 'GRID') {
+            <app-title-grid [entries]="[]" [loading]="true" />
+          } @else {
+            <app-flatrate-table [entries]="[]" [loading]="true" />
+          }
         }
-      }
-      @if (hasPaid()) {
-        <h2>{{ 'provider.buyRent' | transloco }}</h2>
-        @if (userPrefs.viewMode() === 'GRID') {
-          <app-title-grid [entries]="[]" [loading]="true" />
-        } @else {
-          <app-paid-table [entries]="[]" [loading]="true" />
+        @if (hasPaid()) {
+          <h2>{{ 'provider.buyRent' | transloco }}</h2>
+          @if (userPrefs.viewMode() === 'GRID') {
+            <app-title-grid [entries]="[]" [loading]="true" />
+          } @else {
+            <app-paid-table [entries]="[]" [loading]="true" />
+          }
         }
-      }
-    } @else if (page(); as p) {
-      @if (p.included.length > 0) {
-        <h2>{{ 'provider.included' | transloco }}</h2>
-        @if (userPrefs.viewMode() === 'GRID') {
-          <app-title-grid
-            [entries]="includedTiles()"
-            [recentlyChangedId]="seenStore.recentlyChanged()"
-            (seenToggle)="onSeenToggle($event)" />
-        } @else {
-          <app-flatrate-table
-            [entries]="p.included"
-            [recentlyChangedId]="seenStore.recentlyChanged()"
-            (seenToggle)="onSeenToggle($event)" />
+      } @else if (page(); as p) {
+        @if (p.included.length > 0) {
+          <h2>{{ 'provider.included' | transloco }}</h2>
+          @if (userPrefs.viewMode() === 'GRID') {
+            <app-title-grid
+              [entries]="includedTiles()"
+              [recentlyChangedId]="seenStore.recentlyChanged()"
+              (seenToggle)="onSeenToggle($event)" />
+          } @else {
+            <app-flatrate-table
+              [entries]="p.included"
+              [recentlyChangedId]="seenStore.recentlyChanged()"
+              (seenToggle)="onSeenToggle($event)" />
+          }
         }
-      }
-      @if (p.paid.length > 0) {
-        <h2>{{ 'provider.buyRent' | transloco }}</h2>
-        @if (userPrefs.viewMode() === 'GRID') {
-          <app-title-grid
-            [entries]="paidTiles()"
-            [recentlyChangedId]="seenStore.recentlyChanged()"
-            (seenToggle)="onSeenToggle($event)" />
-        } @else {
-          <app-paid-table
-            [entries]="p.paid"
-            [recentlyChangedId]="seenStore.recentlyChanged()"
-            (seenToggle)="onSeenToggle($event)" />
+        @if (p.paid.length > 0) {
+          <h2>{{ 'provider.buyRent' | transloco }}</h2>
+          @if (userPrefs.viewMode() === 'GRID') {
+            <app-title-grid
+              [entries]="paidTiles()"
+              [recentlyChangedId]="seenStore.recentlyChanged()"
+              (seenToggle)="onSeenToggle($event)" />
+          } @else {
+            <app-paid-table
+              [entries]="p.paid"
+              [recentlyChangedId]="seenStore.recentlyChanged()"
+              (seenToggle)="onSeenToggle($event)" />
+          }
         }
-      }
-      @if (p.included.length === 0 && p.paid.length === 0) {
-        <p class="text-muted">{{ 'provider.empty' | transloco }}</p>
+        @if (p.included.length === 0 && p.paid.length === 0) {
+          <p class="text-muted">{{ 'provider.empty' | transloco }}</p>
+        }
       }
     }
   `,
@@ -95,6 +99,7 @@ export class ProviderPage {
   protected readonly page = signal<ProviderPageDto | null>(null);
   protected readonly includedTiles = computed(() => this.page()?.included.map(flatrateToTile) ?? []);
   protected readonly paidTiles = computed(() => this.page()?.paid.map(paidToTile) ?? []);
+  protected readonly hasStaleEntries = computed(() => this.page()?.hasStaleEntries ?? false);
   protected readonly label = signal<string>('');
   /** Which section(s) the current provider has, known statically (see PROVIDERS) so the loading
    * skeleton can show only the applicable section(s) before the fetch resolves. Defaults to

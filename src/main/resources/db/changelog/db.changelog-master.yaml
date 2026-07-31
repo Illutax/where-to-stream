@@ -41,3 +41,6 @@ databaseChangeLog:
   - include:
       file: changes/014-index-query-cache-imdb-id.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/015-query-meta-due-for-refresh-at.xml
+      relativeToChangelogFile: true

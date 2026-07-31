@@ -26,6 +26,10 @@ public class QueryMeta {
     private final ImdbId imdbId;
     @Column(name = "creationTime")
     private final Instant creationTime;
+    // Nullable: rows written before this field existed have no due date (Phase 4's scheduled job
+    // falls back to the invalidated-flag branch for those until they are next scraped).
+    @Column(name = "due_for_refresh_at")
+    private final Instant dueForRefreshAt;
     @Column(name = "invalidated")
     private final boolean invalidated;
     // EAGER (see ADR-0011: no OSIV); batched application-wide via
@@ -37,6 +41,10 @@ public class QueryMeta {
     private final List<QueryResultDB> queries;
 
     public static QueryMeta of(ImdbId imdbId, Instant creationTime, List<QueryResultDB> queries) {
-        return new QueryMeta(null, imdbId, creationTime, false, queries);
+        return new QueryMeta(null, imdbId, creationTime, null, false, queries);
+    }
+
+    public static QueryMeta of(ImdbId imdbId, Instant creationTime, Instant dueForRefreshAt, List<QueryResultDB> queries) {
+        return new QueryMeta(null, imdbId, creationTime, dueForRefreshAt, false, queries);
     }
 }

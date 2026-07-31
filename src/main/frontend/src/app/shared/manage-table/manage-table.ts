@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
@@ -12,6 +13,7 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
   name: '',
   isRated: false,
   needsScrape: false,
+  lastScrapedAt: null,
 }));
 
 /**
@@ -22,7 +24,7 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
 @Component({
   selector: 'app-manage-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatCheckboxModule, MatButtonModule, TranslocoPipe],
+  imports: [MatTableModule, MatCheckboxModule, MatButtonModule, TranslocoPipe, DatePipe],
   template: `
     <form (submit)="onScrape($event)" class="scrape-form">
       <p>
@@ -81,7 +83,7 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
             } @else if (row.needsScrape) {
               <span class="status-pill status-pill--needs-scrape">{{ 'manage.statusNeedsScrape' | transloco }}</span>
             } @else {
-              <span class="status-pill status-pill--cached">{{ 'manage.statusCached' | transloco }}</span>
+              {{ row.lastScrapedAt | date: 'short' }}
             }
           </td>
         </ng-container>

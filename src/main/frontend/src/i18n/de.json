@@ -105,7 +105,6 @@
     "columnImdbId": "IMDb-ID",
     "columnStatus": "Status",
     "statusNeedsScrape": "muss gescrapt werden",
-    "statusCached": "gecacht",
     "noTitles": "Keine Titel.",
     "invalidateSelected": "Ausgewählte invalidieren",
     "select": "{{ name }} auswählen"
@@ -151,6 +150,7 @@
   },
   "common": {
     "dismiss": "Schließen",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "staleDataBanner": "Einige Angaben werden gerade im Hintergrund aktualisiert und können kurzzeitig veraltet sein."
   }
 }

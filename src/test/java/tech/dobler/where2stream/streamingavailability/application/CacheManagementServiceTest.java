@@ -7,6 +7,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.streamingavailability.application.command.InvalidateCommand;
 import tech.dobler.where2stream.streamingavailability.application.dto.ManageRowDto;
+import tech.dobler.where2stream.streamingavailability.domain.QueryMeta;
+import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaRepository;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
@@ -16,7 +18,9 @@ import tech.dobler.where2stream.titlecatalog.port.in.TitleCacheMaintenancePort;
 import tech.dobler.where2stream.streamingavailability.application.PreCacheService;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +39,8 @@ class CacheManagementServiceTest {
     private PreCacheService preCacheService;
     @Mock
     private TitleCacheMaintenancePort titleCacheMaintenancePort;
+    @Mock
+    private QueryMetaRepository queryMetaRepository;
     @InjectMocks
     private CacheManagementService service;
 
@@ -59,6 +65,27 @@ class CacheManagementServiceTest {
         assertThat(page.needsScrapeCount()).isEqualTo(1);
         assertThat(page.rows()).extracting(ManageRowDto::name, ManageRowDto::needsScrape)
                 .containsExactly(tuple("Apple", false), tuple("Zebra", true));
+    }
+
+    @Test
+    void managePageReportsLastScrapedAtEvenWhenInvalidatedAndNeverForNeverScraped() {
+        final var apple = entry("tt1", "Apple", false);
+        final var zebra = entry("tt2", "Zebra", false);
+        when(watchlistCatalogPort.findAll()).thenReturn(List.of(apple, zebra));
+        // tt2 is invalidated (needsScrape = true) but still has a creationTime from its last scrape.
+        when(preCacheService.findUncachedImdbIds()).thenReturn(List.of(id("tt2")));
+        final var appleScrapedAt = Instant.parse("2026-07-01T00:00:00Z");
+        final var zebraScrapedAt = Instant.parse("2026-07-15T00:00:00Z");
+        when(queryMetaRepository.findByImdbIdIn(Set.of(id("tt1"), id("tt2")))).thenReturn(List.of(
+                QueryMeta.of(id("tt1"), appleScrapedAt, List.of()),
+                QueryMeta.of(id("tt2"), zebraScrapedAt, List.of())));
+
+        final var page = service.managePage();
+
+        assertThat(page.rows()).extracting(ManageRowDto::name, ManageRowDto::needsScrape, ManageRowDto::lastScrapedAt)
+                .containsExactlyInAnyOrder(
+                        tuple("Apple", false, appleScrapedAt),
+                        tuple("Zebra", true, zebraScrapedAt));
     }
 
     @Test

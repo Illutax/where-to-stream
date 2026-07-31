@@ -18,6 +18,13 @@ export interface OverviewEntry {
   services: string | null;
 }
 
+/** The catalogue overview page (mirrors the server CatalogPageDto). */
+export interface CatalogPage {
+  entries: OverviewEntry[];
+  /** Whether any entry is currently served from stale cache data (a background refresh is under way). */
+  hasStaleEntries: boolean;
+}
+
 export interface FlatrateEntry {
   isRated: boolean;
   name: string;
@@ -42,6 +49,8 @@ export interface ProviderPage {
   provider: string;
   included: FlatrateEntry[];
   paid: PaidEntry[];
+  /** Whether any entry is currently served from stale cache data (a background refresh is under way). */
+  hasStaleEntries: boolean;
 }
 
 export interface ManageRow {
@@ -49,6 +58,8 @@ export interface ManageRow {
   name: string;
   isRated: boolean;
   needsScrape: boolean;
+  /** ISO timestamp of the last scrape (regardless of validity), or null if never scraped. */
+  lastScrapedAt: string | null;
 }
 
 export interface ManagePage {

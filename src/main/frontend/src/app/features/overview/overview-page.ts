@@ -7,6 +7,7 @@ import { SeenStore } from '../../core/seen-store';
 import { overviewToTile } from '../../core/tile-entry';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
 import { ErrorAlert } from '../../shared/error-alert/error-alert';
+import { StaleDataBanner } from '../../shared/stale-data-banner/stale-data-banner';
 import { TitleGrid } from '../../shared/title-grid/title-grid';
 import { ViewToggleButton } from '../../shared/view-toggle-button/view-toggle-button';
 import { TranslocoService } from '@jsverse/transloco';
@@ -15,24 +16,27 @@ import { TranslocoService } from '@jsverse/transloco';
 @Component({
   selector: 'app-overview-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CatalogTable, TitleGrid, ViewToggleButton, ErrorAlert],
+  imports: [CatalogTable, TitleGrid, ViewToggleButton, ErrorAlert, StaleDataBanner],
   template: `
     <h1>Where 2 Stream</h1>
     <app-view-toggle-button />
     @if (error()) {
       <app-error-alert [message]="error()" />
-    } @else if (userPrefs.viewMode() === 'GRID') {
-      <app-title-grid
-        [entries]="tileEntries()"
-        [loading]="loading()"
-        [recentlyChangedId]="seenStore.recentlyChanged()"
-        (seenToggle)="onSeenToggle($event)" />
     } @else {
-      <app-catalog-table
-        [entries]="entries()"
-        [loading]="loading()"
-        [recentlyChangedId]="seenStore.recentlyChanged()"
-        (seenToggle)="onSeenToggle($event)" />
+      <app-stale-data-banner [visible]="hasStaleEntries()" />
+      @if (userPrefs.viewMode() === 'GRID') {
+        <app-title-grid
+          [entries]="tileEntries()"
+          [loading]="loading()"
+          [recentlyChangedId]="seenStore.recentlyChanged()"
+          (seenToggle)="onSeenToggle($event)" />
+      } @else {
+        <app-catalog-table
+          [entries]="entries()"
+          [loading]="loading()"
+          [recentlyChangedId]="seenStore.recentlyChanged()"
+          (seenToggle)="onSeenToggle($event)" />
+      }
     }
   `,
 })
@@ -44,6 +48,7 @@ export class OverviewPage {
 
   protected readonly entries = signal<OverviewEntry[]>([]);
   protected readonly tileEntries = computed(() => this.entries().map(overviewToTile));
+  protected readonly hasStaleEntries = signal(false);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
@@ -57,8 +62,9 @@ export class OverviewPage {
 
   constructor() {
     this.api.getCatalog().subscribe({
-      next: (entries) => {
-        this.entries.set(entries);
+      next: (page) => {
+        this.entries.set(page.entries);
+        this.hasStaleEntries.set(page.hasStaleEntries);
         this.loading.set(false);
       },
       error: () => {

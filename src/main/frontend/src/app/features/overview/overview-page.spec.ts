@@ -6,7 +6,7 @@ import { By } from '@angular/platform-browser';
 import { OverviewPage } from './overview-page';
 import { ImdbId, imdbId, releaseYear, watchlistDate } from '../../core/domain';
 import { UserPrefsStore } from '../../core/user-prefs-store';
-import { OverviewEntry } from '../../core/models';
+import { CatalogPage, OverviewEntry } from '../../core/models';
 import { SeenStore } from '../../core/seen-store';
 import { CatalogTable } from '../../shared/catalog-table/catalog-table';
 import { TitleGrid } from '../../shared/title-grid/title-grid';
@@ -15,6 +15,12 @@ describe('OverviewPage', () => {
   let fixture: ComponentFixture<OverviewPage>;
   let httpMock: HttpTestingController;
   let toggled: { imdbId: string; seen: boolean } | undefined;
+
+  const page = (over: Partial<CatalogPage>): CatalogPage => ({
+    entries: [],
+    hasStaleEntries: false,
+    ...over,
+  });
 
   beforeEach(() => {
     toggled = undefined;
@@ -56,7 +62,7 @@ describe('OverviewPage', () => {
     expect(fixture.nativeElement.querySelectorAll('.skeleton-bar').length).toBeGreaterThan(0);
     expect(fixture.nativeElement.querySelector('app-loading')).toBeNull();
 
-    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush([]);
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({}));
   });
 
   it('shows the grid toolbar and skeleton tiles sized to tilesPerRow until the catalogue resolves', () => {
@@ -70,14 +76,14 @@ describe('OverviewPage', () => {
     expect(grid.style.getPropertyValue('--tiles-per-row')).toBe('4');
     expect(fixture.nativeElement.querySelectorAll('app-title-tile-skeleton').length).toBe(4 * 3);
 
-    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush([]);
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({}));
   });
 
   it('renders the catalogue table on success', () => {
     const payload: OverviewEntry[] = [
       { isRated: true, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
     ];
-    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({ entries: payload }));
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelectorAll('.skeleton-bar')).toHaveLength(0);
@@ -89,7 +95,7 @@ describe('OverviewPage', () => {
     const payload: OverviewEntry[] = [
       { isRated: false, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
     ];
-    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({ entries: payload }));
     fixture.detectChanges();
 
     const table = fixture.debugElement.query(By.directive(CatalogTable)).componentInstance as CatalogTable;
@@ -106,7 +112,7 @@ describe('OverviewPage', () => {
     const payload: OverviewEntry[] = [
       { isRated: true, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
     ];
-    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({ entries: payload }));
     fixture.detectChanges();
 
     expect(fixture.debugElement.query(By.directive(TitleGrid))).not.toBeNull();
@@ -118,13 +124,27 @@ describe('OverviewPage', () => {
     const payload: OverviewEntry[] = [
       { isRated: false, name: 'Movie', imdbId: imdbId('tt1'), year: releaseYear(2020), added: watchlistDate('2020-01-01'), services: 'Netflix' },
     ];
-    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(payload);
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({ entries: payload }));
     fixture.detectChanges();
 
     const grid = fixture.debugElement.query(By.directive(TitleGrid)).componentInstance as TitleGrid;
     grid.seenToggle.emit({ imdbId: imdbId('tt1'), seen: true });
 
     expect(toggled).toEqual({ imdbId: 'tt1', seen: true });
+  });
+
+  it('shows the stale-data banner when the response has stale entries', () => {
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({ hasStaleEntries: true }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.stale-data-banner')).not.toBeNull();
+  });
+
+  it('hides the stale-data banner when nothing is stale', () => {
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({ hasStaleEntries: false }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.stale-data-banner')).toBeNull();
   });
 
   it('shows an error alert when the request fails', () => {

@@ -21,6 +21,11 @@ public interface QueryMetaRepository extends CrudRepository<QueryMeta, UUID> {
     // index page). May return several rows per imdbId; the caller picks the latest.
     List<QueryMeta> findByImdbIdInAndInvalidatedIsFalse(Collection<ImdbId> imdbIds);
 
+    // Like the above, but without the invalidated filter — used where an invalidated row's
+    // creationTime is still of interest (e.g. "last scraped at" on the manage table).
+    // May return several rows per imdbId; the caller picks the latest.
+    List<QueryMeta> findByImdbIdIn(Collection<ImdbId> imdbIds);
+
     // Marks the still-valid cache entries of the given titles as invalidated, so the next
     // resolve()/scrape refetches them. Returns the number of rows affected.
     @Modifying

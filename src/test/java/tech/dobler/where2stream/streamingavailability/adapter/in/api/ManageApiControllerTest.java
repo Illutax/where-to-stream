@@ -35,7 +35,7 @@ class ManageApiControllerTest {
     @Test
     void managePageReturnsRows() throws Exception {
         when(cacheManagementService.managePage()).thenReturn(new ManagePageDto(
-                List.of(new ManageRowDto(ImdbId.of("tt1"), "Movie", true, false)), 0));
+                List.of(new ManageRowDto(ImdbId.of("tt1"), "Movie", true, false, null)), 0));
 
         mockMvc.perform(get("/api/manage"))
                 .andExpect(status().isOk())

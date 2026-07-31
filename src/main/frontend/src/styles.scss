@@ -171,6 +171,17 @@ h2 {
   border-radius: var(--mat-sys-corner-small);
 }
 
+// Unobtrusive "some data is stale, refreshing in the background" hint — not an error, so it uses
+// a calmer token than .error-alert (and a different one than .status-pill--needs-scrape, which
+// already claims the tertiary container for the manage table's own "needs scrape" pill).
+.stale-data-banner {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-small);
+  margin-bottom: 1rem;
+}
+
 // Small status pills in the manage table (replace Bootstrap badges).
 .status-pill {
   display: inline-block;
@@ -182,11 +193,6 @@ h2 {
 .status-pill--needs-scrape {
   background: var(--mat-sys-tertiary-container);
   color: var(--mat-sys-on-tertiary-container);
-}
-
-.status-pill--cached {
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
 }
 
 // Lightweight "seen" toggle in the availability tables (✅ = seen, ⭕ = not seen).

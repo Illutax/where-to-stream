@@ -15,12 +15,16 @@ import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.titlecatalog.port.in.TitleCacheMaintenancePort;
 import tech.dobler.where2stream.streamingavailability.application.PreCacheService;
+import tech.dobler.where2stream.streamingavailability.domain.QueryMeta;
+import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaRepository;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Global (ADMIN) cache-management use cases: view the manage table, invalidate titles,
@@ -44,6 +48,7 @@ public class CacheManagementService {
     private final WatchlistCatalogPort watchlistCatalogPort;
     private final PreCacheService preCacheService;
     private final TitleCacheMaintenancePort titleCacheMaintenancePort;
+    private final QueryMetaRepository queryMetaRepository;
 
     private record TitleAgg(String name, boolean rated) {
     }
@@ -58,9 +63,15 @@ public class CacheManagementService {
                     (a, b) -> new TitleAgg(a.name(), a.rated() || b.rated()));
         }
 
+        final Map<ImdbId, Instant> lastScrapedAt = queryMetaRepository.findByImdbIdIn(byImdbId.keySet()).stream()
+                .collect(Collectors.groupingBy(QueryMeta::getImdbId,
+                        Collectors.collectingAndThen(
+                                Collectors.maxBy(Comparator.comparing(QueryMeta::getCreationTime)),
+                                max -> max.map(QueryMeta::getCreationTime).orElse(null))));
+
         final List<ManageRowDto> rows = byImdbId.entrySet().stream()
                 .map(e -> new ManageRowDto(e.getKey(), e.getValue().name(), e.getValue().rated(),
-                        needsScrape.contains(e.getKey())))
+                        needsScrape.contains(e.getKey()), lastScrapedAt.get(e.getKey())))
                 .sorted(Comparator.comparing(ManageRowDto::name))
                 .toList();
         return new ManagePageDto(rows, needsScrape.size());

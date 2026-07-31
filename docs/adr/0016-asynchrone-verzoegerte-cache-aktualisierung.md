@@ -1,7 +1,7 @@
 # 0016. Asynchrone, verzögerte Aktualisierung des Verfügbarkeits-Caches statt synchronem Reload beim Seitenaufruf
 
 - **Date**: 2026-07-30
-- **Status**: Proposed
+- **Status**: Accepted
 
 ## Context
 

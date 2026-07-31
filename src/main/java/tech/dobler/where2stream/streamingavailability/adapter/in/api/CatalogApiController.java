@@ -7,10 +7,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.where2stream.streamingavailability.application.CatalogOverviewService;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
-import tech.dobler.where2stream.streamingavailability.application.dto.OverviewEntryDto;
+import tech.dobler.where2stream.streamingavailability.application.dto.CatalogPageDto;
 import tech.dobler.where2stream.shared.platform.observability.LogExecutionTime;
-
-import java.util.List;
 
 /** JSON catalogue overview for the current user — the data behind the Thymeleaf {@code index} page. */
 @RestController
@@ -23,7 +21,7 @@ public class CatalogApiController {
 
     @GetMapping
     @LogExecutionTime
-    public List<OverviewEntryDto> catalog(Authentication authentication) {
-        return catalogOverviewService.overview(currentUserPort.resolveId(authentication.getName()));
+    public CatalogPageDto catalog(Authentication authentication) {
+        return catalogOverviewService.overviewPage(currentUserPort.resolveId(authentication.getName()));
     }
 }

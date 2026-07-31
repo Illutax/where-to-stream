@@ -13,8 +13,14 @@ describe('ManageTable', () => {
   let loader: HarnessLoader;
 
   const rows: ManageRow[] = [
-    { imdbId: imdbId('tt1'), name: 'Alpha', isRated: true, needsScrape: true },
-    { imdbId: imdbId('tt2'), name: 'Beta', isRated: false, needsScrape: false },
+    { imdbId: imdbId('tt1'), name: 'Alpha', isRated: true, needsScrape: true, lastScrapedAt: null },
+    {
+      imdbId: imdbId('tt2'),
+      name: 'Beta',
+      isRated: false,
+      needsScrape: false,
+      lastScrapedAt: '2026-07-15T00:00:00Z',
+    },
   ];
 
   beforeEach(() => {

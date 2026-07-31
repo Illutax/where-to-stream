@@ -53,11 +53,15 @@ class AggregateServiceTest {
 
     /** Catalogue of tt1 (Netflix flatrate, two language variants), tt2 (Netflix paid), tt3 (Disney+ flatrate). */
     private void givenCatalogue() {
+        givenCatalogue(false);
+    }
+
+    private void givenCatalogue(boolean stale) {
         when(watchlistCatalogPort.findAll(USER)).thenReturn(List.of(entry("tt1", "A"), entry("tt2", "B"), entry("tt3", "C")));
         when(streamInfoService.resolveAll(List.of(id("tt1"), id("tt2"), id("tt3")))).thenReturn(Map.of(
-                id("tt1"), List.of(flatrate("tt1", "Netflix", "Deutsch"), flatrate("tt1", "Netflix", "English")),
-                id("tt2"), List.of(paid("tt2", "Netflix")),
-                id("tt3"), List.of(flatrate("tt3", "Disney+", null))));
+                id("tt1"), new ResolvedEntry(List.of(flatrate("tt1", "Netflix", "Deutsch"), flatrate("tt1", "Netflix", "English")), stale),
+                id("tt2"), new ResolvedEntry(List.of(paid("tt2", "Netflix")), false),
+                id("tt3"), new ResolvedEntry(List.of(flatrate("tt3", "Disney+", null)), false)));
     }
 
     @Test
@@ -99,5 +103,19 @@ class AggregateServiceTest {
         givenCatalogue();
 
         assertThat(service.included("Prime Video", USER)).isEmpty();
+    }
+
+    @Test
+    void hasStaleEntriesFalseWhenNothingStale() {
+        givenCatalogue();
+
+        assertThat(service.hasStaleEntries(USER)).isFalse();
+    }
+
+    @Test
+    void hasStaleEntriesTrueWhenAnyEntryIsStale() {
+        givenCatalogue(true);
+
+        assertThat(service.hasStaleEntries(USER)).isTrue();
     }
 }
