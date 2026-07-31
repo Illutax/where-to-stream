@@ -106,6 +106,16 @@ public class TmdbPosterSource implements PosterPort {
     }
 
     /**
+     * A TMDB {@code poster_path} is always relative, e.g. {@code /abc123.jpg} (straight from the
+     * {@code /find} response); a full URL (as {@code ImdbPosterSource} stores) is not (see
+     * {@link PosterPort#isValidPosterPath}, TODO-47).
+     */
+    @Override
+    public boolean isValidPosterPath(String posterPath) {
+        return posterPath != null && posterPath.startsWith("/");
+    }
+
+    /**
      * The first movie (or TV) {@code poster_path} in a TMDB {@code /find} response, or empty.
      * Network-free (unit-testable).
      * Uses Spring Boot's {@code JsonParser} so it is agnostic to the JSON library on the classpath.

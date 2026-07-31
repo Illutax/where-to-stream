@@ -612,7 +612,7 @@ Titel, die niemand ansieht, veralten unbegrenzt, bis sie zufällig wieder aufger
 
 ## Bug (2026-07-31)
 
-### 🟠 TODO-47 — TMDB-Posterdownload schlägt fehl, wenn `title_poster.poster_path` von der IMDb-Quelle stammt
+### ✅ TODO-47 — TMDB-Posterdownload schlägt fehl, wenn `title_poster.poster_path` von der IMDb-Quelle stammt
 Produktions-Log (`tmdb.enabled=true`):
 ```
 WARN t.d.w.t.a.out.tmdb.TmdbPosterSource : TMDB FULL image download
@@ -638,6 +638,13 @@ zusammengeklebt, TMDB antwortet mit 404, der Poster bleibt dauerhaft leer für d
   damit `findPosterPath` erneut über TMDB auflöst statt denselben falschen Pfad endlos wiederzuverwenden).
 - **Hinweis:** Betrifft vermutlich jede Instanz, die die Poster-Quelle nach dem ersten Befüllen von
   `title_poster` umgestellt hat (`imdb.enabled`/`tmdb.enabled` getauscht) — kein Einzelfall.
+- **Erledigt:** Neue `PosterPort.isValidPosterPath(String)` (Default `true`), von `TmdbPosterSource`
+  (`posterPath.startsWith("/")`) und `ImdbPosterSource` (`startsWith("http://"/"https://")`) jeweils
+  auf ihr eigenes Pfad-Format eingeschränkt überschrieben. `PosterService.classify(...)` behandelt
+  einen zur aktiven Quelle nicht passenden `posterPath` wie „noch nicht aufgelöst"
+  (`Cached.needsDiscovery()`) statt ihn blind an `download(...)` durchzureichen — der nächste
+  Zugriff löst über die aktuell aktive Quelle neu auf und überschreibt Pfad **und** alte Bytes
+  (`TitlePoster.refresh(...)`, self-healing ohne manuellen Eingriff).
 
 ---
 

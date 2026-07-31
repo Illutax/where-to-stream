@@ -128,6 +128,13 @@ public class PosterService implements TitleCacheMaintenancePort {
         if (row.getPosterPath() == null) {
             return isNegativeFresh(row, timeService.now()) ? Cached.negative() : Cached.needsDiscovery();
         }
+        // A path left over from a previously active, different poster source doesn't match the
+        // one active now (TODO-47) — treat it like unresolved instead of downloading with it.
+        if (!posterSource.isValidPosterPath(row.getPosterPath())) {
+            log.warn("Poster path '{}' for {} doesn't match the active poster source; re-discovering",
+                    row.getPosterPath(), row.getImdbId());
+            return Cached.needsDiscovery();
+        }
         final byte[] bytes = size == PosterSize.THUMB ? row.getThumb() : row.getFull();
         return bytes != null && bytes.length > 0
                 ? Cached.hit(new Poster(bytes, contentTypeOf(row, size)))

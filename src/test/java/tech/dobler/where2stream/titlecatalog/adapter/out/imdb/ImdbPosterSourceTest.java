@@ -92,4 +92,14 @@ class ImdbPosterSourceTest {
         final var plain = "https://example.com/poster.jpg";
         assertThat(ImdbPosterSource.sizedUrl(plain, 100, 50)).isEqualTo(plain);
     }
+
+    @Test
+    void isValidPosterPathAcceptsOnlyFullUrls() {
+        final var source = new ImdbPosterSource(properties(), titleMetaService, () -> httpClient);
+
+        assertThat(source.isValidPosterPath(POSTER)).isTrue();
+        // A TMDB-relative path is a stale path from a previously active, different source (TODO-47).
+        assertThat(source.isValidPosterPath("/abc.jpg")).isFalse();
+        assertThat(source.isValidPosterPath(null)).isFalse();
+    }
 }

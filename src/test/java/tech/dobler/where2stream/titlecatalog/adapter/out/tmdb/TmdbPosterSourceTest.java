@@ -134,4 +134,14 @@ class TmdbPosterSourceTest {
     void isEmptyForMalformedJson() {
         assertThat(TmdbPosterSource.parsePosterPath("not json")).isEmpty();
     }
+
+    @Test
+    void isValidPosterPathAcceptsOnlyRelativeTmdbPaths() {
+        final var source = new TmdbPosterSource(activeProperties(), () -> httpClient);
+
+        assertThat(source.isValidPosterPath("/abc.jpg")).isTrue();
+        // A full URL is a stale path from a previously active, different source (TODO-47).
+        assertThat(source.isValidPosterPath("https://m.media-amazon.com/images/old.jpg")).isFalse();
+        assertThat(source.isValidPosterPath(null)).isFalse();
+    }
 }

@@ -53,6 +53,16 @@ public class ImdbPosterSource implements PosterPort {
         return titleMetaService.posterPath(imdbId);
     }
 
+    /**
+     * An IMDb poster path is always a full Amazon CDN URL; a TMDB-relative path (as
+     * {@code TmdbPosterSource} stores, e.g. {@code /abc123.jpg}) is not
+     * (see {@link PosterPort#isValidPosterPath}, TODO-47).
+     */
+    @Override
+    public boolean isValidPosterPath(String posterPath) {
+        return posterPath != null && (posterPath.startsWith("http://") || posterPath.startsWith("https://"));
+    }
+
     @Override
     public Optional<byte[]> download(String posterPath, PosterSize size) {
         if (posterPath == null || posterPath.isBlank()) {

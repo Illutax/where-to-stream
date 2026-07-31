@@ -22,7 +22,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +44,7 @@ class PosterServiceTest {
     private PosterService service() {
         lenient().when(timeService.now()).thenReturn(NOW);
         lenient().when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(posterSource.isValidPosterPath(any())).thenReturn(true);
         final var svc = new PosterService(repository, posterSource, new PosterProperties(14), timeService, self);
         lenient().when(self.getObject()).thenReturn(svc);
         return svc;
@@ -59,7 +59,9 @@ class PosterServiceTest {
         final var result = service().thumb(TT);
 
         assertThat(result).get().extracting(PosterService.Poster::bytes).isEqualTo(new byte[]{1, 2, 3});
-        verifyNoInteractions(posterSource);
+        // No network calls on a cache hit; isValidPosterPath (a cheap local format check) does run.
+        verify(posterSource, never()).findPosterPath(any());
+        verify(posterSource, never()).download(any(), any());
     }
 
     @Test
@@ -152,6 +154,26 @@ class PosterServiceTest {
     }
 
     @Test
+    void aPosterPathFromAPreviouslyActiveDifferentSourceIsRediscoveredInsteadOfDownloaded() {
+        // e.g. an old full IMDb CDN URL left over after switching to TMDB (TODO-47).
+        final var service = service(); // built first: its lenient isValidPosterPath(any())=true
+        // default must not shadow the specific override below (Mockito: last stub wins).
+        final var row = TitlePoster.of(TT, "https://m.media-amazon.com/images/old.jpg", NOW);
+        row.setThumb(new byte[]{9, 9}, "image/jpeg"); // stale bytes from the old source too
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(row));
+        when(posterSource.isValidPosterPath("https://m.media-amazon.com/images/old.jpg")).thenReturn(false);
+        when(posterSource.findPosterPath(TT)).thenReturn(Optional.of("/new.jpg"));
+        when(posterSource.download("/new.jpg", PosterSize.THUMB)).thenReturn(Optional.of(new byte[]{1}));
+
+        final var result = service.thumb(TT);
+
+        assertThat(result).get().extracting(PosterService.Poster::bytes).isEqualTo(new byte[]{1});
+        verify(posterSource).findPosterPath(TT); // re-discovered, not served/downloaded via the stale path
+        verify(posterSource, never()).download("https://m.media-amazon.com/images/old.jpg", PosterSize.THUMB);
+        assertThat(row.getPosterPath()).isEqualTo("/new.jpg"); // refreshed in place
+    }
+
+    @Test
     void fullSizeCacheHitUsesTheStoredFullContentType() {
         final var row = TitlePoster.of(TT, "/p.jpg", NOW);
         row.setThumb(new byte[]{1}, "image/jpeg");
@@ -161,7 +183,9 @@ class PosterServiceTest {
         final var result = service().full(TT);
 
         assertThat(result).get().extracting(PosterService.Poster::contentType).isEqualTo("image/png");
-        verifyNoInteractions(posterSource);
+        // No network calls on a cache hit; isValidPosterPath (a cheap local format check) does run.
+        verify(posterSource, never()).findPosterPath(any());
+        verify(posterSource, never()).download(any(), any());
     }
 
     @Test
