@@ -49,6 +49,7 @@ function yearValue(year: number | string): number {
 /** Row shape the "Cache Verwalten" manage table sorts by (title, last scraped at). */
 interface SortableManageRow {
   name: string;
+  needsScrape: boolean;
   lastScrapedAt: string | null;
 }
 
@@ -71,14 +72,21 @@ function compareManage(a: SortableManageRow, b: SortableManageRow, column: strin
     case 'title':
       return a.name.localeCompare(b.name);
     case 'lastScrapedAt':
-      // Never-scraped (null) sorts last ascending / first descending — same treatment as the
-      // paid table's "Not yet released" placeholder for year (see yearValue above).
-      return lastScrapedAtValue(a.lastScrapedAt) - lastScrapedAtValue(b.lastScrapedAt);
+      return lastScrapedAtValue(a) - lastScrapedAtValue(b);
     default:
       return 0;
   }
 }
 
-function lastScrapedAtValue(value: string | null): number {
-  return value === null ? Number.POSITIVE_INFINITY : Date.parse(value);
+/**
+ * A row that "needs scrape" (never cached, or invalidated) always sorts as the earliest possible
+ * timestamp, regardless of whether it happens to still carry an old `lastScrapedAt` from before it
+ * was invalidated — the status pill doesn't show that stale date, so sorting by it would scatter
+ * these rows among unrelated fresh ones instead of grouping them at the "needs attention" end.
+ */
+function lastScrapedAtValue(row: SortableManageRow): number {
+  if (row.needsScrape) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  return row.lastScrapedAt === null ? Number.POSITIVE_INFINITY : Date.parse(row.lastScrapedAt);
 }

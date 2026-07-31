@@ -204,14 +204,14 @@ describe('ManageTable', () => {
     expect(names()).toEqual(['Beta', 'Alpha']);
   });
 
-  it('sorts by last-scraped date when the Status header is clicked, with "never scraped" last', async () => {
+  it('sorts by last-scraped date when the Status header is clicked, with "needs scrape" rows treated as the earliest timestamp', async () => {
     const sort = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSortHarness);
     const [statusHeader] = await sort.getSortHeaders({ label: 'Status' });
 
     await statusHeader.click();
     fixture.detectChanges();
 
-    // tt2 (Beta) has a real lastScrapedAt; tt1 (Alpha) has never been scraped (null) -> sorts last.
-    expect(names()).toEqual(['Beta', 'Alpha']);
+    // tt1 (Alpha) needs scrape (never scraped) -> sorts first; tt2 (Beta) has a real lastScrapedAt.
+    expect(names()).toEqual(['Alpha', 'Beta']);
   });
 });

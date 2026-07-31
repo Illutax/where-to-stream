@@ -55,9 +55,9 @@ describe('sortRows', () => {
 
 describe('sortManageRows', () => {
   const rows = [
-    { name: 'Beta', lastScrapedAt: '2020-03-03T00:00:00Z' },
-    { name: 'alpha', lastScrapedAt: null },
-    { name: 'Gamma', lastScrapedAt: '2020-01-01T00:00:00Z' },
+    { name: 'Beta', needsScrape: false, lastScrapedAt: '2020-03-03T00:00:00Z' },
+    { name: 'alpha', needsScrape: true, lastScrapedAt: null },
+    { name: 'Gamma', needsScrape: false, lastScrapedAt: '2020-01-01T00:00:00Z' },
   ];
 
   const sort = (active: string, direction: '' | 'asc' | 'desc'): Sort => ({ active, direction });
@@ -68,9 +68,24 @@ describe('sortManageRows', () => {
     expect(names(sortManageRows(rows, sort('title', 'desc')))).toEqual(['Gamma', 'Beta', 'alpha']);
   });
 
-  it('sorts by lastScrapedAt chronologically, with never-scraped (null) sorting last ascending / first descending', () => {
-    expect(names(sortManageRows(rows, sort('lastScrapedAt', 'asc')))).toEqual(['Gamma', 'Beta', 'alpha']);
-    expect(names(sortManageRows(rows, sort('lastScrapedAt', 'desc')))).toEqual(['alpha', 'Beta', 'Gamma']);
+  it('sorts a never-scraped row (needsScrape, null date) as the earliest possible timestamp', () => {
+    expect(names(sortManageRows(rows, sort('lastScrapedAt', 'asc')))).toEqual(['alpha', 'Gamma', 'Beta']);
+    expect(names(sortManageRows(rows, sort('lastScrapedAt', 'desc')))).toEqual(['Beta', 'Gamma', 'alpha']);
+  });
+
+  it('sorts an invalidated row (needsScrape) as the earliest timestamp even if its stale lastScrapedAt is the most recent of all', () => {
+    // Regression for a reported bug: an invalidated row still carries its old (real) lastScrapedAt,
+    // but the "needs scrape" pill hides that date — sorting by the hidden stale value scattered it
+    // among unrelated fresh rows instead of grouping it with the rows that need attention.
+    const withStaleInvalidated = [
+      ...rows,
+      { name: 'Delta', needsScrape: true, lastScrapedAt: '2020-06-01T00:00:00Z' }, // newest date of all, but invalidated
+    ];
+
+    expect(names(sortManageRows(withStaleInvalidated, sort('lastScrapedAt', 'asc'))))
+      .toEqual(['alpha', 'Delta', 'Gamma', 'Beta']);
+    expect(names(sortManageRows(withStaleInvalidated, sort('lastScrapedAt', 'desc'))))
+      .toEqual(['Beta', 'Gamma', 'alpha', 'Delta']);
   });
 
   it('restores the input order when the direction is empty', () => {
