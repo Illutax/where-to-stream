@@ -40,15 +40,31 @@ describe('ManageTable', () => {
     Array.from(fixture.nativeElement.querySelectorAll('tbody tr')).map(
       (row) => (row as HTMLElement).querySelector('td:nth-child(2)')?.textContent?.trim(),
     );
+  const rowCheckboxes = () => loader.getAllHarnesses(MatCheckboxHarness.with({ ancestor: 'tbody' }));
+  const headerCheckbox = () => loader.getHarness(MatCheckboxHarness.with({ ancestor: 'thead' }));
+  /** Row checkbox `<input>`s in table order (index 0 = first data row) — used for shift-click,
+   * which needs a raw click with a modifier key rather than the harness's plain toggle(). */
+  const rowCheckboxInputs = () =>
+    Array.from(fixture.nativeElement.querySelectorAll('tbody input[type="checkbox"]')) as HTMLInputElement[];
+  /**
+   * Simulates a user click with an optional modifier key: `mousedown` (which ManageTable listens
+   * to for the shift flag, see the component's doc comment on `onCheckboxMouseDown`) followed by
+   * `click` (which triggers the checkbox's actual toggle) — matching real click event order.
+   */
+  const clickCheckbox = (input: HTMLInputElement, options: { shift?: boolean } = {}) => {
+    const shiftKey = options.shift ?? false;
+    input.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, shiftKey }));
+    input.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey }));
+  };
 
-  it('renders a checkbox per row and disables "Invalidate" until something is selected', async () => {
-    const checkboxes = await loader.getAllHarnesses(MatCheckboxHarness);
-    expect(checkboxes).toHaveLength(2);
+  it('renders a checkbox per row plus a "select all" header checkbox, and disables "Invalidate" until something is selected', async () => {
+    expect(await rowCheckboxes()).toHaveLength(2);
+    expect(await headerCheckbox()).toBeTruthy();
     expect(invalidateButton().disabled).toBe(true);
   });
 
   it('enables "Invalidate" once a row is selected', async () => {
-    const checkboxes = await loader.getAllHarnesses(MatCheckboxHarness);
+    const checkboxes = await rowCheckboxes();
     await checkboxes[0].check();
     fixture.detectChanges();
     expect(invalidateButton().disabled).toBe(false);
@@ -58,7 +74,7 @@ describe('ManageTable', () => {
     const emitted: string[][] = [];
     component.invalidate.subscribe((ids) => emitted.push(ids));
 
-    const checkboxes = await loader.getAllHarnesses(MatCheckboxHarness);
+    const checkboxes = await rowCheckboxes();
     await checkboxes[0].check();
     await checkboxes[1].check();
     fixture.detectChanges();
@@ -74,7 +90,7 @@ describe('ManageTable', () => {
     const emitted: string[][] = [];
     component.invalidate.subscribe((ids) => emitted.push(ids));
 
-    const checkboxes = await loader.getAllHarnesses(MatCheckboxHarness);
+    const checkboxes = await rowCheckboxes();
     await checkboxes[0].check();
     await checkboxes[0].uncheck();
     fixture.detectChanges();
@@ -82,6 +98,74 @@ describe('ManageTable', () => {
     expect(invalidateButton().disabled).toBe(true);
     forms()[1].dispatchEvent(new Event('submit'));
     expect(emitted).toEqual([]);
+  });
+
+  it('"select all" selects every row, and toggles them all off again', async () => {
+    const master = await headerCheckbox();
+
+    await master.check();
+    fixture.detectChanges();
+    expect(invalidateButton().disabled).toBe(false);
+    expect(await (await rowCheckboxes())[0].isChecked()).toBe(true);
+    expect(await (await rowCheckboxes())[1].isChecked()).toBe(true);
+
+    await master.toggle(); // all rows are checked, so this un-checks everything again
+    fixture.detectChanges();
+    expect(invalidateButton().disabled).toBe(true);
+  });
+
+  it('shows "select all" as indeterminate when only some rows are selected', async () => {
+    const master = await headerCheckbox();
+    expect(await master.isIndeterminate()).toBe(false);
+
+    await (await rowCheckboxes())[0].check();
+    fixture.detectChanges();
+
+    expect(await master.isIndeterminate()).toBe(true);
+  });
+
+  it('selects a contiguous range with shift+click, like other applications', () => {
+    fixture.componentRef.setInput('rows', [
+      { imdbId: imdbId('tt1'), name: 'Alpha', isRated: false, needsScrape: false, lastScrapedAt: null },
+      { imdbId: imdbId('tt2'), name: 'Beta', isRated: false, needsScrape: false, lastScrapedAt: null },
+      { imdbId: imdbId('tt3'), name: 'Gamma', isRated: false, needsScrape: false, lastScrapedAt: null },
+    ]);
+    fixture.detectChanges();
+
+    const emitted: string[][] = [];
+    component.invalidate.subscribe((ids) => emitted.push(ids));
+
+    const [first, , third] = rowCheckboxInputs();
+    clickCheckbox(first);
+    fixture.detectChanges();
+    clickCheckbox(third, { shift: true });
+    fixture.detectChanges();
+
+    forms()[1].dispatchEvent(new Event('submit'));
+    expect(emitted[0]?.slice().sort()).toEqual(['tt1', 'tt2', 'tt3']);
+  });
+
+  it('a plain click after a shift-click range-select toggles only that single row, not the whole range again', () => {
+    fixture.componentRef.setInput('rows', [
+      { imdbId: imdbId('tt1'), name: 'Alpha', isRated: false, needsScrape: false, lastScrapedAt: null },
+      { imdbId: imdbId('tt2'), name: 'Beta', isRated: false, needsScrape: false, lastScrapedAt: null },
+      { imdbId: imdbId('tt3'), name: 'Gamma', isRated: false, needsScrape: false, lastScrapedAt: null },
+    ]);
+    fixture.detectChanges();
+
+    const emitted: string[][] = [];
+    component.invalidate.subscribe((ids) => emitted.push(ids));
+
+    const [first, second, third] = rowCheckboxInputs();
+    clickCheckbox(first); // plain click -> {tt1}
+    fixture.detectChanges();
+    clickCheckbox(third, { shift: true }); // range -> {tt1,tt2,tt3}
+    fixture.detectChanges();
+    clickCheckbox(second); // plain click -> toggles only tt2 off
+    fixture.detectChanges();
+
+    forms()[1].dispatchEvent(new Event('submit'));
+    expect(emitted[0]?.slice().sort()).toEqual(['tt1', 'tt3']);
   });
 
   it('shows skeleton rows and disables actions while loading', () => {

@@ -107,7 +107,8 @@
     "statusNeedsScrape": "muss gescrapt werden",
     "noTitles": "Keine Titel.",
     "invalidateSelected": "Ausgewählte invalidieren",
-    "select": "{{ name }} auswählen"
+    "select": "{{ name }} auswählen",
+    "selectAll": "Alle auswählen"
   },
   "users": {
     "title": "Benutzerverwaltung",

@@ -28,29 +28,42 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatTableModule, MatCheckboxModule, MatButtonModule, MatSortModule, TranslocoPipe, DatePipe],
   template: `
-    <form (submit)="onScrape($event)" class="scrape-form">
-      <p>
-        @if (loading()) {
-          <span class="skeleton-bar skeleton-bar--narrow"></span>
-        } @else {
-          <span>{{ needsScrapeCount() }}</span> {{ 'manage.needScraping' | transloco }}
-        }
-      </p>
-      <button matButton="filled" type="submit" [disabled]="loading()">{{ 'manage.scrapeButton' | transloco }}</button>
-    </form>
+    <div class="controls">
+      <form (submit)="onScrape($event)" class="scrape-form">
+        <p>
+          @if (loading()) {
+            <span class="skeleton-bar skeleton-bar--narrow"></span>
+          } @else {
+            <span>{{ needsScrapeCount() }}</span> {{ 'manage.needScraping' | transloco }}
+          }
+        </p>
+        <button matButton="filled" type="submit" [disabled]="loading()">{{ 'manage.scrapeButton' | transloco }}</button>
+      </form>
+
+      <form (submit)="onInvalidate($event)" class="invalidate-form">
+        <button matButton="filled" type="submit" class="invalidate-button" [disabled]="loading() || selected().size === 0">
+          {{ 'manage.invalidateSelected' | transloco }}
+        </button>
+      </form>
+    </div>
 
     <h2>{{ 'manage.invalidateHeading' | transloco }}</h2>
-    <form (submit)="onInvalidate($event)">
-      <div class="table-scroll">
+    <div class="table-scroll">
       <table mat-table [dataSource]="sorted()" [trackBy]="trackByImdbId"
              matSort (matSortChange)="sort.set($event)">
         <ng-container matColumnDef="select">
-          <th mat-header-cell *matHeaderCellDef></th>
+          <th mat-header-cell *matHeaderCellDef>
+            @if (!loading()) {
+              <mat-checkbox [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll()"
+                            [aria-label]="'manage.selectAll' | transloco" />
+            }
+          </th>
           <td mat-cell *matCellDef="let row">
             @if (loading()) {
               <span class="skeleton-bar skeleton-rated"></span>
             } @else {
-              <mat-checkbox [checked]="selected().has(row.imdbId)" (change)="toggle(row.imdbId)"
+              <mat-checkbox [checked]="selected().has(row.imdbId)"
+                            (mousedown)="onCheckboxMouseDown($event)" (change)="toggle(row.imdbId)"
                             [aria-label]="'manage.select' | transloco: { name: row.name }" />
             }
           </td>
@@ -97,19 +110,19 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
           <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">{{ 'manage.noTitles' | transloco }}</td>
         </tr>
       </table>
-      </div>
-
-      <button matButton="filled" type="submit" class="invalidate-button" [disabled]="loading() || selected().size === 0">
-        {{ 'manage.invalidateSelected' | transloco }}
-      </button>
-    </form>
+    </div>
   `,
   styles: `
-    .scrape-form {
+    .controls {
+      display: flex;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 1.5rem;
       margin-bottom: 1rem;
     }
-    .invalidate-button {
-      margin-top: 1rem;
+    .scrape-form,
+    .invalidate-form {
+      margin: 0;
     }
     table {
       width: 100%;
@@ -130,13 +143,65 @@ export class ManageTable {
   protected readonly selected = signal<ReadonlySet<ImdbId>>(new Set());
   protected readonly sort = signal<Sort>({ active: '', direction: '' });
   protected readonly sorted = computed(() => (this.loading() ? SKELETON_ROWS : sortManageRows(this.rows(), this.sort())));
+  protected readonly allSelected = computed(() => {
+    const rows = this.sorted();
+    return rows.length > 0 && rows.every((row) => this.selected().has(row.imdbId));
+  });
+  protected readonly someSelected = computed(() => {
+    const selected = this.selected();
+    return !this.allSelected() && this.sorted().some((row) => selected.has(row.imdbId));
+  });
+
+  /**
+   * Set by the `mousedown` that precedes a checkbox's `(change)` — `MatCheckboxChange` carries no
+   * modifier-key info, so this is how {@link toggle} tells a shift-click apart from a plain one.
+   * `mousedown` rather than `click`: `MatCheckbox`'s own template stops a `click` from bubbling
+   * past its host (to avoid a double-toggle from its wrapping `<label>`), so a `(click)` here would
+   * never fire; `mousedown` isn't intercepted and still fires before the browser's default
+   * check/uncheck action.
+   */
+  private shiftKeyHeld = false;
+  private lastToggledImdbId: ImdbId | null = null;
+
+  protected onCheckboxMouseDown(event: MouseEvent): void {
+    this.shiftKeyHeld = event.shiftKey;
+  }
 
   protected toggle(imdbId: ImdbId): void {
-    const next = new Set(this.selected());
-    if (next.has(imdbId)) {
-      next.delete(imdbId);
+    if (this.shiftKeyHeld && this.lastToggledImdbId !== null) {
+      this.selectRange(this.lastToggledImdbId, imdbId);
     } else {
-      next.add(imdbId);
+      const next = new Set(this.selected());
+      if (next.has(imdbId)) {
+        next.delete(imdbId);
+      } else {
+        next.add(imdbId);
+      }
+      this.selected.set(next);
+    }
+    this.lastToggledImdbId = imdbId;
+  }
+
+  protected toggleAll(): void {
+    this.selected.set(this.allSelected() ? new Set() : new Set(this.sorted().map((row) => row.imdbId)));
+  }
+
+  /**
+   * Selects every row between `fromId` and `toId` (inclusive) in the table's current (sorted)
+   * order — the common "shift-click extends the selection" convention, so this always adds to the
+   * selection rather than toggling each row.
+   */
+  private selectRange(fromId: ImdbId, toId: ImdbId): void {
+    const rows = this.sorted();
+    const fromIndex = rows.findIndex((row) => row.imdbId === fromId);
+    const toIndex = rows.findIndex((row) => row.imdbId === toId);
+    if (fromIndex === -1 || toIndex === -1) {
+      return;
+    }
+    const [start, end] = fromIndex <= toIndex ? [fromIndex, toIndex] : [toIndex, fromIndex];
+    const next = new Set(this.selected());
+    for (let i = start; i <= end; i++) {
+      next.add(rows[i].imdbId);
     }
     this.selected.set(next);
   }

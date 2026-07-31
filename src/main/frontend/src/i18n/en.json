@@ -107,7 +107,8 @@
     "statusNeedsScrape": "needs scrape",
     "noTitles": "No titles.",
     "invalidateSelected": "Invalidate selected",
-    "select": "select {{ name }}"
+    "select": "select {{ name }}",
+    "selectAll": "Select all"
   },
   "users": {
     "title": "User administration",
