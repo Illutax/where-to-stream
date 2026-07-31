@@ -2,10 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ImdbId, imdbId } from '../../core/domain';
 import { ManageRow } from '../../core/models';
+import { sortManageRows } from '../sort/table-sort';
 
 /** Placeholder rows shown while loading (see {@link ManageTable.loading}) — never rendered as real data. */
 const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
@@ -24,7 +26,7 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
 @Component({
   selector: 'app-manage-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatCheckboxModule, MatButtonModule, TranslocoPipe, DatePipe],
+  imports: [MatTableModule, MatCheckboxModule, MatButtonModule, MatSortModule, TranslocoPipe, DatePipe],
   template: `
     <form (submit)="onScrape($event)" class="scrape-form">
       <p>
@@ -40,7 +42,8 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
     <h2>{{ 'manage.invalidateHeading' | transloco }}</h2>
     <form (submit)="onInvalidate($event)">
       <div class="table-scroll">
-      <table mat-table [dataSource]="displayRows()" [trackBy]="trackByImdbId">
+      <table mat-table [dataSource]="sorted()" [trackBy]="trackByImdbId"
+             matSort (matSortChange)="sort.set($event)">
         <ng-container matColumnDef="select">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let row">
@@ -54,7 +57,7 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
         </ng-container>
 
         <ng-container matColumnDef="title">
-          <th mat-header-cell *matHeaderCellDef>{{ 'manage.columnTitle' | transloco }}</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'manage.columnTitle' | transloco }}</th>
           <td mat-cell *matCellDef="let row">
             @if (loading()) {
               <span class="skeleton-bar"></span>
@@ -76,7 +79,7 @@ const SKELETON_ROWS: ManageRow[] = Array.from({ length: 6 }, (_, i) => ({
         </ng-container>
 
         <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>{{ 'manage.columnStatus' | transloco }}</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="lastScrapedAt">{{ 'manage.columnStatus' | transloco }}</th>
           <td mat-cell *matCellDef="let row">
             @if (loading()) {
               <span class="skeleton-bar skeleton-bar--narrow"></span>
@@ -125,7 +128,8 @@ export class ManageTable {
   protected readonly displayedColumns = ['select', 'title', 'imdbId', 'status'];
   protected readonly trackByImdbId = (_: number, row: ManageRow) => row.imdbId;
   protected readonly selected = signal<ReadonlySet<ImdbId>>(new Set());
-  protected readonly displayRows = computed(() => (this.loading() ? SKELETON_ROWS : this.rows()));
+  protected readonly sort = signal<Sort>({ active: '', direction: '' });
+  protected readonly sorted = computed(() => (this.loading() ? SKELETON_ROWS : sortManageRows(this.rows(), this.sort())));
 
   protected toggle(imdbId: ImdbId): void {
     const next = new Set(this.selected());

@@ -610,6 +610,56 @@ Titel, die niemand ansieht, veralten unbegrenzt, bis sie zufällig wieder aufger
 
 ---
 
+## Bug (2026-07-31)
+
+### 🟠 TODO-47 — TMDB-Posterdownload schlägt fehl, wenn `title_poster.poster_path` von der IMDb-Quelle stammt
+Produktions-Log (`tmdb.enabled=true`):
+```
+WARN t.d.w.t.a.out.tmdb.TmdbPosterSource : TMDB FULL image download
+  https://image.tmdb.org/t/p/w500https://m.media-amazon.com/images/M/MV5BMjIzNTA0OTIxNV5BMl5BanBnXkFtZTcwMzA3MTM2Nw@@._V1_.jpg
+  returned HTTP 404 (1957 bytes)
+```
+`TmdbPosterSource.download(posterPath, size)` (`titlecatalog/adapter/out/tmdb/TmdbPosterSource.java`)
+baut die Download-URL immer als `imageBaseUrl + "/" + tmdbSize(size) + posterPath` — es wird
+angenommen, dass `posterPath` ein TMDB-relativer Pfad ist (z. B. `/abc123.jpg`).
+`title_poster.poster_path` ist aber eine einzige, quellenunabhängige Spalte (`PosterService.classify`/`storePath`):
+Wurde der Pfad ursprünglich von `ImdbPosterSource` ermittelt, ist er eine **volle** Amazon-CDN-URL
+(`https://m.media-amazon.com/...`). Läuft die Instanz später (oder gleichzeitig, je nach Konfiguration)
+mit `tmdb.enabled=true`, liest `PosterService.get(...)` diesen alten Pfad aus `title_poster` (Zeile hat
+noch keine Bytes für die angefragte Größe → `Cached.needsDownload(row.getPosterPath())`) und reicht ihn
+unverändert an `TmdbPosterSource.download(...)` durch — die beiden URLs werden ohne Trenner
+zusammengeklebt, TMDB antwortet mit 404, der Poster bleibt dauerhaft leer für diesen Titel
+(kein Retry-Mechanismus für „Pfad vorhanden, aber falsches Format").
+- **Akzeptanzkriterium:** Ein `posterPath`, der nicht zur aktiven Quelle passt (z. B. beginnt er
+  bereits mit `http`, obwohl TMDB aktiv ist), darf nicht blind an die Bild-CDN-URL angehängt werden.
+  Entweder den Pfad pro Quelle kennzeichnen/trennen (z. B. eigene Spalte oder ein Präfix, das beim
+  Quellenwechsel invalidiert), oder `TmdbPosterSource.download(...)` defensiv prüfen und bei einem
+  bereits absoluten `posterPath` (nicht TMDB-Format) wie bei „kein Poster" behandeln (negativ cachen,
+  damit `findPosterPath` erneut über TMDB auflöst statt denselben falschen Pfad endlos wiederzuverwenden).
+- **Hinweis:** Betrifft vermutlich jede Instanz, die die Poster-Quelle nach dem ersten Befüllen von
+  `title_poster` umgestellt hat (`imdb.enabled`/`tmdb.enabled` getauscht) — kein Einzelfall.
+
+---
+
+## Feature (2026-07-31)
+
+### ✅ TODO-48 — Sortierbarkeit der „Cache Verwalten"-Oberfläche
+Die Manage-Tabelle (`/manage`, `ManageTable`) hatte keine Sortierung — anders als die
+Verfügbarkeits-Tabellen (Dashboard/Provider-Seiten), die bereits per Klick auf die Spaltenüberschrift
+nach Titel/Jahr/hinzugefügt sortierbar sind (`shared/sort/table-sort.ts`, `MatSortModule`).
+- **Akzeptanzkriterium:** Die Manage-Tabelle lässt sich per Klick auf die Spaltenüberschrift nach
+  **Name** und nach **Datum** (Zeitpunkt des letzten Scrapes, `lastScrapedAt` aus TODO-43) sortieren,
+  auf- und absteigend, nach demselben Muster (`mat-sort-header`) wie die bestehenden Tabellen.
+- **Erledigt:** Neue `sortManageRows(...)` in `shared/sort/table-sort.ts` (eigene kleine Funktion
+  statt Erweiterung von `sortRows`, da die Manage-Tabelle weder `year` noch `added` hat); nie
+  gescrapte Titel (`lastScrapedAt = null`) sortieren aufsteigend ans Ende / absteigend an den
+  Anfang, analog zum bestehenden `year`-Sonderfall „Not yet released". `ManageTable` verdrahtet
+  `MatSortModule`/`matSort` wie `CatalogTable`; die Status-Spalte trägt `mat-sort-header="lastScrapedAt"`
+  (abweichend vom `matColumnDef`-Namen `status`), da sie sowohl die „muss gescrapt werden"-Pille als
+  auch den Zeitstempel zeigt.
+
+---
+
 ### ✅ F12 — Controller umgehen `ApiExceptionHandler` via rohem `ResponseStatusException`
 `MeApiController` (6×), `WatchlistApiController` (2×) und `ImdbSearchApiController` (1×) warfen
 `ResponseStatusException` direkt statt einer gemappten Exception, wodurch die Fehlermeldung ohne

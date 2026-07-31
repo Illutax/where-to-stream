@@ -2,6 +2,7 @@ import { HarnessLoader } from '@angular/cdk/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatCheckboxHarness } from '@angular/material/checkbox/testing';
+import { MatSortHarness } from '@angular/material/sort/testing';
 import { ManageTable } from './manage-table';
 import { imdbId } from '../../core/domain';
 import { ManageRow } from '../../core/models';
@@ -35,6 +36,10 @@ describe('ManageTable', () => {
 
   const forms = () => Array.from(fixture.nativeElement.querySelectorAll('form')) as HTMLFormElement[];
   const invalidateButton = () => fixture.nativeElement.querySelector('.invalidate-button') as HTMLButtonElement;
+  const names = () =>
+    Array.from(fixture.nativeElement.querySelectorAll('tbody tr')).map(
+      (row) => (row as HTMLElement).querySelector('td:nth-child(2)')?.textContent?.trim(),
+    );
 
   it('renders a checkbox per row and disables "Invalidate" until something is selected', async () => {
     const checkboxes = await loader.getAllHarnesses(MatCheckboxHarness);
@@ -98,5 +103,31 @@ describe('ManageTable', () => {
     forms()[0].dispatchEvent(new Event('submit'));
 
     expect(scraped).toBe(1);
+  });
+
+  it('sorts by title ascending then descending as the header is clicked', async () => {
+    expect(names()).toEqual(['Alpha', 'Beta']); // input order, unsorted
+
+    const sort = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSortHarness);
+    const [titleHeader] = await sort.getSortHeaders({ label: 'Title' });
+
+    await titleHeader.click();
+    fixture.detectChanges();
+    expect(names()).toEqual(['Alpha', 'Beta']);
+
+    await titleHeader.click();
+    fixture.detectChanges();
+    expect(names()).toEqual(['Beta', 'Alpha']);
+  });
+
+  it('sorts by last-scraped date when the Status header is clicked, with "never scraped" last', async () => {
+    const sort = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSortHarness);
+    const [statusHeader] = await sort.getSortHeaders({ label: 'Status' });
+
+    await statusHeader.click();
+    fixture.detectChanges();
+
+    // tt2 (Beta) has a real lastScrapedAt; tt1 (Alpha) has never been scraped (null) -> sorts last.
+    expect(names()).toEqual(['Beta', 'Alpha']);
   });
 });

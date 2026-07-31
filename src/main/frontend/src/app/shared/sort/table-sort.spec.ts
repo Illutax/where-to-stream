@@ -1,5 +1,5 @@
 import { Sort } from '@angular/material/sort';
-import { sortRows } from './table-sort';
+import { sortManageRows, sortRows } from './table-sort';
 
 describe('sortRows', () => {
   const rows = [
@@ -50,5 +50,36 @@ describe('sortRows', () => {
     ];
     expect(names(sortRows(paid, sort('year', 'asc')))).toEqual(['Released', 'Upcoming']);
     expect(names(sortRows(paid, sort('year', 'desc')))).toEqual(['Upcoming', 'Released']);
+  });
+});
+
+describe('sortManageRows', () => {
+  const rows = [
+    { name: 'Beta', lastScrapedAt: '2020-03-03T00:00:00Z' },
+    { name: 'alpha', lastScrapedAt: null },
+    { name: 'Gamma', lastScrapedAt: '2020-01-01T00:00:00Z' },
+  ];
+
+  const sort = (active: string, direction: '' | 'asc' | 'desc'): Sort => ({ active, direction });
+  const names = (rs: { name: string }[]) => rs.map((r) => r.name);
+
+  it('sorts by title ascending and descending, case-insensitively', () => {
+    expect(names(sortManageRows(rows, sort('title', 'asc')))).toEqual(['alpha', 'Beta', 'Gamma']);
+    expect(names(sortManageRows(rows, sort('title', 'desc')))).toEqual(['Gamma', 'Beta', 'alpha']);
+  });
+
+  it('sorts by lastScrapedAt chronologically, with never-scraped (null) sorting last ascending / first descending', () => {
+    expect(names(sortManageRows(rows, sort('lastScrapedAt', 'asc')))).toEqual(['Gamma', 'Beta', 'alpha']);
+    expect(names(sortManageRows(rows, sort('lastScrapedAt', 'desc')))).toEqual(['alpha', 'Beta', 'Gamma']);
+  });
+
+  it('restores the input order when the direction is empty', () => {
+    expect(names(sortManageRows(rows, sort('title', '')))).toEqual(['Beta', 'alpha', 'Gamma']);
+  });
+
+  it('does not mutate the input array', () => {
+    const original = [...rows];
+    sortManageRows(rows, sort('title', 'asc'));
+    expect(rows).toEqual(original);
   });
 });

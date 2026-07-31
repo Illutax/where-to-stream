@@ -45,3 +45,40 @@ function yearValue(year: number | string): number {
   const n = typeof year === 'number' ? year : parseInt(year, 10);
   return Number.isNaN(n) ? Number.POSITIVE_INFINITY : n;
 }
+
+/** Row shape the "Cache Verwalten" manage table sorts by (title, last scraped at). */
+interface SortableManageRow {
+  name: string;
+  lastScrapedAt: string | null;
+}
+
+/**
+ * Same contract as {@link sortRows}, for the manage table's own columns (`title`, `lastScrapedAt`)
+ * — a separate, small function rather than folding it into {@link sortRows}'s `SortableRow`, since
+ * the manage table has neither a `year` nor an `added` column.
+ */
+export function sortManageRows<T extends SortableManageRow>(rows: readonly T[], sort: Sort): T[] {
+  const copy = [...rows];
+  if (!sort.direction || !sort.active) {
+    return copy;
+  }
+  const factor = sort.direction === 'asc' ? 1 : -1;
+  return copy.sort((a, b) => factor * compareManage(a, b, sort.active));
+}
+
+function compareManage(a: SortableManageRow, b: SortableManageRow, column: string): number {
+  switch (column) {
+    case 'title':
+      return a.name.localeCompare(b.name);
+    case 'lastScrapedAt':
+      // Never-scraped (null) sorts last ascending / first descending — same treatment as the
+      // paid table's "Not yet released" placeholder for year (see yearValue above).
+      return lastScrapedAtValue(a.lastScrapedAt) - lastScrapedAtValue(b.lastScrapedAt);
+    default:
+      return 0;
+  }
+}
+
+function lastScrapedAtValue(value: string | null): number {
+  return value === null ? Number.POSITIVE_INFINITY : Date.parse(value);
+}
