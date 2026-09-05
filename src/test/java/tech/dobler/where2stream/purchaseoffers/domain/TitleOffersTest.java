@@ -16,9 +16,9 @@ class TitleOffersTest {
     private static final ImdbId HEAT = ImdbId.of("tt0113277");
     private static final Instant FETCHED_AT = Instant.parse("2026-09-05T14:00:00Z");
     private static final Offer BUY_NOW =
-            new Offer(OfferPrice.of(1299, "EUR"), URI.create("https://www.ebay.de/itm/1"));
+            Offer.withoutStatedShipping(OfferPrice.of(1299, "EUR"), URI.create("https://www.ebay.de/itm/1"));
     private static final Offer AUCTION =
-            new Offer(OfferPrice.of(450, "EUR"), URI.create("https://www.ebay.de/itm/2"));
+            Offer.withoutStatedShipping(OfferPrice.of(450, "EUR"), URI.create("https://www.ebay.de/itm/2"));
 
     @Test
     void bothOffersAreCarriedAlongWithTheFetchTimestamp() {

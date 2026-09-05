@@ -1,5 +1,6 @@
 package tech.dobler.where2stream.purchaseoffers.port.out;
 
+import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableException;
 import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
@@ -34,14 +35,17 @@ public interface PurchaseOfferSource {
     /**
      * Looks up the cheapest fixed-price offer and the cheapest running auction for a title.
      *
-     * @param imdbId     identifies the title, and is carried through into the result
-     * @param searchTerm what to search the marketplace for.
-     *                   Built by the application layer from data we already hold — never taken
-     *                   from the request — so this endpoint cannot be used as an open search proxy
-     *                   (plan section 5.1)
+     * @param imdbId      identifies the title, and is carried through into the result
+     * @param searchTerm  what to search the marketplace for.
+     *                    Built by the application layer from data we already hold — never taken
+     *                    from the request — so this endpoint cannot be used as an open search proxy
+     *                    (plan section 5.1)
+     * @param marketplace which marketplace to ask, taken from the requesting user's setting
+     *                    (plan, decision 6.4). It also fixes the currency of the result and the
+     *                    hosts the offer links may point at
      * @return the offers found, or {@link TitleOffers#none} if the lookup succeeded but found none
      * @throws OfferSourceUnavailableException if the source could not be reached or refused to
      *                                         answer
      */
-    TitleOffers findOffers(ImdbId imdbId, String searchTerm);
+    TitleOffers findOffers(ImdbId imdbId, String searchTerm, Marketplace marketplace);
 }

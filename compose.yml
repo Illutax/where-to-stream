@@ -19,6 +19,10 @@ services:
       - W2S_SECURITY_REMEMBERME_KEY=${W2S_REMEMBER_ME_KEY}
       # Posters come from IMDb by default. Set TMDB_ENABLED=true + a key to use TMDB instead.
       - TMDB_ENABLED=${TMDB_ENABLED:-false}
+      # eBay purchase offers. Off unless EBAY_ENABLED=true and both credentials are in .env
+      # (which is passed through wholesale via env_file below).
+      - EBAY_ENABLED=${EBAY_ENABLED:-false}
+      - EBAY_DEFAULT_MARKETPLACE=${EBAY_DEFAULT_MARKETPLACE:-EBAY_DE}
       # Uncomment to log every poster resource fetched (lookup URL + image CDN URL).
       # Dotted form matches the DispatcherServlet example above; canonical env form is
 #      - LOGGING_LEVEL_TECH_DOBLER_WHERE2STREAM_TITLECATALOG=DEBUG.

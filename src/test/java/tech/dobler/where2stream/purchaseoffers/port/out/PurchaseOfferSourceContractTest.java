@@ -1,6 +1,7 @@
 package tech.dobler.where2stream.purchaseoffers.port.out;
 
 import org.junit.jupiter.api.Test;
+import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 import tech.dobler.where2stream.purchaseoffers.domain.Offer;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferPrice;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableException;
@@ -30,11 +31,11 @@ class PurchaseOfferSourceContractTest {
 
     @Test
     void aSourceCanReportOffersItFound() {
-        final var buyNow = new Offer(OfferPrice.of(1299, "EUR"), URI.create("https://www.ebay.de/itm/1"));
+        final var buyNow = Offer.withoutStatedShipping(OfferPrice.of(1299, "EUR"), URI.create("https://www.ebay.de/itm/1"));
         final PurchaseOfferSource source =
-                (imdbId, term) -> new TitleOffers(imdbId, Optional.of(buyNow), Optional.empty(), FETCHED_AT);
+                (imdbId, term, marketplace) -> new TitleOffers(imdbId, Optional.of(buyNow), Optional.empty(), FETCHED_AT);
 
-        final var offers = source.findOffers(HEAT, "Heat Blu-ray");
+        final var offers = source.findOffers(HEAT, "Heat Blu-ray", Marketplace.EBAY_DE);
 
         assertThat(offers)
                 .isNotNull()
@@ -44,9 +45,9 @@ class PurchaseOfferSourceContractTest {
 
     @Test
     void aSuccessfulLookupWithoutResultsIsAnOrdinaryValueNotAnException() {
-        final PurchaseOfferSource source = (imdbId, term) -> TitleOffers.none(imdbId, FETCHED_AT);
+        final PurchaseOfferSource source = (imdbId, term, marketplace) -> TitleOffers.none(imdbId, FETCHED_AT);
 
-        final var offers = source.findOffers(HEAT, "Heat Blu-ray");
+        final var offers = source.findOffers(HEAT, "Heat Blu-ray", Marketplace.EBAY_DE);
 
         assertThat(offers)
                 .isNotNull()
@@ -56,12 +57,12 @@ class PurchaseOfferSourceContractTest {
 
     @Test
     void anUnreachableSourceThrowsRatherThanReturningAnEmptyResult() {
-        final PurchaseOfferSource source = (imdbId, term) -> {
+        final PurchaseOfferSource source = (imdbId, term, marketplace) -> {
             throw new OfferSourceUnavailableException("upstream refused", new IOException("connection reset"));
         };
 
         assertThatExceptionOfType(OfferSourceUnavailableException.class)
-                .isThrownBy(() -> source.findOffers(HEAT, "Heat Blu-ray"))
+                .isThrownBy(() -> source.findOffers(HEAT, "Heat Blu-ray", Marketplace.EBAY_DE))
                 .withMessage("upstream refused")
                 .withCauseInstanceOf(IOException.class);
     }

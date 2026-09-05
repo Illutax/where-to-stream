@@ -81,6 +81,18 @@ public record OfferPrice(long minorUnits, Currency currency) implements Comparab
     }
 
     /**
+     * Adds two amounts — used to turn an item price plus its shipping cost into what the buyer
+     * actually pays (plan, decision 6.3).
+     *
+     * @throws IllegalArgumentException if the currencies differ, for the same reason
+     *                                  {@link #compareTo} refuses: there is no exchange rate here
+     */
+    public OfferPrice plus(OfferPrice other) {
+        requireSameCurrency(other);
+        return new OfferPrice(minorUnits + other.minorUnits, currency);
+    }
+
+    /**
      * Orders by amount, cheapest first.
      *
      * @throws IllegalArgumentException if the currencies differ — there is no exchange rate here,
@@ -89,11 +101,15 @@ public record OfferPrice(long minorUnits, Currency currency) implements Comparab
      */
     @Override
     public int compareTo(OfferPrice other) {
+        requireSameCurrency(other);
+        return Long.compare(minorUnits, other.minorUnits);
+    }
+
+    private void requireSameCurrency(OfferPrice other) {
         if (!currency.equals(other.currency)) {
             throw new IllegalArgumentException(
-                    "Cannot compare prices in different currencies: %s and %s"
+                    "Cannot combine or compare prices in different currencies: %s and %s"
                             .formatted(currency.getCurrencyCode(), other.currency.getCurrencyCode()));
         }
-        return Long.compare(minorUnits, other.minorUnits);
     }
 }
