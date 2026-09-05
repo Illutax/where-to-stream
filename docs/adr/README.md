@@ -26,5 +26,6 @@ analog zum `adr`-Skill der Team-Doku.
 | [0017](0017-quota-verwaltung-fuer-die-ebay-browse-api.md) | Quota-Verwaltung für die eBay Browse API | Proposed |
 | [0018](0018-dirty-checking-statt-explizitem-save.md) | Dirty Checking statt explizitem `save()` für geladene Entitäten | Proposed |
 | [0019](0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) | `port.spi` für umgekehrte Kontextabhängigkeiten statt Ablage in `shared` | Proposed |
+| [0020](0020-admin-impersonierung-ueber-switchuserfilter.md) | Admin-Impersonierung über Spring Securitys `SwitchUserFilter` | Proposed |
 
 Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.
