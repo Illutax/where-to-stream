@@ -5,11 +5,14 @@ Es ist bewusst so geschrieben, dass eine **andere Claude-Code-Session ohne Vorwi
 Ursprungsgespräch** direkt damit arbeiten kann: jeder Schritt nennt die konkrete Datei, die
 betroffenen Klassen/Komponenten und was sich ändert.
 
-**Status: Entwurf v3.2, in Arbeit.**
-Machbarkeit und Sicherheitslage sind geklärt (Abschnitte 3–5), die Empfehlung steht (Abschnitt 4.2).
-Ein **erster POC-Lauf hat stattgefunden** (Abschnitt 7.1) — er hat Variante E nicht bestätigt,
-sondern das Blockierungsrisiko konkret belegt.
-Offen sind damit die Fragen 2 und 3 aus Phase 0 sowie die Detailentscheidungen aus Abschnitt 6.
+**Status: Entwurf v3.3, in Arbeit.**
+Machbarkeit und Sicherheitslage sind geklärt (Abschnitte 3–5).
+Der POC-Lauf aus Abschnitt 7.1 hat Variante E (Scraping) **widerlegt**;
+der Auftraggeber verfolgt seither **Variante C (Browse API) primär** (Abschnitt 4.2),
+ein Developer-Account ist beantragt mit Rückmeldung bis zum **2026-09-08**.
+Offen sind die Quota-Details (Abschnitt 11) und die Detailentscheidungen aus Abschnitt 6.
+Phase 0 in seiner bisherigen Form (Scraping-Spike) ist damit gegenstandslos — an seine Stelle
+tritt die Verifikation gegen die eBay-Sandbox, sobald der Account da ist.
 
 ## 1. Ziel aus Nutzersicht
 
@@ -184,7 +187,15 @@ Was gegen E spricht — und das ist ernster als die AGB-Frage:
 
 ### 4.2 Empfehlung
 
-**Variante E als Standardquelle, hinter einem Port — mit C als Ausweichadapter.**
+**Variante C (Browse API) als Standardquelle, hinter einem Port.**
+
+Diese Empfehlung ist eine **Korrektur**: bis v3.2 stand hier Variante E (Scraping) als Standard
+mit C als Ausweg.
+Der POC-Lauf aus Abschnitt 7.1 hat diese Reihenfolge umgedreht — E wurde nach rund 40 Requests
+dauerhaft blockiert, und zwar von einer IP, die günstiger bewertet sein dürfte als die spätere
+Produktions-IP.
+Der Auftraggeber hat daraufhin entschieden, **Variante C primär zu verfolgen**;
+ein eBay-Developer-Account ist beantragt, mit Rückmeldung bis zum **2026-09-08**.
 
 Der entscheidende Punkt ist, dass diese Wahl **nicht endgültig sein muss**.
 Die Architektur des Projekts macht sie umkehrbar, und es gibt dafür bereits einen Präzedenzfall:
@@ -192,14 +203,21 @@ Poster sind über `PosterSource` austauschbar (IMDb per Default, TMDB hinter `tm
 Dasselbe hier:
 
 - `PurchaseOfferSource` ist der Port (Abschnitt 7, Phase 1).
-- `EbayScrapeSource` ist der Adapter für Variante E — Standard, ohne Konfiguration lauffähig.
-- `EbayBrowseApiSource` kann später als zweiter Adapter hinter einem Flag (`ebay.api.enabled`)
-  dazukommen, falls das Scraping blockiert wird oder die AGB-Frage neu bewertet wird.
+- `EbayBrowseApiSource` ist der Adapter für Variante C — der Standard.
+  Er braucht Zugangsdaten (5.4) und ein Quota-Budget (Abschnitt 11).
+- `EbayScrapeSource` (Variante E) bleibt als benannter Rückfallweg dokumentiert, wird aber
+  **nicht** gebaut, solange C verfügbar ist.
+  Die Analyse in 4.1 und die Anforderungen in 5.5 bleiben für diesen Fall gültig.
 
 Anwendungsschicht, API-Endpunkt, DTO und das gesamte Frontend sind von der Wahl **nicht** betroffen.
-Wird E blockiert, kostet der Wechsel eine Adapter-Klasse, nicht das Feature.
-Damit ist der Weg mit dem geringsten Vorab-Aufwand (kein Account, kein Freigabeprozess) auch der
-Weg, der am wenigsten kostet, wenn er scheitert.
+Der Preis dieser Korrektur ist entsprechend gering: sie kostet eine Adapter-Klasse, nicht das
+Feature — genau das war der Zweck des Ports.
+
+**Was C gegenüber E einhandelt:** einen Freigabeprozess und eine harte Tagesquote
+(5.000 Calls, Abschnitt 3) anstelle eines Blockierungsrisikos.
+Die Quote ist planbar, die Blockade war es nicht.
+Die Aufteilung dieser Quote unter den Nutzern regelt Abschnitt 11.
+**Was entfällt:** die AGB-Frage aus 5.7 — C ist der von eBay vorgesehene Weg.
 
 ## 5. Sicherheitsanforderungen
 
@@ -317,8 +335,8 @@ Verbindlich für die Umsetzung. Jeder Punkt ist eine Anforderung, kein Hinweis.
 
 ## 6. Offene Entscheidungen
 
-1. **Variante** (Abschnitt 4) — Empfehlung E hinter dem Port, C als späterer Ausweichadapter.
-   Blockiert Phase 1.
+1. ~~**Variante** (Abschnitt 4)~~ — **entschieden:** Variante C (Browse API) primär,
+   E nur noch als dokumentierter Rückfallweg (siehe 4.2).
 2. **Suchbegriff:** deutscher Titel (nur verfügbar, wenn der Metadaten-Cache ihn hat) oder
    Originalname; mit oder ohne Jahr; Kategoriefilter auf „DVDs & Blu-ray Discs" (`_sacat`).
    Die Trefferqualität ist das eigentliche Produktrisiko dieses Features:
@@ -512,8 +530,17 @@ Ehrlich offen — vor der Umsetzung zu klären, nicht zu raten:
   `_sop` — plausibel, aber unverifiziert.
 - Ob ein gemischter Abruf (eine Seite, preisaufsteigend) beide Preise liefert oder zwei getrennte
   Abrufe nötig sind.
-- Für den Ausweichfall C: CORS-Verhalten der Browse-Datenendpunkte, Kombinierbarkeit von
-  `sort=price` mit `buyingOptions:{AUCTION}`.
+Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Account da ist:
+
+- Kombinierbarkeit von `sort=price` mit `buyingOptions:{AUCTION}`.
+- Ob sich beide Angebotsarten in **einem** Call abfragen lassen
+  (etwa `buyingOptions:{FIXED_PRICE|AUCTION}`) und ob eine einzelne preisaufsteigend sortierte
+  Ergebnisseite dann wirklich beide Bestwerte enthält.
+  Das würde das Titel-Budget aus Abschnitt 11 verdoppeln.
+- **Wann eBays Tageskontingent zurückgesetzt wird.**
+  UTC-Mitternacht ist eine plausible Arbeitshypothese, aber durch keine der in Abschnitt 3
+  verlinkten Quellen belegt (siehe 11.5).
+- Ob die Sandbox dieselben Kontingentgrenzen hat wie die Produktionsumgebung.
 
 ## 9. Nicht-Ziele
 
@@ -548,3 +575,136 @@ Ehrlich offen — vor der Umsetzung zu klären, nicht zu raten:
   vor.
   Neuer offener Punkt: der projekteigene `USER_AGENT` allein genügt nicht, ein vollständiger
   Browser-Headersatz ist nötig und damit eine Entscheidung an Abschnitt 5.5.
+- **2026-09-05** — Entwurf v3.3: **Variantenentscheidung umgedreht.**
+  Als Konsequenz aus 7.1 wird Variante C (Browse API) primär verfolgt, Variante E nur noch als
+  dokumentierter Rückfallweg geführt (Abschnitt 4.2, offene Entscheidung 6.1 damit erledigt).
+  Neuer Abschnitt 11 zur Aufteilung der 5.000-Calls-Tagesquote unter den Nutzern nach der Formel
+  des Auftraggebers, inklusive der daraus folgenden Notwendigkeit eines globalen Tageslimits.
+  Abschnitt 8 auf die für C zu prüfenden Punkte umgestellt.
+
+## 11. Quota-Aufteilung unter den Nutzern (Variante C)
+
+Nachdem der POC-Lauf (Abschnitt 7.1) das Blockierungsrisiko von Variante E konkret belegt hat,
+hat der Auftraggeber entschieden: **Variante C (eBay Developer Program, Browse API) wird ab sofort primär verfolgt.**
+Ein Developer-Account ist beantragt; Rückmeldung wird bis zum 2026-09-08 erwartet.
+Damit wird die harte Randbedingung aus Abschnitt 3 — 5.000 Calls pro Tag und Applikation, nicht pro Benutzer —
+zur zentralen Betriebsfrage: das Tagesbudget muss unter allen Nutzern aufgeteilt werden.
+
+### 11.1 Die Aufteilungsformel
+
+Vorgabe des Auftraggebers, wörtlich:
+
+```
+requests_pro_nutzer = 5000 / (anzahl_der_nutzer / 2)
+```
+
+Algebraisch ist das `10000 / n` — das Tagesbudget wird also **bewusst doppelt überbucht**.
+Die zugrundeliegende Annahme ist ausdrücklich benannt:
+an einem gegebenen Tag ruft höchstens die Hälfte der registrierten Nutzer tatsächlich Preise ab.
+Solange diese Annahme hält, bleibt die Summe der real verbrauchten Requests unter 5.000;
+verletzen mehr als die Hälfte der Nutzer die Annahme, ist das Budget vor Tagesende erschöpft (siehe 11.3).
+Das ist eine Entscheidung des Auftraggebers in Kenntnis dieses Punkts, kein Rechenfehler —
+sie tauscht ungenutztes Kontingent gegen ein höheres Per-User-Limit und nimmt dafür das Erschöpfungsrisiko in Kauf.
+
+Da eine Titelabfrage **zwei** API-Calls kostet (siehe 11.2),
+ist das Budget in *Titeln* halb so groß wie in *Requests*:
+
+| Registrierte Nutzer (n) | Requests/Nutzer/Tag (10000/n) | Titelabfragen/Nutzer/Tag |
+| --- | --- | --- |
+| 2 | 5.000 | 2.500 |
+| 5 | 2.000 | 1.000 |
+| 10 | 1.000 | 500 |
+| 25 | 400 | 200 |
+| 50 | 200 | 100 |
+
+Zur Einordnung: die 200-Titel-Watchlist aus Abschnitt 3 wäre bei 25 Nutzern
+genau eine vollständige „alles einmal abfragen"-Runde pro Tag —
+die Bindung an eine bewusste Nutzeraktion ohne Massen-Abruf (Abschnitt 9) bleibt also auch bei Variante C wesentlich.
+
+### 11.2 Zwei Calls je Titel — mit einem offenen Punkt
+
+Abschnitt 3 legt fest, dass Sofortkauf und Auktion über getrennte Filter abgefragt werden:
+ein Request mit `buyingOptions:{FIXED_PRICE}`, einer mit `buyingOptions:{AUCTION}`.
+Alle Zahlen in 11.1 rechnen mit diesem Faktor 2.
+
+**Offener Punkt, der das Titel-Budget verdoppeln würde:**
+ob sich beide Angebotsarten in *einem* Call kombinieren lassen
+(etwa `buyingOptions:{FIXED_PRICE|AUCTION}`), ist im bisherigen Plan nicht verifiziert —
+Abschnitt 8 führt bereits die verwandte Frage der Kombinierbarkeit von `sort=price` mit `buyingOptions:{AUCTION}` als ungeprüft.
+Selbst wenn der kombinierte Filter funktioniert, ist damit noch nicht gezeigt,
+dass eine einzelne preisaufsteigend sortierte Ergebnisseite zuverlässig **beide** Bestwerte enthält:
+der günstigste Sofortkauf und das günstigste laufende Gebot müssen nicht beide auf der ersten Seite liegen.
+Der Punkt gehört daher in die Verifikation nach Erhalt des Developer-Accounts (Sandbox reicht dafür)
+und wird in Abschnitt 8 mitgeführt.
+Bis dahin gilt konservativ der Faktor 2.
+
+### 11.3 Überbuchung erzwingt ein globales Tageslimit
+
+Die Formel verteilt rechnerisch 10.000 Requests, real existieren 5.000.
+**Das Per-User-Limit allein schützt das Kontingent deshalb nicht:**
+wenn mehr als die Hälfte der Nutzer ihr Limit ausschöpft, brauchen die ersten aktiven Nutzer das gemeinsame Budget auf,
+und alle weiteren Calls laufen gegen eBays harte Quote — mit Fehlern, die wir nicht mehr kontrollieren.
+Es braucht daher zwingend **zwei** Zähler:
+
+1. **Per-User-Tageszähler**: `10000 / n` Requests, danach ist für diesen Nutzer Schluss.
+2. **Globaler Tageszähler**: hartes Limit knapp *unter* 5.000
+   (Vorschlag: 4.800, als Puffer für Retries und Zählungenauigkeiten),
+   der greift, bevor eBay selbst ablehnt.
+
+Verhalten bei Erschöpfung — im Sinne von 5.2/5.5 sichtbare Degradation statt Fehler:
+
+- Kein Fehler und keine Exception im Nutzer-Request.
+- Der Endpunkt antwortet mit einem regulären Ergebnis „Tagesbudget erschöpft",
+  das Frontend zeigt eine verständliche Meldung
+  (z. B. „Preisabfragen sind für heute ausgeschöpft, morgen wieder verfügbar"),
+  analog zum Zustand „derzeit nicht verfügbar" aus Phase 2.
+- Per-User-Limit erreicht: gleiche Mechanik, aber mit auf den Nutzer bezogener Meldung —
+  der Unterschied ist für den Nutzer relevant (bei ihm hilft Warten bis morgen, global auch).
+- Beides wird auf `info`/`warn` geloggt, damit erkennbar ist, wie oft die Annahme aus 11.1 reißt.
+
+### 11.4 Was „anzahl_der_nutzer" konkret ist — zu entscheiden
+
+Die Formel lässt offen, was `n` genau ist. Zu entscheiden sind drei Punkte:
+
+- **Grundmenge:** alle registrierten Nutzer aus der Datenbank,
+  oder nur eine Teilmenge (z. B. Nutzer mit nicht-leerer Watchlist)?
+- **Ermittlungszeitpunkt:** beim Anwendungsstart, einmal täglich, oder pro Request?
+  Pro Request wäre exakt, macht das Limit aber im Tagesverlauf beweglich und schwer erklärbar;
+  nur beim Anwendungsstart veraltet bei langen Laufzeiten.
+- **Neue Nutzer mitten am Tag:** bekommen sie sofort ein Limit (womit die Summe der verteilten
+  Limits weiter steigt), oder erst ab dem Folgetag?
+
+**Vorschlag:** `n` = Anzahl registrierter Nutzer laut Datenbank,
+ermittelt **einmal täglich beim Zurücksetzen der Zähler** (11.5) und für den Tag eingefroren.
+Neue Nutzer mitten am Tag erhalten sofort dasselbe Tageslimit wie alle anderen,
+ohne dass bestehende Limits neu berechnet werden —
+das erhöht die Überbuchung geringfügig, ist aber durch das globale Limit (11.3) abgesichert
+und vermeidet, dass sich ein bereits kommuniziertes Limit im Tagesverlauf ändert.
+
+### 11.5 Zurücksetzen der Zähler
+
+Beide Zähler (per User und global) werden einmal täglich zurückgesetzt.
+Der Reset sollte mit dem Zeitpunkt zusammenfallen, zu dem eBay das Applikations-Kontingent erneuert —
+sonst laufen unser Budgetfenster und eBays Fenster gegeneinander,
+und ein frisch zurückgesetzter lokaler Zähler kann auf ein bei eBay noch erschöpftes Kontingent treffen.
+
+**Unverifiziert:** dass eBays Tageskontingent zu **UTC-Mitternacht** zurückgesetzt wird,
+ist eine plausible Annahme, die weder dieses Dokument noch die in Abschnitt 3 verlinkten Quellen belegen.
+Der Punkt ist nach Erhalt des Developer-Accounts zu prüfen
+(die Analytics API bzw. das Developer-Portal zeigen den Kontingentstand und das Reset-Verhalten)
+und wandert bis dahin in Abschnitt 8.
+Bis zur Klärung wird UTC-Mitternacht als Arbeitshypothese verwendet.
+
+### 11.6 Technische Verortung
+
+Beides ist für dieses Projekt Neuland (siehe Abschnitt 2):
+ein **Per-User-Limit auf eingehenden Endpunkten existiert nirgends**,
+und der vorhandene `RateLimiter` (`shared/platform/outbound/RateLimiter.java`)
+drosselt nur ausgehende Requests global — er kennt weder Nutzer noch Tagesbudgets.
+Per-User- und globaler Tageszähler sind daher neu zu bauen.
+Natürlicher Ort ist die Anwendungsschicht des neuen Kontexts `purchaseoffers`
+(`TitleOfferService`, Phase 1), wo bereits In-Flight-Deduplizierung und Circuit Breaker angesiedelt sind;
+In-Memory-Zähler genügen, solange bewusst in Kauf genommen wird,
+dass ein Neustart der Anwendung die Tageszähler zurücksetzt (kein Persistenzbedarf im Sinne von 5.6).
+Die Nutzerzahl kommt über einen bestehenden bzw. schmal zu ergänzenden `port.in` des `accountaccess`-Kontexts,
+nicht über einen Direktzugriff auf dessen Datenbestand (ADR-0014).
