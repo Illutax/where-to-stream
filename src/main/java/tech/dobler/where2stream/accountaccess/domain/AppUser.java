@@ -72,6 +72,18 @@ public class AppUser {
     @Column(name = "show_german_title", nullable = false)
     private boolean showGermanTitle = false;
 
+    /**
+     * Which eBay marketplace the user's price lookups query, as the marketplace's id.
+     *
+     * <p>A {@link String}, not an enum, on purpose: the set of marketplaces belongs to Purchase
+     * Offers, and Account &amp; Access has no business importing another context's domain type
+     * (ADR-0014). What it stores is the user's choice; what that choice means is decided elsewhere.
+     * Which values are acceptable is checked on the way in, against
+     * {@code SupportedMarketplaces} — the context that owns them says so.
+     */
+    @Column(name = "ebay_marketplace", nullable = false)
+    private String ebayMarketplace = "EBAY_DE";
+
     /** The user's preferred library layout (defaults to the poster-tile grid). */
     @Enumerated(EnumType.STRING)
     @Column(name = "view_mode", nullable = false)
@@ -135,6 +147,10 @@ public class AppUser {
 
     public void changeShowGermanTitle(boolean show) {
         this.showGermanTitle = show;
+    }
+
+    public void changeEbayMarketplace(String newMarketplace) {
+        this.ebayMarketplace = newMarketplace;
     }
 
     public void changeViewMode(ViewMode newViewMode) {

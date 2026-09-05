@@ -47,3 +47,6 @@ databaseChangeLog:
   - include:
       file: changes/016-ebay-quota.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/017-user-ebay-marketplace.xml
+      relativeToChangelogFile: true

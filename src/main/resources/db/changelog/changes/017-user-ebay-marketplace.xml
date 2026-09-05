@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="017-user-ebay-marketplace" author="claude">
+        <comment>
+            Per-user eBay marketplace for the price lookup (plan decision 6.4), default EBAY_DE.
+            Mirrors 012-user-language-german-title.
+
+            Stored as the marketplace id rather than an enum column of its own kind: the set of
+            marketplaces belongs to the purchaseoffers context, and accountaccess only keeps the
+            user's choice. Values are validated on the way in by the context that owns them.
+
+            Existing rows get EBAY_DE, which is also the configured application default, so nobody's
+            behaviour changes when this ships.
+        </comment>
+        <addColumn tableName="app_user">
+            <column name="ebay_marketplace" type="varchar(16)" defaultValue="EBAY_DE">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

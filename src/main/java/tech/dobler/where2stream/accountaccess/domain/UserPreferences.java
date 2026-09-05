@@ -14,9 +14,14 @@ public record UserPreferences(
         Language language,
         boolean showGermanTitle,
         ViewMode viewMode,
-        int tilesPerRow
+        int tilesPerRow,
+        String ebayMarketplace
 ) {
+    /** The marketplace a user gets until they choose one; see {@code AppUser.ebayMarketplace}. */
+    public static final String DEFAULT_EBAY_MARKETPLACE = "EBAY_DE";
+
     public static UserPreferences defaults() {
-        return new UserPreferences(Theme.SYSTEM, true, Language.EN, false, ViewMode.GRID, 6);
+        return new UserPreferences(Theme.SYSTEM, true, Language.EN, false, ViewMode.GRID, 6,
+                DEFAULT_EBAY_MARKETPLACE);
     }
 }

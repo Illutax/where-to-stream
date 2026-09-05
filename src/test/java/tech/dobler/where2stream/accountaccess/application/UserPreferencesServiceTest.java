@@ -60,10 +60,12 @@ class UserPreferencesServiceTest {
         user.changeShowGermanTitle(true);
         user.changeViewMode(ViewMode.LIST);
         user.changeTilesPerRow(3);
+        user.changeEbayMarketplace("EBAY_GB");
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
         assertThat(service.preferencesFor("alice"))
-                .isEqualTo(new UserPreferences(Theme.DARK, false, Language.DE, true, ViewMode.LIST, 3));
+                .isEqualTo(new UserPreferences(Theme.DARK, false, Language.DE, true, ViewMode.LIST, 3,
+                        "EBAY_GB"));
     }
 
     @Test

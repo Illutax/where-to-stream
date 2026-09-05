@@ -40,7 +40,8 @@ public class UserPreferencesService {
     public UserPreferences preferencesFor(String username) {
         return users.findByUsername(username)
                 .map(u -> new UserPreferences(u.getTheme(), u.isShowAgeRatings(), u.getLanguage(),
-                        u.isShowGermanTitle(), u.getViewMode(), u.getTilesPerRow()))
+                        u.isShowGermanTitle(), u.getViewMode(), u.getTilesPerRow(),
+                        u.getEbayMarketplace()))
                 .orElseGet(UserPreferences::defaults);
     }
 
