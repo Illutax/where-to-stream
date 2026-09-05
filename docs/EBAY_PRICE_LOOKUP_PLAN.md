@@ -5,7 +5,7 @@ Es ist bewusst so geschrieben, dass eine **andere Claude-Code-Session ohne Vorwi
 Ursprungsgespräch** direkt damit arbeiten kann: jeder Schritt nennt die konkrete Datei, die
 betroffenen Klassen/Komponenten und was sich ändert.
 
-**Status: Entwurf v3.6, in Arbeit.**
+**Status: Entwurf v3.7, in Arbeit.**
 Machbarkeit und Sicherheitslage sind geklärt (Abschnitte 3–5).
 Der POC-Lauf aus Abschnitt 7.1 hat Variante E (Scraping) **widerlegt**;
 der Auftraggeber verfolgt seither **Variante C (Browse API) primär** (Abschnitt 4.2),
@@ -344,20 +344,45 @@ Verbindlich für die Umsetzung. Jeder Punkt ist eine Anforderung, kein Hinweis.
    Originalname; mit oder ohne Jahr; Kategoriefilter auf „DVDs & Blu-ray Discs" (`_sacat`).
    Die Trefferqualität ist das eigentliche Produktrisiko dieses Features:
    „Heat" findet ohne Kategoriefilter vor allem Heizungszubehör.
-3. **Preisdefinition:** Artikelpreis oder Artikelpreis + Versand?
-   Beim Scraping ist das sogar einfacher als über die API, weil die Ergebnisseite die Sortierung
-   „Preis + Versand: niedrigste zuerst" (`_sop=15`) selbst anbietet.
-   Vorschlag v1: reiner Artikelpreis, Versand ignoriert, im UI kenntlich gemacht.
-4. **Marktplatz:** fest `ebay.de` oder abgeleitet aus `UserPrefsStore.language()`.
-5. **Scope:** nur Dashboard oder überall, wo `TitleCell`/`TitleTile` gerendert wird
-   (Provider-Seiten nutzen dieselben Komponenten).
-   Vorschlag: nur Dashboard.
-6. **Anzeigeort:** eigene Tabellenspalte, Chip auf der Poster-Kachel, oder Aufklapp-Detail.
-   Beides muss in Tabelle **und** Grid funktionieren.
-7. **Bounded Context:** neuer Kontext `purchaseoffers` (eigene ArchUnit-Isolationsregel, ADR-pflichtig)
-   oder Einbau in `streamingavailability` (das über `PaidEntry.price` bereits Kaufpreise kennt).
-   Vorschlag: neuer Kontext.
-8. **EPN-Affiliate-Parameter** an ausgehenden Links: bei Variante E ohnehin gegenstandslos.
+3. ~~**Preisdefinition**~~ — **entschieden: beides anzeigen**, Artikelpreis und Versandkosten.
+   Der Nutzer soll sehen, was er tatsächlich zahlt, ohne dass zwei Angebote mit 2 € und 8 €
+   Versand als gleich günstig erscheinen.
+   **Vermutlich kostenlos:** die Browse API liefert `shippingOptions` innerhalb derselben
+   `ItemSummary`, also ohne zusätzlichen Call — dokumentiert, aber unverifiziert (Abschnitt 8).
+   **Rückfallweg, falls es doch Calls kostet:** Versandkosten nicht abrufen und den Preis als
+   „ab 2,99 €" darstellen, was die Unschärfe sichtbar macht, statt sie zu verschweigen.
+4. ~~**Marktplatz**~~ — **entschieden: Auswahl pro Benutzer in dessen Einstellungen.**
+   Ein Dropdown, keine Ableitung aus der Sprache — die Sprache eines Nutzers sagt nichts darüber,
+   wohin geliefert werden soll.
+   Zulässig sind die Marktplätze zu den drei unterstützten Währungen:
+   `ebay.de` (EUR), `ebay.com` (USD), `ebay.co.uk` (GBP).
+   Das ist eine **neue Benutzereinstellung** und damit eine Änderung an `accountaccess`,
+   nicht nur an `purchaseoffers` — siehe Phase 1b.
+5. ~~**Scope**~~ — **entschieden: nur Dashboard.**
+   `TitleCell`/`TitleTile` bekommen den Preisblock nur, wenn das Dashboard ihn anfordert;
+   die Provider-Seiten bleiben unverändert.
+   Begrenzt zugleich die Gelegenheiten, Tagesbudget zu verbrauchen.
+6. ~~**Anzeigeort**~~ — **entschieden: ein Preis inline, beide im Tooltip.**
+   In der Zeile bzw. auf der Kachel steht der günstigere der beiden Preise als „ab 4,50 €";
+   Sofortkauf, Gebot und „Stand"-Zeitstempel stehen im Tooltip.
+   Zwei Dinge folgen daraus zwingend:
+   - **Der Inline-Preis muss für sich stehen.** Auf Touch-Geräten gibt es kein Hover;
+     wer den Tooltip nie öffnet, sieht nur diese eine Zahl.
+     Deshalb „ab" — es sagt, dass es noch etwas zu sehen gibt.
+   - **Der Tooltip braucht ein Tap-Verhalten**, nicht nur Hover, und muss per Tastatur
+     erreichbar sein.
+     Reines `title=`-Attribut reicht dafür nicht.
+7. ~~**Bounded Context**~~ — **entschieden und umgesetzt:** eigener Kontext `purchaseoffers`,
+   mit Isolationsregel im `ArchitectureTest`.
+8. **EPN-Affiliate-Parameter** an ausgehenden Links — **wieder offen.**
+   Unter Variante E war die Frage gegenstandslos, weil es kein eBay-Konto gab, dem sich ein
+   Affiliate-Bezug zuordnen ließe.
+   Mit dem Developer-Account aus Variante C existiert dieser Bezug, also ist zu entscheiden, ob
+   die Angebots-Links einen EPN-Parameter tragen.
+   Zu bedenken: das macht aus einer Preisanzeige eine Monetarisierung, was für ein privates,
+   nicht-kommerzielles Projekt eine andere Zusage gegenüber den eigenen Nutzern ist —
+   und es berührt die Frage, ob die Nutzung damit noch als nicht-kommerziell gilt.
+   Vorschlag: nein, mindestens bis das Feature läuft.
 
 ## 7. Phasenplan
 
@@ -541,16 +566,43 @@ Es gibt in Phase 1 **keinen** Test, der echte eBay-Endpunkte aufruft.
 Weicht die reale Antwort ab, ist die Korrektur auf die statischen Mapping-Methoden und deren
 Tests begrenzt — das ist der Grund, sie zu isolieren.
 
+### Phase 1b — Marktplatz als Benutzereinstellung (`accountaccess`)
+
+Folgt aus Entscheidung 6.4 und ist der einzige Teil des Features, der **außerhalb** von
+`purchaseoffers` liegt.
+Das Projekt hat für Benutzereinstellungen ein etabliertes Muster — `Language`, `Theme`,
+`ViewMode`, `TilesPerRow` und die beiden Anzeige-Flags sind alle so gebaut —, dem hier zu folgen
+ist:
+
+- `Marketplace`-Enum in `accountaccess/domain` (`EBAY_DE`, `EBAY_COM`, `EBAY_CO_UK`),
+  jeweils mit Marktplatz-ID und Währung.
+- Feld in `UserPreferences`, Liquibase-Changelog für die neue Spalte, Default `EBAY_DE`.
+- `MarketplaceUpdateCommand`/`MarketplaceUpdateRequest` plus Endpunkt an `MeApiController`,
+  analog zu `LanguageUpdateRequest`.
+- Auslieferung über `MeDto`, damit der Client sie kennt.
+- **Zugriff aus `purchaseoffers` ausschließlich über einen `port.in`** von `accountaccess`
+  (ADR-0014) — derselbe Weg, über den auch die Benutzerzahl `n` für die Quota kommt.
+- Frontend: Dropdown in den Einstellungen, i18n in `de.json` **und** `en.json`.
+
+Konsequenz, die bewusst hingenommen wird: zwei Nutzer sehen für denselben Titel verschiedene
+Preise, weil sie verschiedene Marktplätze abfragen.
+Das ist unproblematisch, weil nichts zwischengespeichert wird (5.6) — es gäbe ohnehin keinen
+geteilten Wert, der falsch sein könnte.
+
 ### Phase 2 — Frontend
 - `core/api/offers-api.ts`: `OffersApi.get(imdbId)` — dünn, wie die übrigen `*-api.ts`.
 - `core/offers-store.ts`: Zustand je `imdbId` (`idle | loading | loaded | error`),
   Deduplizierung, **kein** automatischer Abruf beim Seitenaufbau. Muster: `SeenStore`.
 - `shared/offer-prices/offer-prices.ts`: dumme Komponente — Knopf im Ruhezustand,
-  danach die zwei Preise mit „Stand"-Zeitstempel, plus Zustand „derzeit nicht verfügbar".
+  danach **ein** Preis inline („ab 4,50 €") und beide Preise samt „Stand"-Zeitstempel im Tooltip
+  (Entscheidung 6.6), plus die Zustände „keine Angebote", „derzeit nicht verfügbar",
+  „dein Tagesbudget erschöpft" und „gemeinsames Tagesbudget erschöpft" (ADR-0017).
   Ladezustand als **Skeleton-Bar** (`.skeleton-bar--narrow`), nicht als Spinner
   (Projektkonvention, siehe `CLAUDE.md`).
-- Einbau in `CatalogTable` (neue Spalte) und `TitleGrid`/`TitleTile` (Chip),
-  gesteuert über den in 6.5 zu entscheidenden Scope.
+  Der Tooltip muss per Tap **und** per Tastatur zu öffnen sein, nicht nur per Hover —
+  ein `title=`-Attribut genügt nicht.
+- Einbau in `CatalogTable` und `TitleGrid`/`TitleTile`, **nur vom Dashboard aus aktiviert**
+  (Entscheidung 6.5); die Provider-Seiten rendern dieselben Komponenten ohne Preisblock.
 - i18n: neuer Block in `src/i18n/de.json` **und** `en.json`, Schlüssel parallel halten.
 - Tests (Vitest, ADR-0004): Store (Dedup, Fehlerpfad), Komponente (Rendering, `rel="noopener"`,
   kein `innerHTML`), API-Service.
@@ -592,6 +644,13 @@ Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Ac
   **welche Kontingent-Header** die Browse API mitschickt.
   Beides entscheidet, wie zuverlässig 11.3.1 greift.
 - Ob die Sandbox dieselben Kontingentgrenzen hat wie die Produktionsumgebung.
+- **Ob `shippingOptions` in der `ItemSummary` der Suchantwort enthalten ist** — also ob die
+  Versandkosten aus Entscheidung 6.3 ohne zusätzlichen Call zu haben sind.
+  Die Dokumentation legt das nahe; bestätigt ist es nicht.
+  Fällt die Antwort negativ aus, greift der dort benannte Rückfallweg („ab 2,99 €").
+- Ob sich die drei Marktplätze aus Entscheidung 6.4 über den `X-EBAY-C-MARKETPLACE-ID`-Header
+  eines einzigen Application-Tokens abfragen lassen, oder ob je Marktplatz eigene Zugangsdaten
+  nötig sind.
 
 ## 9. Nicht-Ziele
 
@@ -599,8 +658,13 @@ Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Ac
 - Keine Preishistorie, keine Preisalarme in dieser Ausbaustufe.
 - Keine Verkäufer-, Versand- oder Zustandsbewertung — nur die zwei geforderten Preise.
 - **Kein Massen-Abruf** („Preise für alle Titel laden") und kein Vorladen im Hintergrund.
-  Der Abruf bleibt an eine bewusste Nutzeraktion gebunden — bei Variante E, weil jeder Request
-  das Blockierungsrisiko erhöht.
+  Der Abruf bleibt an eine bewusste Nutzeraktion gebunden.
+  Die Regel stammt aus der Zeit von Variante E, wo jeder Request das Blockierungsrisiko erhöhte;
+  unter Variante C ist die Begründung eine andere, aber nicht schwächer:
+  jeder Abruf kostet zwei Calls aus einem Tagesbudget, das sich **alle** Nutzer teilen
+  (Abschnitt 11).
+  Ein Knopf „alle Preise laden" auf einer 200-Titel-Watchlist verbraucht 400 Calls — 8 % des
+  Tagesbudgets für einen einzigen Klick.
 - **Kein Wettrüsten gegen Bot-Erkennung** (siehe 5.5): keine Proxy-Rotation, keine Captcha-Löser,
   kein Headless-Browser.
 
@@ -657,6 +721,21 @@ Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Ac
   `ImdbSuggestionSource`, Testliste je Baustein, und der vorbereitende Pfadfinder-Umzug von
   `HttpClientFactory`/`OutboundHttpClients` nach `shared/platform/outbound`.
   Ausdrücklich festgehalten, was ohne den Developer-Account nicht geht.
+
+- **2026-09-05** — Entwurf v3.7: die vier offenen UX-Entscheidungen getroffen (6.3 bis 6.6).
+  Ein Preis inline plus beide im Tooltip, nur auf dem Dashboard, Artikelpreis **und** Versand,
+  Marktplatz als Auswahl pro Benutzer.
+  Letzteres zieht eine neue Benutzereinstellung nach sich und damit eine Änderung an
+  `accountaccess` — als **Phase 1b** aufgenommen, weil es der einzige Teil des Features außerhalb
+  von `purchaseoffers` ist.
+  Zwei Folgerungen aus dem Tooltip festgehalten: der Inline-Preis muss ohne ihn auskommen
+  (Touch kennt kein Hover), und der Tooltip braucht Tap- und Tastaturbedienung.
+  Entscheidung 7 (eigener Bounded Context) als umgesetzt markiert;
+  Entscheidung 8 (EPN-Affiliate) **wieder geöffnet** — unter Variante E war sie gegenstandslos,
+  mit einem Developer-Account ist sie es nicht mehr.
+  Begründung des Massen-Abruf-Verzichts in den Nicht-Zielen von „Blockierungsrisiko" auf
+  „gemeinsames Tagesbudget" umgestellt.
+  Abschnitt 8 um die Versandkosten- und die Marktplatz-Header-Frage ergänzt.
 
 ## 11. Quota-Aufteilung unter den Nutzern (Variante C)
 
