@@ -314,6 +314,11 @@
                     <!-- Testcontainers (MariaDB) tests need a container runtime + image pull;
                          excluded by default, enabled via the 'testcontainers' profile. -->
                     <excludedGroups>${test.excluded.groups}</excludedGroups>
+                    <!-- Don't fail a run just because a -Dtest=... pattern matched nothing.
+                         Without this, every targeted run has to repeat
+                         -DfailIfNoSpecifiedTests=false on the command line, and the one time it is
+                         forgotten the build fails for a reason unrelated to the code. -->
+                    <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                 </configuration>
             </plugin>
             <plugin>
