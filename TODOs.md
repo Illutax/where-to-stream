@@ -679,3 +679,95 @@ nach Titel/Jahr/hinzugefügt sortierbar sind (`shared/sort/table-sort.ts`, `MatS
   `ResponseStatusException`-404-Fälle (`SearchApiController`, `ProviderApiController`, "unbekannte
   Ressource" statt Validierung) wurden bewusst nicht angefasst — andere Fehlerkategorie, außerhalb
   von F12s "400-Validierung"-Fokus.
+
+---
+
+## eBay-Preisabfrage (2026-09-05)
+
+### 🟢 TODO-49 — Bestehende `save()`-Aufrufe auf Dirty Checking umstellen (ADR-0018)
+[ADR-0018](docs/adr/0018-dirty-checking-statt-explizitem-save.md) legt fest, dass innerhalb einer
+Transaktion geladene Entitäten mutiert und **nicht** gespeichert werden — Hibernates Dirty Checking
+schreibt beim Commit. Der Bestand folgt dem noch nicht; fünf Stellen rufen `save()` auf einer
+bereits verwalteten Entität:
+
+- `accountaccess/application/UserPreferencesService.java` — `update(...)`, das alle sechs
+  Präferenz-Setter bündelt
+- `accountaccess/application/UserAdminService.java` — zwei Stellen (`update`, `deactivate`)
+- `titlecatalog/application/PosterService.java` — zwei Stellen (Zeile 151, 166)
+- `titlecatalog/application/TitleMetaService.java` — Zeile 96
+- `watchlist/application/WatchlistImportService.java` — Zeile 73 und 102
+
+- **Akzeptanzkriterium:** Kein `save()` mehr auf einer Entität, die in derselben Transaktion
+  geladen wurde. Die `of(...)`/`new`-Zweige derselben Methoden behalten ihren Aufruf — dort ist er
+  zwingend.
+- **Bewusst kein Sammel-Commit:** Nach der Pfadfinder-Konvention umzustellen, wer die Methode
+  ohnehin anfasst. Die Änderung ist **nicht mechanisch** — bei jeder Stelle ist zu prüfen, ob die
+  Entität wirklich in derselben Transaktion geladen wurde. Ein pauschales Streichen aller Aufrufe
+  würde die tragenden mitreißen.
+- **Risiko beim Umstellen:** Ein Fehler ist still. Wird eine Stelle umgestellt, deren Entität doch
+  detached war, verfällt die Änderung ohne Exception und ohne Logeintrag. Mockito-Tests können das
+  nicht aufdecken — sie sehen kein Dirty Checking. Wo das Schreiben die eigentliche Zusage ist,
+  gehört ein Test gegen eine echte Persistenzschicht dazu.
+
+### 🟠 TODO-50 — Indizes der Datenbank evaluieren
+Bisher gibt es genau einen bewusst gesetzten Index (`014-index-query-cache-imdb-id.xml`); alles
+andere sind Primärschlüssel und die Unique Constraints, die nebenbei einen Index mitbringen. Ob das
+für die tatsächlichen Zugriffspfade reicht, ist **nie geprüft** worden — es ist eine Annahme, kein
+Befund.
+
+Anlass ist die neue Quota-Tabelle aus [ADR-0017](docs/adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md):
+`ebay_user_quota_day` wird bei **jeder** Preisabfrage über `(quota_day, user_id)` gelesen. Der
+Unique Constraint `uk_ebay_user_quota_day` deckt genau diese Kombination ab und trägt die Abfrage
+damit vermutlich schon — aber „vermutlich" ist der Grund für dieses Ticket.
+
+- **Akzeptanzkriterium:** Für die heißen Abfragepfade liegt ein `EXPLAIN`-Befund vor, aus dem
+  hervorgeht, welcher Index benutzt wird bzw. wo ein Full Scan stattfindet. Fehlende Indizes werden
+  als eigenes Liquibase-Changelog ergänzt, überflüssige benannt.
+- **Kandidaten für die Prüfung:**
+  - `ebay_user_quota_day` über `(quota_day, user_id)` — pro Preisabfrage
+  - `watchlist_entry` über `user_id` — jeder Dashboard-Aufruf
+  - `query_meta` über `due_for_refresh_at` — der gestaffelte Hintergrund-Refresh aus ADR-0016
+    scannt danach
+  - `title_meta` / `title_poster` über `imdb_id`
+  - `spring_session` — kommt aus dem Spring-Session-Schema, nicht von uns, aber zu kennen
+- **Zu bedenken:** Bei fünf Nutzern und wenigen tausend Zeilen wird der Optimizer manches ohnehin
+  per Full Scan lösen, und zwar zu Recht. Das Ticket soll Indizes **begründet** setzen, nicht
+  vorsorglich streuen — jeder Index kostet bei jedem Schreibvorgang.
+- **Vorher zu klären:** Der Befund ist gegen **MariaDB** zu erheben, nicht gegen H2. Die
+  Entwicklungs- und Testumgebung läuft auf H2, dessen Optimizer sich anders entscheidet.
+
+### 🟢 TODO-51 — Eigenen Circuit Breaker durch resilience4j ersetzen (zurückgestellt)
+`TitleOfferService` bringt einen handgeschriebenen Circuit Breaker mit: ein Zähler
+aufeinanderfolgender Fehlschläge plus ein `openUntil`-Zeitpunkt, rund 15 Zeilen. Geprüft wurde, ob
+resilience4j mit Spring AOP die bessere Lösung ist.
+
+**Messergebnis (2026-09-05), nicht Vermutung:** `resilience4j-spring-boot3` 2.3.0 lässt sich
+auflösen, der Spring-Kontext startet damit auf **Spring Boot 4.1.0**, und der
+`@CircuitBreaker`-Aspekt greift tatsächlich — eine Wegwerf-Probe mit 120 fehlschlagenden Aufrufen
+öffnete den Breaker (100 erreichten die Methode, 20 wurden kurzgeschlossen). Die technische Hürde,
+die man vermuten würde, existiert also nicht.
+
+**Trotzdem zurückgestellt**, aus drei Gründen:
+
+1. **Es gibt kein Boot-4-Artefakt.** Der Starter heißt `-spring-boot3` und zielt auf Boot 3;
+   `resilience4j-spring-boot4` existiert nicht. Dass es auf 4.1.0 läuft, ist Glück, keine Zusage.
+   Für ein Projekt, das Spring Boot zügig mitzieht, ist das die falsche Art von Abhängigkeit.
+2. **Der transitive Rattenschwanz ist unverhältnismäßig.** resilience4j zieht `kotlin-stdlib-jdk8`
+   und `micrometer-core` nach — eine Kotlin-Laufzeit für 15 Zeilen Zustandslogik.
+3. **Das Projekt hat die Gegenentscheidung schon getroffen**, als es `RateLimiter` selbst schrieb
+   statt eine Bibliothek zu nehmen.
+
+**Was resilience4j besser könnte** — und was damit als bekannte Schwäche der eigenen Lösung
+stehenbleibt:
+
+- **Der eigene Breaker zählt *aufeinanderfolgende* Fehlschläge.** Bei einer Quelle, die
+  zuverlässig jeden zweiten Aufruf ablehnt, löst er **nie** aus, obwohl die Hälfte des Budgets
+  verbrannt wird. Ein Sliding Window über die Fehlerrate würde das erkennen.
+- **Es gibt keinen Half-Open-Zustand.** Nach Ablauf des Fensters läuft der volle Verkehr wieder an
+  statt einiger Probeaufrufe.
+- Metriken bekäme man geschenkt.
+
+- **Akzeptanzkriterium für später:** Sobald resilience4j ein auf Boot 4 zielendes Artefakt
+  veröffentlicht, erneut bewerten. Bis dahin ist zu entscheiden, ob die beiden genannten Schwächen
+  im eigenen Breaker behoben werden (Fehlerrate statt Folge, plus Half-Open) — das wären nochmals
+  etwa 20 Zeilen und wäre immer noch kleiner als die Abhängigkeit.

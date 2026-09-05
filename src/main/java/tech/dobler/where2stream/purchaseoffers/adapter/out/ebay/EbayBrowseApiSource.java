@@ -102,8 +102,10 @@ public class EbayBrowseApiSource implements PurchaseOfferSource {
                 final var detail = "eBay %s search returned HTTP %d: %s"
                         .formatted(buyingOption, response.statusCode(), response.body());
                 if (looksLikeQuotaExhaustion(response.statusCode(), response.body())) {
+                    logQuotaRejection(response);
                     throw new UpstreamQuotaExhaustedException(detail);
                 }
+                logRejection(response);
                 throw new OfferSourceUnavailableException(detail);
             }
             return cheapestOffer(response.body(), marketplace, buyingOption);
@@ -113,6 +115,56 @@ public class EbayBrowseApiSource implements PurchaseOfferSource {
         } catch (IOException e) {
             throw new OfferSourceUnavailableException("eBay %s search failed".formatted(buyingOption), e);
         }
+    }
+
+    /**
+     * Everything eBay might tell us about the quota, dumped verbatim.
+     *
+     * <p>This exists to settle two guesses that the code currently rests on and that no primary
+     * source confirms (ADR-0017, plan section 8): <em>which</em> response means "allowance spent",
+     * and <em>when</em> the allowance rolls over. Both are answerable from production logs and from
+     * nowhere else, so the moment they can be observed must not be wasted on a one-line warning.
+     *
+     * <p>Logged at {@code warn} rather than {@code debug} deliberately: this happens at most a
+     * handful of times a day, and if it is filtered out by a log level, the evidence is gone.
+     */
+    private void logQuotaRejection(HttpResponse<String> response) {
+        log.warn("""
+                        eBay looks like it refused on quota grounds. Recording everything, because \
+                        both the detection and the reset time are unverified guesses (ADR-0017).
+                          status : {}
+                          when   : {} (UTC)
+                          headers: {}
+                          body   : {}""",
+                response.statusCode(), timeService.now(), quotaRelevantHeaders(response), response.body());
+    }
+
+    /** An ordinary rejection — logged more briefly, but with the headers that might reclassify it. */
+    private void logRejection(HttpResponse<String> response) {
+        log.warn("eBay search rejected with HTTP {} (headers: {}). Not recognised as a quota "
+                        + "rejection — if the daily budget was in fact spent, looksLikeQuotaExhaustion "
+                        + "needs correcting.",
+                response.statusCode(), quotaRelevantHeaders(response));
+    }
+
+    /**
+     * Picks out the headers that could carry quota information.
+     *
+     * <p>Which names eBay actually uses is part of what is being established here, so the filter is
+     * broad on purpose: anything mentioning a limit, a quota, a rate or a retry. Header names are
+     * matched case-insensitively because HTTP does not guarantee their casing.
+     */
+    private static String quotaRelevantHeaders(HttpResponse<String> response) {
+        final var interesting = response.headers().map().entrySet().stream()
+                .filter(entry -> {
+                    final var name = entry.getKey().toLowerCase(java.util.Locale.ROOT);
+                    return name.contains("limit") || name.contains("quota") || name.contains("rate")
+                            || name.contains("retry") || name.contains("reset")
+                            || name.startsWith("x-ebay");
+                })
+                .map(entry -> entry.getKey() + "=" + String.join(",", entry.getValue()))
+                .toList();
+        return interesting.isEmpty() ? "<none matched>" : String.join("; ", interesting);
     }
 
     /**

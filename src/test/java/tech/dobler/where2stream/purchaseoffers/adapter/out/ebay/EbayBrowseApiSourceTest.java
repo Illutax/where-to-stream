@@ -11,12 +11,14 @@ import tech.dobler.where2stream.purchaseoffers.domain.Offer;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferPrice;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableException;
 import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
+import tech.dobler.where2stream.purchaseoffers.domain.UpstreamQuotaExhaustedException;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.List;
@@ -246,15 +248,44 @@ class EbayBrowseApiSourceTest {
     }
 
     @Test
-    void aNon200ResponseIsAnUnavailableSource() throws Exception {
+    void aQuotaRejectionIsDistinguishedFromAnOrdinaryFailure() throws Exception {
         when(tokenProvider.accessToken()).thenReturn("tok");
+        when(timeService.now()).thenReturn(NOW);
         doReturn(response).when(httpClient).send(any(), any());
         when(response.statusCode()).thenReturn(429);
         when(response.body()).thenReturn("{\"errors\":[{\"errorId\":2001}]}");
+        when(response.headers()).thenReturn(HttpHeaders.of(
+                java.util.Map.of("X-RateLimit-Reset", List.of("1234")), (k, v) -> true));
+
+        assertThatExceptionOfType(UpstreamQuotaExhaustedException.class)
+                .isThrownBy(() -> source(true).findOffers(HEAT, "Heat", Marketplace.EBAY_DE))
+                .withMessageContaining("HTTP 429");
+    }
+
+    @Test
+    void anOrdinaryRejectionIsNotMistakenForAQuotaOne() throws Exception {
+        when(tokenProvider.accessToken()).thenReturn("tok");
+        doReturn(response).when(httpClient).send(any(), any());
+        when(response.statusCode()).thenReturn(500);
+        when(response.body()).thenReturn("{\"errors\":[{\"errorId\":5000}]}");
+        when(response.headers()).thenReturn(HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
 
         assertThatExceptionOfType(OfferSourceUnavailableException.class)
                 .isThrownBy(() -> source(true).findOffers(HEAT, "Heat", Marketplace.EBAY_DE))
-                .withMessageContaining("HTTP 429");
+                .withMessageContaining("HTTP 500");
+        assertThat(EbayBrowseApiSource.looksLikeQuotaExhaustion(500, "{\"errors\":[{\"errorId\":5000}]}"))
+                .isFalse();
+    }
+
+    @Test
+    void bothDocumentedQuotaSignalsAreRecognised() {
+        // Unverified on purpose (plan section 8) — this pins what we currently believe, so the
+        // first real response can be checked against it.
+        assertThat(EbayBrowseApiSource.looksLikeQuotaExhaustion(429, "{}")).isTrue();
+        assertThat(EbayBrowseApiSource.looksLikeQuotaExhaustion(403, "{\"errors\":[{\"errorId\":2001}]}"))
+                .isTrue();
+        assertThat(EbayBrowseApiSource.looksLikeQuotaExhaustion(500, "{}")).isFalse();
+        assertThat(EbayBrowseApiSource.looksLikeQuotaExhaustion(500, null)).isFalse();
     }
 
     @Test
