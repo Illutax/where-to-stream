@@ -5,7 +5,7 @@ Es ist bewusst so geschrieben, dass eine **andere Claude-Code-Session ohne Vorwi
 Ursprungsgespräch** direkt damit arbeiten kann: jeder Schritt nennt die konkrete Datei, die
 betroffenen Klassen/Komponenten und was sich ändert.
 
-**Status: Entwurf v3.3, in Arbeit.**
+**Status: Entwurf v3.4, in Arbeit.**
 Machbarkeit und Sicherheitslage sind geklärt (Abschnitte 3–5).
 Der POC-Lauf aus Abschnitt 7.1 hat Variante E (Scraping) **widerlegt**;
 der Auftraggeber verfolgt seither **Variante C (Browse API) primär** (Abschnitt 4.2),
@@ -297,7 +297,10 @@ Verbindlich für die Umsetzung. Jeder Punkt ist eine Anforderung, kein Hinweis.
   Verkauf **ganz weg**, nicht nur veraltet.
   Ein persistierter Preis wäre also nicht „etwas älter", sondern mit hoher Wahrscheinlichkeit
   schlicht falsch — und sähe dabei genauso verbindlich aus wie ein frischer.
-  Kein Liquibase-Changelog, keine Tabelle, keine Entity, keine Löschfristen.
+  Kein Liquibase-Changelog, keine Tabelle, keine Entity, keine Löschfristen — **für Preisdaten**.
+  Die einzige Ausnahme betrifft nicht Preise, sondern den Quota-Zustand der Browse API:
+  dass das Tagesbudget erschöpft ist, muss einen Neustart überleben und wird deshalb persistiert
+  (siehe 11.3.1).
 - **Der Browser-Cache reicht für den Nutzer** — aber nur für ihn.
   `Cache-Control: private, max-age=…` (Vorschlag: 60–120 s) auf der Antwort von
   `GET /api/titles/{imdbId}/offers` fängt Re-Renders, Weg-und-zurück-Navigation und Doppelklicks
@@ -486,7 +489,10 @@ Neuer Bounded Context `purchaseoffers` unter `tech.dobler.where2stream`, Aufbau 
   **Kein** TTL-Cache in der ersten Umsetzung (siehe 5.6).
 - `adapter/in/api`: `PurchaseOfferApiController`, `GET /api/titles/{imdbId}/offers`,
   mit den Prüfungen aus 5.1 und `Cache-Control: private, max-age=…` (siehe 5.6).
-- **Kein** Liquibase-Changelog, **keine** neue Tabelle, **keine** Entity — es wird nichts gespeichert.
+- **Keine** Tabelle und **keine** Entity für Angebote oder Preise — die werden nicht gespeichert.
+  Ein Liquibase-Changelog gibt es dennoch, aber ausschließlich für die Quota-Tabelle aus 11.3.1.
+- Per-User- und globaler Tageszähler samt Reset (Abschnitt 11), inklusive der Auswertung von
+  eBays Kontingent-Antwort und des Logging aus 11.3.1.
 - `ArchitectureTest` (ArchUnit) um die Isolationsregel für den neuen Kontext erweitern.
 - Tests: Parsing gegen Fixture (netzwerkfrei), Controller mit MockMvc
   (inkl. „ID nicht auf meiner Watchlist → 404"), TTL-/Circuit-Breaker-Verhalten.
@@ -538,8 +544,11 @@ Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Ac
   Ergebnisseite dann wirklich beide Bestwerte enthält.
   Das würde das Titel-Budget aus Abschnitt 11 verdoppeln.
 - **Wann eBays Tageskontingent zurückgesetzt wird.**
-  UTC-Mitternacht ist eine plausible Arbeitshypothese, aber durch keine der in Abschnitt 3
-  verlinkten Quellen belegt (siehe 11.5).
+  Arbeitshypothese ist 12 Uhr Pazifik-Zeit, belegt nur durch eine Gemini-Auskunft,
+  dazu doppeldeutig (Mittag/Mitternacht) — siehe 11.5.
+- **Der genaue Fehlercode bei Kontingenterschöpfung** (vermutlich `2001`/`RATE_LIMIT`) und
+  **welche Kontingent-Header** die Browse API mitschickt.
+  Beides entscheidet, wie zuverlässig 11.3.1 greift.
 - Ob die Sandbox dieselben Kontingentgrenzen hat wie die Produktionsumgebung.
 
 ## 9. Nicht-Ziele
@@ -581,6 +590,17 @@ Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Ac
   Neuer Abschnitt 11 zur Aufteilung der 5.000-Calls-Tagesquote unter den Nutzern nach der Formel
   des Auftraggebers, inklusive der daraus folgenden Notwendigkeit eines globalen Tageslimits.
   Abschnitt 8 auf die für C zu prüfenden Punkte umgestellt.
+- **2026-09-05** — Entwurf v3.4: Quota-Entscheidungen des Auftraggebers eingearbeitet.
+  Globales Tageslimit auf 5.000 ohne Sicherheitsabschlag; der `n`-Vorschlag aus 11.4 ist
+  angenommen.
+  Neuer Abschnitt 11.3.1: eBays Kontingent-Antwort schlägt den eigenen Zähler, und der
+  Erschöpfungszustand wird für den Tag in der Datenbank festgeschrieben, damit ein Deploy die
+  Sperre nicht aufhebt — als benannte Ausnahme von 5.6, die weiterhin nur Preisdaten meint.
+  Reset-Hypothese von „UTC-Mitternacht" auf „12 Uhr Pazifik-Zeit" geändert (Quelle: Gemini,
+  unbelegt); der Zeitpunkt wird konfigurierbar geführt, weil „12 Uhr" doppeldeutig ist, und die
+  Zone als `America/Los_Angeles` statt als fester PST-Offset, weil Pazifik-Zeit Sommerzeit hat.
+  Zwei Wege zur Überprüfung der Hypothese beschrieben (passiv aus dem Log, aktiv per
+  Ausschöpfung nach vollständiger Implementierung).
 
 ## 11. Quota-Aufteilung unter den Nutzern (Variante C)
 
@@ -647,9 +667,13 @@ und alle weiteren Calls laufen gegen eBays harte Quote — mit Fehlern, die wir 
 Es braucht daher zwingend **zwei** Zähler:
 
 1. **Per-User-Tageszähler**: `10000 / n` Requests, danach ist für diesen Nutzer Schluss.
-2. **Globaler Tageszähler**: hartes Limit knapp *unter* 5.000
-   (Vorschlag: 4.800, als Puffer für Retries und Zählungenauigkeiten),
+2. **Globaler Tageszähler**: hartes Limit bei **5.000** (Entscheidung des Auftraggebers),
    der greift, bevor eBay selbst ablehnt.
+   Ein Sicherheitsabschlag wird bewusst **nicht** eingebaut — der Deckel liegt genau auf dem
+   Kontingent.
+   Die Absicherung gegen Zählungenauigkeiten und Retries übernimmt stattdessen die
+   Rückmeldung von eBay selbst (siehe 11.3.1):
+   wer sich verzählt, merkt es an der Quota-Antwort und nicht an einem Puffer.
 
 Verhalten bei Erschöpfung — im Sinne von 5.2/5.5 sichtbare Degradation statt Fehler:
 
@@ -662,9 +686,45 @@ Verhalten bei Erschöpfung — im Sinne von 5.2/5.5 sichtbare Degradation statt 
   der Unterschied ist für den Nutzer relevant (bei ihm hilft Warten bis morgen, global auch).
 - Beides wird auf `info`/`warn` geloggt, damit erkennbar ist, wie oft die Annahme aus 11.1 reißt.
 
-### 11.4 Was „anzahl_der_nutzer" konkret ist — zu entscheiden
+#### 11.3.1 eBays Quota-Antwort ist die maßgebliche Wahrheit
 
-Die Formel lässt offen, was `n` genau ist. Zu entscheiden sind drei Punkte:
+Unser globaler Zähler ist eine *Schätzung* des Verbrauchs, eBays Kontingentstand ist die
+Tatsache.
+Beide können auseinanderlaufen — durch Retries, durch parallele Requests, durch Calls, die
+unterwegs scheitern und trotzdem gezählt wurden (oder umgekehrt), und durch jeden Neustart der
+Anwendung.
+Deshalb gilt: **meldet eBay, dass das Tageslimit erreicht ist, ist der Tag sofort beendet** —
+unabhängig davon, was unser eigener Zähler gerade sagt.
+
+Konkret:
+
+- Trifft eine Antwort ein, die auf Kontingenterschöpfung hinweist
+  (bei der Browse API der Fehler `2001`/`RATE_LIMIT` — **die genaue Kennung ist gegen die Sandbox
+  zu verifizieren**, siehe Abschnitt 8),
+  wird der globale Tageszähler sofort auf „erschöpft" gesetzt.
+- Dieser Zustand wird **in der Datenbank für den betreffenden Tag festgeschrieben**,
+  nicht nur im Speicher gehalten.
+  Damit übersteht die Sperre einen Neustart der Anwendung — sonst würde ein Deploy am Abend den
+  Zähler zurücksetzen und die Anwendung liefe erneut gegen ein bei eBay längst erschöpftes
+  Kontingent.
+- Ab diesem Punkt wird bis zum nächsten Reset (11.5) **kein** Call mehr nach draußen geschickt.
+  Das Feature degradiert wie oben beschrieben.
+- Die vollständige Antwort wird bei diesem Ereignis auf `warn` geloggt — Statuscode, Fehlercode,
+  Fehlertext und alle Header, die eBay zum Kontingent mitschickt.
+  Das ist zugleich die Datenquelle für 11.5.
+
+**Das ist eine bewusste Ausnahme von 5.6.**
+Dort steht „keine DB-Persistenz" — das gilt für **Preisdaten**, die flüchtig sind und deren
+Speicherung falsche Werte konservieren würde.
+Quota-Zustand ist das Gegenteil: er ist tagesstabil, klein und **muss** einen Neustart
+überleben, um seinen Zweck zu erfüllen.
+Es braucht dafür ein Liquibase-Changelog und eine schmale Tabelle
+(Vorschlag: Quota-Tag, verbrauchte Calls, Zeitpunkt der Erschöpfung),
+aber weiterhin **keine** Tabelle für Angebote oder Preise.
+
+### 11.4 Was „anzahl_der_nutzer" konkret ist — entschieden
+
+Die Formel ließ offen, was `n` genau ist. Drei Punkte standen zur Entscheidung:
 
 - **Grundmenge:** alle registrierten Nutzer aus der Datenbank,
   oder nur eine Teilmenge (z. B. Nutzer mit nicht-leerer Watchlist)?
@@ -674,7 +734,7 @@ Die Formel lässt offen, was `n` genau ist. Zu entscheiden sind drei Punkte:
 - **Neue Nutzer mitten am Tag:** bekommen sie sofort ein Limit (womit die Summe der verteilten
   Limits weiter steigt), oder erst ab dem Folgetag?
 
-**Vorschlag:** `n` = Anzahl registrierter Nutzer laut Datenbank,
+**Entschieden (Auftraggeber):** `n` = Anzahl registrierter Nutzer laut Datenbank,
 ermittelt **einmal täglich beim Zurücksetzen der Zähler** (11.5) und für den Tag eingefroren.
 Neue Nutzer mitten am Tag erhalten sofort dasselbe Tageslimit wie alle anderen,
 ohne dass bestehende Limits neu berechnet werden —
@@ -688,12 +748,45 @@ Der Reset sollte mit dem Zeitpunkt zusammenfallen, zu dem eBay das Applikations-
 sonst laufen unser Budgetfenster und eBays Fenster gegeneinander,
 und ein frisch zurückgesetzter lokaler Zähler kann auf ein bei eBay noch erschöpftes Kontingent treffen.
 
-**Unverifiziert:** dass eBays Tageskontingent zu **UTC-Mitternacht** zurückgesetzt wird,
-ist eine plausible Annahme, die weder dieses Dokument noch die in Abschnitt 3 verlinkten Quellen belegen.
-Der Punkt ist nach Erhalt des Developer-Accounts zu prüfen
-(die Analytics API bzw. das Developer-Portal zeigen den Kontingentstand und das Reset-Verhalten)
-und wandert bis dahin in Abschnitt 8.
-Bis zur Klärung wird UTC-Mitternacht als Arbeitshypothese verwendet.
+**Arbeitshypothese: Reset um 12 Uhr Pazifik-Zeit.**
+Diese Annahme stammt aus einer Auskunft von Gemini und ist **durch keine Primärquelle belegt** —
+weder durch die in Abschnitt 3 verlinkten Quellen noch durch eBays Dokumentation.
+Sie ersetzt die frühere, ebenso unbelegte Annahme „UTC-Mitternacht".
+Der Auftraggeber hat entschieden, sie **bewusst als Hypothese mitzunehmen** und empirisch zu
+prüfen, statt die Umsetzung darauf warten zu lassen.
+
+Zwei Präzisierungen sind für die Implementierung nötig:
+
+- **Mittag oder Mitternacht?** „12 Uhr" ist doppeldeutig.
+  Der Reset-Zeitpunkt wird deshalb als **konfigurierbarer Wert** geführt
+  (`ebay.quota.reset-time`, Default `00:00`), nicht als Konstante im Code.
+  Ist die Lesart falsch, kostet die Korrektur einen Konfigurationswert statt eines Releases.
+- **Nicht PST, sondern `America/Los_Angeles`.**
+  Pazifik-Zeit wechselt zwischen PST (UTC−8) und PDT (UTC−7);
+  im September gilt PDT.
+  Ein fest verdrahteter Offset läuft zweimal im Jahr um eine Stunde daneben —
+  genau dann, wenn ein zu früher Reset gegen ein noch erschöpftes Kontingent läuft.
+  Die Zone gehört als `ZoneId` konfiguriert, die Zeitrechnung über den bestehenden `TimeService`
+  (`shared/platform`), nicht über `LocalDateTime.now()`.
+
+**Wie die Hypothese überprüft wird** — zwei Wege, in dieser Reihenfolge:
+
+1. **Passiv, aus dem Betrieb.** Das Logging aus 11.3.1 hält bei jeder Kontingenterschöpfung den
+   genauen Zeitpunkt und alle von eBay mitgeschickten Header fest.
+   Kommen zwei solche Ereignisse zusammen mit dem jeweils nächsten erfolgreichen Call, lässt sich
+   das Reset-Fenster eingrenzen, ohne irgendetwas zu provozieren.
+   Falls eBay einen Header mit dem Reset-Zeitpunkt mitschickt, erübrigt sich alles Weitere —
+   dann wird dieser Wert verwendet statt der Konfiguration.
+2. **Aktiv, nach vollständiger Implementierung.** Kontingent gezielt ausschöpfen und danach
+   pollen, wann der erste Call wieder durchgeht.
+   Das beantwortet die Frage eindeutig, **kostet aber ein volles Tagesbudget** und gehört deshalb
+   in eine ruhige Phase, nicht in den laufenden Betrieb.
+
+Bis zur Klärung gilt: der konfigurierte Zeitpunkt steuert den Reset, und die Absicherung gegen
+eine falsche Hypothese ist 11.3.1 — liegt der Reset später als angenommen, meldet eBay das
+Kontingent als erschöpft, und der Tag wird wieder geschlossen.
+Ein falsch geratener Reset-Zeitpunkt führt damit zu ein paar vergeblichen Calls, nicht zu einem
+kaputten Feature.
 
 ### 11.6 Technische Verortung
 
@@ -703,8 +796,13 @@ und der vorhandene `RateLimiter` (`shared/platform/outbound/RateLimiter.java`)
 drosselt nur ausgehende Requests global — er kennt weder Nutzer noch Tagesbudgets.
 Per-User- und globaler Tageszähler sind daher neu zu bauen.
 Natürlicher Ort ist die Anwendungsschicht des neuen Kontexts `purchaseoffers`
-(`TitleOfferService`, Phase 1), wo bereits In-Flight-Deduplizierung und Circuit Breaker angesiedelt sind;
-In-Memory-Zähler genügen, solange bewusst in Kauf genommen wird,
-dass ein Neustart der Anwendung die Tageszähler zurücksetzt (kein Persistenzbedarf im Sinne von 5.6).
+(`TitleOfferService`, Phase 1), wo bereits In-Flight-Deduplizierung und Circuit Breaker angesiedelt sind.
+
+**Zur Persistenz:** die laufenden Zähler dürfen im Speicher liegen — ein Neustart verliert dann
+etwas Verbrauchsinformation, was durch 11.3.1 abgefangen wird.
+Der **Erschöpfungszustand** dagegen muss in die Datenbank (11.3.1),
+sonst hebt jeder Deploy die Tagessperre auf.
+Das erfordert ein Liquibase-Changelog und eine schmale Tabelle — die einzige Persistenz in diesem
+Feature, und ausdrücklich keine für Preise oder Angebote.
 Die Nutzerzahl kommt über einen bestehenden bzw. schmal zu ergänzenden `port.in` des `accountaccess`-Kontexts,
 nicht über einen Direktzugriff auf dessen Datenbestand (ADR-0014).
