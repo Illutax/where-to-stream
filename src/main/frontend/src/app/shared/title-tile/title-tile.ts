@@ -4,6 +4,7 @@ import { ImdbId, imdbUrl, posterFullUrl, WatchlistDate } from '../../core/domain
 import { injectTitleMeta } from '../../core/title-meta';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
+import { OfferPrices } from '../offer-prices/offer-prices';
 import { splitTitle, titleSizeSteps } from './title-split';
 
 /**
@@ -18,7 +19,7 @@ import { splitTitle, titleSizeSteps } from './title-split';
 @Component({
   selector: 'app-title-tile',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AgeBadge, TranslocoPipe],
+  imports: [AgeBadge, OfferPrices, TranslocoPipe],
   template: `
     <div class="title-tile" [class.recently-changed]="recentlyChanged()">
       <div class="poster-box" [class.watched]="isRated()">
@@ -60,9 +61,21 @@ import { splitTitle, titleSizeSteps } from './title-split';
         [attr.aria-label]="(isRated() ? 'table.markNotSeen' : 'table.markSeen') | transloco: { name: name() }">
         <span aria-hidden="true">✓</span>
       </button>
+      @if (showOffers()) {
+        <div class="offer-chip">
+          <app-offer-prices [imdbId]="imdbId()" [name]="name()" />
+        </div>
+      }
     </div>
   `,
   styles: `
+    .offer-chip {
+      display: flex;
+      justify-content: center;
+      padding-top: 0.35rem;
+      font-size: 0.85rem;
+    }
+
     .title-tile {
       position: relative;
       transition: transform 0.18s ease;
@@ -258,6 +271,9 @@ import { splitTitle, titleSizeSteps } from './title-split';
   `,
 })
 export class TitleTile {
+  /** Whether to show the eBay price chip; switched on by the dashboard only (decision 6.5). */
+  readonly showOffers = input(false);
+
   readonly imdbId = input.required<ImdbId>();
   readonly name = input<string>('');
   readonly year = input.required<string>();

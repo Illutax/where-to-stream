@@ -3,6 +3,7 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { ImdbId, imdbId, releaseYear, releaseYearDisplay, watchlistDate } from '../../core/domain';
 import { OverviewEntry } from '../../core/models';
+import { OfferPrices } from '../offer-prices/offer-prices';
 import { TitleCell } from '../title-cell/title-cell';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { sortRows } from '../sort/table-sort';
@@ -21,7 +22,7 @@ const SKELETON_ROWS: OverviewEntry[] = Array.from({ length: 8 }, (_, i) => ({
 @Component({
   selector: 'app-catalog-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatSortModule, TitleCell, TranslocoPipe],
+  imports: [MatTableModule, MatSortModule, OfferPrices, TitleCell, TranslocoPipe],
   template: `
     <div class="table-scroll">
     <table mat-table [dataSource]="sorted()" [trackBy]="trackByImdbId"
@@ -82,11 +83,22 @@ const SKELETON_ROWS: OverviewEntry[] = Array.from({ length: 8 }, (_, i) => ({
         </td>
       </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns"
+      <ng-container matColumnDef="offers">
+        <th mat-header-cell *matHeaderCellDef>{{ 'table.offers' | transloco }}</th>
+        <td mat-cell *matCellDef="let entry">
+          @if (loading()) {
+            <span class="skeleton-bar skeleton-bar--narrow"></span>
+          } @else {
+            <app-offer-prices [imdbId]="entry.imdbId" [name]="entry.name" />
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns()"
           [class.recently-changed]="row.imdbId === recentlyChangedId()"></tr>
       <tr class="mat-row" *matNoDataRow>
-        <td class="mat-cell text-muted" [attr.colspan]="displayedColumns.length">{{ 'table.noEntries' | transloco }}</td>
+        <td class="mat-cell text-muted" [attr.colspan]="displayedColumns().length">{{ 'table.noEntries' | transloco }}</td>
       </tr>
     </table>
     </div>
@@ -97,10 +109,22 @@ export class CatalogTable {
   readonly recentlyChangedId = input<ImdbId | null>(null);
   /** While true, renders placeholder rows instead of {@link entries} (still loading). */
   readonly loading = input(false);
+  /**
+   * Whether to show the eBay price column.
+   *
+   * <p>Off by default and switched on only by the dashboard (plan, decision 6.5). This table is
+   * shared with the provider pages, and every place the column appears is another place from which
+   * the shared daily call budget can be spent.
+   */
+  readonly showOffers = input(false);
   readonly seenToggle = output<{ imdbId: ImdbId; seen: boolean }>();
   protected readonly sort = signal<Sort>({ active: '', direction: '' });
   protected readonly sorted = computed(() => (this.loading() ? SKELETON_ROWS : sortRows(this.entries(), this.sort())));
-  protected readonly displayedColumns = ['rated', 'title', 'year', 'added', 'services'];
+  protected readonly displayedColumns = computed(() =>
+    this.showOffers()
+      ? ['rated', 'title', 'year', 'added', 'services', 'offers']
+      : ['rated', 'title', 'year', 'added', 'services'],
+  );
   protected readonly trackByImdbId = (_: number, entry: OverviewEntry) => entry.imdbId;
   protected readonly releaseYearDisplay = releaseYearDisplay;
 }

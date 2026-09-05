@@ -130,4 +130,25 @@ describe('CatalogTable', () => {
     fixture.detectChanges();
     expect(titles()).toEqual(['Unwatched', 'Watched']); // ascending: not-seen first
   });
-});
+
+  it('has no eBay column by default', () => {
+    fixture.componentRef.setInput('entries', [entry({})]);
+    fixture.detectChanges();
+
+    // This table is shared with the provider pages; every place the column appears is another
+    // place from which the shared daily budget can be spent (decision 6.5).
+    expect(fixture.nativeElement.querySelector('app-offer-prices')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('eBay');
+  });
+
+  it('shows the eBay column when the page asks for it, without loading anything', () => {
+    fixture.componentRef.setInput('entries', [entry({})]);
+    fixture.componentRef.setInput('showOffers', true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-offer-prices')).not.toBeNull();
+    // Rendering the column must not itself trigger a lookup — only a click may.
+    expect(fixture.nativeElement.querySelector('.offer-load')).not.toBeNull();
+  });
+}
+);

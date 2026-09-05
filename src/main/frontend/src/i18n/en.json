@@ -47,7 +47,8 @@
     "noEntries": "No entries.",
     "nothingHere": "Nothing here.",
     "markSeen": "Mark seen: {{ name }}",
-    "markNotSeen": "Mark not seen: {{ name }}"
+    "markNotSeen": "Mark not seen: {{ name }}",
+    "offers": "eBay"
   },
   "overview": {
     "loadError": "Failed to load the catalogue."

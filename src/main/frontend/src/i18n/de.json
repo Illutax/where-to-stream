@@ -47,7 +47,8 @@
     "noEntries": "Keine Einträge.",
     "nothingHere": "Nichts vorhanden.",
     "markSeen": "Als gesehen markieren: {{ name }}",
-    "markNotSeen": "Als ungesehen markieren: {{ name }}"
+    "markNotSeen": "Als ungesehen markieren: {{ name }}",
+    "offers": "eBay"
   },
   "overview": {
     "loadError": "Der Katalog konnte nicht geladen werden."

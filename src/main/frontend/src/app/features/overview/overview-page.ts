@@ -26,12 +26,14 @@ import { TranslocoService } from '@jsverse/transloco';
       <app-stale-data-banner [visible]="hasStaleEntries()" />
       @if (userPrefs.viewMode() === 'GRID') {
         <app-title-grid
+          [showOffers]="true"
           [entries]="tileEntries()"
           [loading]="loading()"
           [recentlyChangedId]="seenStore.recentlyChanged()"
           (seenToggle)="onSeenToggle($event)" />
       } @else {
         <app-catalog-table
+          [showOffers]="true"
           [entries]="entries()"
           [loading]="loading()"
           [recentlyChangedId]="seenStore.recentlyChanged()"

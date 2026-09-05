@@ -121,4 +121,21 @@ describe('TitleGrid', () => {
 
     expect(fixture.componentInstance['userPrefs'].tilesPerRow()).toBe(3);
   });
-});
+
+  it('shows no price chip on the tiles by default', () => {
+    fixture.componentRef.setInput('entries', [entry({})]);
+    fixture.detectChanges();
+
+    // The provider pages render the same grid and must stay unchanged (decision 6.5).
+    expect(fixture.nativeElement.querySelector('app-offer-prices')).toBeNull();
+  });
+
+  it('passes the price chip down to the tiles when the page asks for it', () => {
+    fixture.componentRef.setInput('entries', [entry({})]);
+    fixture.componentRef.setInput('showOffers', true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-offer-prices')).not.toBeNull();
+  });
+}
+);

@@ -78,6 +78,7 @@ const SKELETON_ROWS = 3;
       } @else {
         @for (entry of sorted(); track entry.imdbId) {
           <app-title-tile
+            [showOffers]="showOffers()"
             [imdbId]="entry.imdbId"
             [name]="entry.name"
             [year]="entry.year"
@@ -132,6 +133,9 @@ const SKELETON_ROWS = 3;
   `,
 })
 export class TitleGrid {
+  /** Passed through to every tile; the dashboard switches it on, the provider pages do not. */
+  readonly showOffers = input(false);
+
   readonly entries = input.required<TileEntry[]>();
   readonly recentlyChangedId = input<ImdbId | null>(null);
   /** While true, renders placeholder tiles instead of {@link entries} (still loading). */
