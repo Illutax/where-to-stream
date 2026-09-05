@@ -767,3 +767,55 @@ Boot ohnehin da.
   Customizer greift (sonst stünden dort die resilience4j-Defaults 100/60 s) und dass eine
   erschöpfte Quota den Breaker nachweislich **nicht** öffnet, eine gewöhnliche Störung dagegen
   schon.
+
+### 🟢 TODO-52 — Angular-Bundle-Größe reduzieren (Trigger: 1 MB Initial-Bundle)
+**Nicht jetzt angehen.** Das Initial-Bundle liegt bei 655,85 kB roh / 146,30 kB geschätzt
+komprimiert. Das ist bewusst akzeptiert; dieses Ticket sammelt die gemessenen Hebel für den Tag,
+an dem es eng wird.
+
+**Der Trigger liegt im Code, nicht in diesem Text:** `angular.json` bricht den Build ab, sobald das
+Initial-Bundle **1 MB** erreicht (`budgets[type=initial].maximumError`), mit einer Vorwarnung ab
+950 kB. Wer diesen Abbruch sieht, landet über den Kommentar dort bei diesem Ticket.
+
+**Messung vom 2026-09-05** (esbuild-Metafile, `ng build --stats-json`):
+
+| Anteil an `main.js` | Paket |
+| --- | --- |
+| 147,0 kB (24 %) | `@angular/core` |
+| 131,0 kB (21 %) | `@angular/material` |
+| 107,2 kB (18 %) | `@angular/cdk` |
+| 76,5 kB (12 %) | `@angular/router` |
+| **23,8 kB (3,9 %)** | **eigener Anwendungscode** |
+
+Der wichtigste Befund zuerst: **unser eigener Code macht 3,9 % aus.** Optimierung daran ist per
+Konstruktion wirkungslos. Der Hebel liegt allein darin, welche Framework-Fläche im *Initial*-Chunk
+landet.
+
+**Vier Hebel, in dieser Reihenfolge:**
+
+1. **Zuerst die Metrik prüfen, nicht den Code.** Das Budget steht auf der Rohgröße; Nutzer laden die
+   komprimierte. Bevor jemand Bytes jagt, ist zu entscheiden, welche Zahl wir eigentlich verwalten
+   wollen — sonst optimiert man gegen die falsche.
+2. **Suchbox/Dialog aus der App-Hülle lösen — der große Hebel.**
+   `app.ts` lädt `ImdbSearchBox` eager; die injiziert `MatDialog` und zieht damit
+   `material/dialog`, `cdk/dialog` **und** `cdk/overlay` in den Initial-Chunk — für einen Dialog,
+   der erst aufgeht, nachdem jemand getippt *und* ein Ergebnis angeklickt hat.
+   **Gemessen** durch probeweises Entfernen und Neubauen: **−93,98 kB roh / −18,45 kB komprimiert**,
+   also 15 % von `main.js`; Overlay und Dialog verlassen den Initial-Chunk vollständig.
+   Umsetzung: `@defer (on interaction)` um die Suchbox, oder das Dialog-Öffnen in einen dynamisch
+   importierten Teil ziehen.
+   **Preis:** die Suchbox sitzt sichtbar in der Toolbar, `on interaction` bedeutet eine kleine
+   Verzögerung beim ersten Klick ins Suchfeld. Bewusste UX-Entscheidung, keine reine Verbesserung.
+3. **Font-Subsets auf `latin`/`latin-ext` beschränken.**
+   `angular.json` bindet `@fontsource/roboto/{400,500,700}.css` ein — **alle** Subsets. Ausgeliefert
+   werden 768 KB Schriften: cyrillic (165 kB), math (115 kB), greek (65 kB), symbols (57 kB),
+   vietnamese (43 kB) — von einer DE/EN-Oberfläche nie gebraucht. Nutzer laden sie dank
+   `unicode-range` zwar nicht herunter, aber sie liegen im Deployment und im Image. Zudem sind
+   **54 % des Initial-Stylesheets** `@font-face`-Regeln (14,8 kB von 26,9 kB), davon nur 2,3 kB
+   latin/latin-ext. Erwartet: ~12 kB weniger Initial-CSS, ~440 kB kleineres Artefakt.
+4. **Danach neu messen** und, falls immer noch zu groß, die Grenze bewusst anheben statt sie zu
+   umgehen.
+
+**Was hier ausdrücklich nicht die Antwort ist:** Angular Material gegen handgeschriebene Komponenten
+tauschen (238 kB gegen eine dauerhafte Wartungs- und Barrierefreiheitsschuld), oder weiter
+zerschneiden, nur um eine Zahl zu treffen.

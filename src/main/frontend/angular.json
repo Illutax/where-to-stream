@@ -44,8 +44,13 @@
             "production": {
               "budgets": [
                 {
+                  // Trigger fuer TODO-52 ("Angular-Bundle-Groesse reduzieren"): der Build BRICHT AB,
+                  // sobald das Initial-Bundle 1 MB erreicht. Das Ticket beschreibt die vier
+                  // gemessenen Hebel. Solange die Grenze haelt, ist die Groesse bewusst akzeptiert
+                  // und niemand muss sie anfassen; maximumWarning ist die Vorwarnung, kein
+                  // Handlungsauftrag.
                   "type": "initial",
-                  "maximumWarning": "650kB",
+                  "maximumWarning": "950kB",
                   "maximumError": "1MB"
                 },
                 {
