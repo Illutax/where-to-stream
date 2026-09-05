@@ -24,6 +24,7 @@ import tech.dobler.where2stream.accountaccess.application.command.ViewModeUpdate
 import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.application.UserPreferencesService;
 import tech.dobler.where2stream.accountaccess.application.dto.MeDto;
+import tech.dobler.where2stream.accountaccess.adapter.in.security.ImpersonationConfig;
 import tech.dobler.where2stream.accountaccess.port.spi.PosterAttributionProvider;
 
 import java.util.List;
@@ -42,7 +43,7 @@ public class MeApiController {
         final boolean tmdbAttribution = posterAttributionProvider.tmdbAttributionRequired();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            return toDto(false, null, List.of(), tmdbAttribution, UserPreferences.defaults());
+            return toDto(false, null, List.of(), tmdbAttribution, UserPreferences.defaults(), null);
         }
         final List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -52,14 +53,17 @@ public class MeApiController {
                 .toList();
         final var username = authentication.getName();
         final var prefs = userPreferencesService.preferencesFor(username);
-        return toDto(true, username, roles, tmdbAttribution, prefs);
+        // Reading the authentication for the impersonation marker is presentation-layer work by
+        // design: ADR-0007 keeps the SecurityContext out of the layers below.
+        return toDto(true, username, roles, tmdbAttribution, prefs,
+                ImpersonationConfig.originalUsername(authentication).orElse(null));
     }
 
     private static MeDto toDto(boolean authenticated, String username, List<String> roles,
-                               boolean tmdbAttribution, UserPreferences prefs) {
+                               boolean tmdbAttribution, UserPreferences prefs, String impersonatedBy) {
         return new MeDto(authenticated, username, roles, roles.contains("ADMIN"), prefs.theme(), tmdbAttribution,
                 prefs.showAgeRatings(), prefs.language(), prefs.showGermanTitle(), prefs.viewMode(),
-                prefs.tilesPerRow(), prefs.ebayMarketplace());
+                prefs.tilesPerRow(), prefs.ebayMarketplace(), impersonatedBy);
     }
 
     /** Updates the current user's own theme preference. */

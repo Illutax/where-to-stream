@@ -9,6 +9,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
+import tech.dobler.where2stream.accountaccess.port.in.ImpersonationPort;
 import tech.dobler.where2stream.purchaseoffers.application.TitleOfferService;
 import tech.dobler.where2stream.purchaseoffers.domain.Offer;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferLookupResult;
@@ -25,6 +26,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -45,6 +47,8 @@ class PurchaseOfferApiControllerTest {
     private TitleOfferService titleOfferService;
     @MockitoBean
     private CurrentUserPort currentUserPort;
+    @MockitoBean
+    private ImpersonationPort impersonationPort;
 
     private static UsernamePasswordAuthenticationToken alice() {
         return new UsernamePasswordAuthenticationToken("alice", "pw");
@@ -181,5 +185,20 @@ class PurchaseOfferApiControllerTest {
                 .andExpect(jsonPath("$.buyNow.seller").doesNotExist())
                 .andExpect(jsonPath("$.buyNow.imageUrl").doesNotExist())
                 .andExpect(jsonPath("$.buyNow.condition").doesNotExist());
+    }
+
+    @Test
+    void aPriceLookupIsSuspendedWhileAnAdminIsImpersonating() throws Exception {
+        when(currentUserPort.resolveId("alice")).thenReturn(USER);
+        when(impersonationPort.impersonatingAdmin(any())).thenReturn(Optional.of("admin"));
+
+        // Neither party's allowance may be charged for a lookup the admin triggered on someone
+        // else's behalf (ADR-0020), so no lookup happens at all.
+        mockMvc.perform(get("/api/titles/tt0113277/offers").principal(alice()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("IMPERSONATION_ACTIVE"))
+                .andExpect(jsonPath("$.buyNow").doesNotExist())
+                .andExpect(header().string("Cache-Control", "no-store"));
+        verifyNoInteractions(titleOfferService);
     }
 }

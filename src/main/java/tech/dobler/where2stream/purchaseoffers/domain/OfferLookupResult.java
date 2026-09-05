@@ -20,7 +20,14 @@ public record OfferLookupResult(Status status, Optional<TitleOffers> offers) {
         /** This user has spent their own share of the daily budget. */
         USER_ALLOWANCE_REACHED,
         /** The application-wide daily budget is gone, for everyone. */
-        GLOBAL_BUDGET_EXHAUSTED
+        GLOBAL_BUDGET_EXHAUSTED,
+        /**
+         * An admin is currently acting as this user, and lookups are suspended for the duration
+         * (ADR-0020). Booking two calls against the impersonated user's allowance would spend
+         * someone else's budget; booking them against the admin would require the quota layer to
+         * know an identity ADR-0007 keeps from it. So neither happens.
+         */
+        IMPERSONATION_ACTIVE
     }
 
     public OfferLookupResult {
@@ -40,6 +47,10 @@ public record OfferLookupResult(Status status, Optional<TitleOffers> offers) {
 
     public static OfferLookupResult unavailable() {
         return new OfferLookupResult(Status.UNAVAILABLE, Optional.empty());
+    }
+
+    public static OfferLookupResult impersonationActive() {
+        return new OfferLookupResult(Status.IMPERSONATION_ACTIVE, Optional.empty());
     }
 
     public static OfferLookupResult of(QuotaVerdict refusal) {

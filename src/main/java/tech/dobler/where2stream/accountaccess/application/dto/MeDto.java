@@ -23,6 +23,10 @@ import java.util.List;
  * @param ebayMarketplace  which eBay marketplace the user's price lookups query, as its id
  *                         ({@code EBAY_DE} by default and when anonymous). A string rather than an
  *                         enum because the set of marketplaces belongs to another context
+ * @param impersonatedBy   the admin currently acting as this user, or {@code null} in the ordinary
+ *                         case. Carried here so the SPA can show the banner ADR-0020 requires —
+ *                         an impersonation nobody notices is the more dangerous mistake, because
+ *                         the admin then mistakes their own session for the user's
  */
 public record MeDto(
         boolean authenticated,
@@ -36,6 +40,7 @@ public record MeDto(
         boolean showGermanTitle,
         ViewMode viewMode,
         int tilesPerRow,
-        String ebayMarketplace
+        String ebayMarketplace,
+        String impersonatedBy
 ) {
 }

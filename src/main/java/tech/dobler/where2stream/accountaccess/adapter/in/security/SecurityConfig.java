@@ -15,6 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.switchuser.SwitchUserFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -94,12 +96,19 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    ObjectProvider<ClientRegistrationRepository> clientRegistrations,
                                                    GoogleOidcUserService oidcUserService,
-                                                   SecurityProperties securityProperties) throws Exception {
+                                                   SecurityProperties securityProperties,
+                                                   SwitchUserFilter switchUserFilter) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
                         // Public: login page + its Bootstrap CSS (webjars), errors, status probe.
                         .requestMatchers("/login", "/error", "/favicon.ico").permitAll()
                         .requestMatchers("/public/**", "/webjars/**").permitAll()
+                        // Leaving an impersonation must work from the switched session, which no
+                        // longer has ROLE_ADMIN — it has the target's roles plus the authority
+                        // SwitchUserFilter grants. Listed before the /api/admin/** rule because the
+                        // first match wins (ADR-0020).
+                        .requestMatchers(HttpMethod.POST, ImpersonationConfig.EXIT_URL)
+                        .hasAuthority(ImpersonationConfig.SWITCHED_AUTHORITY)
                         // ADMIN: user administration and cache-management / refresh API — fixes TODO-5.
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/manage/**", "/api/cache/**").hasRole("ADMIN")
@@ -122,7 +131,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
-                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
+                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                // Admin impersonation (ADR-0020). Placed after the authorization filter so the
+                // ADMIN-only rule for /api/admin/** is applied before the switch can happen —
+                // otherwise the endpoint would authenticate its own way past it.
+                .addFilterAfter(switchUserFilter, AuthorizationFilter.class);
 
         // OIDC login is wired only when a client registration is actually configured (e.g. Google
         // client-id/secret present), so the app still starts and tests run without an IdP.

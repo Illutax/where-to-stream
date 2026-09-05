@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
+import tech.dobler.where2stream.accountaccess.port.in.ImpersonationPort;
 import tech.dobler.where2stream.purchaseoffers.application.TitleOfferService;
 import tech.dobler.where2stream.purchaseoffers.application.dto.TitleOffersDto;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferLookupResult;
@@ -40,10 +41,19 @@ public class PurchaseOfferApiController {
 
     private final TitleOfferService titleOfferService;
     private final CurrentUserPort currentUserPort;
+    private final ImpersonationPort impersonationPort;
 
     @GetMapping("/{imdbId}/offers")
     public ResponseEntity<TitleOffersDto> offers(Authentication authentication,
                                                  @PathVariable ImdbId imdbId) {
+        if (impersonationPort.impersonatingAdmin(authentication).isPresent()) {
+            // Suspended rather than charged to either party (ADR-0020). Checked here because
+            // whether a switch is active is a fact about the authentication, and reading that is
+            // presentation-layer work (ADR-0007).
+            return ResponseEntity.ok()
+                    .cacheControl(CacheControl.noStore())
+                    .body(TitleOffersDto.from(OfferLookupResult.impersonationActive()));
+        }
         final var userId = currentUserPort.resolveId(authentication.getName());
         final var result = titleOfferService.lookupForWatchlistTitle(userId, imdbId);
         return ResponseEntity.ok()
