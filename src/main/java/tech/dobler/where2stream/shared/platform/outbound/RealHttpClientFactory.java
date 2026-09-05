@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.titlecatalog.adapter.out;
+package tech.dobler.where2stream.shared.platform.outbound;
 
 import org.springframework.stereotype.Component;
 

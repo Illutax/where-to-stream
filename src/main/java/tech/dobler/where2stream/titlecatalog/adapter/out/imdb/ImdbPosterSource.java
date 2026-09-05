@@ -2,8 +2,8 @@ package tech.dobler.where2stream.titlecatalog.adapter.out.imdb;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import tech.dobler.where2stream.titlecatalog.adapter.out.HttpClientFactory;
-import tech.dobler.where2stream.titlecatalog.adapter.out.OutboundHttpClients;
+import tech.dobler.where2stream.shared.platform.outbound.HttpClientFactory;
+import tech.dobler.where2stream.shared.platform.outbound.OutboundHttpClients;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbPosterProperties;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.platform.outbound.RateLimiter;

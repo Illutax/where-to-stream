@@ -1,4 +1,4 @@
-package tech.dobler.where2stream.titlecatalog.adapter.out;
+package tech.dobler.where2stream.shared.platform.outbound;
 
 import java.net.http.HttpClient;
 
@@ -10,6 +10,10 @@ import java.net.http.HttpClient;
  * just an indirection so tests can inject a fake/mocked {@link HttpClient} instead of a real one.
  * Unlike {@link HttpClient#send}, {@link #newClient()} isn't a generic method,
  * so a plain lambda (e.g. {@code () -> mockHttpClient}) works fine as a test double.
+ *
+ * <p>Lives in {@code shared.platform.outbound} rather than inside a bounded context:
+ * its implementors and callers sit in different contexts, and one context may not reach into
+ * another's adapters (ADR-0014).
  */
 public interface HttpClientFactory {
     HttpClient newClient();
