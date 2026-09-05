@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import tech.dobler.where2stream.accountaccess.application.command.EbayMarketplaceUpdateCommand;
 import tech.dobler.where2stream.accountaccess.application.command.LanguageUpdateCommand;
 import tech.dobler.where2stream.accountaccess.application.command.ShowAgeRatingsUpdateCommand;
 import tech.dobler.where2stream.accountaccess.application.command.ShowGermanTitleUpdateCommand;
@@ -57,7 +58,8 @@ public class MeApiController {
     private static MeDto toDto(boolean authenticated, String username, List<String> roles,
                                boolean tmdbAttribution, UserPreferences prefs) {
         return new MeDto(authenticated, username, roles, roles.contains("ADMIN"), prefs.theme(), tmdbAttribution,
-                prefs.showAgeRatings(), prefs.language(), prefs.showGermanTitle(), prefs.viewMode(), prefs.tilesPerRow());
+                prefs.showAgeRatings(), prefs.language(), prefs.showGermanTitle(), prefs.viewMode(),
+                prefs.tilesPerRow(), prefs.ebayMarketplace());
     }
 
     /** Updates the current user's own theme preference. */
@@ -80,6 +82,15 @@ public class MeApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateLanguage(Authentication authentication, @RequestBody LanguageUpdateRequest request) {
         userPreferencesService.updateLanguage(new LanguageUpdateCommand(authentication.getName(), request.language()));
+    }
+
+    /** Updates the current user's own eBay marketplace for price lookups. */
+    @PutMapping("/ebay-marketplace")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateEbayMarketplace(Authentication authentication,
+                                      @RequestBody EbayMarketplaceUpdateRequest request) {
+        userPreferencesService.updateEbayMarketplace(
+                new EbayMarketplaceUpdateCommand(authentication.getName(), request.marketplace()));
     }
 
     /** Updates the current user's own German-title preference. */

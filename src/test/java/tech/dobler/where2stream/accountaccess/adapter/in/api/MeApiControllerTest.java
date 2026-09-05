@@ -44,7 +44,8 @@ class MeApiControllerTest {
                 .andExpect(jsonPath("$.showGermanTitle").value(false))
                 // ...and to the grid view with 6 tiles per row.
                 .andExpect(jsonPath("$.viewMode").value("GRID"))
-                .andExpect(jsonPath("$.tilesPerRow").value(6));
+                .andExpect(jsonPath("$.tilesPerRow").value(6))
+                .andExpect(jsonPath("$.ebayMarketplace").value("EBAY_DE"));
     }
 
     @Test
@@ -163,5 +164,34 @@ class MeApiControllerTest {
         mockMvc.perform(put("/api/me/username").with(user("admin").roles("ADMIN")).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"username\":\"  \"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updatingTheEbayMarketplacePersistsForTheCurrentUser() throws Exception {
+        try {
+            mockMvc.perform(put("/api/me/ebay-marketplace").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"marketplace\":\"EBAY_GB\"}"))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/me").with(user("admin").roles("ADMIN")))
+                    .andExpect(jsonPath("$.ebayMarketplace").value("EBAY_GB"));
+
+            // The column holds a plain string, so an unknown id must be refused here or it would be
+            // stored and then silently ignored on every lookup.
+            mockMvc.perform(put("/api/me/ebay-marketplace").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"marketplace\":\"EBAY_MARS\"}"))
+                    .andExpect(status().isBadRequest());
+
+            mockMvc.perform(put("/api/me/ebay-marketplace").with(user("admin").roles("ADMIN")).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest());
+
+            // The refused values must not have overwritten the accepted one.
+            mockMvc.perform(get("/api/me").with(user("admin").roles("ADMIN")))
+                    .andExpect(jsonPath("$.ebayMarketplace").value("EBAY_GB"));
+        } finally {
+            mockMvc.perform(put("/api/me/ebay-marketplace").with(user("admin").roles("ADMIN")).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"marketplace\":\"EBAY_DE\"}"));
+        }
     }
 }

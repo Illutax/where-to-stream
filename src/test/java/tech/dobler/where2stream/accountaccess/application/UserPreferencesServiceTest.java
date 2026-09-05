@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.where2stream.accountaccess.application.command.EbayMarketplaceUpdateCommand;
 import tech.dobler.where2stream.accountaccess.application.command.LanguageUpdateCommand;
 import tech.dobler.where2stream.accountaccess.application.command.ShowAgeRatingsUpdateCommand;
 import tech.dobler.where2stream.accountaccess.application.command.ShowGermanTitleUpdateCommand;
@@ -19,6 +20,7 @@ import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.domain.ViewMode;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
+import tech.dobler.where2stream.accountaccess.port.spi.SupportedMarketplaces;
 import tech.dobler.where2stream.shared.platform.api.ValidationException;
 
 import java.time.Instant;
@@ -28,6 +30,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +38,8 @@ class UserPreferencesServiceTest {
 
     @Mock
     private AppUserRepository users;
+    @Mock
+    private SupportedMarketplaces supportedMarketplaces;
     @InjectMocks
     private UserPreferencesService service;
 
@@ -178,5 +183,51 @@ class UserPreferencesServiceTest {
 
         assertThatThrownBy(() -> service.updateUsername(new UsernameUpdateCommand("alice", "bob")))
                 .isInstanceOf(ValidationException.class);
+    }
+
+    // --- eBay marketplace --------------------------------------------------------------------
+
+    @Test
+    void aSupportedMarketplaceIsStored() {
+        final var user = alice();
+        when(supportedMarketplaces.supports("EBAY_GB")).thenReturn(true);
+        when(users.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        service.updateEbayMarketplace(new EbayMarketplaceUpdateCommand("alice", "EBAY_GB"));
+
+        assertThat(user.getEbayMarketplace()).isEqualTo("EBAY_GB");
+    }
+
+    @Test
+    void anUnknownMarketplaceIsRefusedAndNamesTheAcceptedOnes() {
+        when(supportedMarketplaces.supports("EBAY_MARS")).thenReturn(false);
+        when(supportedMarketplaces.ids()).thenReturn(Set.of("EBAY_DE", "EBAY_US", "EBAY_GB"));
+        final var command = new EbayMarketplaceUpdateCommand("alice", "EBAY_MARS");
+
+        // The column stores a plain string, so this check is the only thing between the user and a
+        // setting that silently has no effect.
+        assertThatThrownBy(() -> service.updateEbayMarketplace(command))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("EBAY_MARS")
+                .hasMessageContaining("EBAY_DE");
+    }
+
+    @Test
+    void anUnknownMarketplaceIsNotWrittenAtAll() {
+        when(supportedMarketplaces.supports("EBAY_MARS")).thenReturn(false);
+        when(supportedMarketplaces.ids()).thenReturn(Set.of("EBAY_DE"));
+        final var command = new EbayMarketplaceUpdateCommand("alice", "EBAY_MARS");
+
+        assertThatThrownBy(() -> service.updateEbayMarketplace(command))
+                .isInstanceOf(ValidationException.class);
+        verifyNoInteractions(users);
+    }
+
+    @Test
+    void aMissingMarketplaceIsRefusedByTheCommandItself() {
+        // ADR-0015: presence is the command's own business; acceptability needs a collaborator.
+        assertThatThrownBy(() -> new EbayMarketplaceUpdateCommand("alice", "  "))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("A marketplace is required");
     }
 }
