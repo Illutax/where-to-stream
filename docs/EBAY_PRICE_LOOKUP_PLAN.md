@@ -5,10 +5,11 @@ Es ist bewusst so geschrieben, dass eine **andere Claude-Code-Session ohne Vorwi
 Ursprungsgespräch** direkt damit arbeiten kann: jeder Schritt nennt die konkrete Datei, die
 betroffenen Klassen/Komponenten und was sich ändert.
 
-**Status: Entwurf v3, in Arbeit.**
+**Status: Entwurf v3.2, in Arbeit.**
 Machbarkeit und Sicherheitslage sind geklärt (Abschnitte 3–5), die Empfehlung steht (Abschnitt 4.2).
-Offen ist der Spike aus Phase 0 — er entscheidet, ob die empfohlene Variante vom Zielhost aus
-überhaupt funktioniert — sowie die Detailentscheidungen aus Abschnitt 6.
+Ein **erster POC-Lauf hat stattgefunden** (Abschnitt 7.1) — er hat Variante E nicht bestätigt,
+sondern das Blockierungsrisiko konkret belegt.
+Offen sind damit die Fragen 2 und 3 aus Phase 0 sowie die Detailentscheidungen aus Abschnitt 6.
 
 ## 1. Ziel aus Nutzersicht
 
@@ -382,6 +383,74 @@ Ergebnis ist eine Notiz in diesem Dokument, nicht Code, der bleibt.
 **Danach, vor Phase 1:** ADR-0017 schreiben (via `adr`-Skill) und die Entscheidungen aus
 Abschnitt 6 treffen.
 
+### 7.1 Ergebnis des ersten POC-Laufs (2026-09-05)
+
+Durchgeführt aus dem Agent-Container heraus, nachdem die Egress-Routen für `ebay.de`/`ebay.com`
+und `werstreamt.es` freigeschaltet wurden.
+**Wichtige Einschränkung vorweg:** das ist die Egress-IP des Containers, **nicht** die des
+Zielhosts. Frage 1 ist damit für diese Umgebung beantwortet, für die Produktion nicht.
+
+**Umfeld (gesichert):**
+
+- Der Egress-Proxy tunnelt CONNECT sauber durch und bricht TLS **nicht** auf —
+  im Handshake erscheint das echte eBay-Zertifikat (Sectigo, `CN=www.ebay.co.uk`).
+  Der TLS-Fingerprint gegenüber Akamai ist also unser eigener, nicht der des Proxys.
+- `werstreamt.es` ist von hier aus erreichbar (HTTP 200) — der bestehende Scraper wäre bedienbar.
+- jsoup 1.17.2 ist bereits Projektabhängigkeit (`pom.xml`).
+
+**Frage 1 — Antwortet eBay unserem Server? Ja, aber nur kurz.**
+
+| Konfiguration | Ergebnis |
+| --- | --- |
+| curl-Default-User-Agent | 403 (AkamaiGHost) |
+| `OutboundHttpClients.USER_AGENT` allein | **403** |
+| vollständiger Browser-Headersatz | 200, ~190 KB, dreimal reproduzierbar |
+| derselbe Headersatz, ~10 Minuten später | 307 → `/splashui/challenge` |
+
+Der Sprung auf 200 kam erst mit dem kompletten Satz aus `Accept`, `Accept-Language`,
+`Accept-Encoding`, `sec-ch-ua`/`-mobile`/`-platform`, den vier `Sec-Fetch-*`-Headern,
+`Upgrade-Insecure-Requests` und `Connection`.
+Eine Leave-one-out-Analyse zur Bestimmung der Pflicht-Header war **nicht aussagekräftig**:
+die Antworten sprangen unsystematisch zwischen 200, 307 und 403.
+Das spricht für ein Reputations-Scoring von Akamai, nicht für eine feste Header-Liste.
+
+**Nach rund 40 Requests in etwa 25 Minuten war die IP marktplatzübergreifend gesperrt.**
+Fünf Abrufe im Minutenabstand — also bereits mit dem in 5.2 vorgesehenen Rate-Limit — lieferten
+ausnahmslos 307 auf `/splashui/challenge` („Bitte entschuldigen Sie die Störung…").
+Der Zugang hat sich innerhalb der Beobachtungszeit **nicht von selbst erholt**;
+zuletzt antwortete auch `www.ebay.com` mit 403.
+
+**Frage 2 — Sind beide Preise aus dem Markup lesbar? Unbeantwortet.**
+Die 200er-Antworten waren gzip-komprimiert und wurden im Moment des Erfolgs nicht dekomprimiert
+weggeschrieben; als das nachgeholt werden sollte, war der Zugang bereits heruntergestuft.
+Es liegt **kein Ergebnismarkup** vor.
+Selektoren, die Unterscheidbarkeit von Sofortkauf und laufendem Gebot und die URL-Parameter
+(`_sacat`, `LH_BIN`, `LH_Auction`, `_sop`) sind damit **weiterhin unverifiziert**,
+und es ist **kein Fixture eingecheckt**.
+
+**Frage 3 — Trefferqualität? Unbeantwortet**, weil sie Frage 2 voraussetzt.
+
+**Was das für die Empfehlung bedeutet.**
+Der POC hat die in 4.1 als „ernster als die AGB-Frage" benannte Sorge nicht ausgeräumt, sondern
+bestätigt: Variante E funktioniert kurz und kippt dann.
+Ein Feature, das an eine bewusste Nutzeraktion gebunden ist (Abschnitt 9), erzeugt zwar deutlich
+weniger Last als dieser Testlauf — aber die Sperre trat bereits bei einem Volumen ein, das eine
+Handvoll aktiver Nutzer an einem Abend erreichen kann.
+Zwei Punkte sind vor einer Entscheidung zu klären:
+
+1. **Der Headersatz ist eine offene Frage an Abschnitt 5.5.**
+   Der projekteigene `USER_AGENT` allein reicht nachweislich nicht (403).
+   Ein vollständiger, in sich konsistenter Browser-Headersatz ist wohl noch dasselbe Vorgeben
+   eines Browsers, nur vollständig statt halb — aber er geht über das hinaus, was das Projekt
+   heute tut, und ist deshalb eine bewusste Entscheidung für das ADR, kein Implementierungsdetail.
+2. **Ob die Produktions-IP sich anders verhält**, ist offen.
+   Eine Rechenzentrums-IP wird eher schlechter bewertet als besser.
+
+Der in 4.2 benannte Ausweg — `EbayBrowseApiSource` hinter demselben Port — gewinnt durch dieses
+Ergebnis an Gewicht.
+Die Architekturentscheidung (Port + austauschbarer Adapter) trägt unverändert; betroffen ist nur
+die Wahl des Standardadapters.
+
 ### Phase 1 — Backend
 Neuer Bounded Context `purchaseoffers` unter `tech.dobler.where2stream`, Aufbau nach ADR-0014:
 
@@ -431,8 +500,12 @@ Neuer Bounded Context `purchaseoffers` unter `tech.dobler.where2stream`, Aufbau 
 
 Ehrlich offen — vor der Umsetzung zu klären, nicht zu raten:
 
-- **Ob eBay Requests vom Zielhost überhaupt beantwortet** (Phase-0-Spike).
+- **Ob eBay Requests vom Zielhost überhaupt beantwortet.**
   Der wichtigste offene Punkt des gesamten Plans.
+  Aus dem Agent-Container heraus: kurzzeitig ja, dann dauerhaft Challenge (Abschnitt 7.1).
+  Vom Zielhost aus ungeprüft.
+- **Ob und wann eine einmal ausgelöste Sperre wieder abläuft** — im POC innerhalb von
+  fünf Minuten nicht.
 - Die aktuellen **CSS-Selektoren** der eBay-Suchergebnisseite und ob sich Sofortkauf- und
   Auktionsangebote dort zuverlässig unterscheiden lassen.
 - Die URL-Parameter `_sacat` (Kategorie DVDs/Blu-ray auf `ebay.de`), `LH_BIN`, `LH_Auction`,
@@ -465,3 +538,13 @@ Ehrlich offen — vor der Umsetzung zu klären, nicht zu raten:
   Sicherheitsabschnitt nach Varianten getrennt; Blockierungsrisiko, Circuit Breaker und die
   bewusste AGB-Entscheidung aufgenommen; Persistenz entfällt (kein Liquibase, keine Tabelle);
   Phase 0 um den entscheidenden Spike vom Zielhost erweitert.
+- **2026-09-05** — Entwurf v3.1: Datenhaltung vereinfacht — keine DB-Persistenz und kein
+  Server-TTL-Cache in der ersten Umsetzung, stattdessen `Cache-Control: private` für den
+  Browser-Cache plus In-Flight-Deduplizierung auf dem Server (Abschnitt 5.6);
+  Phase 0 als POC mit drei Fragen ausformuliert.
+- **2026-09-05** — Entwurf v3.2: Ergebnis des ersten POC-Laufs als Abschnitt 7.1 aufgenommen.
+  Frage 1 aus dem Agent-Container heraus beantwortet (kurzzeitig 200, danach dauerhafte
+  Akamai-Challenge), Fragen 2 und 3 bleiben offen — es liegt kein Ergebnismarkup und kein Fixture
+  vor.
+  Neuer offener Punkt: der projekteigene `USER_AGENT` allein genügt nicht, ein vollständiger
+  Browser-Headersatz ist nötig und damit eine Entscheidung an Abschnitt 5.5.
