@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayBrowseApiSource.BuyingOption;
+import tech.dobler.where2stream.purchaseoffers.EbayPropertiesFixture;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 import tech.dobler.where2stream.purchaseoffers.domain.Offer;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferPrice;
@@ -18,8 +19,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.time.Instant;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -64,9 +63,7 @@ class EbayBrowseApiSourceTest {
     private TimeService timeService;
 
     private static EbayProperties properties(boolean enabled) {
-        return new EbayProperties(enabled, "id", "secret", "https://api.ebay.com",
-                Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(0),
-                new EbayProperties.Quota(5000, 2, ZoneId.of("America/Los_Angeles"), LocalTime.MIDNIGHT));
+        return EbayPropertiesFixture.enabled(enabled);
     }
 
     private EbayBrowseApiSource source(boolean enabled) {

@@ -9,6 +9,7 @@ import tech.dobler.where2stream.purchaseoffers.domain.Offer;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferPrice;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableException;
 import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
+import tech.dobler.where2stream.purchaseoffers.domain.UpstreamQuotaExhaustedException;
 import tech.dobler.where2stream.purchaseoffers.port.out.PurchaseOfferSource;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.platform.outbound.HttpClientFactory;
@@ -98,9 +99,12 @@ public class EbayBrowseApiSource implements PurchaseOfferSource {
             rateLimiter.acquire();
             final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
-                throw new OfferSourceUnavailableException(
-                        "eBay %s search returned HTTP %d: %s"
-                                .formatted(buyingOption, response.statusCode(), response.body()));
+                final var detail = "eBay %s search returned HTTP %d: %s"
+                        .formatted(buyingOption, response.statusCode(), response.body());
+                if (looksLikeQuotaExhaustion(response.statusCode(), response.body())) {
+                    throw new UpstreamQuotaExhaustedException(detail);
+                }
+                throw new OfferSourceUnavailableException(detail);
             }
             return cheapestOffer(response.body(), marketplace, buyingOption);
         } catch (InterruptedException e) {
@@ -109,6 +113,20 @@ public class EbayBrowseApiSource implements PurchaseOfferSource {
         } catch (IOException e) {
             throw new OfferSourceUnavailableException("eBay %s search failed".formatted(buyingOption), e);
         }
+    }
+
+    /**
+     * Whether a rejection is eBay saying the daily allowance is spent, rather than an ordinary
+     * failure — the two are handled very differently (ADR-0017).
+     *
+     * <p><strong>Unverified.</strong> HTTP 429 plus error id 2001 is what the documentation
+     * suggests, but no real response has been seen. Getting this wrong is survivable: an
+     * unrecognised quota rejection is simply treated as an ordinary failure, so the circuit breaker
+     * handles it instead of the quota ledger. Confirming it is an open point in the plan.
+     */
+    static boolean looksLikeQuotaExhaustion(int statusCode, String body) {
+        return statusCode == 429
+                || (body != null && body.contains("\"errorId\"") && body.contains("2001"));
     }
 
     /**

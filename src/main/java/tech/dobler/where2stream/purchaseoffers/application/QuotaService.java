@@ -71,8 +71,7 @@ public class QuotaService {
     @Transactional
     public QuotaVerdict tryReserve(UUID userId, int calls) {
         final var day = currentQuotaDay();
-        final var global = globalUsage.findById(day.startingOn())
-                .orElseGet(() -> new GlobalQuotaUsage(day));
+        final var global = loadOrCreateGlobal(day);
 
         if (global.isExhausted()) {
             log.info("eBay lookup refused: the shared budget for {} was reported exhausted at {}",
@@ -88,17 +87,19 @@ public class QuotaService {
 
         final var perUser = perUserAllowance();
         final var user = userUsage.findByQuotaDayAndUserId(day.startingOn(), userId)
-                .orElseGet(() -> new UserQuotaUsage(day, userId));
+                .orElseGet(() -> userUsage.save(new UserQuotaUsage(day, userId)));
         if (user.callsUsed() + calls > perUser) {
             log.info("eBay lookup refused for user {}: personal allowance for {} used up ({}/{} calls)",
                     userId, day, user.callsUsed(), perUser);
             return QuotaVerdict.USER_ALLOWANCE_REACHED;
         }
 
+        // No save(): both entities are managed inside this transaction, so Hibernate's dirty
+        // checking flushes the new counts at commit. The only save() calls are the ones that turn a
+        // brand-new, transient row into a managed one — dirty checking has nothing to track before
+        // that.
         global.recordCalls(calls);
         user.recordCalls(calls);
-        globalUsage.save(global);
-        userUsage.save(user);
         return QuotaVerdict.ALLOWED;
     }
 
@@ -111,14 +112,28 @@ public class QuotaService {
     @Transactional
     public void recordExhaustedByUpstream(String upstreamDetail) {
         final var day = currentQuotaDay();
-        final var global = globalUsage.findById(day.startingOn())
-                .orElseGet(() -> new GlobalQuotaUsage(day));
+        final var global = loadOrCreateGlobal(day);
         global.markExhausted(timeService.now());
-        globalUsage.save(global);
         // Logged in full because this is the only evidence we have for when eBay's day rolls over —
         // the reset time in configuration is an unverified hypothesis (ADR-0017).
         log.warn("eBay reported the daily quota exhausted for {} (our count: {} calls). Upstream said: {}",
                 day, global.callsUsed(), upstreamDetail);
+    }
+
+    /**
+     * Loads the day's shared counter, inserting it on first use.
+     *
+     * <p>The {@code save} on the miss path is not redundant with dirty checking: a freshly
+     * constructed entity is transient, and Hibernate only tracks changes to entities it manages.
+     * A loaded one needs no save at all.
+     *
+     * <p>Both entities carry assigned identifiers rather than generated ones, so Spring Data's
+     * {@code save} takes the {@code merge} branch and costs one extra SELECT on insert. That is
+     * once per quota day (and once per user per quota day), which is not worth optimising away.
+     */
+    private GlobalQuotaUsage loadOrCreateGlobal(QuotaDay day) {
+        return globalUsage.findById(day.startingOn())
+                .orElseGet(() -> globalUsage.save(new GlobalQuotaUsage(day)));
     }
 
     /**

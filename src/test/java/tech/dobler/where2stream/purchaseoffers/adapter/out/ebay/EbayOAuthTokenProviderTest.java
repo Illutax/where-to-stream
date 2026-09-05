@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.where2stream.purchaseoffers.EbayPropertiesFixture;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableException;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
@@ -14,8 +15,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.Base64;
 import java.util.List;
 
@@ -44,9 +43,7 @@ class EbayOAuthTokenProviderTest {
     private TimeService timeService;
 
     private static EbayProperties properties() {
-        return new EbayProperties(true, "client-id", "client-secret", "https://api.ebay.com",
-                Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(0),
-                new EbayProperties.Quota(5000, 2, ZoneId.of("America/Los_Angeles"), LocalTime.MIDNIGHT));
+        return EbayPropertiesFixture.active();
     }
 
     private EbayOAuthTokenProvider provider() {

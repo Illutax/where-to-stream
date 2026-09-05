@@ -3,6 +3,7 @@ package tech.dobler.where2stream.purchaseoffers.adapter.out.ebay;
 import org.junit.jupiter.api.Test;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
@@ -15,7 +16,8 @@ class EbayPropertiesTest {
     private static EbayProperties properties(boolean enabled, String clientId, String clientSecret) {
         return new EbayProperties(enabled, clientId, clientSecret, "https://api.ebay.com",
                 Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(2),
-                new EbayProperties.Quota(5000, 2, ZoneId.of("America/Los_Angeles"), LocalTime.MIDNIGHT));
+                new EbayProperties.Quota(5000, 2, ZoneId.of("America/Los_Angeles"), LocalTime.MIDNIGHT),
+                new EbayProperties.CircuitBreaker(3, Duration.ofMinutes(5)));
     }
 
     @Test

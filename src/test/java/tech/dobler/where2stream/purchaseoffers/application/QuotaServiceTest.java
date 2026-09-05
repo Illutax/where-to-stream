@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.dobler.where2stream.accountaccess.port.in.UserDirectoryPort;
+import tech.dobler.where2stream.purchaseoffers.EbayPropertiesFixture;
 import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayProperties;
 import tech.dobler.where2stream.purchaseoffers.domain.GlobalQuotaUsage;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
@@ -18,8 +19,6 @@ import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -51,10 +50,7 @@ class QuotaServiceTest {
     private QuotaService service;
 
     private static EbayProperties properties(int dailyBudget, int overbooking) {
-        return new EbayProperties(true, "id", "secret", "https://api.ebay.com", Marketplace.EBAY_DE,
-                "617", 3, new EbayProperties.RateLimit(0),
-                new EbayProperties.Quota(dailyBudget, overbooking,
-                        ZoneId.of("America/Los_Angeles"), LocalTime.MIDNIGHT));
+        return EbayPropertiesFixture.withQuota(EbayPropertiesFixture.quota(dailyBudget, overbooking));
     }
 
     @BeforeEach
@@ -97,14 +93,36 @@ class QuotaServiceTest {
     // --- reserving ---------------------------------------------------------------------------
 
     @Test
-    void aFirstLookupOfTheDayIsAllowedAndBooksBothCounters() {
+    void theFirstLookupOfTheDayInsertsBothCountersAndIsAllowed() {
         when(userDirectory.registeredUserCount()).thenReturn(5L);
         when(globalUsage.findById(QUOTA_DATE)).thenReturn(Optional.empty());
+        when(globalUsage.save(any())).thenAnswer(i -> i.getArgument(0));
         when(userUsage.findByQuotaDayAndUserId(QUOTA_DATE, USER)).thenReturn(Optional.empty());
+        when(userUsage.save(any())).thenAnswer(i -> i.getArgument(0));
 
         assertThat(service.tryReserve(USER, 2)).isEqualTo(QuotaVerdict.ALLOWED);
+        // save() only on the insert path: a freshly constructed entity is transient, so dirty
+        // checking has nothing to track until it is managed.
         verify(globalUsage).save(any());
         verify(userUsage).save(any());
+    }
+
+    @Test
+    void anExistingCounterIsMutatedInPlaceWithoutASave() {
+        when(userDirectory.registeredUserCount()).thenReturn(5L);
+        final var global = usedGlobal(10);
+        final var user = usedByUser(4);
+        when(globalUsage.findById(QUOTA_DATE)).thenReturn(Optional.of(global));
+        when(userUsage.findByQuotaDayAndUserId(QUOTA_DATE, USER)).thenReturn(Optional.of(user));
+
+        assertThat(service.tryReserve(USER, 2)).isEqualTo(QuotaVerdict.ALLOWED);
+
+        // Both are managed inside the transaction, so Hibernate's dirty checking flushes the new
+        // counts at commit -- an explicit save would be noise.
+        verify(globalUsage, never()).save(any());
+        verify(userUsage, never()).save(any());
+        assertThat(global.callsUsed()).isEqualTo(12);
+        assertThat(user.callsUsed()).isEqualTo(6);
     }
 
     @Test
@@ -148,17 +166,31 @@ class QuotaServiceTest {
     // --- eBay closing the day ----------------------------------------------------------------
 
     @Test
-    void anUpstreamQuotaReportIsPersistedSoADeployCannotLiftTheLockout() {
-        when(globalUsage.findById(QUOTA_DATE)).thenReturn(Optional.of(usedGlobal(120)));
+    void anUpstreamQuotaReportClosesTheDayOnTheStoredRow() {
+        final var global = usedGlobal(120);
+        when(globalUsage.findById(QUOTA_DATE)).thenReturn(Optional.of(global));
+
+        service.recordExhaustedByUpstream("errorId 2001");
+
+        // The row is managed, so the flag reaches the database through dirty checking -- which is
+        // what makes the lockout survive a restart (ADR-0017).
+        assertThat(global)
+                .isNotNull()
+                .extracting(GlobalQuotaUsage::isExhausted, GlobalQuotaUsage::exhaustedAt)
+                .isEqualTo(List.of(true, NOW));
+        verify(globalUsage, never()).save(any());
+    }
+
+    @Test
+    void anUpstreamQuotaReportOnADayWithNoRowYetInsertsOne() {
+        when(globalUsage.findById(QUOTA_DATE)).thenReturn(Optional.empty());
+        when(globalUsage.save(any())).thenAnswer(i -> i.getArgument(0));
 
         service.recordExhaustedByUpstream("errorId 2001");
 
         final var saved = org.mockito.ArgumentCaptor.forClass(GlobalQuotaUsage.class);
         verify(globalUsage).save(saved.capture());
-        assertThat(saved.getValue())
-                .isNotNull()
-                .extracting(GlobalQuotaUsage::isExhausted, GlobalQuotaUsage::exhaustedAt)
-                .isEqualTo(List.of(true, NOW));
+        assertThat(saved.getValue().isExhausted()).isTrue();
     }
 
     @Test
