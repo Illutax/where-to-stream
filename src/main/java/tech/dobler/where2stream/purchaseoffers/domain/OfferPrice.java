@@ -2,7 +2,11 @@ package tech.dobler.where2stream.purchaseoffers.domain;
 
 import java.math.BigDecimal;
 import java.util.Currency;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The price of a purchase offer: an amount in the currency's <em>minor</em> units, plus the
@@ -10,21 +14,41 @@ import java.util.Objects;
  * separated from its currency or confused with an unrelated {@code long}).
  *
  * <p>Minor units, not a decimal: money is counted, not measured, and a {@code double} would make
- * "cheapest offer" comparisons depend on rounding. For EUR and USD a minor unit is a cent, which
- * is why the API DTO calls the field {@code amountCents}; the domain avoids that name because the
- * number of minor units per major unit is a property of the currency (JPY has none, KWD has three)
- * and is read from {@link Currency#getDefaultFractionDigits()} rather than assumed to be two.
+ * "cheapest offer" comparisons depend on rounding. The field is not called {@code amountCents}
+ * (the name the API DTO uses) because a minor unit is only a cent for EUR and USD — GBP's is a
+ * penny — and because the count per major unit is a property of the currency, read from
+ * {@link Currency#getDefaultFractionDigits()} rather than assumed.
+ *
+ * <p><strong>Only EUR, USD and GBP are accepted.</strong> Those are the currencies of the
+ * marketplaces this feature targets ({@code ebay.de}, {@code ebay.com}, {@code ebay.co.uk}), and
+ * restricting the set turns an unexpected currency into an immediate, visible failure instead of a
+ * price rendered with the wrong symbol or compared against an amount it has no exchange rate with.
+ * Widening the set is a one-line change here plus the marketplace that needs it.
  *
  * <p>The amount may be zero — a running auction with no bid yet legitimately starts at 0 — but
  * never negative.
  */
 public record OfferPrice(long minorUnits, Currency currency) implements Comparable<OfferPrice> {
 
+    /** The marketplaces this feature targets settle in these three, and nothing else is expected. */
+    private static final Set<Currency> SUPPORTED = Stream.of("EUR", "USD", "GBP")
+            .map(Currency::getInstance)
+            .collect(Collectors.toUnmodifiableSet());
+
     public OfferPrice {
         Objects.requireNonNull(currency, "currency must not be null");
+        if (!SUPPORTED.contains(currency)) {
+            throw new IllegalArgumentException(
+                    "Unsupported offer currency %s — expected one of %s"
+                            .formatted(currency.getCurrencyCode(), supportedCodes()));
+        }
         if (minorUnits < 0) {
             throw new IllegalArgumentException("Offer price must not be negative: " + minorUnits);
         }
+    }
+
+    private static List<String> supportedCodes() {
+        return SUPPORTED.stream().map(Currency::getCurrencyCode).sorted().toList();
     }
 
     public static OfferPrice of(long minorUnits, String currencyCode) {
@@ -42,13 +66,9 @@ public record OfferPrice(long minorUnits, Currency currency) implements Comparab
     public static OfferPrice ofMajorUnits(BigDecimal amount, String currencyCode) {
         Objects.requireNonNull(amount, "amount must not be null");
         final var currency = currencyOf(currencyCode);
-        final var fractionDigits = currency.getDefaultFractionDigits();
-        if (fractionDigits < 0) {
-            throw new IllegalArgumentException(
-                    "Currency without minor units is not a usable price currency: " + currencyCode);
-        }
         try {
-            return new OfferPrice(amount.movePointRight(fractionDigits).longValueExact(), currency);
+            return new OfferPrice(
+                    amount.movePointRight(currency.getDefaultFractionDigits()).longValueExact(), currency);
         } catch (ArithmeticException e) {
             throw new IllegalArgumentException(
                     "Amount %s has more precision than %s allows".formatted(amount, currencyCode), e);

@@ -9,6 +9,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.tuple;
 
 class OfferPriceTest {
 
@@ -25,13 +26,24 @@ class OfferPriceTest {
     }
 
     @Test
-    void ofMajorUnitsHandlesACurrencyWithoutMinorUnits() {
-        final var price = OfferPrice.ofMajorUnits(new BigDecimal("1500"), "JPY");
+    void theOtherTwoSupportedMarketplaceCurrenciesAreAccepted() {
+        final var pounds = OfferPrice.ofMajorUnits(new BigDecimal("8.50"), "GBP");
+        final var dollars = OfferPrice.ofMajorUnits(new BigDecimal("8.50"), "USD");
 
-        assertThat(price)
-                .isNotNull()
+        assertThat(List.of(pounds, dollars))
                 .extracting(OfferPrice::minorUnits, OfferPrice::currency)
-                .isEqualTo(List.of(1500L, Currency.getInstance("JPY")));
+                .containsExactly(
+                        tuple(850L, Currency.getInstance("GBP")),
+                        tuple(850L, Currency.getInstance("USD")));
+    }
+
+    @Test
+    void aCurrencyOutsideTheThreeSupportedOnesIsRejected() {
+        final var amount = new BigDecimal("1500");
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> OfferPrice.ofMajorUnits(amount, "JPY"))
+                .withMessageContainingAll("Unsupported offer currency", "JPY", "EUR", "GBP", "USD");
     }
 
     @Test
