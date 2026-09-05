@@ -45,6 +45,8 @@ Zwei Vorgaben des Auftraggebers sind gesetzt:
    Das ist eine **bewusste doppelte Überbuchung** unter der Annahme, dass höchstens die Hälfte der
    registrierten Nutzer an einem Tag Preise abruft.
    Sie tauscht ungenutztes Kontingent gegen ein höheres Per-User-Limit.
+   Zur Einordnung: die Anwendung hat derzeit **fünf** registrierte Benutzer,
+   und die Zahl wird absehbar nicht deutlich wachsen.
 2. **Globaler Deckel exakt bei 5.000**, ohne Sicherheitsabschlag.
 
 Aus der Überbuchung folgt zwingend, dass ein Per-User-Limit allein das Kontingent **nicht**
@@ -179,18 +181,32 @@ Reset-Fenster ein, ohne irgendetwas zu provozieren.
 - **Es gibt Persistenz in einem Feature, das ausdrücklich keine haben sollte.** Der Unterschied
   zwischen „Preisdaten nicht speichern" und „Quota-Zustand speichern" muss verstanden werden,
   sonst wirkt es wie ein Widerspruch. Dieses ADR ist der Ort, an dem er festgehalten ist.
-- **Zwei Tabellen brauchen eine Aufräumregel.** Die Per-User-Tabelle wächst mit `n` Zeilen pro Tag.
-  Alte Zeilen müssen gelöscht werden; eine Behaltefrist ist festzulegen
-  (Vorschlag: wenige Tage, gerade genug für die Auswertung aus Punkt 6).
+- **Die Per-User-Tabelle wächst ohne Begrenzung.**
+  Eine Aufräumregel ist bewusst auf eine spätere Ausbaustufe verschoben:
+  die Nutzungszahlen sind retrospektiv aufschlussreich — wie oft die Annahme aus der Formel reißt,
+  wie sich der Verbrauch über die Benutzer verteilt, ob der globale Deckel überhaupt je greift.
+  Bei `n` = 5 sind das rund 1.800 Zeilen im Jahr, also kein Größenproblem.
+  Zwei Punkte bleiben dennoch zu bedenken:
+  es handelt sich um benutzerbezogene Nutzungsdaten ohne Löschfrist,
+  und beim Löschen eines Benutzers sollten dessen Zeilen mitgehen.
 - **Die Überbuchung bleibt eine Wette.** Hält die Annahme aus der Formel nicht, greift der globale
   Deckel — und dann ist das Feature für alle aus, nicht nur für die Vielnutzer.
   Wie oft das passiert, muss beobachtet werden.
-- **Die Zeitzonenlogik ist eine Fehlerquelle**, die in Tests schwer auffällt, weil sie nur zweimal
-  im Jahr und nur für eine Stunde falsch wäre.
-  Sie gehört mit fixem Clock gegen beide Zeitzonenzustände getestet.
-- **Bei kleinem `n` ist das Per-User-Limit praktisch wirkungslos:** bei zwei Nutzern bekäme jeder
-  5.000 Requests, also das volle Kontingent. Der Schutz kommt in dieser Konstellation
-  ausschließlich vom globalen Deckel.
+- **Die Zeitzonenlogik bleibt zu testen, ist in ihrer Wirkung aber entschärft.**
+  Ein Fehler wirkt sich nur zweimal im Jahr und nur für eine Stunde aus, und genau diesen Fall
+  fängt der Vorrang von eBays Kontingent-Antwort (Punkt 2) ab:
+  ein zu früher Reset kostet einige vergebliche Calls, dann schließt der Tag wieder.
+  Sie gehört trotzdem mit fixem Clock gegen beide Zeitzonenzustände getestet — der Test ist billig,
+  und ohne ihn fällt ein Fehler mangels Symptom nie auf.
+- **Beim aktuellen `n` ist das Per-User-Limit keine Fairness-Bremse.**
+  Bei den derzeit fünf registrierten Benutzern ergibt die Formel 2.000 Requests je Benutzer,
+  also 1.000 Titelabfragen — schon drei gleichzeitig aktive Vielnutzer erreichen den globalen
+  Deckel.
+  Der Auftraggeber hat das akzeptiert: die Nutzerzahl ist bekannt und wird absehbar nicht deutlich
+  wachsen, und gegen den eigentlich gefürchteten Fall — ein Skript mit gültigem Session-Cookie —
+  wirkt das Per-User-Limit unverändert.
+  Der Schutz des Kontingents kommt in dieser Konstellation vom globalen Deckel;
+  die Aufteilungsformel entfaltet ihren Zweck erst bei größerem `n`.
 
 **Offen, bewusst nicht hier entschieden:**
 

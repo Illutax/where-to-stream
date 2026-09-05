@@ -5,7 +5,7 @@ Es ist bewusst so geschrieben, dass eine **andere Claude-Code-Session ohne Vorwi
 Ursprungsgespräch** direkt damit arbeiten kann: jeder Schritt nennt die konkrete Datei, die
 betroffenen Klassen/Komponenten und was sich ändert.
 
-**Status: Entwurf v3.4, in Arbeit.**
+**Status: Entwurf v3.5, in Arbeit.**
 Machbarkeit und Sicherheitslage sind geklärt (Abschnitte 3–5).
 Der POC-Lauf aus Abschnitt 7.1 hat Variante E (Scraping) **widerlegt**;
 der Auftraggeber verfolgt seither **Variante C (Browse API) primär** (Abschnitt 4.2),
@@ -601,6 +601,13 @@ Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Ac
   Zone als `America/Los_Angeles` statt als fester PST-Offset, weil Pazifik-Zeit Sommerzeit hat.
   Zwei Wege zur Überprüfung der Hypothese beschrieben (passiv aus dem Log, aktiv per
   Ausschöpfung nach vollständiger Implementierung).
+- **2026-09-05** — Entwurf v3.5: [ADR-0017](adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md)
+  angelegt (Status `Proposed`), das die Quota-Entscheidungen aus Abschnitt 11 festhält —
+  darunter die Aufteilung auf zwei eigene Tabellen statt Spalten an `AppUser`.
+  Die reale Nutzerzahl (fünf) in 11.1 ergänzt, mitsamt der Feststellung, dass das Per-User-Limit
+  bei diesem `n` keine Fairness-Bremse mehr ist, sondern nur noch Missbrauchsschutz —
+  vom Auftraggeber akzeptiert.
+  Aufbewahrung der Per-User-Zeilen bewusst ungeregelt gelassen (Ausbaustufe).
 
 ## 11. Quota-Aufteilung unter den Nutzern (Variante C)
 
@@ -640,6 +647,18 @@ ist das Budget in *Titeln* halb so groß wie in *Requests*:
 Zur Einordnung: die 200-Titel-Watchlist aus Abschnitt 3 wäre bei 25 Nutzern
 genau eine vollständige „alles einmal abfragen"-Runde pro Tag —
 die Bindung an eine bewusste Nutzeraktion ohne Massen-Abruf (Abschnitt 9) bleibt also auch bei Variante C wesentlich.
+
+**Der reale Betriebsfall liegt heute am oberen Ende der Tabelle:**
+die Anwendung hat derzeit **fünf** registrierte Nutzer, und die Zahl wird absehbar nicht deutlich
+wachsen.
+Bei `n` = 5 bekommt jeder Nutzer 2.000 Requests, also 1.000 Titelabfragen am Tag —
+mehr, als eine realistische Watchlist hergibt.
+Das Per-User-Limit ist in dieser Konstellation **keine Fairness-Bremse**, sondern nur noch ein
+Schutz gegen Fehlbedienung und gegen ein Skript mit gültigem Session-Cookie;
+den Kontingentschutz trägt allein der globale Deckel.
+Der Auftraggeber hat das bewusst akzeptiert.
+Die Aufteilungsformel entfaltet ihren eigentlichen Zweck erst, wenn `n` deutlich steigt —
+sie ist damit eher Vorsorge als aktive Begrenzung.
 
 ### 11.2 Zwei Calls je Titel — mit einem offenen Punkt
 
@@ -802,7 +821,16 @@ Natürlicher Ort ist die Anwendungsschicht des neuen Kontexts `purchaseoffers`
 etwas Verbrauchsinformation, was durch 11.3.1 abgefangen wird.
 Der **Erschöpfungszustand** dagegen muss in die Datenbank (11.3.1),
 sonst hebt jeder Deploy die Tagessperre auf.
-Das erfordert ein Liquibase-Changelog und eine schmale Tabelle — die einzige Persistenz in diesem
+Das erfordert ein Liquibase-Changelog und schmale Tabellen — die einzige Persistenz in diesem
 Feature, und ausdrücklich keine für Preise oder Angebote.
+Die Aufteilung auf zwei Tabellen (global je Kontingenttag, Verbrauch je Kontingenttag und Nutzer)
+und die Begründung, warum die Per-User-Zähler **nicht** als Spalten an `AppUser` hängen,
+stehen in [ADR-0017](adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md).
+
+**Aufbewahrung:** eine Aufräumregel für die Per-User-Tabelle ist bewusst auf eine spätere
+Ausbaustufe verschoben — die Nutzungszahlen sind retrospektiv aufschlussreich, und bei fünf
+Nutzern sind es rund 1.800 Zeilen im Jahr.
+Zu bedenken bleibt, dass es benutzerbezogene Nutzungsdaten ohne Löschfrist sind und dass beim
+Löschen eines Nutzers dessen Zeilen mitgehen sollten.
 Die Nutzerzahl kommt über einen bestehenden bzw. schmal zu ergänzenden `port.in` des `accountaccess`-Kontexts,
 nicht über einen Direktzugriff auf dessen Datenbestand (ADR-0014).
