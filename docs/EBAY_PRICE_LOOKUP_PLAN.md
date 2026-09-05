@@ -589,6 +589,51 @@ Preise, weil sie verschiedene Marktplätze abfragen.
 Das ist unproblematisch, weil nichts zwischengespeichert wird (5.6) — es gäbe ohnehin keinen
 geteilten Wert, der falsch sein könnte.
 
+**Architektonisch zu prüfen, bevor Phase 1b umgesetzt wird:**
+Die Marktplatz-Einstellung schafft eine neue Abhängigkeit `purchaseoffers → accountaccess`
+(zusätzlich zu der für die Benutzerzahl `n`).
+Zu klären ist, ob das regelkonform bleibt und insbesondere **keinen Zyklus** zwischen den
+Kontexten erzeugt:
+
+- Wandert der `Marketplace`-Typ über den `port.in` nach draußen, wird er Teil des
+  veröffentlichten Vertrags von `accountaccess` — wie `ImdbEntry`/`WatchlistDate` es für
+  `watchlist` sind, die dafür in `ArchitectureTest` eigens ausgenommen werden mussten.
+  Entweder braucht `Marketplace` dieselbe Ausnahme, oder er gehört in den Shared Kernel,
+  oder der Port gibt einen neutraleren Typ heraus.
+- Ein Zyklus entstünde, sobald `accountaccess` seinerseits etwas aus `purchaseoffers` bräuchte —
+  etwa um beim Löschen eines Benutzers dessen Quota-Zeilen mitzunehmen (ADR-0017 nennt das als
+  Bedenken).
+  Genau diese beiden Anforderungen zeigen in entgegengesetzte Richtungen und sind der
+  wahrscheinlichste Weg, wie hier doch ein Zyklus entsteht.
+- Die bestehenden Isolationsregeln prüfen jeweils **eine** Richtung und bemerken einen Zyklus
+  daher nicht.
+  Eine ArchUnit-Regel auf Zyklusfreiheit der Kontext-Slices
+  (`slices().matching(...).should().beFreeOfCycles()`) wäre die Ergänzung, die das abdeckt.
+
+**Gemessen am 2026-09-05, mit einer verworfenen Probe-Regel:**
+Der Code ist **heute schon nicht zyklenfrei** — unabhängig von diesem Feature.
+
+- Zyklen über `shared` sind erwartbar und dokumentiert:
+  `ApiExceptionHandler` kennt bewusst die Exception-Typen aller Kontexte.
+  Rechnet man `shared` heraus, bleibt trotzdem einer übrig.
+- **`accountaccess` → `titlecatalog` → `accountaccess`.**
+  `MeApiController` hängt an `titlecatalog.port.in.PosterAttributionPort`
+  (für den TMDB-Attributionshinweis), und `titlecatalog` hängt über `CurrentUserPort` zurück
+  an `accountaccess`.
+  Beide Richtungen laufen über *veröffentlichte* Ports — die bestehenden Regeln sind deshalb zu
+  Recht grün, der Kreis existiert dennoch.
+- Eine Zyklusfreiheitsregel lässt sich daher **nicht einfach ergänzen**: sie wäre sofort rot.
+  Zu entscheiden ist, ob der bestehende Zyklus aufgelöst wird (etwa indem die
+  Attributionsinformation nicht am `MeApiController` hängt) oder ob er als bewusste Ausnahme
+  dokumentiert und die Regel entsprechend eingeschränkt wird.
+  Das ist eine Aufräumaufgabe **vor** Phase 1b, nicht Teil davon — sie betrifft bestehenden Code.
+- Für das Feature selbst gilt: `purchaseoffers → accountaccess` erzeugt für sich genommen
+  **keinen** Zyklus, weil `accountaccess` nichts aus `purchaseoffers` braucht.
+  Das kippt erst, wenn die in ADR-0017 erwähnte Löschweitergabe (Benutzer löschen → Quota-Zeilen
+  mitnehmen) als Abhängigkeit von `accountaccess` auf `purchaseoffers` gebaut wird.
+  Sie gehört deshalb andersherum gelöst — als Ereignis oder als Aufräumlauf in
+  `purchaseoffers` —, nicht als Direktaufruf.
+
 ### Phase 2 — Frontend
 - `core/api/offers-api.ts`: `OffersApi.get(imdbId)` — dünn, wie die übrigen `*-api.ts`.
 - `core/offers-store.ts`: Zustand je `imdbId` (`idle | loading | loaded | error`),
