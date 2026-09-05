@@ -7,7 +7,7 @@ import { ImdbId } from './domain';
 const HIGHLIGHT_MS = 4000;
 
 /**
- * Orchestrates the lightweight "mark as seen" toggle so accidental marking is noticeable and
+ * Orchestrates the lightweight "mark as seen" toggle, so accidental marking is noticeable and
  * reversible: it applies the change optimistically (via a caller-supplied `applyLocally`),
  * highlights the just-changed title, persists it, and offers an "Undo" snackbar.
  * On a server error it rolls the optimistic change back.

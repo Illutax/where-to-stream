@@ -36,7 +36,7 @@ public class PurchaseOfferApiController {
      * Long enough to absorb a re-render, a back-and-forth navigation or a double click; short
      * enough that the price does not visibly lag (plan, section 5.6).
      */
-    private static final Duration BROWSER_CACHE = Duration.ofSeconds(90);
+    private static final Duration BROWSER_CACHE = Duration.ofMinutes(5);
 
     private final TitleOfferService titleOfferService;
     private final CurrentUserPort currentUserPort;
@@ -56,7 +56,7 @@ public class PurchaseOfferApiController {
      * charged against their personal allowance, so it must not sit in a shared cache.
      *
      * <p>Only a successful lookup is cacheable. A refusal is not — caching "your budget is spent"
-     * for 90 seconds would keep telling the user that after the situation has changed, and caching
+     * for 5 minutes would keep telling the user that after the situation has changed, and caching
      * "unavailable" would outlast the circuit breaker's own recovery.
      *
      * <p>An explicit {@code Cache-Control} is required rather than merely useful: Spring Security

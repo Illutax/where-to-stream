@@ -128,7 +128,7 @@ class PurchaseOfferApiControllerTest {
         // private, never public: the answer depends on the caller's watchlist and is charged to
         // their personal allowance.
         mockMvc.perform(get("/api/titles/tt0113277/offers").principal(alice()))
-                .andExpect(header().string("Cache-Control", "max-age=90, private"));
+                .andExpect(header().string("Cache-Control", "max-age=300, private"));
     }
 
     @Test

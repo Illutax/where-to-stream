@@ -83,7 +83,7 @@ public class EbayBrowseApiSource implements PurchaseOfferSource {
      * quota ledger has already closed the day anyway.
      */
     @Override
-    @CircuitBreaker(name = "ebay")
+    @CircuitBreaker(name = EbayCircuitBreakerConfig.INSTANCE)
     public TitleOffers findOffers(ImdbId imdbId, String searchTerm, Marketplace marketplace) {
         if (!properties.active()) {
             throw new OfferSourceUnavailableException(
@@ -247,10 +247,7 @@ public class EbayBrowseApiSource implements PurchaseOfferSource {
             return Optional.empty();
         }
         final var url = itemUrl(summary.get("itemWebUrl"), marketplace);
-        if (url.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(new Offer(price.get(), shippingCost(summary, marketplace), url.get()));
+        return url.map(uri -> new Offer(price.get(), shippingCost(summary, marketplace), uri));
     }
 
     /** Reads {@code {"value": "12.34", "currency": "EUR"}}, rejecting anything unexpected. */

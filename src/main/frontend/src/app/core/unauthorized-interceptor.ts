@@ -9,7 +9,7 @@ export const unauthorizedInterceptor: HttpInterceptorFn = (req, next) =>
   next(req).pipe(
     catchError((error) => {
       if (error?.status === 401) {
-        window.location.href = new URL('../login', document.baseURI).toString();
+        globalThis.location.href = new URL('../login', document.baseURI).toString();
       }
       return throwError(() => error);
     }),

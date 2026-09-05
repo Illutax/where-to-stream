@@ -21,9 +21,9 @@ const IDLE: OfferState = { kind: 'idle' };
  * <p><strong>Nothing is fetched on its own.</strong> No prefetch on page load, no "load all"
  * anywhere: every lookup costs two calls from a daily budget the whole installation shares
  * (ADR-0017), so a lookup only ever happens because someone clicked. A dashboard with 200 titles
- * that fetched on render would spend 8% of the day's budget on one page view.
+ * that fetched on render would spend 8% of the day's budget on one-page view.
  *
- * <p>Requests for a title already in flight are dropped rather than queued. That is not the same as
+ * <p>Requests for a title already in flight are dropped rather than queued. That is different from
  * the server's in-flight deduplication — this one only covers a single browser tab; the server's
  * covers two users, two tabs, and a script with a session cookie.
  *
@@ -50,7 +50,7 @@ export class OffersStore {
   }
 
   /**
-   * Looks up prices for a title, unless a lookup is already running for it.
+   * It looks up prices for a title, unless a lookup is already running for it.
    *
    * <p>Does nothing when the title is already loaded — a second click on a price that is already
    * shown should not silently spend two more calls. Use {@link refresh} for a deliberate re-check.
@@ -66,7 +66,7 @@ export class OffersStore {
   /**
    * Re-checks a title the user is already looking at, bypassing the browser cache.
    *
-   * <p>Without the cache-buster the browser would answer from its own 90-second cache and the
+   * <p>Without the cache-buster, the browser would answer from its own 5-minute cache and the
    * button would appear broken.
    */
   refresh(imdbId: ImdbId): void {
