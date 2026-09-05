@@ -3,7 +3,6 @@ package tech.dobler.where2stream.purchaseoffers;
 import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayProperties;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 
-import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
@@ -45,7 +44,6 @@ public final class EbayPropertiesFixture {
     private static EbayProperties with(boolean enabled, String clientId, String clientSecret,
                                        EbayProperties.Quota quota) {
         return new EbayProperties(enabled, clientId, clientSecret, "https://api.ebay.com",
-                Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(0), quota,
-                new EbayProperties.CircuitBreaker(3, Duration.ofMinutes(5)));
+                Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(0), quota);
     }
 }

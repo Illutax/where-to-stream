@@ -736,38 +736,34 @@ damit vermutlich schon — aber „vermutlich" ist der Grund für dieses Ticket.
 - **Vorher zu klären:** Der Befund ist gegen **MariaDB** zu erheben, nicht gegen H2. Die
   Entwicklungs- und Testumgebung läuft auf H2, dessen Optimizer sich anders entscheidet.
 
-### 🟢 TODO-51 — Eigenen Circuit Breaker durch resilience4j ersetzen (zurückgestellt)
-`TitleOfferService` bringt einen handgeschriebenen Circuit Breaker mit: ein Zähler
-aufeinanderfolgender Fehlschläge plus ein `openUntil`-Zeitpunkt, rund 15 Zeilen. Geprüft wurde, ob
-resilience4j mit Spring AOP die bessere Lösung ist.
+### ✅ TODO-51 — Eigenen Circuit Breaker durch resilience4j ersetzt
+`TitleOfferService` brachte einen handgeschriebenen Circuit Breaker mit: ein Zähler
+aufeinanderfolgender Fehlschläge plus ein `openUntil`-Zeitpunkt, rund 15 Zeilen.
 
-**Messergebnis (2026-09-05), nicht Vermutung:** `resilience4j-spring-boot3` 2.3.0 lässt sich
-auflösen, der Spring-Kontext startet damit auf **Spring Boot 4.1.0**, und der
-`@CircuitBreaker`-Aspekt greift tatsächlich — eine Wegwerf-Probe mit 120 fehlschlagenden Aufrufen
-öffnete den Breaker (100 erreichten die Methode, 20 wurden kurzgeschlossen). Die technische Hürde,
-die man vermuten würde, existiert also nicht.
+**Erste Bewertung war falsch und wurde korrigiert.** Zunächst hatte ich nur
+`resilience4j-spring-boot4:2.3.0` geprüft, den Fehlschlag als „es gibt kein Boot-4-Artefakt"
+gedeutet und deshalb zur Beibehaltung geraten. Tatsächlich existiert **`2.4.0`**. Damit fielen zwei
+der drei Gegenargumente weg: das Artefakt zielt auf diese Boot-Generation, und es zieht **kein**
+`kotlin-stdlib` nach (das kam vom `-spring-boot3`-Artefakt). Neu hinzu kommt nur `micrometer-core`,
+das zugleich die Breaker-Metriken mitbringt; `micrometer-observation`/`-commons` waren über Spring
+Boot ohnehin da.
 
-**Trotzdem zurückgestellt**, aus drei Gründen:
-
-1. **Es gibt kein Boot-4-Artefakt.** Der Starter heißt `-spring-boot3` und zielt auf Boot 3;
-   `resilience4j-spring-boot4` existiert nicht. Dass es auf 4.1.0 läuft, ist Glück, keine Zusage.
-   Für ein Projekt, das Spring Boot zügig mitzieht, ist das die falsche Art von Abhängigkeit.
-2. **Der transitive Rattenschwanz ist unverhältnismäßig.** resilience4j zieht `kotlin-stdlib-jdk8`
-   und `micrometer-core` nach — eine Kotlin-Laufzeit für 15 Zeilen Zustandslogik.
-3. **Das Projekt hat die Gegenentscheidung schon getroffen**, als es `RateLimiter` selbst schrieb
-   statt eine Bibliothek zu nehmen.
-
-**Was resilience4j besser könnte** — und was damit als bekannte Schwäche der eigenen Lösung
-stehenbleibt:
-
-- **Der eigene Breaker zählt *aufeinanderfolgende* Fehlschläge.** Bei einer Quelle, die
-  zuverlässig jeden zweiten Aufruf ablehnt, löst er **nie** aus, obwohl die Hälfte des Budgets
-  verbrannt wird. Ein Sliding Window über die Fehlerrate würde das erkennen.
-- **Es gibt keinen Half-Open-Zustand.** Nach Ablauf des Fensters läuft der volle Verkehr wieder an
-  statt einiger Probeaufrufe.
-- Metriken bekäme man geschenkt.
-
-- **Akzeptanzkriterium für später:** Sobald resilience4j ein auf Boot 4 zielendes Artefakt
-  veröffentlicht, erneut bewerten. Bis dahin ist zu entscheiden, ob die beiden genannten Schwächen
-  im eigenen Breaker behoben werden (Fehlerrate statt Folge, plus Half-Open) — das wären nochmals
-  etwa 20 Zeilen und wäre immer noch kleiner als die Abhängigkeit.
+- **Erledigt:** `@CircuitBreaker(name = "ebay")` auf `EbayBrowseApiSource.findOffers` — dort, wo
+  tatsächlich mit eBay gesprochen wird, und an einer Bean-Grenze, die der Aspekt abfangen kann.
+  `TitleOfferService` prüft den Zustand **vor** der Quota-Reservierung, damit ein kurzgeschlossener
+  Aufruf nicht trotzdem zwei Calls vom Tagesbudget kostet, und behandelt
+  `CallNotPermittedException` für das schmale Zeitfenster dazwischen.
+- **Was der Wechsel behebt:** Der eigene Breaker zählte *aufeinanderfolgende* Fehlschläge und hätte
+  bei einer Quelle, die jeden zweiten Aufruf ablehnt, **nie** ausgelöst — während die Hälfte des
+  Budgets in Fehlschläge lief. Jetzt entscheidet die Fehlerrate über ein Sliding Window. Dazu kommt
+  ein Half-Open-Zustand mit zwei Probeaufrufen statt der vollen Wiederöffnung.
+- **Konfiguration in Java** (`EbayCircuitBreakerConfig`), nicht in `application.properties`, aus
+  zwei Gründen, die beide beim Bauen auffielen: `ignoreExceptions` wäre dort ein voll
+  qualifizierter Klassenname als **String**, dessen Tippfehler still auf die Defaults zurückfällt —
+  ausgerechnet bei der Regel, die verhindert, dass ein erschöpftes Tagesbudget den Breaker öffnet.
+  Und `src/test/resources/application.properties` **überschattet** die Produktionsdatei im
+  Test-Classpath, womit Property-Werte für jeden `@SpringBootTest` unsichtbar sind.
+- **Verifiziert:** `EbayCircuitBreakerConfigurationTest` prüft im echten Kontext, dass der
+  Customizer greift (sonst stünden dort die resilience4j-Defaults 100/60 s) und dass eine
+  erschöpfte Quota den Breaker nachweislich **nicht** öffnet, eine gewöhnliche Störung dagegen
+  schon.

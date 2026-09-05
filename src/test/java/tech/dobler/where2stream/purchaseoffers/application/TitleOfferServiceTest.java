@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.dobler.where2stream.purchaseoffers.EbayPropertiesFixture;
-import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayProperties;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferLookupResult;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableException;
@@ -15,7 +15,8 @@ import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
 import tech.dobler.where2stream.purchaseoffers.domain.UpstreamQuotaExhaustedException;
 import tech.dobler.where2stream.purchaseoffers.port.out.PurchaseOfferSource;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
-import tech.dobler.where2stream.shared.platform.time.TimeService;
+
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -46,19 +47,38 @@ class TitleOfferServiceTest {
     private PurchaseOfferSource source;
     @Mock
     private QuotaService quotaService;
-    @Mock
-    private TimeService timeService;
-
+    private CircuitBreakerRegistry circuitBreakers;
     private TitleOfferService service;
 
-    private static EbayProperties properties() {
-        return EbayPropertiesFixture.active();
-    }
-
+    /**
+     * A real resilience4j registry rather than a mock: the point of the switch was to get its
+     * failure-rate semantics, and a mock would only pin our own assumptions about them.
+     * Configured small so the tests stay readable — the production values live in
+     * {@code application.properties}.
+     */
     @BeforeEach
     void setUp() {
-        service = new TitleOfferService(source, quotaService, properties(), timeService);
-        lenient().when(timeService.now()).thenReturn(NOW);
+        circuitBreakers = CircuitBreakerRegistry.of(CircuitBreakerConfig.custom()
+                .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+                .slidingWindowSize(4)
+                .minimumNumberOfCalls(4)
+                .failureRateThreshold(50)
+                .waitDurationInOpenState(Duration.ofMinutes(5))
+                .ignoreExceptions(UpstreamQuotaExhaustedException.class)
+                .build());
+        service = new TitleOfferService(source, quotaService, circuitBreakers);
+    }
+
+    /**
+     * The production breaker wraps {@code EbayBrowseApiSource} via the resilience4j aspect. The
+     * source is a mock here, so nothing records into the breaker on its own — these tests drive it
+     * directly, which is what lets them assert the service's <em>reaction</em> to each state.
+     */
+    private void openTheBreaker() {
+        final var breaker = circuitBreakers.circuitBreaker(TitleOfferService.BREAKER_NAME);
+        for (int i = 0; i < 4; i++) {
+            breaker.onError(0, TimeUnit.MILLISECONDS, new OfferSourceUnavailableException("upstream refused"));
+        }
     }
 
     private OfferLookupResult lookup() {
@@ -132,51 +152,62 @@ class TitleOfferServiceTest {
     // --- circuit breaker ---------------------------------------------------------------------
 
     @Test
-    void repeatedFailuresSuspendFurtherCalls() {
-        when(quotaService.tryReserve(eq(USER), anyInt())).thenReturn(QuotaVerdict.ALLOWED);
-        when(source.findOffers(any(), any(), any()))
-                .thenThrow(new OfferSourceUnavailableException("upstream refused"));
+    void anOpenBreakerRefusesBeforeAnyQuotaIsReserved() {
+        openTheBreaker();
 
-        for (int attempt = 0; attempt < 3; attempt++) {
-            assertThat(lookup().status()).isEqualTo(OfferLookupResult.Status.UNAVAILABLE);
-        }
-        // Fourth attempt is refused before reaching eBay: hammering a refusing upstream prolongs
-        // the refusal, and each attempt would still cost budget.
         assertThat(lookup().status()).isEqualTo(OfferLookupResult.Status.UNAVAILABLE);
-        verify(source, times(3)).findOffers(any(), any(), any());
+        // The pre-check exists precisely so a short-circuited call does not still cost the user two
+        // calls from the shared daily budget.
+        verify(quotaService, never()).tryReserve(any(), anyInt());
+        verify(source, never()).findOffers(any(), any(), any());
     }
 
     @Test
-    void callsResumeOnceTheBreakerWindowHasPassed() {
+    void aShortCircuitedCallIsReportedAsUnavailableRatherThanPropagating() {
         when(quotaService.tryReserve(eq(USER), anyInt())).thenReturn(QuotaVerdict.ALLOWED);
         when(source.findOffers(any(), any(), any()))
-                .thenThrow(new OfferSourceUnavailableException("upstream refused"));
-        for (int attempt = 0; attempt < 3; attempt++) {
-            lookup();
-        }
+                .thenThrow(CallNotPermittedException.createCallNotPermittedException(
+                        circuitBreakers.circuitBreaker(TitleOfferService.BREAKER_NAME)));
 
-        when(timeService.now()).thenReturn(NOW.plus(Duration.ofMinutes(6)));
-        lookup();
-
-        verify(source, times(4)).findOffers(any(), any(), any());
+        // Covers the race where the breaker opens between the pre-check and the call.
+        assertThat(lookup().status()).isEqualTo(OfferLookupResult.Status.UNAVAILABLE);
     }
 
     @Test
-    void aSuccessfulLookupClearsTheFailureCount() {
+    void aClosedBreakerLetsTheLookupThrough() {
         when(quotaService.tryReserve(eq(USER), anyInt())).thenReturn(QuotaVerdict.ALLOWED);
-        when(source.findOffers(any(), any(), any()))
-                .thenThrow(new OfferSourceUnavailableException("first"))
-                .thenThrow(new OfferSourceUnavailableException("second"))
-                .thenReturn(noOffers())
-                .thenThrow(new OfferSourceUnavailableException("third"))
-                .thenThrow(new OfferSourceUnavailableException("fourth"));
+        when(source.findOffers(any(), any(), any())).thenReturn(noOffers());
 
-        for (int attempt = 0; attempt < 5; attempt++) {
-            lookup();
+        assertThat(lookup().status()).isEqualTo(OfferLookupResult.Status.FETCHED);
+    }
+
+    @Test
+    void anIntermittentlyFailingSourceStillTripsTheBreaker() {
+        final var breaker = circuitBreakers.circuitBreaker(TitleOfferService.BREAKER_NAME);
+        for (int i = 0; i < 4; i++) {
+            if (i % 2 == 0) {
+                breaker.onError(0, TimeUnit.MILLISECONDS, new OfferSourceUnavailableException("boom"));
+            } else {
+                breaker.onSuccess(0, TimeUnit.MILLISECONDS);
+            }
         }
 
-        // Four failures in total, but never three in a row — the breaker must not have opened.
-        verify(source, times(5)).findOffers(any(), any(), any());
+        // The reason for moving off the hand-rolled breaker: it counted CONSECUTIVE failures and
+        // would never have opened here, while half the daily budget went to failing calls.
+        assertThat(breaker.getState().name()).isEqualTo("OPEN");
+        assertThat(lookup().status()).isEqualTo(OfferLookupResult.Status.UNAVAILABLE);
+    }
+
+    @Test
+    void anExhaustedQuotaDoesNotCountAsAnUpstreamFailure() {
+        final var breaker = circuitBreakers.circuitBreaker(TitleOfferService.BREAKER_NAME);
+        for (int i = 0; i < 8; i++) {
+            breaker.onError(0, TimeUnit.MILLISECONDS, new UpstreamQuotaExhaustedException("errorId 2001"));
+        }
+
+        // A spent allowance is the upstream working correctly. Opening the breaker on it would
+        // punish us for the one condition the quota ledger already handles.
+        assertThat(breaker.getState().name()).isEqualTo("CLOSED");
     }
 
     // --- in-flight deduplication --------------------------------------------------------------

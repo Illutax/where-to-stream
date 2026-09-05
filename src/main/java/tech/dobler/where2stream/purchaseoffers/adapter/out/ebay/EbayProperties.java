@@ -4,7 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 
-import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
@@ -43,8 +42,7 @@ public record EbayProperties(
         @DefaultValue("617") String categoryId,
         @DefaultValue("3") int resultsPerQuery,
         @DefaultValue RateLimit rateLimit,
-        @DefaultValue Quota quota,
-        @DefaultValue CircuitBreaker circuitBreaker
+        @DefaultValue Quota quota
 ) {
 
     /** Whether eBay can actually be called: the flag is set <em>and</em> both credentials exist. */
@@ -59,10 +57,9 @@ public record EbayProperties(
     @Override
     public String toString() {
         return ("EbayProperties[enabled=%s, clientId=%s, clientSecret=%s, apiBaseUrl=%s, "
-                + "defaultMarketplace=%s, categoryId=%s, resultsPerQuery=%d, rateLimit=%s, quota=%s, "
-                + "circuitBreaker=%s]")
+                + "defaultMarketplace=%s, categoryId=%s, resultsPerQuery=%d, rateLimit=%s, quota=%s]")
                 .formatted(enabled, masked(clientId), masked(clientSecret), apiBaseUrl,
-                        defaultMarketplace, categoryId, resultsPerQuery, rateLimit, quota, circuitBreaker);
+                        defaultMarketplace, categoryId, resultsPerQuery, rateLimit, quota);
     }
 
     private static String masked(String credential) {
@@ -103,26 +100,6 @@ public record EbayProperties(
             }
             if (perUserOverbooking <= 0) {
                 throw new IllegalArgumentException("ebay.quota.per-user-overbooking must be positive");
-            }
-        }
-    }
-
-    /**
-     * When to stop calling a source that keeps failing (plan, section 5.5).
-     *
-     * <p>Hammering an upstream that is already refusing is how a temporary problem becomes a
-     * lasting one, and every attempt still costs a call from the daily budget.
-     *
-     * @param failureThreshold consecutive failures after which calls stop
-     * @param openFor          how long to stay closed for business before trying again
-     */
-    public record CircuitBreaker(
-            @DefaultValue("3") int failureThreshold,
-            @DefaultValue("5m") Duration openFor
-    ) {
-        public CircuitBreaker {
-            if (failureThreshold <= 0) {
-                throw new IllegalArgumentException("ebay.circuit-breaker.failure-threshold must be positive");
             }
         }
     }

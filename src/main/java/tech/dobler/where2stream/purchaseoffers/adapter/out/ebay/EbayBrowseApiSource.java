@@ -1,5 +1,6 @@
 package tech.dobler.where2stream.purchaseoffers.adapter.out.ebay;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.stereotype.Service;
@@ -67,7 +68,22 @@ public class EbayBrowseApiSource implements PurchaseOfferSource {
         this.timeService = timeService;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Guarded by the {@code ebay} circuit breaker (resilience4j, configured in
+     * {@code application.properties}). The annotation sits here rather than in the application
+     * layer because this is the method that actually talks to eBay, and because an aspect only
+     * intercepts calls that cross a bean boundary — {@code TitleOfferService} reaches this through
+     * the {@link PurchaseOfferSource} interface, so the proxy is in the path.
+     *
+     * <p>{@link UpstreamQuotaExhaustedException} is configured as an ignored exception: a spent
+     * daily allowance is not a sign of an unhealthy upstream, it is the upstream working correctly.
+     * Counting it as a failure would open the breaker on the one day it must not — right when the
+     * quota ledger has already closed the day anyway.
+     */
     @Override
+    @CircuitBreaker(name = "ebay")
     public TitleOffers findOffers(ImdbId imdbId, String searchTerm, Marketplace marketplace) {
         if (!properties.active()) {
             throw new OfferSourceUnavailableException(

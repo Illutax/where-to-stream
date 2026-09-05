@@ -1,8 +1,10 @@
 package tech.dobler.where2stream.purchaseoffers.application;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayProperties;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferLookupResult;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableException;
@@ -11,15 +13,12 @@ import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
 import tech.dobler.where2stream.purchaseoffers.domain.UpstreamQuotaExhaustedException;
 import tech.dobler.where2stream.purchaseoffers.port.out.PurchaseOfferSource;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
-import tech.dobler.where2stream.shared.platform.time.TimeService;
 
-import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Looks up purchase offers for a title, and is the one place that decides not to.
@@ -27,7 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>Three guards sit in front of the actual call, each for a different reason:
  * <ul>
  *   <li>a <strong>circuit breaker</strong>, so a source that is already refusing is not hammered
- *       into refusing for longer — and so failing calls stop burning daily budget;</li>
+ *       into refusing for longer — and so failing calls stop burning daily budget. It is
+ *       resilience4j's, declared on {@code EbayBrowseApiSource.findOffers} and configured in
+ *       {@code application.properties};</li>
  *   <li>the <strong>quota</strong> (ADR-0017), which rations the shared allowance between users;</li>
  *   <li><strong>in-flight deduplication</strong>, so two people asking for the same title at the
  *       same moment cost one upstream call rather than two. This is the piece the browser cache
@@ -47,21 +48,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 public class TitleOfferService {
 
+    /** Must match the instance name on {@code EbayBrowseApiSource.findOffers}. */
+    static final String BREAKER_NAME = "ebay";
+
     private final PurchaseOfferSource source;
     private final QuotaService quotaService;
-    private final EbayProperties properties;
-    private final TimeService timeService;
+    private final CircuitBreakerRegistry circuitBreakers;
 
     private final ConcurrentMap<LookupKey, CompletableFuture<TitleOffers>> inFlight = new ConcurrentHashMap<>();
-    private final AtomicInteger consecutiveFailures = new AtomicInteger();
-    private volatile Instant breakerOpenUntil = Instant.MIN;
 
     public TitleOfferService(PurchaseOfferSource source, QuotaService quotaService,
-                             EbayProperties properties, TimeService timeService) {
+                             CircuitBreakerRegistry circuitBreakers) {
         this.source = source;
         this.quotaService = quotaService;
-        this.properties = properties;
-        this.timeService = timeService;
+        this.circuitBreakers = circuitBreakers;
     }
 
     /**
@@ -72,7 +72,7 @@ public class TitleOfferService {
      */
     public OfferLookupResult lookup(UUID userId, ImdbId imdbId, String searchTerm, Marketplace marketplace) {
         if (breakerIsOpen()) {
-            log.debug("eBay lookup for {} skipped: circuit breaker open until {}", imdbId, breakerOpenUntil);
+            log.debug("eBay lookup for {} skipped: circuit breaker is open", imdbId);
             return OfferLookupResult.unavailable();
         }
 
@@ -92,7 +92,6 @@ public class TitleOfferService {
                 return OfferLookupResult.of(verdict);
             }
             final var offers = source.findOffers(imdbId, searchTerm, marketplace);
-            consecutiveFailures.set(0);
             ours.complete(offers);
             return OfferLookupResult.fetched(offers);
         } catch (UpstreamQuotaExhaustedException e) {
@@ -100,9 +99,15 @@ public class TitleOfferService {
             // eBay's word closes the day outright — it outranks our own counter (ADR-0017).
             quotaService.recordExhaustedByUpstream(e.getMessage());
             return OfferLookupResult.of(QuotaVerdict.GLOBAL_BUDGET_EXHAUSTED);
+        } catch (CallNotPermittedException e) {
+            // The breaker opened between our pre-check and the call. Rare, and the only cost is the
+            // reservation we already made — see the note on breakerIsOpen().
+            ours.completeExceptionally(e);
+            log.debug("eBay lookup for {} short-circuited by the open breaker", imdbId);
+            return OfferLookupResult.unavailable();
         } catch (OfferSourceUnavailableException e) {
             ours.completeExceptionally(e);
-            recordFailure(imdbId, e);
+            log.warn("eBay lookup for {} failed: {}", imdbId, e.toString());
             return OfferLookupResult.unavailable();
         } finally {
             inFlight.remove(key, ours);
@@ -115,29 +120,24 @@ public class TitleOfferService {
             log.debug("Joining an in-flight eBay lookup for {}", imdbId);
             return OfferLookupResult.fetched(running.join());
         } catch (CompletionException | java.util.concurrent.CancellationException e) {
-            // The lookup we attached to failed. Its own caller already classified and counted that
-            // failure, so this one only reports it — counting again would trip the breaker twice
-            // for a single upstream call.
+            // The lookup we attached to failed. Its own caller classified it, and the breaker
+            // already recorded the single upstream call that actually happened — joiners must not
+            // be counted again, which is exactly what attaching instead of re-calling achieves.
             return OfferLookupResult.unavailable();
         }
     }
 
+    /**
+     * Asks the breaker's state <em>before</em> reserving quota.
+     *
+     * <p>Without this pre-check the aspect would short-circuit the call after the reservation was
+     * booked, charging the user and the shared budget for two calls that never left the building.
+     * The check is advisory — the state can flip in the gap — which is why the
+     * {@link CallNotPermittedException} branch above still exists. Losing a reservation in that
+     * narrow window is acceptable; losing one on every request while the breaker is open is not.
+     */
     private boolean breakerIsOpen() {
-        return timeService.now().isBefore(breakerOpenUntil);
-    }
-
-    private void recordFailure(ImdbId imdbId, RuntimeException cause) {
-        final var failures = consecutiveFailures.incrementAndGet();
-        final var threshold = properties.circuitBreaker().failureThreshold();
-        if (failures >= threshold) {
-            breakerOpenUntil = timeService.now().plus(properties.circuitBreaker().openFor());
-            consecutiveFailures.set(0);
-            log.warn("eBay lookups suspended until {} after {} consecutive failures (last for {}): {}",
-                    breakerOpenUntil, failures, imdbId, cause.toString());
-        } else {
-            log.warn("eBay lookup for {} failed ({}/{} before suspending): {}",
-                    imdbId, failures, threshold, cause.toString());
-        }
+        return circuitBreakers.circuitBreaker(BREAKER_NAME).getState() == CircuitBreaker.State.OPEN;
     }
 
     /** Fixed-price and auction are separate calls, so one lookup costs two (plan, section 3). */

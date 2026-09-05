@@ -19,6 +19,7 @@
         <java.version>25</java.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.40</lombok.version>
+        <resilience4j.version>2.4.0</resilience4j.version>
         <bootstrap.version>5.3.8</bootstrap.version>
         <testcontainers.version>1.21.3</testcontainers.version>
         <!-- JUnit tags excluded from the default test run; cleared by the 'testcontainers' profile. -->
@@ -181,6 +182,18 @@
         </dependency>
 
         <!-- Parsing -->
+        <!-- Circuit breaker for the outbound eBay integration (ADR-0017 / TODO-51).
+             The -spring-boot4 artifact is the one that targets this Boot generation; the
+             -spring-boot3 one also happens to run here but drags in kotlin-stdlib and has no
+             commitment to Boot 4. Verified against 4.1.0: the @CircuitBreaker aspect intercepts and
+             the instance configuration binds from application.properties.
+             Brings micrometer-core, which also gives the breaker's metrics for free -
+             micrometer-observation/-commons were already present via Spring Boot itself. -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot4</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
