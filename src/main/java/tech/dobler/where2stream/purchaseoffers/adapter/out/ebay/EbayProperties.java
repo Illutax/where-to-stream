@@ -4,6 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 
+import java.time.LocalTime;
+import java.time.ZoneId;
+
 /**
  * Binding for the {@code ebay.*} configuration (purchase offers via the eBay Browse API).
  *
@@ -38,7 +41,8 @@ public record EbayProperties(
         @DefaultValue("EBAY_DE") Marketplace defaultMarketplace,
         @DefaultValue("617") String categoryId,
         @DefaultValue("3") int resultsPerQuery,
-        @DefaultValue RateLimit rateLimit
+        @DefaultValue RateLimit rateLimit,
+        @DefaultValue Quota quota
 ) {
 
     /** Whether eBay can actually be called: the flag is set <em>and</em> both credentials exist. */
@@ -53,9 +57,9 @@ public record EbayProperties(
     @Override
     public String toString() {
         return ("EbayProperties[enabled=%s, clientId=%s, clientSecret=%s, apiBaseUrl=%s, "
-                + "defaultMarketplace=%s, categoryId=%s, resultsPerQuery=%d, rateLimit=%s]")
+                + "defaultMarketplace=%s, categoryId=%s, resultsPerQuery=%d, rateLimit=%s, quota=%s]")
                 .formatted(enabled, masked(clientId), masked(clientSecret), apiBaseUrl,
-                        defaultMarketplace, categoryId, resultsPerQuery, rateLimit);
+                        defaultMarketplace, categoryId, resultsPerQuery, rateLimit, quota);
     }
 
     private static String masked(String credential) {
@@ -67,5 +71,36 @@ public record EbayProperties(
      *                          ({@code <= 0} disables throttling)
      */
     public record RateLimit(@DefaultValue("2") double requestsPerSecond) {
+    }
+
+    /**
+     * The daily call budget and when it rolls over (ADR-0017).
+     *
+     * @param dailyCallBudget    hard global ceiling per quota day, deliberately set to the full
+     *                           allowance rather than a safety margin below it — the guard against
+     *                           miscounting is eBay's own quota response, not a buffer
+     * @param perUserOverbooking divisor in the per-user split {@code dailyCallBudget * f / n}.
+     *                           At the requested {@code 5000 / (n/2)} this is 2: the budget is
+     *                           knowingly handed out twice over, on the assumption that at most
+     *                           half the registered users fetch prices on any given day
+     * @param resetZone          zone eBay's daily allowance rolls over in. A zone, never a fixed
+     *                           offset, because Pacific time observes daylight saving
+     * @param resetTime          time of day the allowance rolls over. Configurable because the
+     *                           "12 o'clock Pacific" hypothesis is both unverified and ambiguous
+     */
+    public record Quota(
+            @DefaultValue("5000") int dailyCallBudget,
+            @DefaultValue("2") int perUserOverbooking,
+            @DefaultValue("America/Los_Angeles") ZoneId resetZone,
+            @DefaultValue("00:00") LocalTime resetTime
+    ) {
+        public Quota {
+            if (dailyCallBudget <= 0) {
+                throw new IllegalArgumentException("ebay.quota.daily-call-budget must be positive");
+            }
+            if (perUserOverbooking <= 0) {
+                throw new IllegalArgumentException("ebay.quota.per-user-overbooking must be positive");
+            }
+        }
     }
 }

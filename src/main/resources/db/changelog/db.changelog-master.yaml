@@ -44,3 +44,6 @@ databaseChangeLog:
   - include:
       file: changes/015-query-meta-due-for-refresh-at.xml
       relativeToChangelogFile: true
+  - include:
+      file: changes/016-ebay-quota.xml
+      relativeToChangelogFile: true

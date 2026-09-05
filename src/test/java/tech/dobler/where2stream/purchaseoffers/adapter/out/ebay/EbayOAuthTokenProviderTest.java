@@ -14,6 +14,8 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.List;
 
@@ -43,7 +45,8 @@ class EbayOAuthTokenProviderTest {
 
     private static EbayProperties properties() {
         return new EbayProperties(true, "client-id", "client-secret", "https://api.ebay.com",
-                Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(0));
+                Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(0),
+                new EbayProperties.Quota(5000, 2, ZoneId.of("America/Los_Angeles"), LocalTime.MIDNIGHT));
     }
 
     private EbayOAuthTokenProvider provider() {

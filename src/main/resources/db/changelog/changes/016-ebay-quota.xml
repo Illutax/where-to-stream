@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Same per-file property definition as 003-security-schema.xml: Liquibase properties are
+         scoped to the changelog file that declares them. -->
+    <property name="uuid.type" value="uuid" dbms="h2"/>
+    <property name="uuid.type" value="uuid" dbms="mariadb"/>
+
+    <changeSet id="016-ebay-quota-day" author="claude">
+        <comment>
+            ADR-0017: the eBay Browse API allows 5000 calls per day for the whole application, so
+            the budget is rationed across users. This table holds the shared counter per quota day
+            plus the moment eBay itself declared the day spent.
+
+            This is the only persistence the purchase-offers feature has. Prices are deliberately
+            not stored (they go stale in minutes), but the exhaustion flag must survive a restart:
+            otherwise an evening deploy clears the day's lockout and the application resumes calling
+            an allowance eBay considers gone.
+
+            quota_day is a day in eBay's reset zone, not ours -- see QuotaDay.
+        </comment>
+        <createTable tableName="ebay_quota_day">
+            <column name="quota_day" type="DATE">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="calls_used" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="exhausted_at" type="TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="016-ebay-user-quota-day" author="claude">
+        <comment>
+            Per-user share of the same day's budget. Its own table rather than columns on app_user:
+            the user belongs to accountaccess and the budget to purchaseoffers, and a column there
+            would write to the user row on every price lookup.
+
+            user_id is intentionally not a foreign key to app_user -- purchaseoffers does not map to
+            another context's entity. Cleaning up rows of deleted users is an open point in
+            ADR-0017, to be solved from this side.
+        </comment>
+        <createTable tableName="ebay_user_quota_day">
+            <column name="id" type="${uuid.type}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="quota_day" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="${uuid.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="calls_used" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="ebay_user_quota_day"
+                             columnNames="quota_day, user_id"
+                             constraintName="uk_ebay_user_quota_day"/>
+    </changeSet>
+</databaseChangeLog>

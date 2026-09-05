@@ -18,6 +18,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,7 +65,8 @@ class EbayBrowseApiSourceTest {
 
     private static EbayProperties properties(boolean enabled) {
         return new EbayProperties(enabled, "id", "secret", "https://api.ebay.com",
-                Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(0));
+                Marketplace.EBAY_DE, "617", 3, new EbayProperties.RateLimit(0),
+                new EbayProperties.Quota(5000, 2, ZoneId.of("America/Los_Angeles"), LocalTime.MIDNIGHT));
     }
 
     private EbayBrowseApiSource source(boolean enabled) {
