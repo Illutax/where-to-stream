@@ -56,4 +56,24 @@ class MarketplaceTest {
     void aUriWithoutAHostIsRejectedRatherThanThrowing() {
         assertThat(Marketplace.EBAY_DE.allowsHostOf(URI.create("/itm/1"))).isFalse();
     }
+
+    @Test
+    void aStoredIdResolvesBackToItsMarketplace() {
+        assertThat(Marketplace.byId("EBAY_GB")).contains(Marketplace.EBAY_GB);
+    }
+
+    @Test
+    void everyMarketplaceIdRoundTrips() {
+        assertThat(Marketplace.values())
+                .allSatisfy(m -> assertThat(Marketplace.byId(m.marketplaceId())).contains(m));
+    }
+
+    @Test
+    void anUnknownIdResolvesToNothingInsteadOfThrowing() {
+        // The value arrives from a varchar column in another context, possibly written when this
+        // enum looked different. Blowing up on a stale preference would be worse than falling back.
+        assertThat(Marketplace.byId("EBAY_MARS")).isEmpty();
+        assertThat(Marketplace.byId("")).isEmpty();
+        assertThat(Marketplace.byId(null)).isEmpty();
+    }
 }

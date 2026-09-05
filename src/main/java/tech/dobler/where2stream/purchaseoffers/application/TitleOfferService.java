@@ -11,6 +11,7 @@ import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableExce
 import tech.dobler.where2stream.purchaseoffers.domain.QuotaVerdict;
 import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
 import tech.dobler.where2stream.purchaseoffers.domain.UpstreamQuotaExhaustedException;
+import tech.dobler.where2stream.accountaccess.port.in.UserDirectoryPort;
 import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayProperties;
 import tech.dobler.where2stream.purchaseoffers.port.out.PurchaseOfferSource;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
@@ -61,17 +62,19 @@ public class TitleOfferService {
     private final QuotaService quotaService;
     private final CircuitBreakerRegistry circuitBreakers;
     private final WatchlistCatalogPort watchlist;
+    private final UserDirectoryPort userDirectory;
     private final EbayProperties properties;
 
     private final ConcurrentMap<LookupKey, CompletableFuture<TitleOffers>> inFlight = new ConcurrentHashMap<>();
 
     public TitleOfferService(PurchaseOfferSource source, QuotaService quotaService,
                              CircuitBreakerRegistry circuitBreakers, WatchlistCatalogPort watchlist,
-                             EbayProperties properties) {
+                             UserDirectoryPort userDirectory, EbayProperties properties) {
         this.source = source;
         this.quotaService = quotaService;
         this.circuitBreakers = circuitBreakers;
         this.watchlist = watchlist;
+        this.userDirectory = userDirectory;
         this.properties = properties;
     }
 
@@ -119,14 +122,24 @@ public class TitleOfferService {
     }
 
     /**
-     * Which marketplace to query for this user.
+     * Which marketplace to query for this user: their own setting, or the configured default.
      *
-     * <p>Currently always the configured default. The per-user setting is decided (plan, decision
-     * 6.4) but lives in Account &amp; Access and is not built yet — phase 1b. This method is where
-     * it plugs in, so the rest of the pipeline already carries a marketplace end to end.
+     * <p>Falls back rather than failing when the stored id resolves to nothing. That check is not
+     * redundant with the validation on the way in: a marketplace removed from the enum would leave
+     * existing rows pointing at it, and refusing the lookup would punish the user for a change
+     * nobody asked them about. It is logged, because a stored value that no longer resolves is data
+     * drift and should be visible rather than merely survivable.
      */
     private Marketplace marketplaceFor(UUID userId) {
-        return properties.defaultMarketplace();
+        final var stored = userDirectory.ebayMarketplaceOf(userId);
+        if (stored.isEmpty()) {
+            return properties.defaultMarketplace();
+        }
+        return Marketplace.byId(stored.get()).orElseGet(() -> {
+            log.warn("User {} has an unknown marketplace '{}' stored; falling back to {}",
+                    userId, stored.get(), properties.defaultMarketplace());
+            return properties.defaultMarketplace();
+        });
     }
 
     /**

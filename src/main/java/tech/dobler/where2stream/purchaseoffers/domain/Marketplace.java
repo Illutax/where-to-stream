@@ -1,8 +1,10 @@
 package tech.dobler.where2stream.purchaseoffers.domain;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Currency;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * An eBay marketplace: which site is queried, in which currency, and which hosts its offer links
@@ -37,6 +39,21 @@ public enum Marketplace {
     /** The value eBay expects in the {@code X-EBAY-C-MARKETPLACE-ID} request header. */
     public String marketplaceId() {
         return marketplaceId;
+    }
+
+    /**
+     * Resolves a stored marketplace id, or empty if it names nothing we know.
+     *
+     * <p>Returns an {@link Optional} rather than throwing, and that is not defensiveness for its own
+     * sake: the value comes from a {@code varchar} column in another context, written at a time when
+     * this enum may have looked different. Removing a marketplace here would leave rows pointing at
+     * it, and a lookup blowing up on someone's stale preference is a worse outcome than quietly
+     * falling back to the default.
+     */
+    public static Optional<Marketplace> byId(String marketplaceId) {
+        return Arrays.stream(values())
+                .filter(marketplace -> marketplace.marketplaceId.equals(marketplaceId))
+                .findFirst();
     }
 
     /** The currency offers on this marketplace are priced in. */

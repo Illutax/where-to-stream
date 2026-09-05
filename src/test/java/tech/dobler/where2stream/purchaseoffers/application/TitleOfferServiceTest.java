@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import tech.dobler.where2stream.accountaccess.port.in.UserDirectoryPort;
 import tech.dobler.where2stream.purchaseoffers.EbayPropertiesFixture;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferLookupResult;
@@ -60,6 +61,8 @@ class TitleOfferServiceTest {
     private QuotaService quotaService;
     @Mock
     private WatchlistCatalogPort watchlist;
+    @Mock
+    private UserDirectoryPort userDirectory;
     private CircuitBreakerRegistry circuitBreakers;
     private TitleOfferService service;
 
@@ -80,7 +83,7 @@ class TitleOfferServiceTest {
                 .ignoreExceptions(UpstreamQuotaExhaustedException.class)
                 .build());
         service = new TitleOfferService(source, quotaService, circuitBreakers, watchlist,
-                EbayPropertiesFixture.active());
+                userDirectory, EbayPropertiesFixture.active());
     }
 
     /**
@@ -311,6 +314,44 @@ class TitleOfferServiceTest {
                 .isEqualTo(OfferLookupResult.Status.FETCHED);
 
         // The term comes from our own data, never from the request (plan 5.1).
+        verify(source).findOffers(HEAT, "Heat 1995", Marketplace.EBAY_DE);
+    }
+
+    @Test
+    void theUsersOwnMarketplaceIsQueriedRatherThanTheDefault() {
+        when(watchlist.findByImdb(USER, HEAT)).thenReturn(Optional.of(entry("Heat", 1995)));
+        when(userDirectory.ebayMarketplaceOf(USER)).thenReturn(Optional.of("EBAY_GB"));
+        when(quotaService.tryReserve(eq(USER), anyInt())).thenReturn(QuotaVerdict.ALLOWED);
+        when(source.findOffers(any(), any(), any())).thenReturn(noOffers());
+
+        service.lookupForWatchlistTitle(USER, HEAT);
+
+        verify(source).findOffers(HEAT, "Heat 1995", Marketplace.EBAY_GB);
+    }
+
+    @Test
+    void aUserWithoutAStoredMarketplaceGetsTheConfiguredDefault() {
+        when(watchlist.findByImdb(USER, HEAT)).thenReturn(Optional.of(entry("Heat", 1995)));
+        when(userDirectory.ebayMarketplaceOf(USER)).thenReturn(Optional.empty());
+        when(quotaService.tryReserve(eq(USER), anyInt())).thenReturn(QuotaVerdict.ALLOWED);
+        when(source.findOffers(any(), any(), any())).thenReturn(noOffers());
+
+        service.lookupForWatchlistTitle(USER, HEAT);
+
+        verify(source).findOffers(HEAT, "Heat 1995", Marketplace.EBAY_DE);
+    }
+
+    @Test
+    void aStoredMarketplaceThatNoLongerExistsFallsBackInsteadOfFailing() {
+        when(watchlist.findByImdb(USER, HEAT)).thenReturn(Optional.of(entry("Heat", 1995)));
+        when(userDirectory.ebayMarketplaceOf(USER)).thenReturn(Optional.of("EBAY_MARS"));
+        when(quotaService.tryReserve(eq(USER), anyInt())).thenReturn(QuotaVerdict.ALLOWED);
+        when(source.findOffers(any(), any(), any())).thenReturn(noOffers());
+
+        // Validation on write cannot cover this: dropping a marketplace from the enum would leave
+        // rows pointing at it, and refusing the lookup would punish the user for that change.
+        assertThat(service.lookupForWatchlistTitle(USER, HEAT).status())
+                .isEqualTo(OfferLookupResult.Status.FETCHED);
         verify(source).findOffers(HEAT, "Heat 1995", Marketplace.EBAY_DE);
     }
 
