@@ -660,10 +660,24 @@ Der Code ist **heute schon nicht zyklenfrei** — unabhängig von diesem Feature
   kein `innerHTML`), API-Service.
 - `npm run lint` + `npm run test:ci` als Gate.
 
-### Phase 3 — Content-Security-Policy (unabhängig)
-- `.headers(...)`-Customizer in `SecurityConfig` mit strikter Policy (`default-src 'self'`);
-  mit Variante E bleibt alles same-origin, es muss **nichts** für eBay geöffnet werden.
-- `style-src`-Bedarf von Angular Material vorher verifizieren.
+### Phase 3 — Content-Security-Policy (unabhängig) — **umgesetzt**
+- `.headers(...)`-Customizer in `SecurityConfig` mit `default-src 'self'`.
+  Es musste **nichts** für eBay geöffnet werden: die Abfrage läuft serverseitig, und auch die
+  Poster kommen same-origin über `/api/titles/{id}/poster` statt vom fremden CDN.
+- **`style-src` braucht `'unsafe-inline'`** — der vorab zu verifizierende Punkt, und er hat sich
+  bestätigt: Angular fügt Komponenten-Styles zur Laufzeit als `<style>`-Elemente ein, und die
+  Login-Seite trägt ein Inline-`style`-Attribut. Der saubere Weg wäre ein Nonce pro Request
+  (`ngCspNonce`), was ein getemplatetes `index.html` statt einer statischen Datei verlangte.
+  Inline-*Styles* sind zudem ungleich harmloser als Inline-Skripte: sie führen nichts aus.
+- **`script-src 'self'` bleibt strikt**, und das ist die Direktive, auf die es ankommt.
+  Möglich wurde das erst durch `optimization.styles.inlineCritical: false` in `angular.json`:
+  Angulars Critical-CSS-Inlining erzeugt einen Inline-`<style>`-Block **und** ein
+  `onload="this.media='all'"` am verzögerten Stylesheet-Link.
+  Ein striktes `script-src` blockiert diesen Handler, das Stylesheet bliebe auf `media="print"`
+  stehen, und die Anwendung käme halb ungestylt — ohne dass irgendetwas im Log darauf hinwiese.
+  Kosten: kein vorgezogenes kritisches CSS, also ein minimal späterer erster Bildaufbau.
+- Kein `data:` in `img-src` nötig — gegen das gebaute Stylesheet geprüft, das ausschließlich lokale
+  Font-Dateien referenziert.
 - Eigener Commit, getrennt vom Feature (Pfadfinder-Konvention).
 
 ## 8. Nicht verifiziert

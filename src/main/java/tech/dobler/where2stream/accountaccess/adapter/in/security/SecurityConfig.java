@@ -40,6 +40,47 @@ import java.util.UUID;
 @Slf4j
 public class SecurityConfig {
 
+    /**
+     * The Content-Security-Policy sent with every response.
+     *
+     * <p>Everything this application loads is same-origin: the SPA bundle, the stylesheet, the
+     * bundled Roboto fonts, and even the posters — those are fetched server-side and re-served from
+     * {@code /api/titles/&#123;id&#125;/poster} rather than letting the browser talk to a foreign CDN.
+     * The eBay integration changes nothing here: it runs on the server, so no eBay origin has to be
+     * allowed. The only outbound references in the UI are ordinary links ({@code <a href>}), which
+     * CSP's fetch directives do not govern at all.
+     *
+     * <p><strong>{@code style-src} needs {@code 'unsafe-inline'}, and that is Angular's doing.</strong>
+     * Angular injects component styles as {@code <style>} elements at runtime, and the Thymeleaf
+     * login page carries one inline {@code style} attribute. The clean alternative is a per-request
+     * nonce ({@code ngCspNonce}), which would mean rendering {@code index.html} through a template
+     * instead of serving it as a static file — more machinery than this buys. Inline <em>styles</em>
+     * are also a far smaller problem than inline scripts: they cannot execute.
+     *
+     * <p>{@code script-src} stays strict, and that is the directive that matters. It only became
+     * possible by turning off Angular's critical-CSS inlining
+     * ({@code optimization.styles.inlineCritical: false}): that feature emits an inline
+     * {@code <style>} block <em>and</em> an {@code onload="this.media='all'"} handler on the
+     * deferred stylesheet link. A strict {@code script-src} blocks that handler, the stylesheet
+     * would stay at {@code media="print"}, and the application would render half-styled — with
+     * nothing in the logs to say why.
+     */
+    private static final String CONTENT_SECURITY_POLICY = String.join("; ",
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline'",
+            // No data: URIs anywhere — verified against the built stylesheet, which references only
+            // local font files.
+            "img-src 'self'",
+            "font-src 'self'",
+            "connect-src 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            // The login form posts to this origin; OIDC leaves via a redirect, not a form post.
+            "form-action 'self'",
+            // Supersedes X-Frame-Options for browsers that support it; Spring still sets that too.
+            "frame-ancestors 'none'");
+
     /** Matches API requests (context-path aware) — used to answer with 401 instead of a redirect. */
     private static final RequestMatcher API = request ->
             request.getRequestURI().substring(request.getContextPath().length()).startsWith("/api/");
@@ -76,6 +117,8 @@ public class SecurityConfig {
                 .logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll())
                 .exceptionHandling(ex -> ex
                         .defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), API))
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY)))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
