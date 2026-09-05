@@ -91,10 +91,9 @@ public class TitleMetaService {
         final RatingSystem system = data.rating() != null ? data.rating().system() : null;
         final String label = data.rating() != null ? data.rating().label() : null;
         repository.findByImdbId(imdbId).ifPresentOrElse(
-                row -> {
-                    row.refresh(data.posterUrl(), system, label, data.germanTitle(), now);
-                    repository.save(row);
-                },
+                // Found: managed in this transaction, so dirty checking writes it (ADR-0018).
+                row -> row.refresh(data.posterUrl(), system, label, data.germanTitle(), now),
+                // Not found: a transient entity, which dirty checking cannot see — save is required.
                 () -> repository.save(TitleMeta.of(imdbId, data.posterUrl(), system, label, data.germanTitle(), now)));
     }
 

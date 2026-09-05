@@ -684,7 +684,7 @@ nach Titel/Jahr/hinzugefügt sortierbar sind (`shared/sort/table-sort.ts`, `MatS
 
 ## eBay-Preisabfrage (2026-09-05)
 
-### 🟢 TODO-49 — Bestehende `save()`-Aufrufe auf Dirty Checking umstellen (ADR-0018)
+### ✅ TODO-49 — Bestehende `save()`-Aufrufe auf Dirty Checking umgestellt (ADR-0018)
 [ADR-0018](docs/adr/0018-dirty-checking-statt-explizitem-save.md) legt fest, dass innerhalb einer
 Transaktion geladene Entitäten mutiert und **nicht** gespeichert werden — Hibernates Dirty Checking
 schreibt beim Commit. Der Bestand folgt dem noch nicht; fünf Stellen rufen `save()` auf einer
@@ -708,6 +708,17 @@ bereits verwalteten Entität:
   detached war, verfällt die Änderung ohne Exception und ohne Logeintrag. Mockito-Tests können das
   nicht aufdecken — sie sehen kein Dirty Checking. Wo das Schreiben die eigentliche Zusage ist,
   gehört ein Test gegen eine echte Persistenzschicht dazu.
+- **Erledigt am 2026-09-05.** Sieben Aufrufe entfernt, einer bewusst behalten:
+  `PosterService.storeBytes` lädt über `orElseGet(() -> TitlePoster.of(...))`, die Entität kann also
+  verwaltet **oder** brandneu sein, und der eine `save` deckt beide Wege ab — ihn zu streichen hätte
+  jedes erstmalige Poster still verloren. Genau der nicht-mechanische Fall, vor dem dieses Ticket
+  warnt.
+  Die Tests prüfen jetzt die Wirkung statt des Mechanismus (`verify(..., never()).save(any())` plus
+  Zusicherung auf der mutierten Entität).
+  Dazu `DirtyCheckingPersistenceTest`: ein nicht-transaktionaler `@SpringBootTest`, der nach dem
+  Commit des Service neu liest — der einzige Test, der das Schreiben tatsächlich belegt. Verifiziert,
+  dass er den Fehlerfall fängt: ohne `@Transactional` an der Service-Methode schlägt er fehl
+  (`expected: DARK but was: SYSTEM`).
 
 ### 🟠 TODO-50 — Indizes der Datenbank evaluieren
 Bisher gibt es genau einen bewusst gesetzten Index (`014-index-query-cache-imdb-id.xml`); alles

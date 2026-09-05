@@ -29,6 +29,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -81,14 +83,14 @@ class UserPreferencesServiceTest {
     }
 
     @Test
-    void updateThemeChangesAndSavesTheUser() {
+    void updateThemeChangesTheUserWithoutAnExplicitSave() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
         service.updateTheme(new ThemeUpdateCommand("alice", Theme.LIGHT));
 
         assertThat(user.getTheme()).isEqualTo(Theme.LIGHT);
-        verify(users).save(user);
+        verify(users, never()).save(any());
     }
 
     @Test
@@ -100,58 +102,58 @@ class UserPreferencesServiceTest {
     }
 
     @Test
-    void updateShowAgeRatingsChangesAndSavesTheUser() {
+    void updateShowAgeRatingsChangesTheUserWithoutAnExplicitSave() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
         service.updateShowAgeRatings(new ShowAgeRatingsUpdateCommand("alice", false));
 
         assertThat(user.isShowAgeRatings()).isFalse();
-        verify(users).save(user);
+        verify(users, never()).save(any());
     }
 
     @Test
-    void updateLanguageChangesAndSavesTheUser() {
+    void updateLanguageChangesTheUserWithoutAnExplicitSave() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
         service.updateLanguage(new LanguageUpdateCommand("alice", Language.DE));
 
         assertThat(user.getLanguage()).isEqualTo(Language.DE);
-        verify(users).save(user);
+        verify(users, never()).save(any());
     }
 
     @Test
-    void updateShowGermanTitleChangesAndSavesTheUser() {
+    void updateShowGermanTitleChangesTheUserWithoutAnExplicitSave() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
         service.updateShowGermanTitle(new ShowGermanTitleUpdateCommand("alice", true));
 
         assertThat(user.isShowGermanTitle()).isTrue();
-        verify(users).save(user);
+        verify(users, never()).save(any());
     }
 
     @Test
-    void updateViewModeChangesAndSavesTheUser() {
+    void updateViewModeChangesTheUserWithoutAnExplicitSave() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
         service.updateViewMode(new ViewModeUpdateCommand("alice", ViewMode.LIST));
 
         assertThat(user.getViewMode()).isEqualTo(ViewMode.LIST);
-        verify(users).save(user);
+        verify(users, never()).save(any());
     }
 
     @Test
-    void updateTilesPerRowChangesAndSavesTheUser() {
+    void updateTilesPerRowChangesTheUserWithoutAnExplicitSave() {
         final var user = alice();
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
         service.updateTilesPerRow(new TilesPerRowUpdateCommand("alice", 3));
 
         assertThat(user.getTilesPerRow()).isEqualTo(3);
-        verify(users).save(user);
+        verify(users, never()).save(any());
     }
 
     @Test
@@ -163,7 +165,7 @@ class UserPreferencesServiceTest {
         service.updateUsername(new UsernameUpdateCommand("alice", "alice2"));
 
         assertThat(user.getUsername()).isEqualTo("alice2");
-        verify(users).save(user);
+        verify(users, never()).save(any());
     }
 
     @Test
@@ -173,7 +175,7 @@ class UserPreferencesServiceTest {
 
         service.updateUsername(new UsernameUpdateCommand("alice", "alice"));
 
-        verify(users).save(user);
+        verify(users, never()).save(any());
     }
 
     @Test

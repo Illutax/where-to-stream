@@ -148,7 +148,6 @@ class UserAdminServiceTest {
         final var id = (UUID) ReflectionTestUtils.getField(admin, "id");
         when(users.findById(id)).thenReturn(Optional.of(admin));
         when(users.findAll()).thenReturn(List.of(admin, other));
-        when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
         final var dto = service.update(new UpdateUserCommand(id, "admin@x", List.of(Role.USER), true));
 
@@ -160,7 +159,6 @@ class UserAdminServiceTest {
         final var admin = user("admin", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
         final var id = (UUID) ReflectionTestUtils.getField(admin, "id");
         when(users.findById(id)).thenReturn(Optional.of(admin));
-        when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
         final var dto = service.update(new UpdateUserCommand(id, "new@x", List.of(Role.ADMIN), true));
 
@@ -231,7 +229,6 @@ class UserAdminServiceTest {
         final var id = (UUID) ReflectionTestUtils.getField(local, "id");
         when(users.findById(id)).thenReturn(Optional.of(local));
         when(passwordEncoder.encode("new")).thenReturn("{bcrypt}new");
-        when(users.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.resetPassword(new ResetPasswordCommand(id, "new"));
 

@@ -94,11 +94,11 @@ class WatchlistImportServiceTest {
                         WatchlistImportResultDto::removed, WatchlistImportResultDto::total)
                 .containsExactly(1, 1, 1, 3);
 
-        // tt4 inserted, tt2 mutated + saved, tt3 deleted, tt1 untouched (no save for an unchanged row).
+        // Only tt4 is inserted, and only an insert needs a save: tt2 is mutated in place and
+        // written by dirty checking, tt3 is deleted, tt1 is untouched (ADR-0018).
         final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
-        verify(repository, org.mockito.Mockito.times(2)).save(saved.capture());
-        assertThat(saved.getAllValues()).extracting(WatchlistEntry::getImdbId)
-                .containsExactlyInAnyOrder(id("tt2"), id("tt4"));
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getImdbId()).isEqualTo(id("tt4"));
         final ArgumentCaptor<WatchlistEntry> deleted = ArgumentCaptor.captor();
         verify(repository).delete(deleted.capture());
         assertThat(deleted.getValue().getImdbId()).isEqualTo(id("tt3"));
@@ -160,14 +160,15 @@ class WatchlistImportServiceTest {
         // ImdbEntry with no url at all (differs() must still compare it against the stored, non-null url).
         final var noUrl = new ImdbEntry("Same", null, WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(2020), id("tt1"));
         when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(noUrl));
-        when(repository.findByUserId(USER)).thenReturn(List.of(stored("tt1", "Same", false)));
+        final var existing = stored("tt1", "Same", false);
+        when(repository.findByUserId(USER)).thenReturn(List.of(existing));
 
         final var result = newService().importCsv(USER, anyCsv());
 
         assertThat(result.updated()).isEqualTo(1);
-        final ArgumentCaptor<WatchlistEntry> saved = ArgumentCaptor.captor();
-        verify(repository).save(saved.capture());
-        assertThat(saved.getValue().getUrl()).isNull();
+        // An update mutates the loaded row; the null URL reaches the database via dirty checking.
+        assertThat(existing.getUrl()).isNull();
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -268,14 +269,16 @@ class WatchlistImportServiceTest {
     }
 
     @Test
-    void markSeenFlipsTheFlagAndSaves() {
+    void markSeenFlipsTheFlagWithoutAnExplicitSave() {
         final var entry = stored("tt1", "The Prestige", false);
         when(repository.findByUserIdAndImdbId(USER, id("tt1"))).thenReturn(Optional.of(entry));
 
         newService().markSeen(new MarkSeenCommand(USER, id("tt1"), true));
 
+        // The flag reaches the database through dirty checking, so there is no save to verify —
+        // asserting the mutation is asserting the effect rather than the mechanism (ADR-0018).
         assertThat(entry.isRated()).isTrue();
-        verify(repository).save(entry);
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -286,7 +289,7 @@ class WatchlistImportServiceTest {
         newService().markSeen(new MarkSeenCommand(USER, id("tt1"), false));
 
         assertThat(entry.isRated()).isFalse();
-        verify(repository).save(entry);
+        verify(repository, never()).save(any());
     }
 
     @Test

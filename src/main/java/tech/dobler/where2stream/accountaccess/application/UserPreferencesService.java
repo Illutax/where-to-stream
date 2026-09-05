@@ -110,7 +110,8 @@ public class UserPreferencesService {
     private void update(String username, Consumer<AppUser> mutator) {
         final var user = user(username);
         mutator.accept(user);
-        users.save(user);
+        // No save(): every caller is @Transactional and the user was loaded inside that
+        // transaction, so Hibernate's dirty checking writes the change at commit (ADR-0018).
     }
 
     private AppUser user(String username) {

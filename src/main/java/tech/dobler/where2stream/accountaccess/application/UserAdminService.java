@@ -68,7 +68,8 @@ public class UserAdminService {
         user.setEmail(command.email());
         user.setRoles(newRoles);
         user.setEnabled(command.enabled());
-        return toDto(users.save(user));
+        // Loaded via require(...) in this transaction — dirty checking persists it (ADR-0018).
+        return toDto(user);
     }
 
     @Transactional
@@ -87,7 +88,7 @@ public class UserAdminService {
             throw UserManagementException.badRequest("Cannot set a password on a " + user.getProvider() + " account.");
         }
         user.changePassword(passwordEncoder.encode(command.newPassword()));
-        users.save(user);
+        // Loaded via require(...) in this transaction — dirty checking persists it (ADR-0018).
     }
 
     private AppUser require(UUID id) {

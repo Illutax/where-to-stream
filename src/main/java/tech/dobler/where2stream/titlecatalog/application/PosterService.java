@@ -146,16 +146,18 @@ public class PosterService implements TitleCacheMaintenancePort {
     public void storePath(ImdbId imdbId, String posterPath) {
         final Instant now = timeService.now();
         repository.findByImdbId(imdbId).ifPresentOrElse(
-                row -> {
-                    row.refresh(posterPath, now);
-                    repository.save(row);
-                },
+                // Found: managed in this transaction, so dirty checking writes it (ADR-0018).
+                row -> row.refresh(posterPath, now),
+                // Not found: a transient entity, which dirty checking cannot see — save is required.
                 () -> repository.save(TitlePoster.of(imdbId, posterPath, now)));
     }
 
     /** Persists downloaded bytes for a size onto the existing (or a newly created) row. */
     @Transactional
     public void storeBytes(ImdbId imdbId, String posterPath, PosterSize size, byte[] bytes) {
+        // Deliberately keeps its save() below, unlike storePath above: `row` here is either a
+        // managed row or a brand-new transient one, and one call has to cover both. Dropping it
+        // would silently lose every first-ever poster (ADR-0018).
         final TitlePoster row = repository.findByImdbId(imdbId)
                 .orElseGet(() -> TitlePoster.of(imdbId, posterPath, timeService.now()));
         if (size == PosterSize.THUMB) {

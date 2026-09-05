@@ -70,7 +70,7 @@ public class WatchlistImportService {
         final var entry = repository.findByUserIdAndImdbId(command.userId(), command.imdbId())
                 .orElseThrow(() -> new NoSuchWatchlistEntryException(command.imdbId()));
         entry.markSeen(command.seen());
-        repository.save(entry);
+        // Loaded in this transaction — dirty checking persists the flag at commit (ADR-0018).
     }
 
     @Transactional
@@ -98,8 +98,9 @@ public class WatchlistImportService {
                         e.isRated(), e.year(), now));
                 added++;
             } else if (differs(current, e)) {
+                // `current` came from the findByUserId above, inside this transaction, so dirty
+                // checking writes it — unlike the insert branch above (ADR-0018).
                 current.update(e.name(), e.url(), e.added(), e.isRated(), e.year());
-                repository.save(current);
                 updated++;
             }
         }
