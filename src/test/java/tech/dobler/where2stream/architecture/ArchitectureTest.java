@@ -148,16 +148,39 @@ class ArchitectureTest {
                     + "has no published inbound port because nothing currently needs to call into it");
 
     /**
+     * Same isolation rule again, for Purchase Offers (eBay price lookup, see
+     * {@code docs/EBAY_PRICE_LOOKUP_PLAN.md} and ADR-0017).
+     * Like Streaming Availability it publishes no inbound port yet — it reaches <em>out</em> to
+     * watchlist's and accountaccess's published ports, and nothing needs to call into it.
+     * The rule is added with the context's first classes rather than later, so the boundary is
+     * guarded from the start instead of being retrofitted once something has already crossed it.
+     */
+    @ArchTest
+    static final ArchRule purchaseoffers_is_only_accessed_through_its_published_ports = noClasses()
+            .that().resideOutsideOfPackage("..purchaseoffers..")
+            .and().resideOutsideOfPackage("..shared..")
+            .should().dependOnClassesThat(
+                    resideInAPackage("..purchaseoffers..")
+                            .and(not(resideInAPackage("..purchaseoffers.port.in..")))
+            )
+            .because("nothing outside purchase offers should depend on its internals — it has no "
+                    + "published inbound port because nothing currently needs to call into it");
+
+    /**
      * A Spring Data repository interface is itself the outbound port to the database: Spring Data
      * generates the adapter (a runtime proxy) directly from the interface, so there's no separate
      * hand-written adapter class the way there is for e.g. {@code PosterPort}.
-     * All four bounded contexts have now migrated, so this applies everywhere (old flat
+     * All bounded contexts have now migrated, so this applies everywhere (old flat
      * {@code persistence} classes are gone).
+     * {@code purchaseoffers} is listed before it owns a repository: its quota tables (ADR-0017)
+     * are the only persistence it will have, and naming it here means the rule applies the moment
+     * that repository appears rather than being remembered afterwards.
      */
     @ArchTest
     static final ArchRule spring_data_repositories_are_the_port_not_the_adapter = classes()
             .that().areAssignableTo(Repository.class)
-            .and().resideInAnyPackage("..accountaccess..", "..watchlist..", "..titlecatalog..", "..streamingavailability..")
+            .and().resideInAnyPackage("..accountaccess..", "..watchlist..", "..titlecatalog..",
+                    "..streamingavailability..", "..purchaseoffers..")
             .should().resideInAPackage("..port.out..")
             .because("the repository interface is the outbound port; JPA supplies the adapter as a "
                     + "runtime proxy, so there is no separate adapter class for persistence "
