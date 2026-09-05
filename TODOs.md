@@ -720,7 +720,7 @@ bereits verwalteten Entität:
   dass er den Fehlerfall fängt: ohne `@Transactional` an der Service-Methode schlägt er fehl
   (`expected: DARK but was: SYSTEM`).
 
-### 🟠 TODO-50 — Indizes der Datenbank evaluieren
+### ✅ TODO-50 — Indizes der Datenbank evaluiert
 Bisher gibt es genau einen bewusst gesetzten Index (`014-index-query-cache-imdb-id.xml`); alles
 andere sind Primärschlüssel und die Unique Constraints, die nebenbei einen Index mitbringen. Ob das
 für die tatsächlichen Zugriffspfade reicht, ist **nie geprüft** worden — es ist eine Annahme, kein
@@ -746,6 +746,48 @@ damit vermutlich schon — aber „vermutlich" ist der Grund für dieses Ticket.
   vorsorglich streuen — jeder Index kostet bei jedem Schreibvorgang.
 - **Vorher zu klären:** Der Befund ist gegen **MariaDB** zu erheben, nicht gegen H2. Die
   Entwicklungs- und Testumgebung läuft auf H2, dessen Optimizer sich anders entscheidet.
+
+**Erledigt am 2026-09-06.** Erhoben gegen MariaDB 12.3 in einem Wegwerf-Container, mit 2000
+geseedeten `watchlist_entry`- und `query_meta`-Zeilen — leere Tabellen liefern nur
+„Impossible WHERE" und damit keine Aussage.
+
+| Zugriffspfad | Ergebnis |
+| --- | --- |
+| `ebay_user_quota_day` über `(quota_day, user_id)` | nutzt `uk_ebay_user_quota_day` — die Vermutung des Tickets bestätigt, **kein** zusätzlicher Index nötig |
+| `watchlist_entry` über `(user_id, imdb_id)` | `type=const` über den zusammengesetzten Unique-Index |
+| `watchlist_entry` über `user_id` allein | **`type=ALL`**, beide Indizes verfügbar, keiner gewählt |
+| `query_meta` über `imdb_id` | nutzt `ix_query_meta_imdb_id` |
+| `query_meta` über `due_for_refresh_at` | **`type=ALL`, `possible_keys=null`** — kein Index vorhanden |
+| `app_user` über `username`, `query_result` über `imdb_id`, `title_meta`/`title_poster` über `imdb_id` | jeweils passender Unique-/Normalindex vorhanden und genutzt |
+
+**Ein Kandidat gefunden, bewusst nicht umgesetzt:** `ix_watchlist_entry_user` ist überflüssig —
+strukturell, weil `uq_watchlist_entry_user_imdb` `(user_id, imdb_id)` abdeckt und `user_id` dessen
+linkes Präfix ist, und praktisch, weil der Optimizer ihn nachweislich nicht wählt (bei fünf Nutzern
+trifft einer 20 % der Tabelle, da ist ein Full Scan billiger als 400 Index-Lookups). Jeder
+Schreibvorgang pflegt ihn umsonst.
+
+**Warum er trotzdem bleibt — der eigentliche Erkenntnisgewinn dieses Tickets:** die beiden
+Datenbanken sind sich uneinig. MariaDB/InnoDB lässt den Drop zu, weil der Fremdschlüssel
+`fk_watchlist_entry_user` seinen Pflichtindex im zusammengesetzten Unique-Index findet (geprüft:
+`DROP` erfolgreich, Plan danach unverändert). **H2 verweigert ihn**
+(`Index "IX_WATCHLIST_ENTRY_USER" belongs to constraint "FK_WATCHLIST_ENTRY_USER"`) — dort ist der
+Index an die Zwangsbedingung gebunden. Ein Changeset, das nur auf MariaDB läuft, ließe
+Entwicklungs- und Produktionsschema auseinanderlaufen; der Umweg über Fremdschlüssel löschen,
+Index löschen, Fremdschlüssel neu anlegen wäre gegen beide Datenbanken zu verifizieren.
+
+Für eine Tabelle mit wenigen tausend Zeilen und fünf Nutzern steht dieser Aufwand in keinem
+Verhältnis zum eingesparten Index-Unterhalt. **Neu bewerten, wenn** `watchlist_entry` deutlich
+wächst oder H2 als Entwicklungsdatenbank ohnehin abgelöst wird.
+
+**Bewusst *kein* Index auf `due_for_refresh_at`.** Der gestaffelte Hintergrund-Refresh (ADR-0016)
+scannt die Tabelle voll. Das ist heute richtig: die Tabelle hat eine Zeile je gecachtem Titel,
+der Lauf ist geplant und nicht anfragegebunden, und ein Index würde jeden Scrape-Schreibvorgang
+verteuern. **Neu bewerten, wenn** `query_meta` fünfstellig wird oder der Refresh-Lauf spürbar
+dauert — dann ist er selektiv genug, um sich zu lohnen.
+
+**Methodischer Hinweis für die nächste Runde:** die Aussagekraft hängt an realistischen Zeilenzahlen.
+Mit leeren Tabellen hätte dieselbe Messung „alles bestens" ergeben und den Full Scan auf
+`user_id` nicht gezeigt.
 
 ### ✅ TODO-51 — Eigenen Circuit Breaker durch resilience4j ersetzt
 `TitleOfferService` brachte einen handgeschriebenen Circuit Breaker mit: ein Zähler
@@ -830,3 +872,36 @@ landet.
 **Was hier ausdrücklich nicht die Antwort ist:** Angular Material gegen handgeschriebene Komponenten
 tauschen (238 kB gegen eine dauerhafte Wartungs- und Barrierefreiheitsschuld), oder weiter
 zerschneiden, nur um eine Zahl zu treffen.
+
+---
+
+## Feature (2026-09-06)
+
+### 🔴 TODO-53 — Als Admin andere Nutzer impersonieren
+Ein ADMIN soll die Anwendung vorübergehend als ein anderer Nutzer sehen können, um Meldungen
+nachzuvollziehen, ohne sich dessen Passwort geben zu lassen.
+
+- **Akzeptanzkriterium:** Ein ADMIN kann aus der Benutzerverwaltung heraus in die Sicht eines
+  anderen Nutzers wechseln, sieht dessen Watchlist und Einstellungen, und kann den Wechsel wieder
+  beenden — zurück in die eigene Sitzung, ohne erneute Anmeldung.
+- **Naheliegender Weg:** Spring Security bringt dafür `SwitchUserFilter` mit
+  (`/login/impersonate?username=…`, `/logout/impersonate`) — kein Eigenbau nötig. Der Filter legt
+  die ursprüngliche Authentifizierung als `SwitchUserGrantedAuthority` ab, worüber der Rückweg
+  läuft.
+- **Was vor der Umsetzung zu klären ist — das ist hier der eigentliche Inhalt:**
+  - **Wer darf wen?** Ein ADMIN, der einen anderen ADMIN impersoniert, ist ein Weg zur
+    Rechteausweitung ohne Spur. Mindestens: keine Impersonierung von ADMINs, und niemals von sich
+    selbst aus wieder hoch.
+  - **Was ist sichtbar?** Ein Wechsel, den man nicht bemerkt, ist der gefährlichere Fehler. Die
+    Oberfläche braucht einen dauerhaften, unübersehbaren Hinweis („Du siehst die Anwendung als
+    …") mit dem Ausstieg direkt daneben.
+  - **Was wird protokolliert?** Beginn und Ende jeder Impersonierung gehören ins Log, mit beiden
+    Identitäten. Ohne das ist im Nachhinein nicht unterscheidbar, ob ein Nutzer etwas selbst getan
+    hat oder ein Admin in seinem Namen.
+  - **Was darf der Impersonierende tun?** Nur lesen oder auch schreiben? Schreiben in fremdem
+    Namen ist der Punkt, an dem aus einem Diagnosewerkzeug eine Vertrauensfrage wird.
+  - **Wechselwirkung mit der eBay-Quota (ADR-0017):** Preisabfragen während einer Impersonierung
+    werden auf das Kontingent des *impersonierten* Nutzers gebucht. Ob das gewollt ist, ist zu
+    entscheiden — sonst verbraucht ein Admin fremdes Budget.
+- **ADR-pflichtig**, sobald die Antworten stehen: es ist eine Sicherheitsentscheidung, keine
+  Bedienkomfort-Frage.
