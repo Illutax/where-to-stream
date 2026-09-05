@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import tech.dobler.where2stream.purchaseoffers.EbayPropertiesFixture;
 import tech.dobler.where2stream.purchaseoffers.domain.Marketplace;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferLookupResult;
 import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableException;
@@ -15,11 +16,20 @@ import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
 import tech.dobler.where2stream.purchaseoffers.domain.UpstreamQuotaExhaustedException;
 import tech.dobler.where2stream.purchaseoffers.port.out.PurchaseOfferSource;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
+import tech.dobler.where2stream.shared.platform.api.ValidationException;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 
+import org.springframework.http.HttpStatus;
+
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -27,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -47,6 +58,8 @@ class TitleOfferServiceTest {
     private PurchaseOfferSource source;
     @Mock
     private QuotaService quotaService;
+    @Mock
+    private WatchlistCatalogPort watchlist;
     private CircuitBreakerRegistry circuitBreakers;
     private TitleOfferService service;
 
@@ -66,7 +79,8 @@ class TitleOfferServiceTest {
                 .waitDurationInOpenState(Duration.ofMinutes(5))
                 .ignoreExceptions(UpstreamQuotaExhaustedException.class)
                 .build());
-        service = new TitleOfferService(source, quotaService, circuitBreakers);
+        service = new TitleOfferService(source, quotaService, circuitBreakers, watchlist,
+                EbayPropertiesFixture.active());
     }
 
     /**
@@ -265,5 +279,56 @@ class TitleOfferServiceTest {
 
         // Deduplication is not a cache: it only joins requests that genuinely overlap in time.
         verify(source, times(2)).findOffers(any(), any(), any());
+    }
+
+    // --- watchlist guard and search term -----------------------------------------------------
+
+    private static ImdbEntry entry(String name, int year) {
+        return new ImdbEntry(name, URI.create("https://www.imdb.com/title/tt0113277/"),
+                new WatchlistDate("2026-01-01"), false, ReleaseYear.of(year), HEAT);
+    }
+
+    @Test
+    void aTitleNotOnTheUsersWatchlistIsRefusedBeforeAnythingElseHappens() {
+        when(watchlist.findByImdb(USER, HEAT)).thenReturn(Optional.empty());
+
+        assertThatExceptionOfType(ValidationException.class)
+                .isThrownBy(() -> service.lookupForWatchlistTitle(USER, HEAT))
+                .satisfies(e -> assertThat(e.status()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        // No quota spent and no call made for a title the caller has no claim to.
+        verify(quotaService, never()).tryReserve(any(), anyInt());
+        verify(source, never()).findOffers(any(), any(), any());
+    }
+
+    @Test
+    void aTitleOnTheWatchlistIsLookedUpWithAServerBuiltSearchTerm() {
+        when(watchlist.findByImdb(USER, HEAT)).thenReturn(Optional.of(entry("Heat", 1995)));
+        when(quotaService.tryReserve(eq(USER), anyInt())).thenReturn(QuotaVerdict.ALLOWED);
+        when(source.findOffers(any(), any(), any())).thenReturn(noOffers());
+
+        assertThat(service.lookupForWatchlistTitle(USER, HEAT).status())
+                .isEqualTo(OfferLookupResult.Status.FETCHED);
+
+        // The term comes from our own data, never from the request (plan 5.1).
+        verify(source).findOffers(HEAT, "Heat 1995", Marketplace.EBAY_DE);
+    }
+
+    @Test
+    void theSearchTermAppendsTheYearAsTheCheapestDisambiguator() {
+        // "Heat" alone mostly finds heating supplies -- the plan calls hit quality the real product
+        // risk of this feature.
+        assertThat(TitleOfferService.searchTermFor(entry("Heat", 1995))).isEqualTo("Heat 1995");
+    }
+
+    @Test
+    void anUnknownReleaseYearIsLeftOutRatherThanSearchedFor() {
+        // ReleaseYear uses 0 for "not yet released"/unknown; "Heat 0" would find nothing.
+        assertThat(TitleOfferService.searchTermFor(entry("Heat", 0))).isEqualTo("Heat");
+    }
+
+    @Test
+    void aPaddedTitleIsTrimmedBeforeItBecomesASearchTerm() {
+        assertThat(TitleOfferService.searchTermFor(entry("  Up  ", 2009))).isEqualTo("Up 2009");
     }
 }

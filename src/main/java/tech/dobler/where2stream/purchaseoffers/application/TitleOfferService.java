@@ -11,8 +11,14 @@ import tech.dobler.where2stream.purchaseoffers.domain.OfferSourceUnavailableExce
 import tech.dobler.where2stream.purchaseoffers.domain.QuotaVerdict;
 import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
 import tech.dobler.where2stream.purchaseoffers.domain.UpstreamQuotaExhaustedException;
+import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayProperties;
 import tech.dobler.where2stream.purchaseoffers.port.out.PurchaseOfferSource;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
+import tech.dobler.where2stream.shared.platform.api.ValidationException;
+import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
+
+import org.springframework.http.HttpStatus;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -54,14 +60,73 @@ public class TitleOfferService {
     private final PurchaseOfferSource source;
     private final QuotaService quotaService;
     private final CircuitBreakerRegistry circuitBreakers;
+    private final WatchlistCatalogPort watchlist;
+    private final EbayProperties properties;
 
     private final ConcurrentMap<LookupKey, CompletableFuture<TitleOffers>> inFlight = new ConcurrentHashMap<>();
 
     public TitleOfferService(PurchaseOfferSource source, QuotaService quotaService,
-                             CircuitBreakerRegistry circuitBreakers) {
+                             CircuitBreakerRegistry circuitBreakers, WatchlistCatalogPort watchlist,
+                             EbayProperties properties) {
         this.source = source;
         this.quotaService = quotaService;
         this.circuitBreakers = circuitBreakers;
+        this.watchlist = watchlist;
+        this.properties = properties;
+    }
+
+    /**
+     * Looks up offers for a title <em>on the requesting user's watchlist</em>.
+     *
+     * <p>This is the entry point the API uses, and the two things it does before delegating are
+     * both security requirements rather than conveniences (plan, section 5.1):
+     * <ul>
+     *   <li>the title must be on <em>this</em> user's watchlist, otherwise the endpoint would let
+     *       anyone with a session enumerate arbitrary titles;</li>
+     *   <li>the search term is built here from data we already hold — it is never taken from the
+     *       request, which is what stops the endpoint being an open search proxy for eBay.</li>
+     * </ul>
+     *
+     * @throws ValidationException with {@code 404} if the title is not on the user's watchlist.
+     *                             Deliberately the same answer as for a title that does not exist:
+     *                             a distinguishable "exists but not yours" would leak whose
+     *                             watchlist holds what.
+     */
+    public OfferLookupResult lookupForWatchlistTitle(UUID userId, ImdbId imdbId) {
+        final var entry = watchlist.findByImdb(userId, imdbId)
+                .orElseThrow(() -> new ValidationException(HttpStatus.NOT_FOUND,
+                        "No such title on your watchlist."));
+        return lookup(userId, imdbId, searchTermFor(entry), marketplaceFor(userId));
+    }
+
+    /**
+     * Builds the eBay search term for a watchlist entry.
+     *
+     * <p>Static and package-private because this is the single biggest product risk of the whole
+     * feature and the thing most likely to need tuning: the plan calls hit quality out by name,
+     * with "Heat" returning heating supplies as the example. Keeping it in one testable method
+     * means adjusting it later is a local change with its own tests.
+     *
+     * <p>The year is appended when known — it is the cheapest available disambiguator, and the
+     * category filter (configured separately) does the rest. Which form actually works best is
+     * still open (plan, decision 6.2) and cannot be settled without a real account.
+     */
+    static String searchTermFor(ImdbEntry entry) {
+        final var name = entry.name() == null ? "" : entry.name().trim();
+        final var year = entry.year() == null ? 0 : entry.year().value();
+        // ReleaseYear uses 0 for "not yet released"/unknown, where a year would only mislead.
+        return year > 0 ? name + " " + year : name;
+    }
+
+    /**
+     * Which marketplace to query for this user.
+     *
+     * <p>Currently always the configured default. The per-user setting is decided (plan, decision
+     * 6.4) but lives in Account &amp; Access and is not built yet — phase 1b. This method is where
+     * it plugs in, so the rest of the pipeline already carries a marketplace end to end.
+     */
+    private Marketplace marketplaceFor(UUID userId) {
+        return properties.defaultMarketplace();
     }
 
     /**
