@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Checks that the {@code ebay} circuit-breaker instance is actually configured as intended.
+ * Checks that the {@link EbayCircuitBreakerConfig#INSTANCE} circuit-breaker instance is actually configured as intended.
  *
  * <p>The configuration itself lives in {@link EbayCircuitBreakerConfig} rather than in properties,
  * for reasons documented there. This test is what verifies the customizer is actually picked up:
@@ -35,12 +35,12 @@ class EbayCircuitBreakerConfigurationTest {
      */
     @BeforeEach
     void resetTheBreaker() {
-        registry.circuitBreaker("ebay").reset();
+        registry.circuitBreaker(EbayCircuitBreakerConfig.INSTANCE).reset();
     }
 
     @Test
     void theEbayInstanceUsesAFailureRateOverASlidingWindow() {
-        final var config = registry.circuitBreaker("ebay").getCircuitBreakerConfig();
+        final var config = registry.circuitBreaker(EbayCircuitBreakerConfig.INSTANCE).getCircuitBreakerConfig();
 
         assertThat(config)
                 .isNotNull()
@@ -51,7 +51,7 @@ class EbayCircuitBreakerConfigurationTest {
 
     @Test
     void theBreakerStaysOpenLongEnoughToBeWorthOpening() {
-        final var config = registry.circuitBreaker("ebay").getCircuitBreakerConfig();
+        final var config = registry.circuitBreaker(EbayCircuitBreakerConfig.INSTANCE).getCircuitBreakerConfig();
 
         assertThat(config.getWaitIntervalFunctionInOpenState().apply(1))
                 .isEqualTo(Duration.ofMinutes(5).toMillis());
@@ -59,7 +59,7 @@ class EbayCircuitBreakerConfigurationTest {
 
     @Test
     void anExhaustedDailyQuotaIsNotTreatedAsAnUpstreamFailure() {
-        final var breaker = registry.circuitBreaker("ebay");
+        final var breaker = registry.circuitBreaker(EbayCircuitBreakerConfig.INSTANCE);
 
         // Asserted behaviourally rather than against a predicate: resilience4j keeps the ignore
         // list in its own predicate, separate from the record one, and reading the wrong one is an
@@ -74,7 +74,7 @@ class EbayCircuitBreakerConfigurationTest {
 
     @Test
     void anOrdinaryUpstreamFailureDoesCountTowardsOpening() {
-        final var breaker = registry.circuitBreaker("ebay");
+        final var breaker = registry.circuitBreaker(EbayCircuitBreakerConfig.INSTANCE);
 
         for (int i = 0; i < 10; i++) {
             breaker.onError(0, TimeUnit.MILLISECONDS,

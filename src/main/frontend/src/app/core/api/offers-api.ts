@@ -19,7 +19,7 @@ export class OffersApi {
 
   /**
    * @param cacheBuster a value that changes per explicit refresh. The response carries
-   *   `Cache-Control: private, max-age=90`, which is what makes a re-render or a back-and-forth
+   *   `Cache-Control: private, max-age=300`, which is what makes a re-render or a back-and-forth
    *   navigation free — but it would also make a deliberate "check again" click do nothing.
    *   A changing query parameter is the client's way around its own cache; the server offers no
    *   force flag, because that would be a way to spend the shared daily budget faster with no gate.

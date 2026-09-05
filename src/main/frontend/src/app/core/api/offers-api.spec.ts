@@ -33,7 +33,7 @@ describe('OffersApi', () => {
   it('appends a cache-buster when one is given', () => {
     api.get(imdbId('tt0113277'), 7).subscribe();
 
-    // Without this a deliberate re-check would be answered from the browser's own 90s cache and
+    // Without this a deliberate re-check would be answered from the browser's own 5-minute cache and
     // the button would look broken.
     const req = httpMock.expectOne((r) => r.urlWithParams.includes('refresh=7'));
     req.flush({ status: 'FETCHED', buyNow: null, auction: null, fetchedAt: null });

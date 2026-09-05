@@ -302,7 +302,9 @@ Verbindlich für die Umsetzung. Jeder Punkt ist eine Anforderung, kein Hinweis.
   dass das Tagesbudget erschöpft ist, muss einen Neustart überleben und wird deshalb persistiert
   (siehe 11.3.1).
 - **Der Browser-Cache reicht für den Nutzer** — aber nur für ihn.
-  `Cache-Control: private, max-age=…` (Vorschlag: 60–120 s) auf der Antwort von
+  `Cache-Control: private, max-age=…` (**umgesetzt: 300 s**; der ursprüngliche Vorschlag lautete
+  60–120 s — die längere Dauer spart Calls, und der „Stand"-Zeitstempel verhindert, dass ein
+  älterer Preis aktueller wirkt, als er ist) auf der Antwort von
   `GET /api/titles/{imdbId}/offers` fängt Re-Renders, Weg-und-zurück-Navigation und Doppelklicks
   desselben Benutzers ab, ohne dass der Server irgendeinen Zustand hält.
   Angulars `HttpClient` nutzt den HTTP-Cache des Browsers dafür ohne Zutun.

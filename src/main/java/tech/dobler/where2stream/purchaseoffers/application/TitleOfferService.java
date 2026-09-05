@@ -12,6 +12,7 @@ import tech.dobler.where2stream.purchaseoffers.domain.QuotaVerdict;
 import tech.dobler.where2stream.purchaseoffers.domain.TitleOffers;
 import tech.dobler.where2stream.purchaseoffers.domain.UpstreamQuotaExhaustedException;
 import tech.dobler.where2stream.accountaccess.port.in.UserDirectoryPort;
+import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayCircuitBreakerConfig;
 import tech.dobler.where2stream.purchaseoffers.adapter.out.ebay.EbayProperties;
 import tech.dobler.where2stream.purchaseoffers.port.out.PurchaseOfferSource;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
@@ -55,8 +56,14 @@ import java.util.concurrent.ConcurrentMap;
 @Service
 public class TitleOfferService {
 
-    /** Must match the instance name on {@code EbayBrowseApiSource.findOffers}. */
-    static final String BREAKER_NAME = "ebay";
+    /**
+     * The breaker instance this service asks about, taken from the adapter that declares it.
+     *
+     * <p>Not a second copy of the string: two constants holding {@code "ebay"} would drift apart
+     * the moment one of them is renamed, and the failure would be silent — the registry hands out a
+     * fresh, default-configured breaker for an unknown name rather than complaining.
+     */
+    static final String BREAKER_NAME = EbayCircuitBreakerConfig.INSTANCE;
 
     private final PurchaseOfferSource source;
     private final QuotaService quotaService;
