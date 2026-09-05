@@ -24,6 +24,36 @@ One context may depend on another only through its published `port.in` interface
   ever need looking up. Architecture over sprawl: check `docs/adr/README.md` (see below) and
   follow what's documented instead of improvising a parallel approach.
 
+## Project knowledge lives in this repository — not in an agent memory
+
+**Do not use any agent-side persistent memory feature** (Claude Code's `memory/` directory,
+`MEMORY.md`, or an equivalent under another name).
+Anything worth carrying from one session to the next goes into a **file in this repository**,
+in a commit.
+
+Where it belongs:
+
+| What | Where |
+| --- | --- |
+| Architecture, stack and convention decisions | `docs/adr/` — via the `adr` skill, indexed in `docs/adr/README.md` |
+| How we work together, review/test conventions | this file (`CLAUDE.md`) |
+| What the project is, how to build and run it | `README.md` |
+| Outstanding and planned work | `TODOs.md`, or a plan document under `docs/` for larger efforts |
+| Repeatable, mechanical procedures | `.claude/skills/` |
+| Why a specific change was made | the commit message |
+
+The reason is reviewability.
+A note in an agent memory is invisible to the human reviewer, is not versioned, does not survive
+a fresh clone, cannot be corrected in review, and silently drifts out of sync with the code it
+describes.
+A committed file is none of those things.
+The `Collaboration style` section above exists precisely because those preferences were written
+down here instead of being remembered privately.
+
+The practical rule: **if it is worth remembering, it is worth a commit.**
+If something genuinely does not fit any of the files above, say so and propose where it should
+live — do not fall back to a private note.
+
 ## Before writing or reviewing code
 
 - **Check `docs/adr/README.md`** for existing architecture decisions before making a design,
