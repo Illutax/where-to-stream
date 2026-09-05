@@ -1,6 +1,9 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { MatSelect } from '@angular/material/select';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { SettingsPage } from './settings-page';
 import { translocoTesting } from '../../testing/transloco-testing';
 
@@ -11,7 +14,7 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [SettingsPage, translocoTesting()],
-      providers: [provideHttpClient(withFetch()), provideHttpClientTesting()],
+      providers: [provideHttpClient(withFetch()), provideHttpClientTesting(), provideNoopAnimations()],
     });
     fixture = TestBed.createComponent(SettingsPage);
     httpMock = TestBed.inject(HttpTestingController);
@@ -25,8 +28,30 @@ describe('SettingsPage', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Settings');
     expect(text).toContain('Language');
+    expect(text).toContain('Price lookup');
     expect(text).toContain('Appearance');
     expect(text).toContain('Account');
+  });
+
+  it('offers exactly the three marketplaces the server accepts', () => {
+    fixture.detectChanges();
+
+    // mat-option lives in a lazily instantiated template, so the options only exist once the panel
+    // is opened — querying the DOM beforehand finds nothing.
+    const selects = fixture.debugElement.queryAll(By.directive(MatSelect));
+    const values = selects.flatMap((select) => {
+      const matSelect = select.componentInstance as MatSelect;
+      matSelect.open();
+      fixture.detectChanges();
+      return matSelect.options.map((option) => option.value as string);
+    });
+
+    // A fourth option here, or a renamed value, would be stored and then refused by the server's
+    // SupportedMarketplaces check — a setting that appears to save and silently does not.
+    expect(values).toContain('EBAY_DE');
+    expect(values).toContain('EBAY_US');
+    expect(values).toContain('EBAY_GB');
+    expect(values.filter((value) => value.startsWith('EBAY_'))).toHaveLength(3);
   });
 
   it('toggling the age-rating switch persists the preference', () => {

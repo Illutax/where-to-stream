@@ -21,13 +21,14 @@ describe('UserPrefsStore', () => {
     document.documentElement.style.colorScheme = '';
   });
 
-  it('defaults to SYSTEM/on/EN/off/GRID/6', () => {
+  it('defaults to SYSTEM/on/EN/off/GRID/6/EBAY_DE', () => {
     expect(store.theme()).toBe('SYSTEM');
     expect(store.showAgeRatings()).toBe(true);
     expect(store.language()).toBe('EN');
     expect(store.showGermanTitle()).toBe(false);
     expect(store.viewMode()).toBe('GRID');
     expect(store.tilesPerRow()).toBe(6);
+    expect(store.ebayMarketplace()).toBe('EBAY_DE');
   });
 
   it('init() adopts a partial update without persisting, leaving other fields untouched', () => {
@@ -46,6 +47,7 @@ describe('UserPrefsStore', () => {
       showGermanTitle: true,
       viewMode: 'LIST',
       tilesPerRow: 3,
+      ebayMarketplace: 'EBAY_GB',
     });
 
     expect(store.theme()).toBe('DARK');
@@ -54,6 +56,7 @@ describe('UserPrefsStore', () => {
     expect(store.showGermanTitle()).toBe(true);
     expect(store.viewMode()).toBe('LIST');
     expect(store.tilesPerRow()).toBe(3);
+    expect(store.ebayMarketplace()).toBe('EBAY_GB');
     expect(document.documentElement.style.colorScheme).toBe('dark');
     httpMock.expectNone(() => true);
   });
@@ -101,6 +104,24 @@ describe('UserPrefsStore', () => {
 
     expect(store.tilesPerRow()).toBe(4);
     httpMock.expectOne((r) => r.url.endsWith('/api/me/tiles-per-row')).flush(null);
+  });
+
+  it('setEbayMarketplace() applies and persists', () => {
+    store.setEbayMarketplace('EBAY_US');
+
+    expect(store.ebayMarketplace()).toBe('EBAY_US');
+    httpMock.expectOne((r) => r.url.endsWith('/api/me/ebay-marketplace')).flush(null);
+  });
+
+  it('setEbayMarketplace() keeps the chosen value when the server rejects it', () => {
+    store.setEbayMarketplace('EBAY_US');
+    httpMock
+      .expectOne((r) => r.url.endsWith('/api/me/ebay-marketplace'))
+      .flush({ detail: 'Unknown marketplace' }, { status: 400, statusText: 'Bad Request' });
+
+    // Same optimistic behaviour as every other preference here: the UI does not roll back.
+    // Worth pinning, because a rejected marketplace is the one case the server can actually refuse.
+    expect(store.ebayMarketplace()).toBe('EBAY_US');
   });
 
   /**

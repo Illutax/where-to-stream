@@ -110,6 +110,12 @@ export type Theme = 'SYSTEM' | 'LIGHT' | 'DARK';
 /** UI language preference (mirrors the server Language enum). */
 export type Language = 'EN' | 'DE';
 
+/**
+ * Which eBay marketplace the user's price lookups query (mirrors the server Marketplace enum).
+ * The server stores this as a plain string and validates it against the same set.
+ */
+export type EbayMarketplace = 'EBAY_DE' | 'EBAY_US' | 'EBAY_GB';
+
 /** The user's preferred library layout (mirrors the server ViewMode enum). */
 export type ViewMode = 'LIST' | 'GRID';
 
@@ -132,6 +138,8 @@ export interface Me {
   viewMode: ViewMode;
   /** Tiles per row in the grid view (2-6). */
   tilesPerRow: number;
+  /** Which eBay marketplace the user's price lookups query. */
+  ebayMarketplace: EbayMarketplace;
 }
 
 /** Rating system of an age rating (mirrors the server AgeRating.RatingSystem). */

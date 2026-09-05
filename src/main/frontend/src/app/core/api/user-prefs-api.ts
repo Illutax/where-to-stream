@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../api-base';
-import { Language, Theme, ViewMode } from '../models';
+import { EbayMarketplace, Language, Theme, ViewMode } from '../models';
 
 /** Persists the current user's own UI preferences (one PUT per preference, `/api/me/*`). */
 @Injectable({ providedIn: 'root' })
@@ -32,5 +32,10 @@ export class UserPrefsApi {
 
   setTilesPerRow(tilesPerRow: number): Observable<void> {
     return this.http.put<void>(`${this.base}me/tiles-per-row`, { tilesPerRow });
+  }
+
+  /** Body key is `marketplace`, not `ebayMarketplace` — it mirrors the server request record. */
+  setEbayMarketplace(marketplace: EbayMarketplace): Observable<void> {
+    return this.http.put<void>(`${this.base}me/ebay-marketplace`, { marketplace });
   }
 }

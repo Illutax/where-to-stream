@@ -71,4 +71,15 @@ describe('UserPrefsApi', () => {
     req.flush(null);
     expect(completed).toBe(true);
   });
+
+  it('PUTs the marketplace to "../api/me/ebay-marketplace" under the key the server expects', () => {
+    let completed = false;
+    api.setEbayMarketplace('EBAY_GB').subscribe(() => (completed = true));
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/me/ebay-marketplace'));
+    // `marketplace`, not `ebayMarketplace` — the server request record names it that way, and a
+    // mismatch would deserialise to null and come back as a 400 that says "a marketplace is required".
+    expect(req.request.body).toEqual({ marketplace: 'EBAY_GB' });
+    req.flush(null);
+    expect(completed).toBe(true);
+  });
 });

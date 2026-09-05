@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { computed, inject, Injectable, signal, untracked } from '@angular/core';
 import { UserPrefsApi } from './api/user-prefs-api';
-import { Language, Theme, ViewMode } from './models';
+import { EbayMarketplace, Language, Theme, ViewMode } from './models';
 
 export interface UserPrefs {
   theme: Theme;
@@ -10,6 +10,7 @@ export interface UserPrefs {
   showGermanTitle: boolean;
   viewMode: ViewMode;
   tilesPerRow: number;
+  ebayMarketplace: EbayMarketplace;
 }
 
 const DEFAULTS: UserPrefs = {
@@ -19,11 +20,12 @@ const DEFAULTS: UserPrefs = {
   showGermanTitle: false,
   viewMode: 'GRID',
   tilesPerRow: 6,
+  ebayMarketplace: 'EBAY_DE',
 };
 
 /**
  * Holds and persists every one of the user's own UI preferences — theme, language, age-rating
- * badges, German titles, and the library view mode + tiles-per-row — behind one store instead of
+ * badges, German titles, the library view mode + tiles-per-row, and the eBay marketplace — behind one store instead of
  * one store/api pair per preference (they're all populated from the same `/api/me` response and
  * were previously six near-identical `init()`/`set()` pairs).
  * Loaded from the account on app start (`init()`, no persist) and persisted individually on
@@ -42,6 +44,7 @@ export class UserPrefsStore {
   readonly showGermanTitle = computed(() => this._prefs().showGermanTitle);
   readonly viewMode = computed(() => this._prefs().viewMode);
   readonly tilesPerRow = computed(() => this._prefs().tilesPerRow);
+  readonly ebayMarketplace = computed(() => this._prefs().ebayMarketplace);
 
   /**
    * Adopt (all or some of) the preferences loaded from the server without persisting them back.
@@ -92,6 +95,11 @@ export class UserPrefsStore {
   setTilesPerRow(tilesPerRow: number): void {
     this._prefs.update((p) => ({ ...p, tilesPerRow }));
     this.api.setTilesPerRow(tilesPerRow).subscribe({ error: () => undefined });
+  }
+
+  setEbayMarketplace(ebayMarketplace: EbayMarketplace): void {
+    this._prefs.update((p) => ({ ...p, ebayMarketplace }));
+    this.api.setEbayMarketplace(ebayMarketplace).subscribe({ error: () => undefined });
   }
 
   /** Reflects the theme onto `color-scheme` so Material's `light-dark()` tokens follow it. */

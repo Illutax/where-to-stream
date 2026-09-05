@@ -14,8 +14,8 @@ import { AuthStore } from '../../core/auth-store';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 
 /**
- * The user's settings: display language, colour theme, age-rating badges, German film titles,
- * and renaming the login username.
+ * The user's settings: display language, the eBay marketplace used for price lookups, colour
+ * theme, age-rating badges, German film titles, and renaming the login username.
  * Reads/writes the preference stores directly;
  * renaming the username ends the session, so it redirects to the login page.
  */
@@ -38,6 +38,20 @@ import { UserPrefsStore } from '../../core/user-prefs-store';
           <mat-option value="DE">{{ 'settings.languageGerman' | transloco }}</mat-option>
         </mat-select>
       </mat-form-field>
+    </mat-card>
+
+    <mat-card class="settings-card">
+      <h2>{{ 'settings.prices' | transloco }}</h2>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'settings.marketplace' | transloco }}</mat-label>
+        <mat-select [value]="userPrefsStore.ebayMarketplace()"
+                    (selectionChange)="userPrefsStore.setEbayMarketplace($event.value)">
+          <mat-option value="EBAY_DE">{{ 'settings.marketplaceDe' | transloco }}</mat-option>
+          <mat-option value="EBAY_US">{{ 'settings.marketplaceUs' | transloco }}</mat-option>
+          <mat-option value="EBAY_GB">{{ 'settings.marketplaceGb' | transloco }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <p class="setting-hint">{{ 'settings.marketplaceHint' | transloco }}</p>
     </mat-card>
 
     <mat-card class="settings-card">

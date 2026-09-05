@@ -27,7 +27,13 @@
     "username": "Benutzername",
     "changeUsername": "Benutzernamen ändern",
     "usernameTaken": "Dieser Benutzername ist bereits vergeben.",
-    "usernameError": "Der Benutzername konnte nicht geändert werden."
+    "usernameError": "Der Benutzername konnte nicht geändert werden.",
+    "prices": "Preisabfrage",
+    "marketplace": "eBay-Marktplatz",
+    "marketplaceDe": "ebay.de (Euro)",
+    "marketplaceUs": "ebay.com (US-Dollar)",
+    "marketplaceGb": "ebay.co.uk (Pfund)",
+    "marketplaceHint": "Bestimmt, auf welchem Marktplatz nach Preisen gesucht wird — und damit auch die Währung."
   },
   "table": {
     "seen": "Gesehen",
