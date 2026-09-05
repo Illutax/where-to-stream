@@ -23,7 +23,7 @@ import tech.dobler.where2stream.accountaccess.application.command.ViewModeUpdate
 import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.application.UserPreferencesService;
 import tech.dobler.where2stream.accountaccess.application.dto.MeDto;
-import tech.dobler.where2stream.shared.platform.api.PosterAttributionPort;
+import tech.dobler.where2stream.accountaccess.port.spi.PosterAttributionProvider;
 
 import java.util.List;
 
@@ -34,11 +34,11 @@ import java.util.List;
 public class MeApiController {
 
     private final UserPreferencesService userPreferencesService;
-    private final PosterAttributionPort posterAttributionPort;
+    private final PosterAttributionProvider posterAttributionProvider;
 
     @GetMapping
     public MeDto me(Authentication authentication) {
-        final boolean tmdbAttribution = posterAttributionPort.tmdbAttributionRequired();
+        final boolean tmdbAttribution = posterAttributionProvider.tmdbAttributionRequired();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
             return toDto(false, null, List.of(), tmdbAttribution, UserPreferences.defaults());

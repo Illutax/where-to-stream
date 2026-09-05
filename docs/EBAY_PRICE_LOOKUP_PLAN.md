@@ -622,12 +622,13 @@ Der Code ist **heute schon nicht zyklenfrei** — unabhängig von diesem Feature
   an `accountaccess`.
   Beide Richtungen laufen über *veröffentlichte* Ports — die bestehenden Regeln sind deshalb zu
   Recht grün, der Kreis existiert dennoch.
-- **Erledigt am 2026-09-05:** Der Zyklus ist aufgelöst.
-  `PosterAttributionPort` liegt jetzt in `shared/platform/api` statt in `titlecatalog/port/in`.
-  Die Begründung ist nicht Bequemlichkeit: ein Flag „die Oberfläche muss diesen Hinweis zeigen" ist
-  weder eine Tatsache von `accountaccess` noch eine von `titlecatalog`, sondern ein Vertrag
-  zwischen beiden — und `shared` ist aus demselben Grund ohnehin von den Isolationsregeln
-  ausgenommen.
+- **Erledigt am 2026-09-05:** Der Zyklus ist aufgelöst — durch Umkehrung der Abhängigkeit, siehe
+  [ADR-0019](adr/0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md).
+  `accountaccess` deklariert seinen Bedarf selbst (`port/spi/PosterAttributionProvider`),
+  `titlecatalog` erfüllt ihn.
+  Ein erster Versuch, das Interface nach `shared` zu verschieben, wurde verworfen: das hätte die
+  Regel grün gemacht, ohne die Kopplung zu beseitigen, und `shared` planmäßig zum Ablagefach für
+  ungelöste Abhängigkeiten gemacht.
   Dazu kam die ArchUnit-Regel `bounded_contexts_are_free_of_cycles`, die `shared` in beiden
   Richtungen ausklammert (sonst wäre sie wegen `ApiExceptionHandler` dauerhaft rot und damit
   wertlos). Verifiziert: mit einer temporär wiedereingeführten Kante schlägt sie fehl.

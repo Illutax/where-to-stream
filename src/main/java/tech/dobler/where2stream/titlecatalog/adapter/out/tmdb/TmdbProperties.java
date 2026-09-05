@@ -2,7 +2,7 @@ package tech.dobler.where2stream.titlecatalog.adapter.out.tmdb;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
-import tech.dobler.where2stream.shared.platform.api.PosterAttributionPort;
+import tech.dobler.where2stream.accountaccess.port.spi.PosterAttributionProvider;
 
 /**
  * Binding for the {@code tmdb.*} configuration (poster images via The Movie Database API).
@@ -24,7 +24,7 @@ public record TmdbProperties(
         @DefaultValue("https://api.themoviedb.org/3") String apiBaseUrl,
         @DefaultValue("https://image.tmdb.org/t/p") String imageBaseUrl,
         @DefaultValue RateLimit rateLimit
-) implements PosterAttributionPort {
+) implements PosterAttributionProvider {
     /** Whether TMDB is the active poster source: the flag is set <em>and</em> a key is configured. */
     public boolean active() {
         return enabled && apiKey != null && !apiKey.isBlank();

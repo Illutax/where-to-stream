@@ -79,6 +79,14 @@ class ArchitectureTest {
      * {@code shared..} is exempt: {@code ApiExceptionHandler} deliberately maps every context's own
      * exception types (a cross-cutting concern the shared kernel is meant to know about),
      * which is a different thing from one bounded context depending on another's internals.
+     *
+     * <p>{@code port.spi} is published alongside {@code port.in}, and the distinction is
+     * deliberate. {@code port.in} is what others may <em>call</em> on this context; {@code port.spi}
+     * is what this context asks others to <em>implement</em> for it
+     * ({@code PosterAttributionProvider}, satisfied by Title Catalog). Both are contracts this
+     * context owns and publishes. {@code port.out} remains off-limits: those are its own
+     * dependencies on its database and external systems, and nothing outside has business with
+     * them.
      */
     @ArchTest
     static final ArchRule accountaccess_is_only_accessed_through_its_published_ports = noClasses()
@@ -87,10 +95,13 @@ class ArchitectureTest {
             .should().dependOnClassesThat(
                     resideInAPackage("..accountaccess..")
                             .and(not(resideInAPackage("..accountaccess.port.in..")))
+                            .and(not(resideInAPackage("..accountaccess.port.spi..")))
             )
-            .because("other bounded contexts may depend on accountaccess only through its "
-                    + "published inbound port (CurrentUserPort), not its internals — including its "
-                    + "own outbound ports (e.g. AppUserRepository)");
+            .because("other bounded contexts may depend on accountaccess only through the contracts "
+                    + "it publishes — port.in (what they may call: CurrentUserPort, "
+                    + "UserDirectoryPort) and port.spi (what they may implement for it: "
+                    + "PosterAttributionProvider) — never its internals or its own outbound ports "
+                    + "(e.g. AppUserRepository)");
 
     /**
      * Same isolation rule as above, for the Watchlist context (published port:
