@@ -176,6 +176,14 @@
     "auction": "Gebot",
     "shipping": "zzgl. {{price}} Versand",
     "shippingUnknown": "Versandkosten unbekannt",
-    "asOf": "Stand: {{time}}"
+    "asOf": "Stand: {{time}}",
+    "impersonating": "Während einer Impersonierung nicht verfügbar"
+  },
+  "impersonation": {
+    "banner": "Du siehst die Anwendung als {{user}} — angemeldet als {{admin}}.",
+    "exit": "Impersonierung beenden",
+    "start": "Als dieser Nutzer ansehen",
+    "notForAdmins": "Administratoren können nicht impersoniert werden.",
+    "failed": "Der Wechsel war nicht möglich."
   }
 }

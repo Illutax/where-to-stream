@@ -176,6 +176,14 @@
     "auction": "Current bid",
     "shipping": "plus {{price}} shipping",
     "shippingUnknown": "shipping cost unknown",
-    "asOf": "As of {{time}}"
+    "asOf": "As of {{time}}",
+    "impersonating": "Not available while impersonating"
+  },
+  "impersonation": {
+    "banner": "You are viewing the app as {{user}} — signed in as {{admin}}.",
+    "exit": "End impersonation",
+    "start": "View as this user",
+    "notForAdmins": "Administrators cannot be impersonated.",
+    "failed": "Could not switch to that user."
   }
 }

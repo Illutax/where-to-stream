@@ -11,13 +11,15 @@ import { AuthStore } from './core/auth-store';
 import { UserPrefsStore } from './core/user-prefs-store';
 import { WatchlistStore } from './core/watchlist-store';
 import { ImdbSearchBox } from './shared/imdb-search-box/imdb-search-box';
+import { ImpersonationBanner } from './shared/impersonation-banner/impersonation-banner';
 import { Navbar } from './shared/navbar/navbar';
 
 @Component({
   selector: 'app-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, Navbar, ImdbSearchBox, MatToolbarModule, MatButtonModule, MatSidenavModule, TranslocoPipe],
+  imports: [RouterOutlet, RouterLink, Navbar, ImdbSearchBox, ImpersonationBanner, MatToolbarModule, MatButtonModule, MatSidenavModule, TranslocoPipe],
   template: `
+    <app-impersonation-banner />
     <mat-toolbar class="app-toolbar">
       <button matIconButton (click)="drawer.toggle()" [attr.aria-label]="'app.toggleNav' | transloco">☰</button>
       <a class="app-brand" routerLink="/">W2S</a>

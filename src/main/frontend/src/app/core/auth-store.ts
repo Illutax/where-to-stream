@@ -18,6 +18,13 @@ export class AuthStore {
   readonly authenticated = computed(() => this._me()?.authenticated ?? false);
   /** True when posters come from TMDB, so the SPA shows the required TMDB attribution footer. */
   readonly tmdbAttribution = computed(() => this._me()?.tmdbAttribution ?? false);
+  /**
+   * The admin acting as the current user, or null.
+   *
+   * Note that {@link isAdmin} is false during an impersonation: the session carries the target's
+   * roles. Anything that should stay reachable while switched has to key off this instead.
+   */
+  readonly impersonatedBy = computed(() => this._me()?.impersonatedBy ?? null);
 
   /**
    * Fetches the principal and updates {@link me}.

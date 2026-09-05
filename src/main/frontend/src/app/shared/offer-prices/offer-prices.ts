@@ -102,8 +102,9 @@ export class OfferPrices {
   });
 
   /**
-   * Why there is no price. The three reasons are kept apart because they call for different things
-   * from the reader: try later, wait until tomorrow, or accept that nobody is selling it.
+   * Why there is no price. The reasons are kept apart because they call for different things from
+   * the reader: try later, wait until tomorrow, leave the impersonation, or accept that nobody is
+   * selling it.
    */
   protected readonly noOfferMessageKey = computed(() => {
     const state = this.offerState();
@@ -115,6 +116,8 @@ export class OfferPrices {
         return 'offers.userLimit';
       case 'GLOBAL_BUDGET_EXHAUSTED':
         return 'offers.globalLimit';
+      case 'IMPERSONATION_ACTIVE':
+        return 'offers.impersonating';
       case 'UNAVAILABLE':
         return 'offers.unavailable';
       default:

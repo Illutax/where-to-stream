@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { ImpersonationApi } from '../../core/api/impersonation-api';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -71,6 +72,10 @@ const SKELETON_USERS: AdminUser[] = Array.from({ length: 5 }, (_, i) => ({
         <th mat-header-cell *matHeaderCellDef></th>
         <td mat-cell *matCellDef="let u">
           @if (!loading()) {
+            <button matButton (click)="impersonate(u)" [disabled]="isAdmin(u)"
+                    [title]="(isAdmin(u) ? 'impersonation.notForAdmins' : 'impersonation.start') | transloco">
+              {{ 'impersonation.start' | transloco }}
+            </button>
             <button matButton (click)="resetPassword(u)" [disabled]="u.provider !== 'LOCAL'">{{ 'users.resetPassword' | transloco }}</button>
             <button matButton="outlined" class="delete-button" (click)="remove(u)">{{ 'users.delete' | transloco }}</button>
           }
@@ -88,6 +93,7 @@ const SKELETON_USERS: AdminUser[] = Array.from({ length: 5 }, (_, i) => ({
 })
 export class AdminUsersPage {
   private readonly api = inject(AdminUsersApi);
+  private readonly impersonationApi = inject(ImpersonationApi);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly users = signal<AdminUser[]>([]);
@@ -143,6 +149,20 @@ export class AdminUsersPage {
     this.api.create(request).subscribe({
       next: () => this.reload(),
       error: (err) => this.showError(err, this.transloco.translate('users.createFailed')),
+    });
+  }
+
+  /**
+   * Switches into another account. Disabled for admins — the server refuses it either way
+   * (ADR-0020); the disabled button only spares the pointless round trip.
+   *
+   * Reloads rather than updating the store: the switch changes the identity behind every cached
+   * page and preference in the running app.
+   */
+  protected impersonate(user: AdminUser): void {
+    this.impersonationApi.switchTo(user.username).subscribe({
+      next: () => (window.location.href = new URL('../app/', document.baseURI).toString()),
+      error: (err) => this.showError(err, this.transloco.translate('impersonation.failed')),
     });
   }
 

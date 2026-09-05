@@ -140,6 +140,12 @@ export interface Me {
   tilesPerRow: number;
   /** Which eBay marketplace the user's price lookups query. */
   ebayMarketplace: EbayMarketplace;
+  /**
+   * The admin currently acting as this user, or `null` in the ordinary case.
+   * The only signal the UI has that an impersonation is running — an ordinary user never sees a
+   * value here, and therefore never learns the feature exists.
+   */
+  impersonatedBy: string | null;
 }
 
 /** Rating system of an age rating (mirrors the server AgeRating.RatingSystem). */
@@ -206,7 +212,12 @@ export const PROVIDERS: ProviderInfo[] = [
  * How a price lookup ended (mirrors the server `OfferLookupResult.Status`).
  * None of these is an error — they are the four things the widget has to be able to say.
  */
-export type OfferStatus = 'FETCHED' | 'UNAVAILABLE' | 'USER_ALLOWANCE_REACHED' | 'GLOBAL_BUDGET_EXHAUSTED';
+export type OfferStatus =
+  | 'FETCHED'
+  | 'UNAVAILABLE'
+  | 'USER_ALLOWANCE_REACHED'
+  | 'GLOBAL_BUDGET_EXHAUSTED'
+  | 'IMPERSONATION_ACTIVE';
 
 /** One eBay offer (mirrors the server OfferDto). */
 export interface Offer {

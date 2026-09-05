@@ -877,7 +877,7 @@ zerschneiden, nur um eine Zahl zu treffen.
 
 ## Feature (2026-09-06)
 
-### 🔴 TODO-53 — Als Admin andere Nutzer impersonieren
+### ✅ TODO-53 — Als Admin andere Nutzer impersonieren
 Ein ADMIN soll die Anwendung vorübergehend als ein anderer Nutzer sehen können, um Meldungen
 nachzuvollziehen, ohne sich dessen Passwort geben zu lassen.
 
@@ -905,3 +905,19 @@ nachzuvollziehen, ohne sich dessen Passwort geben zu lassen.
     entscheiden — sonst verbraucht ein Admin fremdes Budget.
 - **ADR-pflichtig**, sobald die Antworten stehen: es ist eine Sicherheitsentscheidung, keine
   Bedienkomfort-Frage.
+
+**Erledigt am 2026-09-06**, dokumentiert in
+[ADR-0020](docs/adr/0020-admin-impersonierung-ueber-switchuserfilter.md). Entscheidungen des
+Auftraggebers: Schreiben ist erlaubt, ADMIN-Ziele sind ausgeschlossen, Preisabfragen sind während
+einer Impersonierung gesperrt.
+
+Zwei Punkte, die erst beim Bauen sichtbar wurden:
+
+- **Der Rückweg darf nicht unter `/api/admin/**` liegen.** Während eines Wechsels trägt die Sitzung
+  die Rollen des Ziels, also kein `ROLE_ADMIN` — ein Ausstieg hinter der Admin-Regel wäre
+  ausgerechnet für die Sitzung geschlossen, die ihn braucht. Er liegt jetzt auf
+  `/api/impersonate/exit` und ist über `ROLE_PREVIOUS_ADMINISTRATOR` geschützt, die Berechtigung,
+  die nur eine gewechselte Sitzung hat.
+- **Ein Nicht-Admin erfährt nichts.** Das Banner hängt allein an `impersonatedBy` aus `/api/me`, und
+  dieses Feld ist für einen gewöhnlichen Nutzer immer `null`. Die Startaktion liegt in der
+  Benutzerverwaltung, die ohnehin ADMIN-only ist.
