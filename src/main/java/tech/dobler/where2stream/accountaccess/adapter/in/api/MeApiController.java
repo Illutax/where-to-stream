@@ -23,7 +23,7 @@ import tech.dobler.where2stream.accountaccess.application.command.ViewModeUpdate
 import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.application.UserPreferencesService;
 import tech.dobler.where2stream.accountaccess.application.dto.MeDto;
-import tech.dobler.where2stream.titlecatalog.port.in.PosterAttributionPort;
+import tech.dobler.where2stream.shared.platform.api.PosterAttributionPort;
 
 import java.util.List;
 

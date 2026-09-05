@@ -2,7 +2,7 @@ package tech.dobler.where2stream.titlecatalog.adapter.out.tmdb;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
-import tech.dobler.where2stream.titlecatalog.port.in.PosterAttributionPort;
+import tech.dobler.where2stream.shared.platform.api.PosterAttributionPort;
 
 /**
  * Binding for the {@code tmdb.*} configuration (poster images via The Movie Database API).

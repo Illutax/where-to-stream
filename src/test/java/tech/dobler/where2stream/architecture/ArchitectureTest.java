@@ -3,7 +3,11 @@ package tech.dobler.where2stream.architecture;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.library.dependencies.SliceRule;
+import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition;
 import org.springframework.data.repository.Repository;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
@@ -165,6 +169,29 @@ class ArchitectureTest {
             )
             .because("nothing outside purchase offers should depend on its internals — it has no "
                     + "published inbound port because nothing currently needs to call into it");
+
+
+    /**
+     * No cycles <em>between</em> bounded contexts.
+     *
+     * <p>The per-context isolation rules above each guard one direction, which means none of them
+     * can see a circle: A may legitimately depend on B's published port while B depends on A's, and
+     * every rule stays green. That is not hypothetical — {@code accountaccess} and
+     * {@code titlecatalog} were in exactly that state until {@code PosterAttributionPort} moved to
+     * {@code shared}, and nothing reported it.
+     *
+     * <p>{@code shared} is excluded in both directions, deliberately and not as a convenience:
+     * {@code ApiExceptionHandler} maps every context's own exception types, so {@code shared}
+     * necessarily depends on all of them while all of them depend on it. That is the documented
+     * cross-cutting arrangement, not an accident — and leaving it in would make this rule permanently
+     * red and therefore useless.
+     */
+    @ArchTest
+    static final SliceRule bounded_contexts_are_free_of_cycles = SlicesRuleDefinition.slices()
+            .matching("tech.dobler.where2stream.(*)..")
+            .should().beFreeOfCycles()
+            .ignoreDependency(resideInAPackage("..shared.."), DescribedPredicate.<JavaClass>alwaysTrue())
+            .ignoreDependency(DescribedPredicate.<JavaClass>alwaysTrue(), resideInAPackage("..shared.."));
 
     /**
      * A Spring Data repository interface is itself the outbound port to the database: Spring Data

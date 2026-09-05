@@ -622,11 +622,15 @@ Der Code ist **heute schon nicht zyklenfrei** — unabhängig von diesem Feature
   an `accountaccess`.
   Beide Richtungen laufen über *veröffentlichte* Ports — die bestehenden Regeln sind deshalb zu
   Recht grün, der Kreis existiert dennoch.
-- Eine Zyklusfreiheitsregel lässt sich daher **nicht einfach ergänzen**: sie wäre sofort rot.
-  Zu entscheiden ist, ob der bestehende Zyklus aufgelöst wird (etwa indem die
-  Attributionsinformation nicht am `MeApiController` hängt) oder ob er als bewusste Ausnahme
-  dokumentiert und die Regel entsprechend eingeschränkt wird.
-  Das ist eine Aufräumaufgabe **vor** Phase 1b, nicht Teil davon — sie betrifft bestehenden Code.
+- **Erledigt am 2026-09-05:** Der Zyklus ist aufgelöst.
+  `PosterAttributionPort` liegt jetzt in `shared/platform/api` statt in `titlecatalog/port/in`.
+  Die Begründung ist nicht Bequemlichkeit: ein Flag „die Oberfläche muss diesen Hinweis zeigen" ist
+  weder eine Tatsache von `accountaccess` noch eine von `titlecatalog`, sondern ein Vertrag
+  zwischen beiden — und `shared` ist aus demselben Grund ohnehin von den Isolationsregeln
+  ausgenommen.
+  Dazu kam die ArchUnit-Regel `bounded_contexts_are_free_of_cycles`, die `shared` in beiden
+  Richtungen ausklammert (sonst wäre sie wegen `ApiExceptionHandler` dauerhaft rot und damit
+  wertlos). Verifiziert: mit einer temporär wiedereingeführten Kante schlägt sie fehl.
 - Für das Feature selbst gilt: `purchaseoffers → accountaccess` erzeugt für sich genommen
   **keinen** Zyklus, weil `accountaccess` nichts aus `purchaseoffers` braucht.
   Das kippt erst, wenn die in ADR-0017 erwähnte Löschweitergabe (Benutzer löschen → Quota-Zeilen
