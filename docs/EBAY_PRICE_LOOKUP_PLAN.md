@@ -5,7 +5,7 @@ Es ist bewusst so geschrieben, dass eine **andere Claude-Code-Session ohne Vorwi
 Ursprungsgespräch** direkt damit arbeiten kann: jeder Schritt nennt die konkrete Datei, die
 betroffenen Klassen/Komponenten und was sich ändert.
 
-**Status: Entwurf v3.5, in Arbeit.**
+**Status: Entwurf v3.6, in Arbeit.**
 Machbarkeit und Sicherheitslage sind geklärt (Abschnitte 3–5).
 Der POC-Lauf aus Abschnitt 7.1 hat Variante E (Scraping) **widerlegt**;
 der Auftraggeber verfolgt seither **Variante C (Browse API) primär** (Abschnitt 4.2),
@@ -479,12 +479,21 @@ Neuer Bounded Context `purchaseoffers` unter `tech.dobler.where2stream`, Aufbau 
   (günstigster Sofortkauf, günstigstes laufendes Gebot, Abrufzeitpunkt).
 - `port/out`: `PurchaseOfferSource` — die austauschbare Schnittstelle (siehe 4.2).
 - `adapter/out/ebay`:
-  - `EbayProperties` (`@ConfigurationProperties("ebay")`): Basis-URL, Kategorie, Marktplatz,
-    `rateLimit`, Cache-TTLs, Circuit-Breaker-Schwellen.
-  - `EbayScrapeSource implements PurchaseOfferSource`: jsoup, `ConnectionFactory`-Seam,
-    `RateLimiter`, Degradation auf „kein Ergebnis" — Vorbild ist `WerStreamtEsSource`
-    Zeile für Zeile.
-    Parsing als **statische, package-private Methoden** gegen das Fixture aus Phase 0 testbar.
+  - `EbayProperties` (`@ConfigurationProperties("ebay")`): Basis-URLs (OAuth und Browse),
+    Marktplatz, Kategorie, `rateLimit`, Quota-Einstellungen (Deckel, Reset-Zone und -Uhrzeit),
+    Circuit-Breaker-Schwellen, `enabled` (Default `false`) sowie `clientId`/`clientSecret`.
+    Wegen 5.4 mit **maskierendem `toString()`** — ein Record würde das Secret sonst in jeden
+    Log-Eintrag schreiben.
+  - `EbayOAuthTokenProvider`: Client-Credentials-Grant gegen
+    `POST /identity/v1/oauth2/token`, Token nur im Speicher, Erneuerung vor Ablauf,
+    niemals geloggt und niemals an den Client ausgeliefert.
+  - `EbayBrowseApiSource implements PurchaseOfferSource`: `HttpClientFactory`-Seam,
+    `RateLimiter`, Degradation auf „kein Ergebnis".
+    **Vorbild ist `ImdbSuggestionSource`** (JSON/REST über `HttpClient`), nicht
+    `WerStreamtEsSource` — das ist der jsoup-Fall und hier nicht einschlägig.
+    Die Abbildung von eBay-JSON auf `TitleOffers` liegt in **statischen, package-private
+    Methoden**, damit sie netzwerkfrei testbar ist und bei einer Abweichung der realen Antwort
+    an genau einer Stelle korrigiert werden muss.
 - `application`: `TitleOfferService` — In-Flight-Deduplizierung und Circuit Breaker.
   **Kein** TTL-Cache in der ersten Umsetzung (siehe 5.6).
 - `adapter/in/api`: `PurchaseOfferApiController`, `GET /api/titles/{imdbId}/offers`,
@@ -493,11 +502,44 @@ Neuer Bounded Context `purchaseoffers` unter `tech.dobler.where2stream`, Aufbau 
   Ein Liquibase-Changelog gibt es dennoch, aber ausschließlich für die Quota-Tabelle aus 11.3.1.
 - Per-User- und globaler Tageszähler samt Reset (Abschnitt 11), inklusive der Auswertung von
   eBays Kontingent-Antwort und des Logging aus 11.3.1.
+- `port/in`: Zugriff auf die Benutzerzahl für `n` über einen `port.in` des
+  `accountaccess`-Kontexts, nicht per Direktzugriff (ADR-0014, ADR-0017).
 - `ArchitectureTest` (ArchUnit) um die Isolationsregel für den neuen Kontext erweitern.
-- Tests: Parsing gegen Fixture (netzwerkfrei), Controller mit MockMvc
-  (inkl. „ID nicht auf meiner Watchlist → 404"), TTL-/Circuit-Breaker-Verhalten.
-  AssertJ + Mockito (ADR-0005), Mehrfeld-Prüfungen als **eine** `extracting(...)`-Assertion
-  (Skill `consolidate-test-assertions`).
+
+**Vorbereitend, als eigener Pfadfinder-Commit:**
+`HttpClientFactory` und `OutboundHttpClients` liegen heute in
+`titlecatalog/adapter/out` — ein Kontext, den `purchaseoffers` nach ADR-0014 nicht importieren
+darf.
+Beide gehören nach `shared/platform/outbound`, wo `RateLimiter` bereits liegt.
+Der Umzug ist rein mechanisch (Paketwechsel plus Importe in den vier bestehenden Integrationen)
+und gehört getrennt vom Feature committet.
+
+**Tests — netzwerkfrei, für jeden Teil:**
+
+- `EbayBrowseApiSource`: `@Mock HttpClient` + `@Mock HttpResponse<String>`, JSON als Text-Literal,
+  Seam als `() -> httpClient`.
+  Muster ist `ImdbSuggestionSourceTest` — inklusive der dortigen Fehlerpfade
+  (Nicht-200, `IOException`, `InterruptedException` mit Wiederherstellen des Interrupt-Flags).
+- `EbayOAuthTokenProvider`: Token-Erneuerung, Wiederverwendung eines gültigen Tokens,
+  Verhalten bei abgelehnten Zugangsdaten — und ein Test, der belegt, dass das Secret
+  **nicht** im `toString()` der Properties auftaucht.
+- Quota: Per-User- und globaler Zähler, Vorrang von eBays Kontingent-Antwort, Reset über einen
+  **fixen Clock** gegen **beide** Zeitzonenzustände (PST und PDT, siehe ADR-0017).
+- `TitleOfferService`: In-Flight-Deduplizierung, Circuit Breaker, Degradation.
+- `PurchaseOfferApiController`: MockMvc, inklusive „ID nicht auf meiner Watchlist → 404",
+  gesetztem `Cache-Control` und der Host-Allowlist aus 5.3.
+- AssertJ + Mockito (ADR-0005), Mehrfeld-Prüfungen als **eine** `extracting(...)`-Assertion
+  (Skill `consolidate-test-assertions`; bei mehreren Extractors gehört `.isNotNull()` in
+  dieselbe Kette).
+
+**Was ohne den Developer-Account nicht geht** — und was das für Phase 1 bedeutet:
+Die reale Antwortstruktur der Browse API ist dokumentiert, aber unverifiziert;
+dasselbe gilt für den Fehlercode bei Kontingenterschöpfung und die Kontingent-Header.
+Phase 1 wird deshalb **gegen die dokumentierte Struktur** gebaut und vollständig mit Mocks
+getestet.
+Es gibt in Phase 1 **keinen** Test, der echte eBay-Endpunkte aufruft.
+Weicht die reale Antwort ab, ist die Korrektur auf die statischen Mapping-Methoden und deren
+Tests begrenzt — das ist der Grund, sie zu isolieren.
 
 ### Phase 2 — Frontend
 - `core/api/offers-api.ts`: `OffersApi.get(imdbId)` — dünn, wie die übrigen `*-api.ts`.
@@ -608,6 +650,13 @@ Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Ac
   bei diesem `n` keine Fairness-Bremse mehr ist, sondern nur noch Missbrauchsschutz —
   vom Auftraggeber akzeptiert.
   Aufbewahrung der Per-User-Zeilen bewusst ungeregelt gelassen (Ausbaustufe).
+- **2026-09-05** — Entwurf v3.6: Phase 1 auf Variante C umgeschrieben.
+  Die Liste beschrieb noch `EbayScrapeSource` mit jsoup und dem Fixture aus Phase 0 — ein
+  Überbleibsel aus v3.2, das die Variantenentscheidung aus v3.3 nicht mitbekommen hatte.
+  Stattdessen jetzt `EbayOAuthTokenProvider` und `EbayBrowseApiSource` nach dem Vorbild von
+  `ImdbSuggestionSource`, Testliste je Baustein, und der vorbereitende Pfadfinder-Umzug von
+  `HttpClientFactory`/`OutboundHttpClients` nach `shared/platform/outbound`.
+  Ausdrücklich festgehalten, was ohne den Developer-Account nicht geht.
 
 ## 11. Quota-Aufteilung unter den Nutzern (Variante C)
 
