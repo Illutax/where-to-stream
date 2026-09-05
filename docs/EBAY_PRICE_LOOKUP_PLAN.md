@@ -272,22 +272,32 @@ Verbindlich für die Umsetzung. Jeder Punkt ist eine Anforderung, kein Hinweis.
 - Die Parse-Methoden sind **statisch und netzwerkfrei** und werden gegen ein eingechecktes
   HTML-Fixture getestet, damit ein Markup-Bruch beim nächsten Fixture-Update auffällt.
 
-### 5.6 Datenhaltung: was „flüchtig" konkret heißt
-- „Flüchtig im Client anzeigen" löst die Frage der **Speicherung**, nicht die der **Last**.
-  Ohne jeden Cache erzeugt jeder Knopfdruck einen Live-Request — genau das beschleunigt eine
-  Blockade.
-- Empfehlung: **kein DB-Persist, aber ein kurzlebiger In-Memory-Cache** im Server
-  (TTL im Minutenbereich für Auktionen, Stundenbereich für Sofortkauf).
-  Damit bleibt es „flüchtig" im gemeinten Sinn (nichts wird dauerhaft gespeichert, kein
-  Liquibase-Changelog, keine neue Tabelle, keine Löschfristen), aber wiederholte Klicks auf
-  denselben Titel erzeugen keinen neuen Fremdzugriff.
-  Der Cache ist **global** pro Titel, nicht pro Benutzer.
-- „Günstigster Preis für Film X" ist nicht personenbezogen.
-  Da nichts persistiert wird, entfallen Löschfristen und die Frage nach personenbezogenen Daten
-  ohnehin.
-- Der angezeigte Preis bekommt einen **„Stand: …"-Zeitstempel** — bei Auktionen ist ein
-  Cache-Wert sonst irreführend.
-- Ein Neustart der Anwendung leert den Cache. Das ist akzeptabel und ausdrücklich gewollt.
+### 5.6 Datenhaltung: keine Persistenz, Browser-Cache statt Server-Cache
+- **Keine DB-Persistenz.** Entscheidend sind zwei Eigenschaften der Daten selbst:
+  ein Gebot kann sich minütlich ändern, und ein Sofortkaufangebot mit Stückzahl 1 ist nach dem
+  Verkauf **ganz weg**, nicht nur veraltet.
+  Ein persistierter Preis wäre also nicht „etwas älter", sondern mit hoher Wahrscheinlichkeit
+  schlicht falsch — und sähe dabei genauso verbindlich aus wie ein frischer.
+  Kein Liquibase-Changelog, keine Tabelle, keine Entity, keine Löschfristen.
+- **Der Browser-Cache reicht für den Nutzer** — aber nur für ihn.
+  `Cache-Control: private, max-age=…` (Vorschlag: 60–120 s) auf der Antwort von
+  `GET /api/titles/{imdbId}/offers` fängt Re-Renders, Weg-und-zurück-Navigation und Doppelklicks
+  desselben Benutzers ab, ohne dass der Server irgendeinen Zustand hält.
+  Angulars `HttpClient` nutzt den HTTP-Cache des Browsers dafür ohne Zutun.
+- **Was der Browser-Cache nicht abdeckt:** zwei Benutzer beim selben Titel, derselbe Benutzer in
+  zwei Tabs, und ein Skript mit gültigem Session-Cookie.
+  Dagegen hilft nur serverseitige Begrenzung.
+- **Minimum auf dem Server ist deshalb nicht ein TTL-Cache, sondern In-Flight-Deduplizierung:**
+  läuft für einen Titel bereits ein Abruf, hängen sich parallele Anfragen an dessen Ergebnis,
+  statt einen zweiten Request nach draußen zu schicken.
+  Das sind wenige Zeilen, kostet keinen Zustand über die Requestdauer hinaus und deckt genau die
+  Fälle ab, die der Browser-Cache offenlässt.
+- Ein kurzlebiger **In-Memory-TTL-Cache** (Minutenbereich) bleibt die Option für den Fall, dass
+  der Spike Blockierungsdruck zeigt — er ist bewusst **nicht** Teil der ersten Umsetzung.
+  Reihenfolge: erst In-Flight-Dedup + Cache-Header, TTL-Cache nur bei Bedarf nachrüsten.
+- Der angezeigte Preis bekommt einen **„Stand: …"-Zeitstempel**, bei Auktionen sekundengenau.
+  Ein erneuter Klick auf den Knopf muss den Browser-Cache umgehen können
+  (Cache-Buster oder `no-cache`), sonst kann der Benutzer nicht aktualisieren.
 
 ### 5.7 Nutzungsbedingungen — bewusste Entscheidung
 - Die eBay-Nutzungsbedingungen untersagen das automatisierte Auslesen der Website;
@@ -330,27 +340,47 @@ Verbindlich für die Umsetzung. Jeder Punkt ist eine Anforderung, kein Hinweis.
 ## 7. Phasenplan
 
 ```
-Phase 0 (Spike vom Zielhost + ADR)   ──► Voraussetzung; kann das Vorhaben stoppen
+Phase 0 (POC vom Zielhost + ADR)     ──► Voraussetzung; kann das Vorhaben stoppen
 Phase 1 (Backend: Port + Scrape-Adapter) ──► Voraussetzung für Phase 2
 Phase 2 (Frontend: Knopf + Anzeige)  ◄── braucht Phase 1
 Phase 3 (CSP)                        ──► unabhängig, eigener Commit
 ```
 
-### Phase 0 — Spike und Entscheidung (fast kein Code)
-- **Zuerst und wichtigstes:** von der **Produktionsmaschine** aus (nicht vom Entwicklungsrechner!)
-  die eBay-Suchergebnisseite mit dem projekteigenen User-Agent abrufen und prüfen,
-  ob echtes Ergebnis-Markup zurückkommt — oder Captcha/403/leere Seite.
-  Das ist eine Frage von Minuten und entscheidet über die gesamte Variante.
-  Fällt der Spike negativ aus, ist Variante C/D der Weg und Phase 1 sieht anders aus.
-- Aus derselben abgerufenen Seite die **Selektoren und URL-Parameter** verifizieren:
-  `_nkw`, `_sacat` (Kategorie DVDs/Blu-ray), `LH_BIN=1`, `LH_Auction=1`, `_sop` (Sortierung),
-  und wie Sofortkaufpreis und aktuelles Gebot im Markup unterscheidbar sind.
-  Die Seite als **Test-Fixture** einchecken.
-- **ADR-0017** „eBay-Preise über gescrapte Suchergebnisseite hinter austauschbarem Port"
-  (via `adr`-Skill): hält fest, warum die Client-Variante ausscheidet (CORS, Secret),
-  warum Scraping statt API gewählt wurde, dass der AGB-Verstoß bewusst eingegangen wird,
-  und was der Ausweg ist.
-- Entscheidungen aus Abschnitt 6 treffen.
+### Phase 0 — POC (Wegwerf-Code, eigener Commit, klar als POC markiert)
+
+Der POC beantwortet **drei Fragen** und baut sonst nichts.
+Kein Endpunkt, kein Frontend, kein Bounded Context, kein Cache, keine Konfiguration.
+Fällt eine der drei Antworten negativ aus, ändert sich der Plan — deshalb steht er vor Phase 1.
+
+**Frage 1: Antwortet eBay unserem Server überhaupt?**
+Abruf der Suchergebnisseite mit dem projekteigenen `OutboundHttpClients.USER_AGENT`,
+**von der Zielmaschine aus** — nicht vom Entwicklungsrechner.
+Erwartet wird echtes Ergebnis-Markup; möglich sind Captcha-Seite, `403`, oder eine leere Antwort
+wie sie IMDb an Rechenzentrums-IPs liefert (im README dokumentiert).
+Diese Frage ist in Minuten beantwortet und entscheidet über die gesamte Variante.
+
+**Frage 2: Sind beide Preise zuverlässig aus dem Markup lesbar?**
+Aus der abgerufenen Seite die Selektoren verifizieren und die URL-Parameter bestätigen:
+`_nkw`, `_sacat` (Kategorie DVDs/Blu-ray auf ebay.de), `LH_BIN=1`, `LH_Auction=1`, `_sop`.
+Insbesondere: lassen sich Sofortkaufpreis und aktuelles Gebot im Markup **unterscheiden**,
+und reicht eine gemischte, preisaufsteigend sortierte Seite, oder braucht es zwei Abrufe?
+Die Seite wird als **Test-Fixture eingecheckt**, damit das Parsing ab hier netzwerkfrei
+entwickelt und getestet werden kann.
+
+**Frage 3: Stimmt die Trefferqualität?**
+Für 5–10 echte Watchlist-Titel (bewusst inklusive Problemfällen wie „Heat", „Up", „It")
+Suchbegriff bilden, abrufen, parsen und tabellarisch ausgeben:
+Titel | günstigster Sofortkauf | günstigstes Gebot | ist das plausibel der richtige Film?
+Das ist das eigentliche Produktrisiko — es lässt sich durch keine Architektur beheben,
+nur durch einen besseren Suchbegriff (Kategoriefilter, Jahr, deutscher Titel).
+
+**Form:** eine kleine, klar als POC benannte Klasse oder ein `@Tag`-annotierter Test im
+Backend — nicht in die Bounded-Context-Struktur einsortiert, nicht produktionsreif,
+ausdrücklich zum Wegwerfen.
+Ergebnis ist eine Notiz in diesem Dokument, nicht Code, der bleibt.
+
+**Danach, vor Phase 1:** ADR-0017 schreiben (via `adr`-Skill) und die Entscheidungen aus
+Abschnitt 6 treffen.
 
 ### Phase 1 — Backend
 Neuer Bounded Context `purchaseoffers` unter `tech.dobler.where2stream`, Aufbau nach ADR-0014:
@@ -365,11 +395,11 @@ Neuer Bounded Context `purchaseoffers` unter `tech.dobler.where2stream`, Aufbau 
     `RateLimiter`, Degradation auf „kein Ergebnis" — Vorbild ist `WerStreamtEsSource`
     Zeile für Zeile.
     Parsing als **statische, package-private Methoden** gegen das Fixture aus Phase 0 testbar.
-- `application`: `TitleOfferService` — In-Memory-TTL-Cache, In-Flight-Deduplizierung,
-  Circuit Breaker.
+- `application`: `TitleOfferService` — In-Flight-Deduplizierung und Circuit Breaker.
+  **Kein** TTL-Cache in der ersten Umsetzung (siehe 5.6).
 - `adapter/in/api`: `PurchaseOfferApiController`, `GET /api/titles/{imdbId}/offers`,
-  mit den Prüfungen aus 5.1.
-- **Kein** Liquibase-Changelog, **keine** neue Tabelle, **keine** Entity — der Cache ist flüchtig.
+  mit den Prüfungen aus 5.1 und `Cache-Control: private, max-age=…` (siehe 5.6).
+- **Kein** Liquibase-Changelog, **keine** neue Tabelle, **keine** Entity — es wird nichts gespeichert.
 - `ArchitectureTest` (ArchUnit) um die Isolationsregel für den neuen Kontext erweitern.
 - Tests: Parsing gegen Fixture (netzwerkfrei), Controller mit MockMvc
   (inkl. „ID nicht auf meiner Watchlist → 404"), TTL-/Circuit-Breaker-Verhalten.
