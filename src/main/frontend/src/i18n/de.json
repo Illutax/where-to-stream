@@ -159,5 +159,22 @@
     "dismiss": "Schließen",
     "cancel": "Abbrechen",
     "staleDataBanner": "Einige Angaben werden gerade im Hintergrund aktualisiert und können kurzzeitig veraltet sein."
+  },
+  "offers": {
+    "load": "Preise",
+    "loadFor": "eBay-Preise für {{name}} laden",
+    "loading": "Preise werden geladen",
+    "from": "ab {{price}}",
+    "none": "Keine Angebote",
+    "unavailable": "Derzeit nicht verfügbar",
+    "userLimit": "Dein Tageslimit ist erreicht",
+    "globalLimit": "Für heute ausgeschöpft",
+    "details": "Preisdetails anzeigen",
+    "refresh": "Preise neu abfragen",
+    "buyNow": "Sofortkauf",
+    "auction": "Gebot",
+    "shipping": "zzgl. {{price}} Versand",
+    "shippingUnknown": "Versandkosten unbekannt",
+    "asOf": "Stand: {{time}}"
   }
 }

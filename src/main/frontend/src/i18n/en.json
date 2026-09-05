@@ -159,5 +159,22 @@
     "dismiss": "Dismiss",
     "cancel": "Cancel",
     "staleDataBanner": "Some data is being refreshed in the background and may be briefly out of date."
+  },
+  "offers": {
+    "load": "Prices",
+    "loadFor": "Load eBay prices for {{name}}",
+    "loading": "Loading prices",
+    "from": "from {{price}}",
+    "none": "No offers",
+    "unavailable": "Currently unavailable",
+    "userLimit": "Your daily allowance is used up",
+    "globalLimit": "Used up for today",
+    "details": "Show price details",
+    "refresh": "Check prices again",
+    "buyNow": "Buy it now",
+    "auction": "Current bid",
+    "shipping": "plus {{price}} shipping",
+    "shippingUnknown": "shipping cost unknown",
+    "asOf": "As of {{time}}"
   }
 }
