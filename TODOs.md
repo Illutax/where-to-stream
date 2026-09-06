@@ -990,3 +990,18 @@ Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript
   allerdings, warum aus einem einmaligen Fehlschlag ein Dauerzustand wurde, unabhängig davon, was
   ihn ausgelöst hat.
 
+**Teilweise erledigt am 2026-09-06:**
+
+- ✅ Punkt 1: `CURRENT_HEAD` wird vor der ersten Änderung gesetzt, mit Abbruch falls leer, plus
+  `git checkout -- pom.xml` im Fehlerpfad. Ein fehlgeschlagener Lauf hinterlässt damit einen
+  sauberen Arbeitsbaum.
+- ✅ Punkt 2: Der Prüflauf geht über `docker build . --target verify` statt `mvn clean package`
+  auf dem Host. Prüfung und Auslieferung leiten sich jetzt von derselben `toolchain`-Stufe im
+  Dockerfile ab.
+- ⬜ Punkt 3 offen: Milestones/RCs werden weiterhin automatisch gezogen — das ist TODO-13.
+- ⬜ **Nicht verifiziert:** der vollständige Docker-Build ließ sich in der Entwicklungsumgebung
+  nicht ausführen (Podman kann dort kein Netzwerk für den Container aufsetzen). Geprüft sind der
+  Stage-Graph, die Shell-Syntax und dass `.dockerignore` weder `src/` noch `pom.xml` ausschließt.
+  **Der erste echte Lauf auf dem Host ist damit die eigentliche Probe** — am besten einmal von
+  Hand, bevor der Cron ihn wieder anfasst.
+

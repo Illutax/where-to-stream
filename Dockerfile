@@ -12,29 +12,19 @@ ARG DOCKER_IMAGE_TAG
 FROM $NODE_BASE_IMAGE AS nodejs
 
 #############################################################
-# pre-fetch dependencies
-FROM $MVN_BASE_IMAGE AS dependencies
-COPY pom.xml .
-RUN mvn -B -e org.apache.maven.plugins:maven-dependency-plugin:go-offline
-
-#############################################################
-# build jar
-FROM $MVN_BASE_IMAGE AS builder
-ARG DOCKER_IMAGE_TAG
-ENV DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG
-
-# For Debugging:
-#RUN apt update &&  \
-#    apt upgrade -y &&  \
-#    apt install tree -y
-
+# Build toolchain: Maven plus the pinned Node, and nothing project-specific.
+#
+# Every stage that compiles anything derives from here, so the toolchain is described exactly once.
+# That matters beyond tidiness: upgrade-spring-boot.sh used to verify a Spring Boot bump with the
+# HOST's `mvn clean package`, while the shipped artifact was built from this file. The two could be
+# green and red independently -- a Node upgrade on the host broke the nightly check even though the
+# image would still have built. Both now go through the `verify`/`builder` stages below.
+#
+# Node is copied from the pinned node:24-alpine stage rather than `apk add nodejs`, so the version
+# does not follow the Alpine repo state. libstdc++/libgcc are node's musl runtime deps.
+# registry.npmjs.org must be reachable during the build (set NPM_CONFIG_REGISTRY for a mirror).
+FROM $MVN_BASE_IMAGE AS toolchain
 WORKDIR /opt/app
-
-# The build also compiles the Angular client (src/main/frontend) via npm, so the builder needs
-# Node.js/npm. Instead of an unpinned `apk add nodejs`, copy the pinned Node from the node:24-alpine
-# stage (deterministic version across machines). libstdc++/libgcc are node's musl runtime deps.
-# registry.npmjs.org must be reachable during the image build (set NPM_CONFIG_REGISTRY to a mirror
-# if it is not). Pass -Dskip.frontend=true to build the backend only.
 RUN apk add --no-cache libstdc++ libgcc
 COPY --from=nodejs /usr/local/bin/node /usr/local/bin/node
 COPY --from=nodejs /usr/local/lib/node_modules /usr/local/lib/node_modules
@@ -42,14 +32,33 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
  && node --version && npm --version
 
-COPY --from=dependencies pom.xml .
+#############################################################
+# pre-fetch dependencies (cached layer: only invalidated by pom.xml)
+FROM toolchain AS dependencies
+COPY pom.xml .
+RUN mvn -B -e org.apache.maven.plugins:maven-dependency-plugin:go-offline
+
+#############################################################
+# toolchain + dependencies + sources; the one place the project is copied in
+FROM toolchain AS sources
+COPY --from=dependencies /opt/app/pom.xml .
 COPY --from=dependencies /root/.m2 /root/.m2
 COPY src/ ./src/
+
+#############################################################
+# the artifact that ships. Tests are skipped here on purpose -- they run in `verify`.
+FROM sources AS builder
+ARG DOCKER_IMAGE_TAG
+ENV DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG
 RUN echo "$DOCKER_IMAGE_TAG" | mvn versions:set -DnewVersion= -DgenerateBackupPoms=false
 RUN mvn package -DskipTests
 
-# For Debugging:
-#ENTRYPOINT ["ls","-la", "target"]
+#############################################################
+# the same toolchain, WITH tests. Built by upgrade-spring-boot.sh to check a dependency bump
+# before it is committed:  docker build . --target verify
+# Produces no artifact worth keeping; its value is the exit code.
+FROM sources AS verify
+RUN mvn -B clean package
 
 #############################################################
 # run
