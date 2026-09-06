@@ -1099,10 +1099,43 @@ Der Link wird im Client gebaut — **kein Server-Aufruf, keine Quota, kein Accou
 kein Circuit Breaker**.
 Es gibt nichts, was eine Freischaltung voraussetzt.
 
+**Die Randbedingung des Vorgängers gilt hier nicht mehr, und das ändert den Entwurf.**
+Beim Preisabruf kostete jede Anfrage zwei Calls aus einem geteilten Tagesbudget — deshalb war die
+Suche dort auf *ein* Ergebnis optimiert und jede Verfeinerung ein Kompromiss.
+Ein Link kostet nichts, weder beim Bauen noch beim Nichtanklicken.
+Die Suchanfrage darf deshalb so gut sein, wie wir sie hinbekommen, statt so sparsam wie möglich.
+
 - **URL-Form:** `https://www.<domain>/sch/i.html?_nkw=<urlencodierter Suchbegriff>`.
-  Dass diese Form stabil ist, ist **nicht verifiziert** —
-  sie stammt aus der Recherche des alten Plans.
-- **Suchbegriff** aus vorhandenen Client-Daten (`OverviewEntry.name`, `OverviewEntry.year`).
+  **Nicht verifiziert** — aus der Recherche des alten Plans übernommen.
+- **Kategoriefilter `&_sacat=…` — der größte Hebel auf die Trefferqualität, und der einzige Punkt,
+  der vor der Umsetzung geprüft gehört.**
+  Der alte Plan nannte `617` („DVDs & Blu-ray Discs") für `ebay.de`.
+  Ohne ihn findet „Heat" Heizungszubehör, mit ihm Filme.
+  **Zweifach unverifiziert:** weder ist die Zahl bestätigt, noch dass sie auf `ebay.com` und
+  `ebay.co.uk` dieselbe ist — eBay-Kategorie-Ids sind nicht garantiert marktplatzübergreifend
+  identisch.
+  Das ist in Minuten von Hand nachzusehen, indem man die Suche auf jedem der drei Marktplätze
+  einmal aufruft.
+  Falls die Ids abweichen, gehört die Kategorie zur Marktplatz-Zuordnung, nicht in eine Konstante.
+- **Deutscher Titel, wenn vorhanden und passend.**
+  Eine Suche auf `ebay.de` nach „Der Pate 1972" trifft besser als nach „The Godfather 1972".
+  Der deutsche Titel liegt in `TitleMeta.germanTitle` und ist im Client über `injectTitleMeta`
+  erreichbar — **aber nur, wenn er ohnehin schon geladen wird**, also wenn Altersfreigaben oder
+  deutsche Titel eingeschaltet sind (`title-meta.ts` holt sonst nichts).
+  **Regel:** deutscher Titel nur für `EBAY_DE` und nur, wenn er ohne Zusatzabruf verfügbar ist;
+  sonst `OverviewEntry.name`.
+  **Ausdrücklich keinen Abruf allein für den Link auslösen** — eine Anfrage je Titel beim
+  Seitenaufbau ist genau das, was dieser Ersatz loswerden soll.
+- **Sortierung nach Gesamtpreis, aufsteigend — `&_sop=15` („Preis + Versand: niedrigste zuerst").**
+  Kein Extra, sondern der Punkt, an dem der Link das ersetzt, was die Preisabfrage leisten sollte:
+  Die alte Funktion beantwortete „was kostet das mindestens?" mit einer Zahl,
+  der Link beantwortet dieselbe Frage mit dem ersten Treffer der Liste.
+  Ohne Sortierung landet man auf eBays Relevanz-Reihenfolge, und die Antwort steht irgendwo.
+  Dass die Sortierung Versand einschließt, ist dabei die eigentliche Übereinstimmung —
+  auch der alte Vergleich rechnete Preis plus Versand
+  (`offerTotalCents` im entfallenden `offer-prices.ts`).
+  **Der Wert `15` ist nicht verifiziert.** Beim Prüfen des Kategoriefilters mit abhaken —
+  es ist derselbe Handgriff. Falls er nicht stimmt: den Parameter weglassen, nicht raten.
 - **Kein Link bei noch nicht erschienenen Titeln.**
   `ReleaseYear` nutzt `0` für „noch nicht erschienen/unbekannt".
   Das alte Feature ließ in diesem Fall nur das Jahr weg und suchte trotzdem
@@ -1113,16 +1146,16 @@ Es gibt nichts, was eine Freischaltung voraussetzt.
   oder es gibt ihn nicht.
   Zu entscheiden bleibt die Darstellung: gar nichts rendern oder ein deaktivierter Hinweis.
   Vorschlag: gar nichts, damit die Zeile ruhig bleibt.
-- **Trefferqualität** bleibt das Produktrisiko:
-  „Heat" findet ohne Kategoriefilter Heizungszubehör.
-  Anders als beim Vorgänger ist das hier folgenlos —
-  der Nutzer sieht die eBay-Suche und kann sie selbst verfeinern.
-  Ein Kategoriefilter (`_sacat`) wäre optional ergänzbar, ist aber **unverifiziert**.
 - **Darstellung:** dasselbe Muster wie der bestehende IMDb-Link in `TitleCell`/`TitleTile` —
   `<a target="_blank" rel="noopener">`.
-  Nur Dashboard, nicht auf den Provider-Seiten —
-  dieselbe Abgrenzung wie zuvor, hier aber ohne Budget-Begründung:
-  dort gehört er schlicht nicht hin.
+  Nur Dashboard, nicht auf den Provider-Seiten.
+  Beide Komponenten werden von den Provider-Seiten mitgenutzt, die Abgrenzung braucht also einen
+  ausdrücklichen Eingang (wie zuvor `showOffers`) und ergibt sich nicht von selbst.
+  Die Begründung ist diesmal aber eine andere: kein Budget, das zu schützen wäre, sondern schlicht,
+  dass der Absprung dort nicht hingehört.
+- **Barrierefreiheit:** der Link braucht einen zugänglichen Namen, der den Titel nennt.
+  Zweihundert Zeilen mit dem identischen Linktext „eBay" sind mit einer Vorlesehilfe unbenutzbar.
+  Muster wie beim alten `offers.loadFor`: sichtbarer Kurztext, `aria-label` mit dem Titelnamen.
 - **i18n** in `de.json` und `en.json`, Schlüssel parallel halten.
 - **Tests (Vitest):** URL-Bildung als reine, testbare Funktion
   (Marktplatz-Zuordnung, Sonderzeichen im Titel korrekt kodiert);
@@ -1131,5 +1164,6 @@ Es gibt nichts, was eine Freischaltung voraussetzt.
   der Content-Security-Policy nicht erfasst.
 
 - **Akzeptanzkriterium:** Ein Klick neben einem erschienenen Titel öffnet in einem neuen Tab
-  die eBay-Suche des eingestellten Marktplatzes nach Titel und Jahr.
+  die eBay-Suche des eingestellten Marktplatzes nach Titel und Jahr,
+  aufsteigend nach Preis inklusive Versand sortiert.
   Bei einem noch nicht erschienenen Titel gibt es keinen Absprung.
