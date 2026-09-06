@@ -1103,10 +1103,16 @@ Es gibt nichts, was eine Freischaltung voraussetzt.
   Dass diese Form stabil ist, ist **nicht verifiziert** —
   sie stammt aus der Recherche des alten Plans.
 - **Suchbegriff** aus vorhandenen Client-Daten (`OverviewEntry.name`, `OverviewEntry.year`).
-  `ReleaseYear` nutzt `0` für „unbekannt/noch nicht erschienen" —
-  dann gehört das Jahr weggelassen, `"Heat 0"` fände nichts.
-  Diese Regel gab es im alten Feature schon (`TitleOfferService.searchTermFor`)
-  und sie ist übernehmenswert.
+- **Kein Link bei noch nicht erschienenen Titeln.**
+  `ReleaseYear` nutzt `0` für „noch nicht erschienen/unbekannt".
+  Das alte Feature ließ in diesem Fall nur das Jahr weg und suchte trotzdem
+  (`TitleOfferService.searchTermFor`) — hier ist der Absprung stattdessen ganz wegzulassen:
+  was nicht erschienen ist, wird auch nicht verkauft, und eine Suche nach dem blanken Titel
+  liefert dann bestenfalls Rauschen.
+  Das erspart zugleich den Sonderfall im Suchbegriff — er enthält immer Titel **und** Jahr,
+  oder es gibt ihn nicht.
+  Zu entscheiden bleibt die Darstellung: gar nichts rendern oder ein deaktivierter Hinweis.
+  Vorschlag: gar nichts, damit die Zeile ruhig bleibt.
 - **Trefferqualität** bleibt das Produktrisiko:
   „Heat" findet ohne Kategoriefilter Heizungszubehör.
   Anders als beim Vorgänger ist das hier folgenlos —
@@ -1119,10 +1125,11 @@ Es gibt nichts, was eine Freischaltung voraussetzt.
   dort gehört er schlicht nicht hin.
 - **i18n** in `de.json` und `en.json`, Schlüssel parallel halten.
 - **Tests (Vitest):** URL-Bildung als reine, testbare Funktion
-  (Marktplatz-Zuordnung, Jahr-0-Fall, Sonderzeichen im Titel korrekt kodiert);
-  Rendering mit `rel="noopener"`.
+  (Marktplatz-Zuordnung, Sonderzeichen im Titel korrekt kodiert);
+  Rendering mit `rel="noopener"`, und dass bei `year = 0` **kein** Link entsteht.
 - **Kein CSP-Problem:** ein `<a href>` ist eine Navigation und wird von den Fetch-Direktiven
   der Content-Security-Policy nicht erfasst.
 
-- **Akzeptanzkriterium:** Ein Klick neben einem Titel öffnet in einem neuen Tab
+- **Akzeptanzkriterium:** Ein Klick neben einem erschienenen Titel öffnet in einem neuen Tab
   die eBay-Suche des eingestellten Marktplatzes nach Titel und Jahr.
+  Bei einem noch nicht erschienenen Titel gibt es keinen Absprung.
