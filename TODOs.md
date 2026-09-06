@@ -1019,3 +1019,110 @@ Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript
   **Der erste echte Lauf auf dem Host ist damit die eigentliche Probe** — am besten einmal von
   Hand, bevor der Cron ihn wieder anfasst.
 
+
+---
+
+## eBay-Rückbau und Ersatz (2026-09-06)
+
+### 🔴 TODO-56 — eBay-Preisabfrage zurückbauen
+Der eBay-Developer-Account wurde nie freigeschaltet; die Preisabfrage über die Browse API
+(ADR-0017) kann damit nie Daten liefern und wird zurückgebaut.
+Der Stand ist auf einem Branch festgehalten — hier geht nichts verloren, nur aus `dev` raus.
+**Die Marktplatz-Auswahl pro Nutzer bleibt**, weil der Ersatz (TODO-57) sie braucht.
+
+**Zuerst klären — zwingend vor dem Löschen, sonst startet die Anwendung nicht mehr:**
+Die bleibende Marktplatz-Auswahl hängt an zwei Dingen, die im wegfallenden Kontext liegen.
+
+1. Das Enum `Marketplace` (EBAY_DE/EBAY_US/EBAY_GB mit Marktplatz-Id, Währung, Basisdomain)
+   liegt in `purchaseoffers/domain`.
+2. `MarketplaceCatalog` (`purchaseoffers/adapter/in/spi`) implementiert
+   `accountaccess.port.spi.SupportedMarketplaces` — und ist die **einzige** Implementierung.
+   Fällt sie ersatzlos weg, findet Spring keine Bean für den SPI,
+   `UserPreferencesService` bekommt sie injiziert, und **der Anwendungskontext startet nicht mehr**.
+   Zusätzlich entfiele die Validierung der Marktplatz-Eingabe —
+   `app_user.ebay_marketplace` würde zum Freitextfeld.
+
+Wohin beides wandert, ist hier **nicht zu entscheiden, nur zu benennen**:
+Enum und Katalog in einen bleibenden Kontext verschieben,
+oder die Marktplatz-Liste dorthin ziehen, wo der neue Deep-Link (TODO-57) sie braucht.
+
+**Reihenfolge:** Erst TODO-57 umsetzen — dann ist geklärt, wo `Marketplace` künftig lebt —,
+dann zurückbauen.
+Andersherum muss die Marktplatz-Auswahl zwischendurch zweimal angefasst werden.
+
+**Bestandsaufnahme (erhoben, vollständig):**
+
+| Bereich | Entfällt |
+| --- | --- |
+| Backend | Ganzer Bounded Context `purchaseoffers`: `domain` (`Offer`, `OfferPrice`, `TitleOffers`, `OfferLookupResult`, `QuotaDay`, `QuotaVerdict`, `GlobalQuotaUsage`, `UserQuotaUsage`, `OfferSourceUnavailableException`, `UpstreamQuotaExhaustedException`, `Marketplace` — siehe oben), `application` (`TitleOfferService`, `QuotaService`, `dto/OfferDto`, `dto/TitleOffersDto`), `port/out` (`PurchaseOfferSource`, `GlobalQuotaUsageRepository`, `UserQuotaUsageRepository`), `adapter/out/ebay` (`EbayBrowseApiSource`, `EbayOAuthTokenProvider`, `EbayProperties`, `EbayCircuitBreakerConfig`), `adapter/in/api/PurchaseOfferApiController`, `adapter/in/spi/MarketplaceCatalog` — plus alle zugehörigen Tests |
+| Frontend | `core/api/offers-api.ts`, `core/offers-store.ts`, `shared/offer-prices/` (Komponente + Spec), der `showOffers`-Eingang samt eBay-Spalte in `shared/catalog-table/catalog-table.ts`, der Chip in `shared/title-tile/title-tile.ts`, das Durchreichen in `shared/title-grid/title-grid.ts`, die Aktivierung in `features/overview/overview-page.ts`, die Typen `Offer`/`TitleOffers`/`OfferStatus` in `core/models.ts`, der i18n-Block `offers.*` in `i18n/de.json` und `i18n/en.json`, der Spaltenkopf `table.offers` |
+| Konfiguration | `ebay.*`-Block in `application.properties` (**ohne** `ebay.default-marketplace` — der gehört zur bleibenden Auswahl), eBay-Abschnitt in `.env.example`, die beiden `EBAY_*`-Zeilen in `compose.yml`, Abhängigkeit `io.github.resilience4j:resilience4j-spring-boot4` samt `resilience4j.version`-Property in `pom.xml` (wird ausschließlich von diesem Feature genutzt) |
+| ArchUnit | Regel `purchaseoffers_is_only_accessed_through_its_published_ports`; `purchaseoffers` fliegt aus der Paketliste von `spring_data_repositories_are_the_port_not_the_adapter`. `bounded_contexts_are_free_of_cycles` bleibt. |
+
+**Datenbank:** Liquibase `016-ebay-quota.xml` legt `ebay_quota_day` und `ebay_user_quota_day` an.
+Angewendete Changesets dürfen nicht aus dem Changelog gelöscht werden —
+es braucht ein **neues** Changeset, das beide Tabellen droppt.
+`017-user-ebay-marketplace.xml` bleibt unangetastet.
+
+**Weiteres, das mitzuziehen ist:**
+
+- `accountaccess.port.in.ImpersonationPort` wurde nur für die Sperre der Preisabfrage
+  während einer Impersonierung eingeführt und hat danach keinen Aufrufer mehr —
+  entfällt, ebenso der Status `IMPERSONATION_ACTIVE` und der i18n-Schlüssel `offers.impersonating`.
+- [ADR-0017](docs/adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md) wird gegenstandslos →
+  auf `Superseded` setzen, nicht löschen.
+  [ADR-0020](docs/adr/0020-admin-impersonierung-ueber-switchuserfilter.md) verweist auf die
+  Quota-Wechselwirkung → diesen Absatz anpassen.
+- `docs/EBAY_PRICE_LOOKUP_PLAN.md` bleibt als historisches Dokument,
+  bekommt aber einen Statushinweis, dass das Vorhaben eingestellt wurde.
+- TODO-51 (resilience4j) und TODO-52 (Bundle-Größe) beziehen sich teilweise auf entfallenden Code;
+  TODO-52 wird durch den Rückbau eher besser.
+
+- **Akzeptanzkriterium:** `grep -ri ebay` trifft im Produktionscode nichts mehr außer der
+  Marktplatz-Auswahl und dem neuen Deep-Link;
+  der Anwendungskontext startet;
+  alle Tests grün;
+  die beiden Quota-Tabellen sind per Changeset entfernt.
+
+### 🟠 TODO-57 — eBay-Suchlink pro Titel auf dem Dashboard
+Der Ersatz für die zurückgebaute Preisabfrage (TODO-56) — im ursprünglichen Plan
+([`docs/EBAY_PRICE_LOOKUP_PLAN.md`](docs/EBAY_PRICE_LOOKUP_PLAN.md), Abschnitt 4) war das
+**Variante A**, dort bewertet als „trivial, minimales Risiko, Stunden statt Tage".
+
+Neben jedem Titel auf dem Dashboard steht ein Link, der in einem neuen Tab die eBay-Suche öffnet:
+Suchbegriff `"<Titel> <Erscheinungsjahr>"`,
+Marktplatz nach der Einstellung des Nutzers (`ebayMarketplace` aus `/api/me`,
+EBAY_DE/EBAY_US/EBAY_GB → `ebay.de`/`ebay.com`/`ebay.co.uk`).
+
+**Warum das funktioniert, wo der Vorgänger scheiterte:**
+Der Link wird im Client gebaut — **kein Server-Aufruf, keine Quota, kein Account,
+kein Circuit Breaker**.
+Es gibt nichts, was eine Freischaltung voraussetzt.
+
+- **URL-Form:** `https://www.<domain>/sch/i.html?_nkw=<urlencodierter Suchbegriff>`.
+  Dass diese Form stabil ist, ist **nicht verifiziert** —
+  sie stammt aus der Recherche des alten Plans.
+- **Suchbegriff** aus vorhandenen Client-Daten (`OverviewEntry.name`, `OverviewEntry.year`).
+  `ReleaseYear` nutzt `0` für „unbekannt/noch nicht erschienen" —
+  dann gehört das Jahr weggelassen, `"Heat 0"` fände nichts.
+  Diese Regel gab es im alten Feature schon (`TitleOfferService.searchTermFor`)
+  und sie ist übernehmenswert.
+- **Trefferqualität** bleibt das Produktrisiko:
+  „Heat" findet ohne Kategoriefilter Heizungszubehör.
+  Anders als beim Vorgänger ist das hier folgenlos —
+  der Nutzer sieht die eBay-Suche und kann sie selbst verfeinern.
+  Ein Kategoriefilter (`_sacat`) wäre optional ergänzbar, ist aber **unverifiziert**.
+- **Darstellung:** dasselbe Muster wie der bestehende IMDb-Link in `TitleCell`/`TitleTile` —
+  `<a target="_blank" rel="noopener">`.
+  Nur Dashboard, nicht auf den Provider-Seiten —
+  dieselbe Abgrenzung wie zuvor, hier aber ohne Budget-Begründung:
+  dort gehört er schlicht nicht hin.
+- **i18n** in `de.json` und `en.json`, Schlüssel parallel halten.
+- **Tests (Vitest):** URL-Bildung als reine, testbare Funktion
+  (Marktplatz-Zuordnung, Jahr-0-Fall, Sonderzeichen im Titel korrekt kodiert);
+  Rendering mit `rel="noopener"`.
+- **Kein CSP-Problem:** ein `<a href>` ist eine Navigation und wird von den Fetch-Direktiven
+  der Content-Security-Policy nicht erfasst.
+
+- **Akzeptanzkriterium:** Ein Klick neben einem Titel öffnet in einem neuen Tab
+  die eBay-Suche des eingestellten Marktplatzes nach Titel und Jahr.
