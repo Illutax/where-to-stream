@@ -178,12 +178,17 @@ Die Amazon-Seite (`web/DataAggregateController.getAmazon`) rief `included()` **u
 
 ## Build / Betrieb
 
-### 🔴 TODO-13 — Cron zieht Pre-Release-Spring-Boot
+### ✅ TODO-13 — Cron zieht Pre-Release-Spring-Boot — **bewusst so belassen**
 Git-History: `4.1.0-M1 → M2 → M3 → M4 → RC1 → 4.1.0`.
 `upgrade-spring-boot.sh` nutzt `versions:update-parent` ohne `-DallowSnapshots=false` und ohne Milestone-Filter,
-d. h. der Cron deployt automatisch Milestones/RCs in den Betrieb.
-- **Akzeptanzkriterium:** Auf stabile Releases beschränken (Ruleset/Rules bzw. passende `versions`-Flags),
-  keine Milestones/RCs automatisch.
+d. h. der Cron zieht automatisch Milestones/RCs.
+- **Entscheidung des Auftraggebers (2026-09-06): so gewollt.** Milestones mitzunehmen ist hier kein
+  Versehen, sondern der Zweck — das Projekt sammelt darüber früh Erkenntnisse über kommende
+  Spring-Boot-Versionen, und ein privates Projekt mit fünf Nutzern kann sich das leisten.
+- **Was diese Entscheidung tragfähig macht**, ist die Absicherung drumherum, nicht die Stabilität
+  des Parents: der Prüflauf baut mit Tests durch die `verify`-Stufe, und ein Fehlschlag setzt seit
+  TODO-55 den Arbeitsbaum sauber zurück, statt die Update-Kette zu verklemmen. Ohne diese beiden
+  wäre ein instabiler Parent teuer geworden.
 
 ### 🟢 TODO-14 — `versions-maven-plugin` ohne Version
 `pom.xml`: Plugin ohne fixierte `<version>`.
@@ -973,16 +978,17 @@ Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript
    `node:24-alpine`. Eine Node-Aktualisierung auf dem Host bricht damit den Prüflauf, obwohl das
    Artefakt selbst gebaut werden könnte — und umgekehrt kann der Prüflauf grün sein, während der
    Docker-Build scheitert. Die beiden sollten dieselbe Toolchain benutzen.
-3. **Milestones und RCs werden weiterhin automatisch gezogen** — das ist das offene
-   [TODO-13](#), dessen Auswirkung hier zusammenfällt: ein instabiler Parent lässt den Build
-   scheitern, und wegen (1) bleibt der Schaden stehen.
+3. **Milestones und RCs werden automatisch gezogen** (TODO-13). Das ist inzwischen als gewollt
+   entschieden — es macht den Punkt (1) allerdings umso wichtiger: ein instabiler Parent lässt den
+   Build häufiger scheitern, und ohne funktionierenden Rollback bleibt jeder dieser Fehlschläge
+   stehen.
 
 - **Akzeptanzkriterium:**
   - `CURRENT_HEAD="$(git rev-parse HEAD)"` **vor** der ersten Änderung setzen; zusätzlich im
     Fehlerfall `git checkout -- pom.xml` als Gürtel-und-Hosenträger.
   - Der Prüflauf verwendet dieselbe Node-Version wie der Docker-Build (entweder im Container
     bauen oder die Version aus einer gemeinsamen Quelle beziehen, siehe TODO-54).
-  - Kein automatisches Update auf Milestones/RCs (TODO-13).
+  - ~~Kein automatisches Update auf Milestones/RCs~~ — verworfen, siehe TODO-13.
   - Ein fehlgeschlagener Lauf hinterlässt einen **sauberen** Arbeitsbaum — prüfbar, indem man den
     Fehlerfall einmal absichtlich auslöst.
 - **Nicht verifiziert:** Welcher der drei Punkte den konkreten Ausfall ausgelöst hat, lässt sich
@@ -998,7 +1004,8 @@ Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript
 - ✅ Punkt 2: Der Prüflauf geht über `docker build . --target verify` statt `mvn clean package`
   auf dem Host. Prüfung und Auslieferung leiten sich jetzt von derselben `toolchain`-Stufe im
   Dockerfile ab.
-- ⬜ Punkt 3 offen: Milestones/RCs werden weiterhin automatisch gezogen — das ist TODO-13.
+- ✅ Punkt 3: Milestones/RCs weiterhin automatisch — auf Entscheidung des Auftraggebers so
+  gewollt, siehe TODO-13. Der Punkt entfällt damit als Mangel.
 - ⬜ **Nicht verifiziert:** der vollständige Docker-Build ließ sich in der Entwicklungsumgebung
   nicht ausführen (Podman kann dort kein Netzwerk für den Container aufsetzen). Geprüft sind der
   Stage-Graph, die Shell-Syntax und dass `.dockerignore` weder `src/` noch `pom.xml` ausschließt.
