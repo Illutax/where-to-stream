@@ -921,3 +921,72 @@ Zwei Punkte, die erst beim Bauen sichtbar wurden:
 - **Ein Nicht-Admin erfährt nichts.** Das Banner hängt allein an `impersonatedBy` aus `/api/me`, und
   dieses Feld ist für einen gewöhnlichen Nutzer immer `null`. Die Startaktion liegt in der
   Benutzerverwaltung, die ohnehin ADMIN-only ist.
+
+---
+
+## Build-Toolchain (2026-09-06)
+
+### 🔴 TODO-54 — Node-/npm-Version an einer Stelle verbindlich festlegen
+Die zulässige Toolchain steht heute an **vier** Orten, die getrennt gepflegt werden und bereits
+auseinanderlaufen:
+
+| Ort | Aussage | Stand 2026-09-06 |
+| --- | --- | --- |
+| `src/main/frontend/.nvmrc` | `24` | nur Major |
+| `package.json` → `engines` | `node >=22 <25`, `npm >=10` | Spanne |
+| `package.json` → `packageManager` | `npm@11.16.0` | **exakt, und veraltet** |
+| `Dockerfile` → `NODE_BASE_IMAGE` | `node:24-alpine` | Major, Minor/Patch fließend |
+
+`src/main/frontend/.npmrc` setzt `engine-strict=true` — eine Toolchain außerhalb der Spanne bricht
+`npm ci` also **hart** ab, was richtig ist, aber bedeutet: jede Abweichung legt den Build still.
+
+**Was aktuell gilt** (gegen die Registry geprüft, nicht geschätzt):
+
+- Angular 22.0.7 verlangt `node ^22.22.3 || ^24.15.0 || >=26.0.0` — **Node 25 ist ausdrücklich
+  ausgenommen**, die Spanne springt von 24 auf 26.
+- `npm` steht bei **12.0.2**; der letzte 11er ist 11.19.1. Das in `packageManager` gepinnte
+  11.16.0 gibt es also weder in der Node-24-Zeile noch sonstwo als aktuelle Version.
+- Angular selbst ist bei 22.1.5, das Projekt bei 22.0.7 — ein Minor-Rückstand, kein Problem.
+
+- **Akzeptanzkriterium:** Eine Quelle der Wahrheit für Node und npm, aus der die anderen Orte
+  abgeleitet oder gegen die sie geprüft werden. Mindestens: `packageManager` entweder pflegen oder
+  entfernen, und `NODE_BASE_IMAGE` auf dieselbe Spanne festnageln wie `engines`.
+- **Zu entscheiden:** ob `engines` auf `>=22 <25` bleibt (dann muss jede Node-Aktualisierung auf
+  25 bewusst blockiert werden) oder auf Angulars eigene Spanne umgestellt wird
+  (`^22.22.3 || ^24.15.0 || >=26.0.0`), die die 25er-Lücke korrekt abbildet.
+- **Hängt zusammen mit TODO-55:** die Versionsfrage wurde erst dadurch akut, dass der
+  Auto-Upgrade-Lauf sie ungebremst trifft.
+
+### 🔴 TODO-55 — `upgrade-spring-boot.sh` härten
+Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript:
+
+1. **Der Rollback rollt nicht zurück.** `handle_error()` ruft
+   `git reset --hard "$CURRENT_HEAD"` — **`CURRENT_HEAD` wird nirgends gesetzt** (einzige
+   Fundstelle im Skript ist diese Verwendung). Der Befehl scheitert an einem leeren Argument, der
+   Reset findet nicht statt, und die von `versions:update-parent` geänderte `pom.xml` bleibt im
+   Arbeitsbaum liegen. Der nächste Lauf startet auf einem verschmutzten Baum, `update-and-restart.sh`
+   bricht bei `git pull --rebase` ab — **die gesamte Update-Kette steht, bis jemand von Hand
+   aufräumt.** Das ist der eigentliche Grund, warum ein einzelner fehlgeschlagener Build zum
+   Dauerzustand wurde.
+2. **Getestet wird gegen die Toolchain des Hosts, ausgeliefert wird aus Docker.**
+   `mvn clean package` im Skript nutzt Node/npm des Hosts; der spätere `docker build` nutzt
+   `node:24-alpine`. Eine Node-Aktualisierung auf dem Host bricht damit den Prüflauf, obwohl das
+   Artefakt selbst gebaut werden könnte — und umgekehrt kann der Prüflauf grün sein, während der
+   Docker-Build scheitert. Die beiden sollten dieselbe Toolchain benutzen.
+3. **Milestones und RCs werden weiterhin automatisch gezogen** — das ist das offene
+   [TODO-13](#), dessen Auswirkung hier zusammenfällt: ein instabiler Parent lässt den Build
+   scheitern, und wegen (1) bleibt der Schaden stehen.
+
+- **Akzeptanzkriterium:**
+  - `CURRENT_HEAD="$(git rev-parse HEAD)"` **vor** der ersten Änderung setzen; zusätzlich im
+    Fehlerfall `git checkout -- pom.xml` als Gürtel-und-Hosenträger.
+  - Der Prüflauf verwendet dieselbe Node-Version wie der Docker-Build (entweder im Container
+    bauen oder die Version aus einer gemeinsamen Quelle beziehen, siehe TODO-54).
+  - Kein automatisches Update auf Milestones/RCs (TODO-13).
+  - Ein fehlgeschlagener Lauf hinterlässt einen **sauberen** Arbeitsbaum — prüfbar, indem man den
+    Fehlerfall einmal absichtlich auslöst.
+- **Nicht verifiziert:** Welcher der drei Punkte den konkreten Ausfall ausgelöst hat, lässt sich
+  von hier aus nicht sagen — die Fehlermeldung des Hosts liegt nicht vor. Punkt 1 erklärt
+  allerdings, warum aus einem einmaligen Fehlschlag ein Dauerzustand wurde, unabhängig davon, was
+  ihn ausgelöst hat.
+
