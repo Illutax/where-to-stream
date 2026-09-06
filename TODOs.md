@@ -1006,6 +1006,13 @@ Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript
   Dockerfile ab.
 - ✅ Punkt 3: Milestones/RCs weiterhin automatisch — auf Entscheidung des Auftraggebers so
   gewollt, siehe TODO-13. Der Punkt entfällt damit als Mangel.
+- ✅ Nachgezogen am 2026-09-06: Die ausgelieferte `builder`-Stufe baut jetzt **mit** Tests. Ohne
+  das wäre jeder gewöhnliche Commit ungetestet in den Betrieb gegangen — der nächtliche Prüflauf
+  greift ja nur, wenn Spring Boot selbst etwas veröffentlicht hat.
+- ✅ `cron.sh` entkoppelt: `upgrade-spring-boot.sh` unterscheidet jetzt „nichts zu tun" (Exit 2)
+  von „kaputt" (Exit 1). Vorher brach die Kette in jeder Nacht ohne Spring-Boot-Release ab, und
+  `update-and-restart.sh` lief nie — die Anwendung wurde also nur dann neu ausgerollt, wenn
+  zufällig auch Spring Boot etwas veröffentlicht hatte.
 - ⬜ **Nicht verifiziert:** der vollständige Docker-Build ließ sich in der Entwicklungsumgebung
   nicht ausführen (Podman kann dort kein Netzwerk für den Container aufsetzen). Geprüft sind der
   Stage-Graph, die Shell-Syntax und dass `.dockerignore` weder `src/` noch `pom.xml` ausschließt.

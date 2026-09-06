@@ -46,17 +46,28 @@ COPY --from=dependencies /root/.m2 /root/.m2
 COPY src/ ./src/
 
 #############################################################
-# the artifact that ships. Tests are skipped here on purpose -- they run in `verify`.
+# the artifact that ships -- built WITH tests.
+#
+# `update-and-restart.sh` runs a plain `docker build .`, which builds the runtime stage below and
+# therefore this one. Skipping tests here would mean deploying code that nothing verified: the
+# nightly check in upgrade-spring-boot.sh only runs when Spring Boot itself released something, so
+# every ordinary commit would reach production untested.
+#
+# The version is stamped before the build rather than after, so the tests run against the same
+# coordinates that ship.
 FROM sources AS builder
 ARG DOCKER_IMAGE_TAG
 ENV DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG
 RUN echo "$DOCKER_IMAGE_TAG" | mvn versions:set -DnewVersion= -DgenerateBackupPoms=false
-RUN mvn package -DskipTests
+RUN mvn -B package
 
 #############################################################
-# the same toolchain, WITH tests. Built by upgrade-spring-boot.sh to check a dependency bump
-# before it is committed:  docker build . --target verify
-# Produces no artifact worth keeping; its value is the exit code.
+# the same toolchain and the same tests, without the version stamping -- built by
+# upgrade-spring-boot.sh to check a dependency bump before it is committed:
+#   docker build . --target verify
+# Deliberately a sibling of `builder` rather than its parent: the deploy build must not drag an
+# extra frontend compilation along, and this target needs no DOCKER_IMAGE_TAG. Both share the
+# cached `sources` stage, so the duplication is in the file, not in the work.
 FROM sources AS verify
 RUN mvn -B clean package
 

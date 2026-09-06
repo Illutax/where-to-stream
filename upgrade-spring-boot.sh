@@ -31,11 +31,15 @@ echo "Updating parent version..."
 mvn versions:update-parent -DgenerateBackupPoms=false || handle_error
 NEW_SPRING_BOOT_VERSION=$(get_spring_boot_version)
 
-# Check if version changed
+# Check if version changed.
+# Exit codes are meaningful to cron.sh:  0 = updated,  2 = nothing to do,  1 = something broke.
+# "Nothing to do" used to be a plain 1, which cron.sh could not tell apart from a real failure --
+# so on every night without a Spring Boot release the whole chain bailed out and the application
+# was never redeployed.
 if [ "$SPRING_BOOT_VERSION" = "$NEW_SPRING_BOOT_VERSION" ]; then
-  echo "Version didn't change (already at $SPRING_BOOT_VERSION). Exiting."
+  echo "Version didn't change (already at $SPRING_BOOT_VERSION). Nothing to do."
   git reset --hard "$CURRENT_HEAD"
-  exit 1 # no new version -> considered a fail
+  exit 2
 fi
 
 ## Test
