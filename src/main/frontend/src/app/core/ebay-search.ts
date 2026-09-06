@@ -1,6 +1,3 @@
-import { ReleaseYear } from './domain';
-import { EbayMarketplace } from './models';
-
 /**
  * Builds the eBay search deep link shown next to a title (TODO-57).
  *
@@ -14,6 +11,11 @@ import { EbayMarketplace } from './models';
  * is the point — the predecessor died waiting for one.
  */
 
+import { computed, inject, Signal } from '@angular/core';
+import { ReleaseYear } from './domain';
+import { EbayMarketplace } from './models';
+import { UserPrefsStore } from './user-prefs-store';
+
 /** What one marketplace needs for a search link. */
 interface MarketplaceSearch {
   readonly host: string;
@@ -24,12 +26,13 @@ interface MarketplaceSearch {
    * ordering by lowest price without a category puts the cheapest *matching junk* first — a poster,
    * a keychain, an empty case — where relevance ordering would have buried it.
    *
-   * <p><strong>Unverified.</strong> {@code 617} ("DVDs & Blu-ray Discs") comes from the research in
-   * {@code docs/EBAY_PRICE_LOOKUP_PLAN.md} and could not be checked from the build container —
-   * eBay answers automated requests with 403. It is held per marketplace rather than as one
-   * constant precisely because eBay does not guarantee category ids across sites: if `.com` or
-   * `.co.uk` turns out to use different ids, only this table changes, and setting an entry to null
-   * drops the filter for that marketplace alone.
+   * <p><strong>Unverified.</strong> {@code 617} ("DVDs & Blu-ray Discs") is carried over from the
+   * default of the withdrawn price lookup ({@code EbayProperties.categoryId}); it was never checked
+   * against eBay there either, and it cannot be checked from the build container — eBay answers
+   * automated requests with 403. TODO-58 tracks the manual check. It is held per marketplace rather
+   * than as one constant precisely because eBay does not guarantee category ids across sites: if
+   * `.com` or `.co.uk` turns out to use different ids, only this table changes, and setting an entry
+   * to null drops the filter for that marketplace alone.
    */
   readonly categoryId: string | null;
   /**
@@ -47,6 +50,9 @@ const MARKETPLACES: Record<EbayMarketplace, MarketplaceSearch> = {
   EBAY_GB: { host: 'www.ebay.co.uk', categoryId: '617', prefersGermanTitle: false },
 };
 
+/** Where an unknown marketplace lands — see {@link ebaySearchUrl}. */
+const FALLBACK_MARKETPLACE: EbayMarketplace = 'EBAY_DE';
+
 /**
  * eBay's "price + shipping: lowest first" ordering.
  *
@@ -55,41 +61,89 @@ const MARKETPLACES: Record<EbayMarketplace, MarketplaceSearch> = {
  * the same answer. It includes shipping for the same reason the old comparison did — a cheap disc
  * with expensive postage is not the cheaper offer.
  *
- * <p><strong>The value is unverified</strong>, for the same reason as the category above. If it is
- * wrong, drop the parameter rather than guessing another number: eBay's default ordering is a
- * worse answer, but it is not a wrong one.
+ * <p><strong>The value is unverified</strong>, for the same reason as the category above (TODO-58).
+ * If it is wrong, drop the parameter rather than guessing another number: eBay's default ordering
+ * is a worse answer, but it is not a wrong one.
  */
 const SORT_BY_LOWEST_TOTAL = '15';
 
 /**
  * The search URL for one title, or null when there should be no link at all.
  *
- * <p>Null for an unreleased title ({@link ReleaseYear} 0). Nothing that has not been released is
- * being sold second-hand, and a search for the bare title — sorted by price, in a category full of
- * unrelated discs — returns noise dressed up as an answer. Dropping the link is the honest output;
- * it also keeps the search term free of a special case, since it now always carries both title and
- * year or does not exist.
+ * <p>Null for an unreleased title ({@link ReleaseYear} 0 or absent). Nothing that has not been
+ * released is being sold second-hand, and a search for the bare title — sorted by price, in a
+ * category full of unrelated discs — returns noise dressed up as an answer. Dropping the link is
+ * the honest output; it also keeps the search term free of a special case, since it now always
+ * carries both title and year or does not exist.
  *
- * @param germanTitle the German title if it happens to be loaded already, else null. Never fetch
- *   one just for this link: a request per title on page load is exactly what this replacement
- *   exists to avoid. Callers pass what {@code injectTitleMeta} already holds, which is populated
- *   only while the age-rating or German-title preference is on.
+ * <p>An unknown marketplace falls back to {@link FALLBACK_MARKETPLACE} rather than throwing. The
+ * server takes the same line for the same value (see {@code Marketplace.byId}): a stale preference
+ * should not be able to take a page down, and here it would — this runs inside a `computed` during
+ * render, once per row.
+ *
+ * @param germanTitle the German title if the caller already has one, else null. Never fetch one
+ *   just for this link: a request per title on page load is exactly what this replacement exists
+ *   to avoid.
  */
 export function ebaySearchUrl(
   marketplace: EbayMarketplace,
-  year: ReleaseYear,
+  year: ReleaseYear | null,
   name: string,
-  germanTitle?: string | null,
+  germanTitle: string | null,
 ): string | null {
-  if (year <= 0) {
+  if (year === null || year <= 0) {
     return null;
   }
-  const site = MARKETPLACES[marketplace];
-  const title = (site.prefersGermanTitle && germanTitle) || name;
-  const params = new URLSearchParams({ _nkw: `${title} ${year}` });
+  const site = MARKETPLACES[marketplace] ?? MARKETPLACES[FALLBACK_MARKETPLACE];
+  const title = ((site.prefersGermanTitle && germanTitle) || name).trim();
+  if (!title) {
+    return null;
+  }
+  const params = new URLSearchParams({ _nkw: `${title} ${year}`, _sop: SORT_BY_LOWEST_TOTAL });
   if (site.categoryId) {
     params.set('_sacat', site.categoryId);
   }
-  params.set('_sop', SORT_BY_LOWEST_TOTAL);
   return `https://${site.host}/sch/i.html?${params}`;
+}
+
+/** What a component has to offer before a search link can be built for its row. */
+export interface EbaySearchSource {
+  /** Whether this view wants the link at all — off outside the dashboard. */
+  readonly enabled: () => boolean;
+  /** The title as the server delivered it (the original, usually English). */
+  readonly name: () => string;
+  /** The release year, or null where the row never carried a machine-readable one. */
+  readonly year: () => ReleaseYear | null;
+  /** Whatever German title the row already holds, without fetching one for this purpose. */
+  readonly germanTitle: () => string | null;
+}
+
+/**
+ * The search link for one row as a signal, or null where there is none.
+ *
+ * <p>Exists so the rule lives once rather than in every component that renders a title. Both the
+ * table cell and the poster tile show the same link, and a divergence between them would be a
+ * dashboard that searches for two different things depending on the view mode.
+ *
+ * <p>Must be called from an injection context, mirroring {@link injectTitleMeta}.
+ *
+ * <p>The German title is used only while the user has that preference on. Not for tidiness: the
+ * metadata that carries it is fetched whenever *either* the age-rating or the German-title
+ * preference is on, so taking it whenever it happens to be there made the search term depend on
+ * the age-rating toggle — an unrelated setting — and change under the cursor once the fetch
+ * resolved. Tying it to the preference that is actually about titles makes the link match what the
+ * row displays.
+ */
+export function injectEbaySearchUrl(source: EbaySearchSource): Signal<string | null> {
+  const userPrefs = inject(UserPrefsStore);
+  return computed(() =>
+    source.enabled()
+      ? ebaySearchUrl(
+          userPrefs.ebayMarketplace(),
+          source.year(),
+          source.name(),
+          userPrefs.showGermanTitle() ? source.germanTitle() : null,
+        )
+      : null,
+  );
 }

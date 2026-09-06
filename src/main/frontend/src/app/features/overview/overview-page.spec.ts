@@ -157,4 +157,30 @@ describe('OverviewPage', () => {
     expect(alert).not.toBeNull();
     expect(alert.textContent).toContain('Failed to load the catalogue');
   });
+
+  it('carries the eBay search link into both view modes', () => {
+    // The link is switched on here and reaches the row through three components. Testing only the
+    // leaf components would leave the wiring free to disappear in a template edit without a single
+    // test turning red -- and a missing input defaults to "no link", so nothing would complain.
+    const entries = [{ isRated: false, name: 'Heat', imdbId: imdbId('tt1'), year: releaseYear(1995), added: watchlistDate('2020-01-01'), services: null }];
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({ entries }));
+    fixture.detectChanges();
+
+    const inTable = fixture.nativeElement.querySelector('.ebay-link') as HTMLAnchorElement | null;
+
+    TestBed.inject(UserPrefsStore).init({ viewMode: 'GRID', tilesPerRow: 6 });
+    fixture.detectChanges();
+    const inGrid = fixture.nativeElement.querySelector('.ebay-chip a') as HTMLAnchorElement | null;
+
+    expect([inTable, inGrid].map((a) => new URL(a!.href).searchParams.get('_nkw')))
+      .toEqual(['Heat 1995', 'Heat 1995']);
+  });
+
+  it('offers no eBay search for an unreleased title', () => {
+    const entries = [{ isRated: false, name: 'Avatar 5', imdbId: imdbId('tt1'), year: releaseYear(0), added: watchlistDate('2020-01-01'), services: null }];
+    httpMock.expectOne((r) => r.url.endsWith('/api/catalog')).flush(page({ entries }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.ebay-link')).toBeNull();
+  });
 });

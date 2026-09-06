@@ -48,7 +48,7 @@ const SKELETON_ROWS: OverviewEntry[] = Array.from({ length: 8 }, (_, i) => ({
             <span class="skeleton-bar"></span>
           } @else {
             <app-title-cell [imdbId]="entry.imdbId" [name]="entry.name"
-                            [showEbayLink]="showEbayLink()" [year]="entry.year" />
+                            [showEbayLink]="showEbayLink()" [releaseYear]="entry.year" />
           }
         </td>
       </ng-container>

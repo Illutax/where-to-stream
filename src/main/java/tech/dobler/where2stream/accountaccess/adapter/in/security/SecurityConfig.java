@@ -48,9 +48,11 @@ public class SecurityConfig {
      * <p>Everything this application loads is same-origin: the SPA bundle, the stylesheet, the
      * bundled Roboto fonts, and even the posters — those are fetched server-side and re-served from
      * {@code /api/titles/&#123;id&#125;/poster} rather than letting the browser talk to a foreign CDN.
-     * The eBay integration changes nothing here: it runs on the server, so no eBay origin has to be
-     * allowed. The only outbound references in the UI are ordinary links ({@code <a href>}), which
-     * CSP's fetch directives do not govern at all.
+     * The eBay integration changes nothing here either, though the reason moved: since TODO-57 it
+     * runs in the browser, but only as a <em>navigation target</em> — the UI builds an
+     * {@code <a href>} to an eBay search and nothing more, and CSP's fetch directives do not govern
+     * navigation. Anything beyond that (an eBay logo, a result count fetched live) would need a
+     * real widening of {@code img-src} / {@code connect-src}, not a formality.
      *
      * <p><strong>{@code style-src} needs {@code 'unsafe-inline'}, and that is Angular's doing.</strong>
      * Angular injects component styles as {@code <style>} elements at runtime, and the Thymeleaf

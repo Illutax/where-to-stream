@@ -185,4 +185,16 @@ describe('ProviderPage', () => {
 
     expect(fixture.nativeElement.querySelector('.stale-data-banner')).toBeNull();
   });
+
+  it('offers no eBay search link -- the jump to a shop belongs on the dashboard', () => {
+    // The counterpart to the dashboard test: the shared title components default the link off, and
+    // this is the assertion that notices if someone switches it on here by copying a binding.
+    setup('netflix');
+    httpMock.expectOne((r) => r.url.endsWith('/api/providers/netflix')).flush(page({
+      included: [{ isRated: false, name: 'Heat', imdbId: imdbId('tt1'), year: releaseYear(1995), added: watchlistDate('2020-01-01') }],
+    }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.ebay-link, .ebay-chip')).toBeNull();
+  });
 });

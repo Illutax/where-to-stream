@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ImdbId, imdbUrl, posterFullUrl, ReleaseYear, WatchlistDate } from '../../core/domain';
-import { ebaySearchUrl } from '../../core/ebay-search';
+import { injectEbaySearchUrl } from '../../core/ebay-search';
 import { injectTitleMeta } from '../../core/title-meta';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
@@ -70,7 +70,7 @@ import { splitTitle, titleSizeSteps } from './title-split';
       @if (ebayUrl(); as url) {
         <div class="ebay-chip">
           <a [href]="url" target="_blank" rel="noopener"
-             [attr.aria-label]="'ebay.searchFor' | transloco: { name: name() }">{{ 'ebay.link' | transloco }}</a>
+             [attr.aria-label]="'ebay.searchFor' | transloco: { name: displayTitle() }">{{ 'ebay.link' | transloco }}</a>
         </div>
       }
     </div>
@@ -82,8 +82,18 @@ import { splitTitle, titleSizeSteps } from './title-split';
       padding-top: 0.35rem;
       font-size: 0.78rem;
     }
+    /* Same 24px target as the table link; coarse pointers get the 44px the watched toggle uses. */
     .ebay-chip a {
-      color: var(--mat-sys-secondary);
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 0.5rem;
+      color: var(--mat-sys-primary);
+    }
+    @media (pointer: coarse) {
+      .ebay-chip a {
+        min-height: 44px;
+      }
     }
 
     .offer-chip {
@@ -313,18 +323,15 @@ export class TitleTile {
   protected readonly meta = injectTitleMeta(() => this.imdbId());
 
   /** The German title when the preference is on and one exists, else the original (English) name. */
-  private readonly displayTitle = computed(
+  protected readonly displayTitle = computed(
     () => (this.userPrefsStore.showGermanTitle() && this.meta()?.germanTitle) || this.name(),
   );
-  /**
-   * The eBay search link, or null when there is none to offer — see {@link ebaySearchUrl}.
-   * Hands on whatever German title is already loaded and never asks for one.
-   */
-  protected readonly ebayUrl = computed(() => {
-    const year = this.releaseYear();
-    return this.showEbayLink() && year !== null
-      ? ebaySearchUrl(this.userPrefsStore.ebayMarketplace(), year, this.name(), this.meta()?.germanTitle)
-      : null;
+  /** The eBay search link, or null when there is none to offer — see {@link injectEbaySearchUrl}. */
+  protected readonly ebayUrl = injectEbaySearchUrl({
+    enabled: this.showEbayLink,
+    name: this.name,
+    year: this.releaseYear,
+    germanTitle: () => this.meta()?.germanTitle ?? null,
   });
 
   protected readonly titleParts = computed(() => splitTitle(this.displayTitle()));

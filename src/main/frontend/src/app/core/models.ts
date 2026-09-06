@@ -111,7 +111,7 @@ export type Theme = 'SYSTEM' | 'LIGHT' | 'DARK';
 export type Language = 'EN' | 'DE';
 
 /**
- * Which eBay marketplace the user's price lookups query (mirrors the server Marketplace enum).
+ * Which eBay marketplace the user's search links point at (mirrors the server Marketplace enum).
  * The server stores this as a plain string and validates it against the same set.
  */
 export type EbayMarketplace = 'EBAY_DE' | 'EBAY_US' | 'EBAY_GB';
@@ -138,7 +138,7 @@ export interface Me {
   viewMode: ViewMode;
   /** Tiles per row in the grid view (2-6). */
   tilesPerRow: number;
-  /** Which eBay marketplace the user's price lookups query. */
+  /** Which eBay marketplace the user's search links point at. */
   ebayMarketplace: EbayMarketplace;
   /**
    * The admin currently acting as this user, or `null` in the ordinary case.

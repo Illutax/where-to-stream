@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ImdbId, imdbUrl, releaseYear, ReleaseYear } from '../../core/domain';
-import { ebaySearchUrl } from '../../core/ebay-search';
+import { ImdbId, imdbUrl, ReleaseYear } from '../../core/domain';
+import { injectEbaySearchUrl } from '../../core/ebay-search';
 import { injectTitleMeta } from '../../core/title-meta';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
@@ -28,15 +28,27 @@ import { PosterThumb } from '../poster-thumb/poster-thumb';
       }
       @if (ebayUrl(); as url) {
         <a class="ebay-link" [href]="url" target="_blank" rel="noopener"
-           [attr.aria-label]="'ebay.searchFor' | transloco: { name: name() }">{{ 'ebay.link' | transloco }}</a>
+           [attr.aria-label]="'ebay.searchFor' | transloco: { name: displayTitle() }">{{ 'ebay.link' | transloco }}</a>
       }
     </div>
   `,
   styles: `
+    /*
+     * A link, so it takes the link colour rather than a fourth shade of its own.
+     * \`flex: 0 0 auto\` mirrors .age-badge in the same flex row: without it the nowrap text
+     * squeezes the title instead of keeping its own width.
+     * The min-height and padding buy the 24px target WCAG 2.5.8 asks for -- inline text of
+     * 0.78rem is about 15px tall on its own.
+     */
     .ebay-link {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 0.35rem;
       font-size: 0.78rem;
       white-space: nowrap;
-      color: var(--mat-sys-secondary);
+      color: var(--mat-sys-primary);
     }
   `,
 })
@@ -48,8 +60,12 @@ export class TitleCell {
    * provider pages, where a jump to a shop has no business being (TODO-57).
    */
   readonly showEbayLink = input(false);
-  /** Only for the eBay link — an unreleased title (0) gets none. */
-  readonly year = input<ReleaseYear>(releaseYear(0));
+  /**
+   * Only for the eBay link — null where the caller has no machine-readable year; an unreleased
+   * title (0) gets no link either. Null rather than a 0 default on purpose: a 0 default would make
+   * a forgotten binding indistinguishable from "not released yet", and both would fail silently.
+   */
+  readonly releaseYear = input<ReleaseYear | null>(null);
 
   protected readonly userPrefsStore = inject(UserPrefsStore);
   protected readonly imdbUrl = imdbUrl;
@@ -60,21 +76,11 @@ export class TitleCell {
     () => (this.userPrefsStore.showGermanTitle() && this.meta()?.germanTitle) || this.name(),
   );
 
-  /**
-   * The eBay search link, or null when there is none to offer.
-   *
-   * <p>Passes on whatever German title {@link injectTitleMeta} already holds and never asks for one:
-   * that signal is populated only while a preference needs it, and a request per row on page load
-   * is the cost this replacement exists to avoid.
-   */
-  protected readonly ebayUrl = computed(() =>
-    this.showEbayLink()
-      ? ebaySearchUrl(
-          this.userPrefsStore.ebayMarketplace(),
-          this.year(),
-          this.name(),
-          this.meta()?.germanTitle,
-        )
-      : null,
-  );
+  /** The eBay search link, or null when there is none to offer — see {@link injectEbaySearchUrl}. */
+  protected readonly ebayUrl = injectEbaySearchUrl({
+    enabled: this.showEbayLink,
+    name: this.name,
+    year: this.releaseYear,
+    germanTitle: () => this.meta()?.germanTitle ?? null,
+  });
 }

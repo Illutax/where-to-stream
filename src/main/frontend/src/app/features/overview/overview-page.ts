@@ -26,7 +26,6 @@ import { TranslocoService } from '@jsverse/transloco';
       <app-stale-data-banner [visible]="hasStaleEntries()" />
       @if (userPrefs.viewMode() === 'GRID') {
         <app-title-grid
-          [showOffers]="true"
           [showEbayLink]="true"
           [entries]="tileEntries()"
           [loading]="loading()"
@@ -34,7 +33,6 @@ import { TranslocoService } from '@jsverse/transloco';
           (seenToggle)="onSeenToggle($event)" />
       } @else {
         <app-catalog-table
-          [showOffers]="true"
           [showEbayLink]="true"
           [entries]="entries()"
           [loading]="loading()"

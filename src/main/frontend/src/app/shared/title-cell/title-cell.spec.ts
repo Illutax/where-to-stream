@@ -70,27 +70,29 @@ describe('TitleCell', () => {
     expect(link().textContent?.trim()).toBe('Up');
   });
 
-  it('offers an eBay search for the released title, cheapest total first', () => {
-    renderPlain({ imdbId: imdbId('tt1'), name: 'Heat', year: releaseYear(1995), showEbayLink: true });
+  it('offers a labelled eBay search, in a new tab, for the released title', () => {
+    renderPlain({ imdbId: imdbId('tt1'), name: 'Heat', releaseYear: releaseYear(1995), showEbayLink: true });
 
+    // The accessible name has to carry the title: two hundred rows whose only link text is "eBay"
+    // are unusable with a screen reader. `rel` without `target` would guard nothing, so both.
     const url = new URL(ebayLink()!.href);
-    expect([url.host, url.searchParams.get('_nkw'), url.searchParams.get('_sop'), ebayLink()!.rel])
-      .toEqual(['www.ebay.de', 'Heat 1995', '15', 'noopener']);
+    expect([
+      url.host,
+      url.searchParams.get('_nkw'),
+      url.searchParams.get('_sop'),
+      ebayLink()!.target,
+      ebayLink()!.rel,
+      ebayLink()!.getAttribute('aria-label'),
+    ]).toEqual(['www.ebay.de', 'Heat 1995', '15', '_blank', 'noopener', 'Search eBay for Heat, cheapest first']);
   });
 
-  it('names the title in the link label, so a row of them stays distinguishable', () => {
-    // Two hundred rows whose only link text is "eBay" are unusable with a screen reader.
-    renderPlain({ imdbId: imdbId('tt1'), name: 'Heat', year: releaseYear(1995), showEbayLink: true });
-
-    expect(ebayLink()!.getAttribute('aria-label')).toContain('Heat');
-  });
-
-  it('searches ebay.de for the German title when one is already loaded', () => {
-    // The link hands on whatever the metadata fetch happened to bring; it never asks for it
-    // itself, so this only holds while a preference has the fetch running anyway.
+  it('searches ebay.de for the German title the row is showing', () => {
+    // Label, rendered title and search term have to name the same film. The link takes the German
+    // title only while that preference is on — which is also what puts it on screen.
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: true });
     fixture.componentRef.setInput('imdbId', imdbId('tt1'));
     fixture.componentRef.setInput('name', 'The Godfather');
-    fixture.componentRef.setInput('year', releaseYear(1972));
+    fixture.componentRef.setInput('releaseYear', releaseYear(1972));
     fixture.componentRef.setInput('showEbayLink', true);
     fixture.detectChanges();
 
@@ -98,18 +100,22 @@ describe('TitleCell', () => {
       .flush({ rating: null, germanTitle: 'Der Pate' });
     fixture.detectChanges();
 
-    expect(new URL(ebayLink()!.href).searchParams.get('_nkw')).toBe('Der Pate 1972');
+    expect([
+      new URL(ebayLink()!.href).searchParams.get('_nkw'),
+      ebayLink()!.getAttribute('aria-label'),
+      link().textContent?.trim(),
+    ]).toEqual(['Der Pate 1972', 'Search eBay for Der Pate, cheapest first', 'Der Pate']);
   });
 
   it('offers no eBay search where the cell is reused outside the dashboard', () => {
-    renderPlain({ imdbId: imdbId('tt1'), name: 'Heat', year: releaseYear(1995) });
+    renderPlain({ imdbId: imdbId('tt1'), name: 'Heat', releaseYear: releaseYear(1995) });
 
     expect(ebayLink()).toBeNull();
   });
 
   it('offers no eBay search for a title that is not out yet', () => {
     // Nothing unreleased is being sold second-hand; a price-sorted search would return noise.
-    renderPlain({ imdbId: imdbId('tt1'), name: 'Avatar 5', year: releaseYear(0), showEbayLink: true });
+    renderPlain({ imdbId: imdbId('tt1'), name: 'Avatar 5', releaseYear: releaseYear(0), showEbayLink: true });
 
     expect(ebayLink()).toBeNull();
   });

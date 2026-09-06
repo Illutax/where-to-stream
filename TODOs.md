@@ -1062,7 +1062,7 @@ verliert hier aber ihren zweiten Anwendungsfall
 | Bereich | Entfällt |
 | --- | --- |
 | Backend | Ganzer Bounded Context `purchaseoffers`: `domain` (`Offer`, `OfferPrice`, `TitleOffers`, `OfferLookupResult`, `QuotaDay`, `QuotaVerdict`, `GlobalQuotaUsage`, `UserQuotaUsage`, `OfferSourceUnavailableException`, `UpstreamQuotaExhaustedException`, `Marketplace` — siehe oben), `application` (`TitleOfferService`, `QuotaService`, `dto/OfferDto`, `dto/TitleOffersDto`), `port/out` (`PurchaseOfferSource`, `GlobalQuotaUsageRepository`, `UserQuotaUsageRepository`), `adapter/out/ebay` (`EbayBrowseApiSource`, `EbayOAuthTokenProvider`, `EbayProperties`, `EbayCircuitBreakerConfig`), `adapter/in/api/PurchaseOfferApiController`, `adapter/in/spi/MarketplaceCatalog` — plus alle zugehörigen Tests |
-| Frontend | `core/api/offers-api.ts`, `core/offers-store.ts`, `shared/offer-prices/` (Komponente + Spec), der `showOffers`-Eingang samt eBay-Spalte in `shared/catalog-table/catalog-table.ts`, der Chip in `shared/title-tile/title-tile.ts`, das Durchreichen in `shared/title-grid/title-grid.ts`, die Aktivierung in `features/overview/overview-page.ts`, die Typen `Offer`/`TitleOffers`/`OfferStatus` in `core/models.ts`, der i18n-Block `offers.*` in `i18n/de.json` und `i18n/en.json`, der Spaltenkopf `table.offers` |
+| Frontend | **Achtung:** neben jeder dieser Stellen steht seit TODO-57 ein gleichnamiger `showEbayLink`-Eingang, der **bleibt** — er trägt den Suchlink. Ein `grep`-getriebener Rückbau löscht ihn mit, und weil Angular-Inputs einen Default haben, fällt das weder beim Kompilieren noch zur Laufzeit auf: der Link verschwindet still. Es entfallen: `core/api/offers-api.ts`, `core/offers-store.ts`, `shared/offer-prices/` (Komponente + Spec), der `showOffers`-Eingang samt eBay-Spalte in `shared/catalog-table/catalog-table.ts`, der Chip in `shared/title-tile/title-tile.ts`, das Durchreichen in `shared/title-grid/title-grid.ts` (die Aktivierung in `features/overview/overview-page.ts` ist bereits entfernt — siehe TODO-57), die Typen `Offer`/`TitleOffers`/`OfferStatus` in `core/models.ts`, der i18n-Block `offers.*` in `i18n/de.json` und `i18n/en.json`, der Spaltenkopf `table.offers` |
 | Konfiguration | `ebay.*`-Block in `application.properties` (**ohne** `ebay.default-marketplace` — der gehört zur bleibenden Auswahl), eBay-Abschnitt in `.env.example`, die beiden `EBAY_*`-Zeilen in `compose.yml`, Abhängigkeit `io.github.resilience4j:resilience4j-spring-boot4` samt `resilience4j.version`-Property in `pom.xml` (wird ausschließlich von diesem Feature genutzt) |
 | ArchUnit | Regel `purchaseoffers_is_only_accessed_through_its_published_ports`; `purchaseoffers` fliegt aus der Paketliste von `spring_data_repositories_are_the_port_not_the_adapter`. `bounded_contexts_are_free_of_cycles` bleibt. |
 
@@ -1185,9 +1185,96 @@ nur `OverviewPage` schaltet ihn an.
 für die Provider-Kacheln null, weil `PaidEntry` das Jahr nur als fertigen Text liefert
 und ein zurückgerechnetes Jahr ein erfundenes wäre.
 
-**Zwei Werte sind weiterhin unverifiziert und stehen so auch im Code:**
+**Zwei Werte sind weiterhin unverifiziert und stehen so auch im Code** —
 die Kategorie-Id `617` und der Sortierwert `_sop=15`.
-Ein Versuch, sie gegen eBay zu prüfen, endete mit `403` —
-eBay beantwortet automatisierte Anfragen nicht.
-Beides ist von Hand in Minuten zu prüfen, indem man je Marktplatz eine Suche aufruft;
-stimmt ein Wert nicht, entfällt der Parameter, statt einen anderen zu raten.
+Ein Versuch, sie gegen eBay zu prüfen, endete mit `403`.
+Das ist als **TODO-58** herausgezogen, statt als Prosa unter einem abgehakten Punkt zu verschwinden.
+
+**Nachgezogen nach dem Review (2026-09-07):** siehe Commit „Review-Anmerkungen zu TODO-57".
+Wesentlich: der deutsche Titel hing an der Altersfreigaben-Einstellung
+(und wechselte nach dem Laden der Metadaten unter dem Cursor);
+die Verdrahtung über drei Komponenten war ungetestet;
+und das Dashboard zeigte den Suchlink **neben** der alten Preisabfrage —
+zwei Bedienelemente namens „eBay" pro Zeile.
+`showOffers` ist deshalb auf dem Dashboard bereits abgeschaltet;
+der Code selbst entfällt mit TODO-56.
+
+### 🟡 TODO-58 — eBay-Suchparameter `_sacat` und `_sop` einmal von Hand verifizieren
+Der Suchlink aus TODO-57 trägt zwei Werte, die nie gegen eBay geprüft wurden:
+die Kategorie `_sacat=617` („DVDs & Blu-ray Discs")
+und die Sortierung `_sop=15` („Preis + Versand, niedrigste zuerst").
+
+**Herkunft:** `617` stammt aus dem Default der zurückgebauten Preisabfrage
+(`EbayProperties.categoryId`) — dort war er ebenso ungeprüft.
+Aus der Containerumgebung ist das nicht nachzuholen:
+eBay beantwortet automatisierte Anfragen mit `403`.
+
+**Warum das nicht kosmetisch ist:** Der Link sortiert nach dem niedrigsten Gesamtpreis.
+Ohne wirksamen Kategoriefilter steht damit nicht das billigste *Exemplar des Films* oben,
+sondern der billigste Treffer überhaupt — ein Poster, eine Leerhülle, ein Schlüsselanhänger.
+Der Filter trägt hier mehr Last als in einer relevanzsortierten Liste.
+
+**Zu tun** (Minuten, von Hand, im Browser):
+1. Je Marktplatz (`ebay.de`, `ebay.com`, `ebay.co.uk`) eine Suche aufrufen und prüfen,
+   ob `_sacat=617` dort dieselbe Kategorie meint.
+   eBay garantiert Kategorie-Ids **nicht** marktplatzübergreifend.
+2. Prüfen, ob `_sop=15` tatsächlich nach Preis inklusive Versand aufsteigend sortiert.
+3. Ergebnis in `core/ebay-search.ts` eintragen.
+   Die Tabelle dort ist je Marktplatz aufgebaut, eine Korrektur kostet eine Zeile;
+   `categoryId: null` schaltet den Filter für einen einzelnen Marktplatz ab.
+
+**Stimmt ein Wert nicht: Parameter entfernen, nicht einen anderen raten.**
+Eine falsche Kategorie liefert eine plausible, aber leere oder falsche Trefferliste —
+still, ohne Fehlermeldung.
+Der Test `ebay-search.spec.ts` schreibt die Werte fest, belegt sie aber ausdrücklich nicht;
+ein roter Test nach einer Korrektur ist das erwartete Verhalten, kein Rückschritt.
+
+- **Akzeptanzkriterium:** Für jeden der drei Marktplätze ist notiert,
+  ob Kategorie und Sortierung stimmen; der Code bildet das ab;
+  die JSDoc-Warnung „unverified" ist entfernt, wo sie nicht mehr zutrifft.
+
+### 🟡 TODO-59 — `/api/titles/{id}/meta`: ein Request pro Zeile, unstorniert
+Beim Review von TODO-57 gemessen (nicht geschätzt), Aufbau mit 300 Kacheln:
+`injectTitleMeta` (`core/title-meta.ts`) feuert **einen GET pro Zeile**,
+sobald Altersfreigaben **oder** deutsche Titel eingeschaltet sind —
+Altersfreigaben sind per Default an, also ist das der Normalfall.
+
+Zwei getrennte Probleme:
+
+1. **Keine Stornierung.** Die `subscribe()` im `effect()` hängt an keinem Destroy-Hook.
+   Nach `fixture.destroy()` waren **0 von 300** Requests storniert.
+   Der View-Umschalter auf dem Dashboard (`@if (viewMode() === 'GRID')`) zerstört alle Zeilen
+   und baut sie neu auf — einmal hin und her sind 600 Requests, 300 davon verwaist.
+2. **Kein Dedup, kein Batch.** Jede Zeile fragt einzeln, ohne Client-Cache.
+   Über HTTP/1.1 ergibt das eine Sechserschlange mit Head-of-Line-Blocking.
+
+**Vorbestehend, nicht durch TODO-57 verursacht** — der Suchlink liest das Signal nur mit
+und löst nichts zusätzlich aus (nachgemessen).
+Aufgenommen, weil der Befund sonst mit dem Review verloren geht.
+
+**Zu tun:**
+- `takeUntilDestroyed()` / `DestroyRef` in `injectTitleMeta` — behebt Punkt 1 allein.
+- Für Punkt 2 entweder ein `Map<ImdbId, Signal>`-Cache in `TitleMetaApi`
+  oder ein Sammelendpunkt `/api/titles/meta?ids=…`, den die Seite einmal ruft.
+  Der Sammelendpunkt ist die ehrlichere Lösung, kostet aber Backend.
+
+- **Akzeptanzkriterium:** Ein Wechsel der Ansicht hinterlässt keine offenen Requests;
+  ein Dashboard mit n Zeilen erzeugt nicht mehr n Metadaten-Requests.
+
+### 🟢 TODO-60 — `PaidEntryDto.year` als Zahl ausliefern
+`PaidEntryDto` (`streamingavailability/application/dto`) formatiert das Jahr auf dem Server
+(`imdbEntry.year().display()`), liefert also `"Not yet released"` als Text.
+Zwei Folgen, beide beim Review von TODO-57 aufgefallen:
+
+- **Der Client kann damit nicht rechnen.** `TileEntry.releaseYear` ist nur deshalb nullable —
+  aus einem fertigen String lässt sich kein Jahr zurückgewinnen, ohne zu raten.
+  Der eBay-Suchlink ist der erste Fall, der daran hängt, vermutlich nicht der letzte.
+- **Der Text ist unübersetzt englisch** und landet so in einer zweisprachigen Oberfläche,
+  während der Client dieselbe Konstante in `core/domain.ts` ohnehin führt.
+
+`OverviewEntryDto` und `FlatrateEntryDto` machen es bereits richtig und liefern `ReleaseYear`.
+
+- **Akzeptanzkriterium:** `PaidEntryDto.year` ist eine Zahl,
+  die Formatierung liegt im Client bei `releaseYearDisplay`,
+  und `TileEntry.releaseYear` ist nicht mehr nullable.
+

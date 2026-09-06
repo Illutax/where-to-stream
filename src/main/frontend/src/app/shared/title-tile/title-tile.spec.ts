@@ -98,21 +98,52 @@ describe('TitleTile', () => {
     expect(fixture.nativeElement.querySelector('.age-badge')?.textContent?.trim()).toBe('16');
   });
 
-  it('offers an eBay search on the dashboard, for the marketplace the user picked', () => {
+  it('offers a labelled eBay search on the dashboard, for the marketplace the user picked', () => {
     TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false, ebayMarketplace: 'EBAY_GB' });
     fixture.componentRef.setInput('showEbayLink', true);
     fixture.componentRef.setInput('releaseYear', releaseYear(2003));
     fixture.detectChanges();
 
     const url = new URL(ebayLink()!.href);
-    expect([url.host, url.searchParams.get('_nkw'), ebayLink()!.rel])
-      .toEqual(['www.ebay.co.uk', 'Old School - Wir lassen absolut nichts anbrennen 2003', 'noopener']);
+    expect([url.host, url.searchParams.get('_nkw'), ebayLink()!.target, ebayLink()!.rel, ebayLink()!.getAttribute('aria-label')])
+      .toEqual([
+        'www.ebay.co.uk',
+        'Old School - Wir lassen absolut nichts anbrennen 2003',
+        '_blank',
+        'noopener',
+        'Search eBay for Old School - Wir lassen absolut nichts anbrennen, cheapest first',
+      ]);
   });
 
-  it('offers no eBay search on a provider page, where the row has no year to search for', () => {
+  it('searches ebay.de for the German title in the grid too', () => {
+    // Grid is the default view mode, so this is the more travelled of the two paths -- and the one
+    // where a silent fall-back to the original title would go unnoticed longest.
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: true, ebayMarketplace: 'EBAY_DE' });
+    fixture.componentRef.setInput('showEbayLink', true);
+    fixture.componentRef.setInput('releaseYear', releaseYear(2003));
+    fixture.detectChanges();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/titles/tt1/meta'))
+      .flush({ rating: null, germanTitle: 'Old School' });
+    fixture.detectChanges();
+
+    expect(new URL(ebayLink()!.href).searchParams.get('_nkw')).toBe('Old School 2003');
+  });
+
+  it('offers no eBay search for a row that has no machine-readable year', () => {
     // `releaseYear` stays null for the paid-provider rows: the server hands those a formatted
-    // string, and the link must not guess a number out of it.
+    // string, and the link must not guess a number out of it. Asserted with the link switched ON,
+    // so it is this guard that holds and not the enabling flag.
     TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
+    fixture.componentRef.setInput('showEbayLink', true);
+    fixture.detectChanges();
+
+    expect(ebayLink()).toBeNull();
+  });
+
+  it('offers no eBay search where the tile is reused outside the dashboard', () => {
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
+    fixture.componentRef.setInput('releaseYear', releaseYear(2003));
     fixture.detectChanges();
 
     expect(ebayLink()).toBeNull();

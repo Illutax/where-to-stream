@@ -135,10 +135,12 @@ describe('CatalogTable', () => {
     fixture.componentRef.setInput('entries', [entry({})]);
     fixture.detectChanges();
 
-    // This table is shared with the provider pages; every place the column appears is another
-    // place from which the shared daily budget can be spent (decision 6.5).
-    expect(fixture.nativeElement.querySelector('app-offer-prices')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('eBay');
+    // Asserted on the element, not on the word "eBay": the search link (TODO-57) renders that word
+    // too, and a text match would make this test the accidental guard of an unrelated feature.
+    expect([
+      fixture.nativeElement.querySelector('app-offer-prices'),
+      fixture.nativeElement.querySelector('th.mat-column-offers'),
+    ]).toEqual([null, null]);
   });
 
   it('shows the eBay column when the page asks for it, without loading anything', () => {
