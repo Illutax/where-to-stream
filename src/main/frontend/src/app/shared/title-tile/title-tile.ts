@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ImdbId, imdbUrl, posterFullUrl, WatchlistDate } from '../../core/domain';
+import { ImdbId, imdbUrl, posterFullUrl, ReleaseYear, WatchlistDate } from '../../core/domain';
+import { ebaySearchUrl } from '../../core/ebay-search';
 import { injectTitleMeta } from '../../core/title-meta';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
@@ -10,7 +11,7 @@ import { splitTitle, titleSizeSteps } from './title-split';
 /**
  * A poster tile for the grid view: the poster art with a bottom scrim, the (auto-shrinking, never
  * truncated) title, a year/age-rating badge stack, an added-date chip revealed on hover/focus,
- * and a watched toggle.
+ * a watched toggle, and — on the dashboard — the eBay search link (TODO-57).
  * The chrome sitting directly on top of the poster artwork (scrim, hairline, title, chips) uses
  * fixed dark-scrim/light-ink colors for legibility regardless of the app's light/dark theme —
  * like a photo app's caption overlay; only the watched-toggle's *watched* state (an opaque chip,
@@ -66,9 +67,25 @@ import { splitTitle, titleSizeSteps } from './title-split';
           <app-offer-prices [imdbId]="imdbId()" [name]="name()" />
         </div>
       }
+      @if (ebayUrl(); as url) {
+        <div class="ebay-chip">
+          <a [href]="url" target="_blank" rel="noopener"
+             [attr.aria-label]="'ebay.searchFor' | transloco: { name: name() }">{{ 'ebay.link' | transloco }}</a>
+        </div>
+      }
     </div>
   `,
   styles: `
+    .ebay-chip {
+      display: flex;
+      justify-content: center;
+      padding-top: 0.35rem;
+      font-size: 0.78rem;
+    }
+    .ebay-chip a {
+      color: var(--mat-sys-secondary);
+    }
+
     .offer-chip {
       display: flex;
       justify-content: center;
@@ -273,10 +290,17 @@ import { splitTitle, titleSizeSteps } from './title-split';
 export class TitleTile {
   /** Whether to show the eBay price chip; switched on by the dashboard only (decision 6.5). */
   readonly showOffers = input(false);
+  /**
+   * Whether to offer the eBay search link. Off by default: the grid is shared with the provider
+   * pages, where a jump to a shop has no business being (TODO-57).
+   */
+  readonly showEbayLink = input(false);
 
   readonly imdbId = input.required<ImdbId>();
   readonly name = input<string>('');
   readonly year = input.required<string>();
+  /** The year as a number for the eBay link; null where the row never carried one. */
+  readonly releaseYear = input<ReleaseYear | null>(null);
   readonly added = input.required<WatchlistDate>();
   readonly isRated = input.required<boolean>();
   readonly recentlyChanged = input(false);
@@ -292,6 +316,17 @@ export class TitleTile {
   private readonly displayTitle = computed(
     () => (this.userPrefsStore.showGermanTitle() && this.meta()?.germanTitle) || this.name(),
   );
+  /**
+   * The eBay search link, or null when there is none to offer — see {@link ebaySearchUrl}.
+   * Hands on whatever German title is already loaded and never asks for one.
+   */
+  protected readonly ebayUrl = computed(() => {
+    const year = this.releaseYear();
+    return this.showEbayLink() && year !== null
+      ? ebaySearchUrl(this.userPrefsStore.ebayMarketplace(), year, this.name(), this.meta()?.germanTitle)
+      : null;
+  });
+
   protected readonly titleParts = computed(() => splitTitle(this.displayTitle()));
   protected readonly sizeSteps = computed(() => titleSizeSteps(this.titleParts().main.length));
 }

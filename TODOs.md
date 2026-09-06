@@ -1042,13 +1042,20 @@ Die bleibende Marktplatz-Auswahl hängt an zwei Dingen, die im wegfallenden Kont
    Zusätzlich entfiele die Validierung der Marktplatz-Eingabe —
    `app_user.ebay_marketplace` würde zum Freitextfeld.
 
-Wohin beides wandert, ist hier **nicht zu entscheiden, nur zu benennen**:
-Enum und Katalog in einen bleibenden Kontext verschieben,
-oder die Marktplatz-Liste dorthin ziehen, wo der neue Deep-Link (TODO-57) sie braucht.
+**Geklärt durch TODO-57 (2026-09-06):** Der Deep-Link entsteht vollständig im Client,
+aus `EbayMarketplace` in `core/models.ts`.
+Das Backend liefert dazu nichts — es braucht `Marketplace` nur noch, um die Einstellung eines
+Nutzers zu validieren.
+Damit gehört das Enum in `accountaccess`, den Kontext, dem die Einstellung ohnehin gehört.
 
-**Reihenfolge:** Erst TODO-57 umsetzen — dann ist geklärt, wo `Marketplace` künftig lebt —,
-dann zurückbauen.
-Andersherum muss die Marktplatz-Auswahl zwischendurch zweimal angefasst werden.
+Das erledigt Punkt 2 gleich mit: liegt das Enum dort, gibt es keine kontextübergreifende
+Abhängigkeit mehr, die umzudrehen wäre — `SupportedMarketplaces` (`accountaccess/port/spi`)
+und `MarketplaceCatalog` entfallen beide ersatzlos,
+statt in einen anderen Kontext verschoben zu werden.
+Die eingeführte Inversion war an die Preisabfrage gebunden und verschwindet mit ihr;
+[ADR-0019](docs/adr/0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) bleibt gültig,
+verliert hier aber ihren zweiten Anwendungsfall
+(`PosterAttributionProvider` bleibt der erste).
 
 **Bestandsaufnahme (erhoben, vollständig):**
 
@@ -1084,7 +1091,7 @@ es braucht ein **neues** Changeset, das beide Tabellen droppt.
   alle Tests grün;
   die beiden Quota-Tabellen sind per Changeset entfernt.
 
-### 🟠 TODO-57 — eBay-Suchlink pro Titel auf dem Dashboard
+### ✅ TODO-57 — eBay-Suchlink pro Titel auf dem Dashboard
 Der Ersatz für die zurückgebaute Preisabfrage (TODO-56) — im ursprünglichen Plan
 ([`docs/EBAY_PRICE_LOOKUP_PLAN.md`](docs/EBAY_PRICE_LOOKUP_PLAN.md), Abschnitt 4) war das
 **Variante A**, dort bewertet als „trivial, minimales Risiko, Stunden statt Tage".
@@ -1167,3 +1174,20 @@ Die Suchanfrage darf deshalb so gut sein, wie wir sie hinbekommen, statt so spar
   die eBay-Suche des eingestellten Marktplatzes nach Titel und Jahr,
   aufsteigend nach Preis inklusive Versand sortiert.
   Bei einem noch nicht erschienenen Titel gibt es keinen Absprung.
+
+**Umgesetzt (2026-09-06).**
+`core/ebay-search.ts` baut die URL als reine Funktion; die Marktplatz-Tabelle dort hält Host,
+Kategorie und die Frage, ob der deutsche Titel hier der bessere Suchbegriff ist —
+je Marktplatz, nicht als eine Konstante, damit eine falsche Kategorie-Id eine Zeile kostet.
+`TitleCell` und `TitleTile` bekommen je einen `showEbayLink`-Eingang (aus, sofern nicht gesetzt);
+nur `OverviewPage` schaltet ihn an.
+`TileEntry` trägt jetzt zusätzlich `releaseYear: ReleaseYear | null` —
+für die Provider-Kacheln null, weil `PaidEntry` das Jahr nur als fertigen Text liefert
+und ein zurückgerechnetes Jahr ein erfundenes wäre.
+
+**Zwei Werte sind weiterhin unverifiziert und stehen so auch im Code:**
+die Kategorie-Id `617` und der Sortierwert `_sop=15`.
+Ein Versuch, sie gegen eBay zu prüfen, endete mit `403` —
+eBay beantwortet automatisierte Anfragen nicht.
+Beides ist von Hand in Minuten zu prüfen, indem man je Marktplatz eine Suche aufruft;
+stimmt ein Wert nicht, entfällt der Parameter, statt einen anderen zu raten.

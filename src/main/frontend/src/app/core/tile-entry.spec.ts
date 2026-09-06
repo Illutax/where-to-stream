@@ -16,6 +16,7 @@ describe('tile-entry adapters', () => {
       imdbId: imdbId('tt1'),
       name: 'Vertigo',
       year: '1958',
+      releaseYear: releaseYear(1958),
       added: watchlistDate('2024-11-03'),
       isRated: true,
     });
@@ -47,6 +48,7 @@ describe('tile-entry adapters', () => {
       imdbId: imdbId('tt3'),
       name: 'Stalker',
       year: '1979',
+      releaseYear: releaseYear(1979),
       added: watchlistDate('2025-01-18'),
       isRated: false,
     });
@@ -67,6 +69,9 @@ describe('tile-entry adapters', () => {
       imdbId: imdbId('tt4'),
       name: 'Drive',
       year: 'Not yet released',
+      // No number to hand on: the server already formatted this row's year, and parsing it back
+      // would invent a value. The eBay link is dashboard-only, so nothing here needs one.
+      releaseYear: null,
       added: watchlistDate('2026-02-14'),
       isRated: true,
     });

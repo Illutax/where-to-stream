@@ -185,5 +185,9 @@
     "start": "Als dieser Nutzer ansehen",
     "notForAdmins": "Administratoren können nicht impersoniert werden.",
     "failed": "Der Wechsel war nicht möglich."
+  },
+  "ebay": {
+    "link": "eBay",
+    "searchFor": "Auf eBay nach {{name}} suchen, günstigste zuerst"
   }
 }

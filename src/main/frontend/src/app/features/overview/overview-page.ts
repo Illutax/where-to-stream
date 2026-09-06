@@ -27,6 +27,7 @@ import { TranslocoService } from '@jsverse/transloco';
       @if (userPrefs.viewMode() === 'GRID') {
         <app-title-grid
           [showOffers]="true"
+          [showEbayLink]="true"
           [entries]="tileEntries()"
           [loading]="loading()"
           [recentlyChangedId]="seenStore.recentlyChanged()"
@@ -34,6 +35,7 @@ import { TranslocoService } from '@jsverse/transloco';
       } @else {
         <app-catalog-table
           [showOffers]="true"
+          [showEbayLink]="true"
           [entries]="entries()"
           [loading]="loading()"
           [recentlyChangedId]="seenStore.recentlyChanged()"

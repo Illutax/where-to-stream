@@ -47,7 +47,8 @@ const SKELETON_ROWS: OverviewEntry[] = Array.from({ length: 8 }, (_, i) => ({
           @if (loading()) {
             <span class="skeleton-bar"></span>
           } @else {
-            <app-title-cell [imdbId]="entry.imdbId" [name]="entry.name" />
+            <app-title-cell [imdbId]="entry.imdbId" [name]="entry.name"
+                            [showEbayLink]="showEbayLink()" [year]="entry.year" />
           }
         </td>
       </ng-container>
@@ -117,6 +118,8 @@ export class CatalogTable {
    * the shared daily call budget can be spent.
    */
   readonly showOffers = input(false);
+  /** Whether the title cells carry the eBay search link (TODO-57) — the dashboard switches it on. */
+  readonly showEbayLink = input(false);
   readonly seenToggle = output<{ imdbId: ImdbId; seen: boolean }>();
   protected readonly sort = signal<Sort>({ active: '', direction: '' });
   protected readonly sorted = computed(() => (this.loading() ? SKELETON_ROWS : sortRows(this.entries(), this.sort())));

@@ -3,7 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatButtonToggleGroupHarness } from '@angular/material/button-toggle/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { imdbId, watchlistDate } from '../../core/domain';
+import { imdbId, releaseYear, watchlistDate } from '../../core/domain';
 import { TileEntry } from '../../core/tile-entry';
 import { translocoTesting } from '../../testing/transloco-testing';
 import { TitleGrid } from './title-grid';
@@ -16,6 +16,7 @@ describe('TitleGrid', () => {
     name: 'Movie',
     imdbId: imdbId('tt1'),
     year: '2020',
+    releaseYear: releaseYear(2020),
     added: watchlistDate('2020-01-01'),
     ...over,
   });

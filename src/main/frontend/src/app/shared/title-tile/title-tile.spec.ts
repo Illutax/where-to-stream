@@ -1,7 +1,8 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { imdbId, watchlistDate } from '../../core/domain';
+import { imdbId, releaseYear, watchlistDate } from '../../core/domain';
+import { UserPrefsStore } from '../../core/user-prefs-store';
 import { translocoTesting } from '../../testing/transloco-testing';
 import { TitleTile } from './title-tile';
 
@@ -29,6 +30,7 @@ describe('TitleTile', () => {
   const mainTitle = () => fixture.nativeElement.querySelector('.main-title a') as HTMLAnchorElement;
   const subtitle = () => fixture.nativeElement.querySelector('.subtitle') as HTMLElement | null;
   const toggle = () => fixture.nativeElement.querySelector('.watched-toggle') as HTMLButtonElement;
+  const ebayLink = () => fixture.nativeElement.querySelector('.ebay-chip a') as HTMLAnchorElement | null;
 
   it('renders the poster, splits the title into main/subtitle, and shows the year', () => {
     fixture.detectChanges();
@@ -94,5 +96,25 @@ describe('TitleTile', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.age-badge')?.textContent?.trim()).toBe('16');
+  });
+
+  it('offers an eBay search on the dashboard, for the marketplace the user picked', () => {
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false, ebayMarketplace: 'EBAY_GB' });
+    fixture.componentRef.setInput('showEbayLink', true);
+    fixture.componentRef.setInput('releaseYear', releaseYear(2003));
+    fixture.detectChanges();
+
+    const url = new URL(ebayLink()!.href);
+    expect([url.host, url.searchParams.get('_nkw'), ebayLink()!.rel])
+      .toEqual(['www.ebay.co.uk', 'Old School - Wir lassen absolut nichts anbrennen 2003', 'noopener']);
+  });
+
+  it('offers no eBay search on a provider page, where the row has no year to search for', () => {
+    // `releaseYear` stays null for the paid-provider rows: the server hands those a formatted
+    // string, and the link must not guess a number out of it.
+    TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
+    fixture.detectChanges();
+
+    expect(ebayLink()).toBeNull();
   });
 });

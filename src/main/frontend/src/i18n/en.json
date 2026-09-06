@@ -185,5 +185,9 @@
     "start": "View as this user",
     "notForAdmins": "Administrators cannot be impersonated.",
     "failed": "Could not switch to that user."
+  },
+  "ebay": {
+    "link": "eBay",
+    "searchFor": "Search eBay for {{name}}, cheapest first"
   }
 }
