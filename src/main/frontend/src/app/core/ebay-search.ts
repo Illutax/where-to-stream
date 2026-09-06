@@ -26,12 +26,14 @@ interface MarketplaceSearch {
    * ordering by lowest price without a category puts the cheapest *matching junk* first — a poster,
    * a keychain, an empty case — where relevance ordering would have buried it.
    *
-   * <p><strong>Unverified.</strong> {@code 617} ("DVDs & Blu-ray Discs") is carried over from the
-   * default of the withdrawn price lookup ({@code EbayProperties.categoryId}); it was never checked
-   * against eBay there either, and it cannot be checked from the build container — eBay answers
-   * automated requests with 403. TODO-58 tracks the manual check. It is held per marketplace rather
-   * than as one constant precisely because eBay does not guarantee category ids across sites: if
-   * `.com` or `.co.uk` turns out to use different ids, only this table changes, and setting an entry
+   * <p>{@code 617} is "DVDs & Blu-ray Discs". Verified against eBay (TODO-58, 2026-09-07): the
+   * result page names the category in its title on {@code .de} ("DVDs & Blu-rays") and on
+   * {@code .com} ("… in DVDs & Blu-ray Discs for sale"). {@code .co.uk} never names it, so the
+   * evidence there is indirect but consistent — the filter narrows a film search from 296 to 193
+   * hits and "kettle" from 32,000 to 370.
+   *
+   * <p>Still held per marketplace rather than as one constant: eBay does not guarantee category ids
+   * across sites, so the day one of them diverges, only this table changes — and setting an entry
    * to null drops the filter for that marketplace alone.
    */
   readonly categoryId: string | null;
@@ -61,9 +63,11 @@ const FALLBACK_MARKETPLACE: EbayMarketplace = 'EBAY_DE';
  * the same answer. It includes shipping for the same reason the old comparison did — a cheap disc
  * with expensive postage is not the cheaper offer.
  *
- * <p><strong>The value is unverified</strong>, for the same reason as the category above (TODO-58).
- * If it is wrong, drop the parameter rather than guessing another number: eBay's default ordering
- * is a worse answer, but it is not a wrong one.
+ * <p>Verified against eBay (TODO-58, 2026-09-07): on {@code .de} the first results come back at
+ * 1.50 / 2.49 / 3.00 / 3.90 EUR plus postage, ascending; on {@code .com} the ordering visibly
+ * shifts towards the cheaper listings compared with the same search without the parameter. Note
+ * that {@code 12}, the neighbouring value, is *not* the ascending one — it was the obvious guess
+ * and it is wrong.
  */
 const SORT_BY_LOWEST_TOTAL = '15';
 

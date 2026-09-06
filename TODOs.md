@@ -1185,10 +1185,8 @@ nur `OverviewPage` schaltet ihn an.
 für die Provider-Kacheln null, weil `PaidEntry` das Jahr nur als fertigen Text liefert
 und ein zurückgerechnetes Jahr ein erfundenes wäre.
 
-**Zwei Werte sind weiterhin unverifiziert und stehen so auch im Code** —
-die Kategorie-Id `617` und der Sortierwert `_sop=15`.
-Ein Versuch, sie gegen eBay zu prüfen, endete mit `403`.
-Das ist als **TODO-58** herausgezogen, statt als Prosa unter einem abgehakten Punkt zu verschwinden.
+Die beiden eBay-Parameter (`_sacat=617`, `_sop=15`) sind unter **TODO-58** geprüft
+und bestätigt — über `m.ebay.*`, weil `www.ebay.*` automatisierte Anfragen mit `403` abweist.
 
 **Nachgezogen nach dem Review (2026-09-07):** siehe Commit „Review-Anmerkungen zu TODO-57".
 Wesentlich: der deutsche Titel hing an der Altersfreigaben-Einstellung
@@ -1199,7 +1197,7 @@ zwei Bedienelemente namens „eBay" pro Zeile.
 `showOffers` ist deshalb auf dem Dashboard bereits abgeschaltet;
 der Code selbst entfällt mit TODO-56.
 
-### 🟡 TODO-58 — eBay-Suchparameter `_sacat` und `_sop` einmal von Hand verifizieren
+### ✅ TODO-58 — eBay-Suchparameter `_sacat` und `_sop` verifiziert
 Der Suchlink aus TODO-57 trägt zwei Werte, die nie gegen eBay geprüft wurden:
 die Kategorie `_sacat=617` („DVDs & Blu-ray Discs")
 und die Sortierung `_sop=15` („Preis + Versand, niedrigste zuerst").
@@ -1223,15 +1221,31 @@ Der Filter trägt hier mehr Last als in einer relevanzsortierten Liste.
    Die Tabelle dort ist je Marktplatz aufgebaut, eine Korrektur kostet eine Zeile;
    `categoryId: null` schaltet den Filter für einen einzelnen Marktplatz ab.
 
-**Stimmt ein Wert nicht: Parameter entfernen, nicht einen anderen raten.**
-Eine falsche Kategorie liefert eine plausible, aber leere oder falsche Trefferliste —
-still, ohne Fehlermeldung.
-Der Test `ebay-search.spec.ts` schreibt die Werte fest, belegt sie aber ausdrücklich nicht;
-ein roter Test nach einer Korrektur ist das erwartete Verhalten, kein Rückschritt.
+**Erledigt am 2026-09-07 — beide Werte stimmen, der Code bleibt unverändert.**
 
-- **Akzeptanzkriterium:** Für jeden der drei Marktplätze ist notiert,
-  ob Kategorie und Sortierung stimmen; der Code bildet das ab;
-  die JSDoc-Warnung „unverified" ist entfernt, wo sie nicht mehr zutrifft.
+Der Weg über `www.ebay.*` scheitert weiter an `403`.
+Die **mobile** Domain `m.ebay.*` antwortet dagegen mit einer echten Trefferseite
+(200, ~100 kB, kein Captcha) — dieselben Parameter, dieselbe Suchmaschine.
+Das ist der Handgriff, der beim nächsten Mal Zeit spart.
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| `_sacat=617` auf `.de` | ✅ Seitentitel: „DVDs & Blu-rays \| eBay" |
+| `_sacat=617` auf `.com` | ✅ Seitentitel: „Heat 1995 **in DVDs & Blu-ray Discs** for sale" |
+| `_sacat=617` auf `.co.uk` | ⚠️ wirksam, aber nie benannt: Filmsuche 296 → 193 Treffer, „kettle" 32.000 → 370. Konsistent mit derselben Kategorie, **direkt belegt ist es nicht** |
+| `_sop=15` auf `.de` | ✅ erste Treffer 1,50 / 2,49 / 3,00 / 3,90 € zzgl. Versand, aufsteigend |
+| `_sop=15` auf `.com` | ✅ Reihenfolge kippt gegenüber derselben Suche ohne den Parameter sichtbar zu den günstigeren Angeboten |
+
+**Ein Nebenbefund, der eine Notiz wert ist:** `_sop=12` heißt **nicht** aufsteigend.
+Es war der naheliegende Kandidat — die Menü-Beschriftung „Niedrigster Preis inkl. Versand"
+steht im Markup direkt daneben — und liefert doch eine ungeordnete Liste
+(4,99 / 58,50 / 5,99 / 2,00 €).
+Wer den Wert künftig „korrigiert", macht es schlechter.
+Steht deshalb als Warnung im JSDoc.
+
+Die Werte bleiben Magie aus einem fremden System:
+`ebay-search.spec.ts` schreibt sie fest, damit eine Änderung eine bewusste Handlung ist.
+Die Prüfung hindert eBay nicht daran, morgen umzunummerieren.
 
 ### 🟡 TODO-59 — `/api/titles/{id}/meta`: ein Request pro Zeile, unstorniert
 Beim Review von TODO-57 gemessen (nicht geschätzt), Aufbau mit 300 Kacheln:

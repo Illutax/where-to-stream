@@ -18,8 +18,9 @@ describe('ebaySearchUrl', () => {
   });
 
   it('asks for title and year, in the movie category, cheapest total first', () => {
-    // The two eBay parameters are unverified (see the module and TODO-58) — this pins them so a
-    // correction is a deliberate act, it does not confirm them.
+    // Both eBay parameters were checked against the live site (TODO-58): 617 is the disc category,
+    // 15 the ascending price-plus-postage sort. Pinned here because they are magic numbers in
+    // someone else's system — the check does not stop eBay from renumbering.
     const url = new URL(ebaySearchUrl('EBAY_DE', year, 'Heat', null)!);
 
     expect([url.pathname, ...['_nkw', '_sacat', '_sop'].map((p) => url.searchParams.get(p))]).toEqual([
