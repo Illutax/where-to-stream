@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="018-drop-ebay-quota" author="claude">
+        <comment>
+            Removes the two quota tables from 016-ebay-quota.xml. The eBay developer account they
+            were built for was never granted, so the price lookup (ADR-0017) never ran and is now
+            withdrawn (TODO-56); a dashboard search link replaced it (TODO-57), which needs no
+            budget and therefore no counter.
+
+            A new changeset rather than an edit of 016: applied changesets are immutable, and
+            rewriting one would leave every database that already ran it with tables Liquibase
+            believes it never created.
+
+            The unique constraint on ebay_user_quota_day needs no separate drop -- it goes with its
+            table -- and there is no foreign key from anywhere else, so the order of the two drops
+            is free. They are still written child-before-parent, which is the order that stays
+            correct if a reference is ever added between writing this and running it.
+
+            017-user-ebay-marketplace.xml is deliberately untouched: app_user.ebay_marketplace
+            carries the marketplace setting, which survives the rollback and feeds the search link.
+
+            This discards the recorded call counts. They have no reader left and no value without
+            the feature -- but the deletion is real and one-way, and the branch that preserves the
+            code (feature/ebay_search) does not preserve data.
+        </comment>
+        <dropTable tableName="ebay_user_quota_day"/>
+        <dropTable tableName="ebay_quota_day"/>
+    </changeSet>
+
+</databaseChangeLog>
