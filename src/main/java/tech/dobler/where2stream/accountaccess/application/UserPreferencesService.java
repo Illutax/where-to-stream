@@ -14,8 +14,8 @@ import tech.dobler.where2stream.accountaccess.application.command.UsernameUpdate
 import tech.dobler.where2stream.accountaccess.application.command.ViewModeUpdateCommand;
 import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
+import tech.dobler.where2stream.accountaccess.domain.EbayMarketplace;
 import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
-import tech.dobler.where2stream.accountaccess.port.spi.SupportedMarketplaces;
 import tech.dobler.where2stream.shared.platform.api.ValidationException;
 
 import java.util.function.Consumer;
@@ -37,7 +37,6 @@ import java.util.function.Consumer;
 public class UserPreferencesService {
 
     private final AppUserRepository users;
-    private final SupportedMarketplaces supportedMarketplaces;
 
     /** Every preference for {@code username} at once, or the defaults for an unknown user. */
     public UserPreferences preferencesFor(String username) {
@@ -64,18 +63,17 @@ public class UserPreferencesService {
     }
 
     /**
-     * Sets the user's eBay marketplace, refusing anything the owning context does not recognise.
+     * Sets the user's eBay marketplace, refusing anything {@link EbayMarketplace} does not name.
      *
      * <p>Without this check the column would be free text: an unknown id would be stored happily
-     * and then quietly fall back to the default on every lookup — the setting would appear to have
-     * no effect, with nothing anywhere saying why.
+     * and the search link would then quietly open the default marketplace — the setting would
+     * appear to have no effect, with nothing anywhere saying why.
      */
     @Transactional
     public void updateEbayMarketplace(EbayMarketplaceUpdateCommand command) {
-        if (!supportedMarketplaces.supports(command.marketplace())) {
+        if (!EbayMarketplace.supports(command.marketplace())) {
             throw new ValidationException("Unknown marketplace '%s'. Expected one of %s."
-                    .formatted(command.marketplace(),
-                            supportedMarketplaces.ids().stream().sorted().toList()));
+                    .formatted(command.marketplace(), EbayMarketplace.ids().stream().sorted().toList()));
         }
         update(command.username(), user -> user.changeEbayMarketplace(command.marketplace()));
     }

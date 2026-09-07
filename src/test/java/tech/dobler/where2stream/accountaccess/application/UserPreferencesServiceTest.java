@@ -20,7 +20,6 @@ import tech.dobler.where2stream.accountaccess.domain.UserPreferences;
 import tech.dobler.where2stream.accountaccess.domain.ViewMode;
 import tech.dobler.where2stream.accountaccess.domain.AppUser;
 import tech.dobler.where2stream.accountaccess.port.out.AppUserRepository;
-import tech.dobler.where2stream.accountaccess.port.spi.SupportedMarketplaces;
 import tech.dobler.where2stream.shared.platform.api.ValidationException;
 
 import java.time.Instant;
@@ -40,8 +39,6 @@ class UserPreferencesServiceTest {
 
     @Mock
     private AppUserRepository users;
-    @Mock
-    private SupportedMarketplaces supportedMarketplaces;
     @InjectMocks
     private UserPreferencesService service;
 
@@ -192,7 +189,6 @@ class UserPreferencesServiceTest {
     @Test
     void aSupportedMarketplaceIsStored() {
         final var user = alice();
-        when(supportedMarketplaces.supports("EBAY_GB")).thenReturn(true);
         when(users.findByUsername("alice")).thenReturn(Optional.of(user));
 
         service.updateEbayMarketplace(new EbayMarketplaceUpdateCommand("alice", "EBAY_GB"));
@@ -202,8 +198,6 @@ class UserPreferencesServiceTest {
 
     @Test
     void anUnknownMarketplaceIsRefusedAndNamesTheAcceptedOnes() {
-        when(supportedMarketplaces.supports("EBAY_MARS")).thenReturn(false);
-        when(supportedMarketplaces.ids()).thenReturn(Set.of("EBAY_DE", "EBAY_US", "EBAY_GB"));
         final var command = new EbayMarketplaceUpdateCommand("alice", "EBAY_MARS");
 
         // The column stores a plain string, so this check is the only thing between the user and a
@@ -216,8 +210,6 @@ class UserPreferencesServiceTest {
 
     @Test
     void anUnknownMarketplaceIsNotWrittenAtAll() {
-        when(supportedMarketplaces.supports("EBAY_MARS")).thenReturn(false);
-        when(supportedMarketplaces.ids()).thenReturn(Set.of("EBAY_DE"));
         final var command = new EbayMarketplaceUpdateCommand("alice", "EBAY_MARS");
 
         assertThatThrownBy(() -> service.updateEbayMarketplace(command))
@@ -227,7 +219,7 @@ class UserPreferencesServiceTest {
 
     @Test
     void aMissingMarketplaceIsRefusedByTheCommandItself() {
-        // ADR-0015: presence is the command's own business; acceptability needs a collaborator.
+        // ADR-0015: presence is the command's own business; acceptability is the service's.
         assertThatThrownBy(() -> new EbayMarketplaceUpdateCommand("alice", "  "))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("A marketplace is required");

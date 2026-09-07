@@ -73,13 +73,14 @@ public class AppUser {
     private boolean showGermanTitle = false;
 
     /**
-     * Which eBay marketplace the user's price lookups query, as the marketplace's id.
+     * Which eBay marketplace the user's search links open, as the marketplace's id.
      *
-     * <p>A {@link String}, not an enum, on purpose: the set of marketplaces belongs to Purchase
-     * Offers, and Account &amp; Access has no business importing another context's domain type
-     * (ADR-0014). What it stores is the user's choice; what that choice means is decided elsewhere.
-     * Which values are acceptable is checked on the way in, against
-     * {@code SupportedMarketplaces} — the context that owns them says so.
+     * <p>A {@link String}, not the {@link EbayMarketplace} enum, even now that the enum lives in
+     * this context: the column outlives the code. A marketplace dropped from the enum would leave
+     * rows naming it, and a mapping that throws on someone's stale preference is a worse outcome
+     * than a value we can still read and ask about. Acceptable values are checked on the way in
+     * ({@code UserPreferencesService.updateEbayMarketplace}), which is the point where refusing
+     * costs nothing.
      */
     @Column(name = "ebay_marketplace", nullable = false)
     private String ebayMarketplace = "EBAY_DE";
