@@ -1359,30 +1359,55 @@ das deutet auf Zustand, der aus der abgelaufenen Sitzung übrig bleibt.
    Das ändert nur die *Antwort* — den Request merkt sich der `ExceptionTranslationFilter`
    trotzdem, **bevor** er den Entry Point aufruft.
 
-**Daraus die Arbeitshypothese** — ausdrücklich unbestätigt:
-Läuft die Sitzung ab, während die SPA offen ist, schlägt der nächste XHR mit 401 fehl.
-Dieser XHR (`/api/…`) landet als *SavedRequest* in der neuen Sitzung, der Interceptor schickt
-den Browser auf `/login`, und die anschließende erfolgreiche Anmeldung leitet auf **diese
-API-URL** weiter statt auf die SPA.
+**Die Arbeitshypothese von gestern ist widerlegt.**
+Sie lautete: der abgewiesene XHR landet als `SavedRequest` in der Sitzung,
+und der Login leitet auf diese API-URL statt auf die SPA.
+`LoginRedirectTest` (neu) zeigt, dass die Kette schon im ersten Glied reißt:
+ein `/api/**`-Aufruf, der mit blankem 401 beantwortet wird, **legt gar keine Sitzung an** —
+es gibt also nichts zu merken.
+Der Test hält das fest, weil die Sache kippt, sobald jemand diesen Entry Point gegen eine
+Weiterleitung tauscht: dann entsteht eine Sitzung, mit ihr der `SavedRequest`,
+und der beschriebene Fehlermodus wird real, ohne dass ein Test es bemerkt.
 
-Die Hypothese erklärt „kommt nicht zum Dashboard" gut, „bleibt auf der Login-Seite" aber **nicht** —
-eine Weiterleitung auf `/api/…` würde JSON zeigen.
-**Also fehlt ein Glied in der Kette.** Kandidaten, die zuerst zu prüfen sind:
+**Was damit ausgeschlossen ist** (je ein Test in
+`accountaccess/adapter/in/security/LoginRedirectTest.java`):
 
-- Welche URL steht nach dem Ablauf tatsächlich im `SavedRequest`?
-  (Mehrere parallele XHRs überschreiben einander — der letzte gewinnt.)
-- Was passiert, wenn der gemerkte Request ein **POST** war?
-  Die Weiterleitung ist ein GET; auf einem POST-only-Endpunkt gäbe das 405.
-- Landet man auf `/login` mit `?error`, oder auf einer sauberen Login-Seite?
-  Das unterscheidet „Login abgelehnt" von „Login angenommen, Ziel falsch".
-- Spielt das veraltete `XSRF-TOKEN`-Cookie aus der toten Sitzung eine Rolle?
-  Es ist bewusst nicht `httpOnly` und überlebt den Sitzungsablauf.
+| Geprüft | Ergebnis |
+| --- | --- |
+| Login ohne Vorgeschichte | → `/` → `/app/` ✅ |
+| Merkt sich der abgewiesene `/api/**`-Aufruf etwas? | **nein** — ein blankes 401 legt gar keine Sitzung an, also gibt es keinen `SavedRequest` ✅ |
+| Hinterlässt der Login einen authentifizierten Kontext? | ja ✅ |
+| Browser-Navigation vs. XHR auf `/app/` | 302 auf die Loginseite bzw. blankes 401 ✅ |
 
-**Erst messen, dann bauen.** Der naheliegende Fix — `defaultSuccessUrl("/app/", true)`,
-also den gemerkten Request grundsätzlich zu ignorieren — würde das Symptom vermutlich beseitigen
-und dabei ein gewolltes Verhalten mitnehmen:
-das Zurückspringen auf eine gezielt aufgerufene Seite nach dem Login.
-Bevor das geopfert wird, gehört die tatsächliche Ursache belegt.
+Ebenfalls durchgesehen und unauffällig:
+`SpaController` (`/` → `/app/`, kontextpfad-relativ),
+die Boot-Sequenz in `app.ts` (nichts darin leitet auf `/login`),
+und der einzige Absprung im Frontend überhaupt — der 401-Interceptor.
+
+**Der Fehler ist damit im Backend nicht nachstellbar.**
+Das grenzt ein, beweist aber nichts: die Meldung hängt an echtem Browser-Zustand
+(Cookies aus einer toten Sitzung, `XSRF-TOKEN`, Remember-me, Cache),
+und den bildet MockMvc nicht ab.
+
+**Was beim nächsten Auftreten zu erfassen ist** — ohne das ist jeder weitere Schritt Raten:
+
+1. Die **URL in der Adresszeile**, nachdem der Login abgeschickt wurde.
+   Steht dort `/login?error`, war die Anmeldung abgelehnt und die Meldung deutet in eine
+   ganz andere Richtung als angenommen.
+2. Im Netzwerk-Tab: Was antwortet `POST /login` (302 wohin?), und was `GET /api/me` danach?
+3. Welche Cookies liegen vor dem Login-Versuch an — insbesondere **mehr als ein** `JSESSIONID`
+   oder `SESSION` (unterschiedliche Pfade aus einer früheren Deployment-Variante)?
+   Das würde erklären, warum ein frischer Browser nicht betroffen ist.
+4. Tritt es auch in einem privaten Fenster auf, wenn man sich dort anmeldet, abmeldet
+   und erneut anmeldet?
+
+**Mögliche Sofortmaßnahme, bewusst nicht umgesetzt:**
+Der Interceptor schickt bei **jedem** 401 hart auf `/login`, ohne Schleifenschutz.
+Käme direkt nach dem Login noch ein 401 herein, landete man wieder auf der Loginseite —
+das entspräche dem gemeldeten Bild.
+Eine Sperre („nicht erneut umleiten, wenn wir gerade von `/login` kommen") wäre billig,
+verdeckt aber die Ursache, falls es eine andere ist.
+Erst messen.
 
 - **Akzeptanzkriterium:** Eine Anmeldung nach abgelaufener Sitzung landet im Dashboard,
   in derselben Browser-Sitzung wie zuvor, ohne Cookies von Hand zu löschen.
