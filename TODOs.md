@@ -1334,3 +1334,58 @@ Zwei Folgen, beide beim Review von TODO-57 aufgefallen:
   die Formatierung liegt im Client bei `releaseYearDisplay`,
   und `TileEntry.releaseYear` ist nicht mehr nullable.
 
+### 🔴 TODO-61 — Nach abgelaufener Sitzung führt ein erfolgreicher Login nicht zum Dashboard
+**Gemeldet am 2026-09-08 aus dem Betrieb.**
+
+**Reproduktion (so berichtet):**
+In einem Browser, in dem man angemeldet **war** und dann abgemeldet wurde,
+führt eine erneute Anmeldung nicht zum Dashboard —
+man bleibt auf der Login-Seite stehen, **obwohl die Anmeldung erfolgreich war**.
+
+Der Zusatz „obwohl eingeloggt" ist der wichtige Teil:
+es ist kein fehlgeschlagener Login, sondern ein Weiterleitungsproblem *nach* dem Login.
+Ein frischer Browser (oder ein privates Fenster) ist nach dem bisherigen Bild nicht betroffen —
+das deutet auf Zustand, der aus der abgelaufenen Sitzung übrig bleibt.
+
+**Was am Code gesichert ist** (gelesen, nicht ausprobiert):
+
+1. `SecurityConfig` setzt **kein** `defaultSuccessUrl`.
+   Damit gilt Spring Securitys Standard, der `SavedRequestAwareAuthenticationSuccessHandler`:
+   nach dem Login wird auf den **gemerkten Request** weitergeleitet, falls einer in der Sitzung liegt,
+   sonst auf `/`.
+2. `unauthorized-interceptor.ts` schickt den Browser bei **jedem** 401 hart auf `/login`
+   (`globalThis.location.href = …`).
+3. Für `/api/**` ist ein `HttpStatusEntryPoint(401)` gesetzt.
+   Das ändert nur die *Antwort* — den Request merkt sich der `ExceptionTranslationFilter`
+   trotzdem, **bevor** er den Entry Point aufruft.
+
+**Daraus die Arbeitshypothese** — ausdrücklich unbestätigt:
+Läuft die Sitzung ab, während die SPA offen ist, schlägt der nächste XHR mit 401 fehl.
+Dieser XHR (`/api/…`) landet als *SavedRequest* in der neuen Sitzung, der Interceptor schickt
+den Browser auf `/login`, und die anschließende erfolgreiche Anmeldung leitet auf **diese
+API-URL** weiter statt auf die SPA.
+
+Die Hypothese erklärt „kommt nicht zum Dashboard" gut, „bleibt auf der Login-Seite" aber **nicht** —
+eine Weiterleitung auf `/api/…` würde JSON zeigen.
+**Also fehlt ein Glied in der Kette.** Kandidaten, die zuerst zu prüfen sind:
+
+- Welche URL steht nach dem Ablauf tatsächlich im `SavedRequest`?
+  (Mehrere parallele XHRs überschreiben einander — der letzte gewinnt.)
+- Was passiert, wenn der gemerkte Request ein **POST** war?
+  Die Weiterleitung ist ein GET; auf einem POST-only-Endpunkt gäbe das 405.
+- Landet man auf `/login` mit `?error`, oder auf einer sauberen Login-Seite?
+  Das unterscheidet „Login abgelehnt" von „Login angenommen, Ziel falsch".
+- Spielt das veraltete `XSRF-TOKEN`-Cookie aus der toten Sitzung eine Rolle?
+  Es ist bewusst nicht `httpOnly` und überlebt den Sitzungsablauf.
+
+**Erst messen, dann bauen.** Der naheliegende Fix — `defaultSuccessUrl("/app/", true)`,
+also den gemerkten Request grundsätzlich zu ignorieren — würde das Symptom vermutlich beseitigen
+und dabei ein gewolltes Verhalten mitnehmen:
+das Zurückspringen auf eine gezielt aufgerufene Seite nach dem Login.
+Bevor das geopfert wird, gehört die tatsächliche Ursache belegt.
+
+- **Akzeptanzkriterium:** Eine Anmeldung nach abgelaufener Sitzung landet im Dashboard,
+  in derselben Browser-Sitzung wie zuvor, ohne Cookies von Hand zu löschen.
+  Ein Test hält den Fall fest — die Reproduktion hängt an Sitzungszustand,
+  und genau das vergisst man beim nächsten Umbau.
+
