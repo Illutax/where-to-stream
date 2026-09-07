@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ImdbId, imdbUrl, posterFullUrl, ReleaseYear, WatchlistDate } from '../../core/domain';
-import { injectEbaySearchUrl } from '../../core/ebay-search';
 import { injectTitleMeta } from '../../core/title-meta';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
+import { EbayLink } from '../ebay-link/ebay-link';
 import { OfferPrices } from '../offer-prices/offer-prices';
 import { splitTitle, titleSizeSteps } from './title-split';
 
@@ -20,7 +20,7 @@ import { splitTitle, titleSizeSteps } from './title-split';
 @Component({
   selector: 'app-title-tile',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AgeBadge, OfferPrices, TranslocoPipe],
+  imports: [AgeBadge, EbayLink, OfferPrices, TranslocoPipe],
   template: `
     <div class="title-tile" [class.recently-changed]="recentlyChanged()">
       <div class="poster-box" [class.watched]="isRated()">
@@ -67,10 +67,9 @@ import { splitTitle, titleSizeSteps } from './title-split';
           <app-offer-prices [imdbId]="imdbId()" [name]="name()" />
         </div>
       }
-      @if (ebayUrl(); as url) {
+      @if (showEbayLink()) {
         <div class="ebay-chip">
-          <a [href]="url" target="_blank" rel="noopener"
-             [attr.aria-label]="'ebay.searchFor' | transloco: { name: displayTitle() }">{{ 'ebay.link' | transloco }}</a>
+          <app-ebay-link appearance="badge" [imdbId]="imdbId()" [name]="name()" [releaseYear]="releaseYear()" />
         </div>
       }
     </div>
@@ -79,21 +78,7 @@ import { splitTitle, titleSizeSteps } from './title-split';
     .ebay-chip {
       display: flex;
       justify-content: center;
-      padding-top: 0.35rem;
-      font-size: 0.78rem;
-    }
-    /* Same 24px target as the table link; coarse pointers get the 44px the watched toggle uses. */
-    .ebay-chip a {
-      display: inline-flex;
-      align-items: center;
-      min-height: 24px;
-      padding: 0 0.5rem;
-      color: var(--mat-sys-primary);
-    }
-    @media (pointer: coarse) {
-      .ebay-chip a {
-        min-height: 44px;
-      }
+      padding-top: 0.2rem;
     }
 
     .offer-chip {
@@ -323,17 +308,9 @@ export class TitleTile {
   protected readonly meta = injectTitleMeta(() => this.imdbId());
 
   /** The German title when the preference is on and one exists, else the original (English) name. */
-  protected readonly displayTitle = computed(
+  private readonly displayTitle = computed(
     () => (this.userPrefsStore.showGermanTitle() && this.meta()?.germanTitle) || this.name(),
   );
-  /** The eBay search link, or null when there is none to offer — see {@link injectEbaySearchUrl}. */
-  protected readonly ebayUrl = injectEbaySearchUrl({
-    enabled: this.showEbayLink,
-    name: this.name,
-    year: this.releaseYear,
-    germanTitle: () => this.meta()?.germanTitle ?? null,
-  });
-
   protected readonly titleParts = computed(() => splitTitle(this.displayTitle()));
   protected readonly sizeSteps = computed(() => titleSizeSteps(this.titleParts().main.length));
 }

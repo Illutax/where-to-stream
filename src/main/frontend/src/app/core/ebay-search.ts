@@ -112,8 +112,6 @@ export function ebaySearchUrl(
 
 /** What a component has to offer before a search link can be built for its row. */
 export interface EbaySearchSource {
-  /** Whether this view wants the link at all — off outside the dashboard. */
-  readonly enabled: () => boolean;
   /** The title as the server delivered it (the original, usually English). */
   readonly name: () => string;
   /** The release year, or null where the row never carried a machine-readable one. */
@@ -125,9 +123,9 @@ export interface EbaySearchSource {
 /**
  * The search link for one row as a signal, or null where there is none.
  *
- * <p>Exists so the rule lives once rather than in every component that renders a title. Both the
- * table cell and the poster tile show the same link, and a divergence between them would be a
- * dashboard that searches for two different things depending on the view mode.
+ * <p>Exists so the rule lives once rather than in every component that renders a title. Whether a
+ * view wants the link at all is not asked here: the caller simply does not render {@code EbayLink}
+ * where it does not belong, which also spares the metadata lookup behind it.
  *
  * <p>Must be called from an injection context, mirroring {@link injectTitleMeta}.
  *
@@ -141,13 +139,11 @@ export interface EbaySearchSource {
 export function injectEbaySearchUrl(source: EbaySearchSource): Signal<string | null> {
   const userPrefs = inject(UserPrefsStore);
   return computed(() =>
-    source.enabled()
-      ? ebaySearchUrl(
-          userPrefs.ebayMarketplace(),
-          source.year(),
-          source.name(),
-          userPrefs.showGermanTitle() ? source.germanTitle() : null,
-        )
-      : null,
+    ebaySearchUrl(
+      userPrefs.ebayMarketplace(),
+      source.year(),
+      source.name(),
+      userPrefs.showGermanTitle() ? source.germanTitle() : null,
+    ),
   );
 }

@@ -152,5 +152,39 @@ describe('CatalogTable', () => {
     // Rendering the column must not itself trigger a lookup — only a click may.
     expect(fixture.nativeElement.querySelector('.offer-load')).not.toBeNull();
   });
-}
-);
+
+  it('has no eBay search column by default', () => {
+    fixture.componentRef.setInput('entries', [entry({})]);
+    fixture.detectChanges();
+
+    expect([
+      fixture.nativeElement.querySelector('th.mat-column-ebay'),
+      fixture.nativeElement.querySelector('app-ebay-link a'),
+    ]).toEqual([null, null]);
+  });
+
+  it('gives the eBay search its own column when the page asks for it', () => {
+    // Its own column rather than a link tucked into the title cell: across a few hundred rows an
+    // inline link sits at a different x-position in every one of them, which is not scannable.
+    fixture.componentRef.setInput('entries', [entry({ name: 'Heat', year: releaseYear(1995) })]);
+    fixture.componentRef.setInput('showEbayLink', true);
+    fixture.detectChanges();
+
+    const header = fixture.nativeElement.querySelector('th.mat-column-ebay') as HTMLElement;
+    const link = rows()[0].querySelector('td.mat-column-ebay a') as HTMLAnchorElement;
+    expect([header.textContent?.trim(), new URL(link.href).searchParams.get('_nkw')])
+      .toEqual(['eBay', 'Heat 1995']);
+  });
+
+  it('keeps the eBay column but leaves the cell empty for an unreleased title', () => {
+    // A ragged table would be worse than an empty cell, but there is nothing to jump to.
+    fixture.componentRef.setInput('entries', [entry({ name: 'Avatar 5', year: releaseYear(0) })]);
+    fixture.componentRef.setInput('showEbayLink', true);
+    fixture.detectChanges();
+
+    expect([
+      fixture.nativeElement.querySelector('th.mat-column-ebay') !== null,
+      rows()[0].querySelector('td.mat-column-ebay a'),
+    ]).toEqual([true, null]);
+  });
+});

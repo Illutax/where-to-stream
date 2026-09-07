@@ -95,10 +95,9 @@ describe('injectEbaySearchUrl', () => {
     prefs = TestBed.inject(UserPrefsStore);
   });
 
-  const link = (over: { enabled?: boolean; germanTitle?: string | null } = {}) =>
+  const link = (over: { germanTitle?: string | null } = {}) =>
     TestBed.runInInjectionContext(() =>
       injectEbaySearchUrl({
-        enabled: signal(over.enabled ?? true),
         name: signal('The Godfather'),
         year: signal(releaseYear(1972)),
         germanTitle: signal(over.germanTitle ?? null),
@@ -125,9 +124,5 @@ describe('injectEbaySearchUrl', () => {
     prefs.init({ ebayMarketplace: 'EBAY_US' });
 
     expect(new URL(link()()!).host).toBe('www.ebay.com');
-  });
-
-  it('offers nothing at all where the view did not ask for a link', () => {
-    expect(link({ enabled: false })()).toBeNull();
   });
 });

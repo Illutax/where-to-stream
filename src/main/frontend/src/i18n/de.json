@@ -48,7 +48,8 @@
     "nothingHere": "Nichts vorhanden.",
     "markSeen": "Als gesehen markieren: {{ name }}",
     "markNotSeen": "Als ungesehen markieren: {{ name }}",
-    "offers": "eBay"
+    "offers": "eBay",
+    "ebay": "eBay"
   },
   "overview": {
     "loadError": "Der Katalog konnte nicht geladen werden."
@@ -187,7 +188,7 @@
     "failed": "Der Wechsel war nicht möglich."
   },
   "ebay": {
-    "link": "eBay",
+    "search": "Suche",
     "searchFor": "Auf eBay nach {{name}} suchen, günstigste zuerst"
   }
 }

@@ -1153,8 +1153,11 @@ Die Suchanfrage darf deshalb so gut sein, wie wir sie hinbekommen, statt so spar
   oder es gibt ihn nicht.
   Zu entscheiden bleibt die Darstellung: gar nichts rendern oder ein deaktivierter Hinweis.
   Vorschlag: gar nichts, damit die Zeile ruhig bleibt.
-- **Darstellung:** dasselbe Muster wie der bestehende IMDb-Link in `TitleCell`/`TitleTile` —
-  `<a target="_blank" rel="noopener">`.
+- **Darstellung:** `<a target="_blank" rel="noopener">` wie der bestehende IMDb-Link,
+  aber **nicht** in der Titelzelle:
+  ein Inline-Link säße über ein paar hundert Zeilen in jeder an einer anderen x-Position
+  und wäre nicht mehr scanbar.
+  In der Tabelle deshalb eine eigene Spalte, im Grid eine Badge unter der Kachel.
   Nur Dashboard, nicht auf den Provider-Seiten.
   Beide Komponenten werden von den Provider-Seiten mitgenutzt, die Abgrenzung braucht also einen
   ausdrücklichen Eingang (wie zuvor `showOffers`) und ergibt sich nicht von selbst.
@@ -1179,7 +1182,12 @@ Die Suchanfrage darf deshalb so gut sein, wie wir sie hinbekommen, statt so spar
 `core/ebay-search.ts` baut die URL als reine Funktion; die Marktplatz-Tabelle dort hält Host,
 Kategorie und die Frage, ob der deutsche Titel hier der bessere Suchbegriff ist —
 je Marktplatz, nicht als eine Konstante, damit eine falsche Kategorie-Id eine Zeile kostet.
-`TitleCell` und `TitleTile` bekommen je einen `showEbayLink`-Eingang (aus, sofern nicht gesetzt);
+Dargestellt wird er von `shared/ebay-link/` in zwei Erscheinungsformen —
+in der Tabelle als Wort in einer **eigenen Spalte**,
+im Poster-Grid als **Badge mit dem eBay-Schriftzug** in den vier Markenfarben.
+Eine Komponente für beides, damit die zwei Ansichten nicht auseinanderlaufen
+und dieselbe Zeile nicht je nach Ansichtsmodus etwas anderes sucht.
+`CatalogTable` und `TitleTile` bekommen je einen `showEbayLink`-Eingang (aus, sofern nicht gesetzt);
 nur `OverviewPage` schaltet ihn an.
 `TileEntry` trägt jetzt zusätzlich `releaseYear: ReleaseYear | null` —
 für die Provider-Kacheln null, weil `PaidEntry` das Jahr nur als fertigen Text liefert
@@ -1268,9 +1276,15 @@ Aufgenommen, weil der Befund sonst mit dem Review verloren geht.
 
 **Zu tun:**
 - `takeUntilDestroyed()` / `DestroyRef` in `injectTitleMeta` — behebt Punkt 1 allein.
-- Für Punkt 2 entweder ein `Map<ImdbId, Signal>`-Cache in `TitleMetaApi`
-  oder ein Sammelendpunkt `/api/titles/meta?ids=…`, den die Seite einmal ruft.
-  Der Sammelendpunkt ist die ehrlichere Lösung, kostet aber Backend.
+- Für Punkt 2 ein Sammelendpunkt `/api/titles/meta?ids=…`, den die Seite einmal ruft.
+
+**Punkt 2 ist teilweise erledigt (2026-09-07):** `TitleMetaApi` hält jetzt ein geteiltes Signal
+je `ImdbId` plus eine In-Flight-Sperre, weil die neue eBay-Spalte sonst einen **zweiten** Abruf
+je Zeile ausgelöst hätte — die Spalte hätte sich in Traffic selbst bezahlt.
+Damit kostet ein Titel einen Request, egal wie viele Komponenten ihn zeigen,
+und ein Ansichtswechsel fragt nichts erneut ab.
+**Offen bleibt:** n Zeilen sind weiterhin n Requests (dafür braucht es den Sammelendpunkt),
+und storniert wird immer noch nichts — Punkt 1 ist unangetastet.
 
 - **Akzeptanzkriterium:** Ein Wechsel der Ansicht hinterlässt keine offenen Requests;
   ein Dashboard mit n Zeilen erzeugt nicht mehr n Metadaten-Requests.

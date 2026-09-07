@@ -3,6 +3,7 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { ImdbId, imdbId, releaseYear, releaseYearDisplay, watchlistDate } from '../../core/domain';
 import { OverviewEntry } from '../../core/models';
+import { EbayLink } from '../ebay-link/ebay-link';
 import { OfferPrices } from '../offer-prices/offer-prices';
 import { TitleCell } from '../title-cell/title-cell';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -22,7 +23,7 @@ const SKELETON_ROWS: OverviewEntry[] = Array.from({ length: 8 }, (_, i) => ({
 @Component({
   selector: 'app-catalog-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTableModule, MatSortModule, OfferPrices, TitleCell, TranslocoPipe],
+  imports: [MatTableModule, MatSortModule, EbayLink, OfferPrices, TitleCell, TranslocoPipe],
   template: `
     <div class="table-scroll">
     <table mat-table [dataSource]="sorted()" [trackBy]="trackByImdbId"
@@ -47,8 +48,7 @@ const SKELETON_ROWS: OverviewEntry[] = Array.from({ length: 8 }, (_, i) => ({
           @if (loading()) {
             <span class="skeleton-bar"></span>
           } @else {
-            <app-title-cell [imdbId]="entry.imdbId" [name]="entry.name"
-                            [showEbayLink]="showEbayLink()" [releaseYear]="entry.year" />
+            <app-title-cell [imdbId]="entry.imdbId" [name]="entry.name" />
           }
         </td>
       </ng-container>
@@ -81,6 +81,17 @@ const SKELETON_ROWS: OverviewEntry[] = Array.from({ length: 8 }, (_, i) => ({
           @if (loading()) {
             <span class="skeleton-bar"></span>
           } @else if (entry.services) { {{ entry.services }} } @else { <em class="text-muted">{{ 'table.na' | transloco }}</em> }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="ebay">
+        <th mat-header-cell *matHeaderCellDef>{{ 'table.ebay' | transloco }}</th>
+        <td mat-cell *matCellDef="let entry">
+          @if (loading()) {
+            <span class="skeleton-bar skeleton-bar--narrow"></span>
+          } @else {
+            <app-ebay-link [imdbId]="entry.imdbId" [name]="entry.name" [releaseYear]="entry.year" />
+          }
         </td>
       </ng-container>
 
@@ -118,16 +129,20 @@ export class CatalogTable {
    * the shared daily call budget can be spent.
    */
   readonly showOffers = input(false);
-  /** Whether the title cells carry the eBay search link (TODO-57) — the dashboard switches it on. */
+  /** Whether to show the eBay search column (TODO-57) — the dashboard switches it on. */
   readonly showEbayLink = input(false);
   readonly seenToggle = output<{ imdbId: ImdbId; seen: boolean }>();
   protected readonly sort = signal<Sort>({ active: '', direction: '' });
   protected readonly sorted = computed(() => (this.loading() ? SKELETON_ROWS : sortRows(this.entries(), this.sort())));
-  protected readonly displayedColumns = computed(() =>
-    this.showOffers()
-      ? ['rated', 'title', 'year', 'added', 'services', 'offers']
-      : ['rated', 'title', 'year', 'added', 'services'],
-  );
+  protected readonly displayedColumns = computed(() => [
+    'rated',
+    'title',
+    'year',
+    'added',
+    'services',
+    ...(this.showEbayLink() ? ['ebay'] : []),
+    ...(this.showOffers() ? ['offers'] : []),
+  ]);
   protected readonly trackByImdbId = (_: number, entry: OverviewEntry) => entry.imdbId;
   protected readonly releaseYearDisplay = releaseYearDisplay;
 }

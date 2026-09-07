@@ -48,7 +48,8 @@
     "nothingHere": "Nothing here.",
     "markSeen": "Mark seen: {{ name }}",
     "markNotSeen": "Mark not seen: {{ name }}",
-    "offers": "eBay"
+    "offers": "eBay",
+    "ebay": "eBay"
   },
   "overview": {
     "loadError": "Failed to load the catalogue."
@@ -187,7 +188,7 @@
     "failed": "Could not switch to that user."
   },
   "ebay": {
-    "link": "eBay",
+    "search": "Search",
     "searchFor": "Search eBay for {{name}}, cheapest first"
   }
 }

@@ -7,7 +7,7 @@ import { injectTitleMeta } from './title-meta';
 import { UserPrefsStore } from './user-prefs-store';
 
 // A throwaway host so `injectTitleMeta` (a functional-injection helper) runs inside a real
-// component lifecycle, exactly like its two real callers (TitleCell, TitleTile) do.
+// component lifecycle, exactly like its real callers (TitleCell, TitleTile, EbayLink) do.
 @Component({
   selector: 'app-title-meta-host',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,5 +61,43 @@ describe('injectTitleMeta', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.meta()).toBeNull();
+  });
+
+  it('serves several components showing the same title from one request', () => {
+    // A dashboard row has two of them since the eBay column arrived (TODO-57): the title cell and
+    // the search link. Per-component signals would have doubled a request count that is already
+    // one per row (TODO-59) -- the column would have paid for itself in traffic.
+    const second = TestBed.createComponent(TitleMetaHost);
+    second.componentRef.setInput('imdbId', imdbId('tt1'));
+
+    fixture.detectChanges();
+    second.detectChanges();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/titles/tt1/meta'))
+      .flush({ rating: null, germanTitle: 'Der Piano-Spieler' });
+    fixture.detectChanges();
+    second.detectChanges();
+
+    // expectOne above already fails on a second request; this pins that both hosts see the answer.
+    expect([fixture.componentInstance.meta()?.germanTitle, second.componentInstance.meta()?.germanTitle])
+      .toEqual(['Der Piano-Spieler', 'Der Piano-Spieler']);
+  });
+
+  it('lets the next component retry a title whose fetch failed', () => {
+    // Only *answers* are shared, not failures. Remembering the failure would be cheaper, but it
+    // would let one transient blip hide a badge for the rest of the session; a broken title now
+    // costs what it always cost, one request per consumer.
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.url.endsWith('/api/titles/tt1/meta')).error(new ProgressEvent('error'));
+
+    const second = TestBed.createComponent(TitleMetaHost);
+    second.componentRef.setInput('imdbId', imdbId('tt1'));
+    second.detectChanges();
+
+    httpMock.expectOne((r) => r.url.endsWith('/api/titles/tt1/meta'))
+      .flush({ rating: null, germanTitle: 'Zweiter Versuch' });
+    second.detectChanges();
+
+    expect(second.componentInstance.meta()?.germanTitle).toBe('Zweiter Versuch');
   });
 });
