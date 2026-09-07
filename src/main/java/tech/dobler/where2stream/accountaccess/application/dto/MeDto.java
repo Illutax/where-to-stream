@@ -20,7 +20,7 @@ import java.util.List;
  * @param showGermanTitle whether film titles are shown in German where available (off by default)
  * @param viewMode        the user's preferred library layout ({@code GRID} by default)
  * @param tilesPerRow      number of poster tiles per row in the grid view (2-6, defaults to 6)
- * @param ebayMarketplace  which eBay marketplace the user's price lookups query, as its id
+ * @param ebayMarketplace  which eBay marketplace the user's search links open, as its id
  *                         ({@code EBAY_DE} by default and when anonymous). A string rather than an
  *                         enum because the set of marketplaces belongs to another context
  * @param impersonatedBy   the admin currently acting as this user, or {@code null} in the ordinary

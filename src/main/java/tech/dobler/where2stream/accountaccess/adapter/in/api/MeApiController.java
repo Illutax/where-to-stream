@@ -88,7 +88,7 @@ public class MeApiController {
         userPreferencesService.updateLanguage(new LanguageUpdateCommand(authentication.getName(), request.language()));
     }
 
-    /** Updates the current user's own eBay marketplace for price lookups. */
+    /** Updates the current user's own eBay marketplace, which their search links open. */
     @PutMapping("/ebay-marketplace")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateEbayMarketplace(Authentication authentication,

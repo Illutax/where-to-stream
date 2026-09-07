@@ -23,7 +23,7 @@ analog zum `adr`-Skill der Team-Doku.
 | [0014](0014-backend-nach-bounded-contexts-und-ports-adaptern.md) | Backend nach Bounded Contexts, mit pragmatischen Ports & Adaptern | Accepted |
 | [0015](0015-selbstvalidierende-commands-statt-verstreuter-request-validierung.md) | Selbstvalidierende Commands statt verstreuter Request-Validierung | Accepted |
 | [0016](0016-asynchrone-verzoegerte-cache-aktualisierung.md) | Asynchrone, verzögerte Aktualisierung des Verfügbarkeits-Caches statt synchronem Reload | Accepted |
-| [0017](0017-quota-verwaltung-fuer-die-ebay-browse-api.md) | Quota-Verwaltung für die eBay Browse API | Proposed |
+| [0017](0017-quota-verwaltung-fuer-die-ebay-browse-api.md) | Quota-Verwaltung für die eBay Browse API | Superseded |
 | [0018](0018-dirty-checking-statt-explizitem-save.md) | Dirty Checking statt explizitem `save()` für geladene Entitäten | Proposed |
 | [0019](0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) | `port.spi` für umgekehrte Kontextabhängigkeiten statt Ablage in `shared` | Proposed |
 | [0020](0020-admin-impersonierung-ueber-switchuserfilter.md) | Admin-Impersonierung über Spring Securitys `SwitchUserFilter` | Proposed |

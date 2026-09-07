@@ -47,7 +47,7 @@ describe('SettingsPage', () => {
     });
 
     // A fourth option here, or a renamed value, would be stored and then refused by the server's
-    // SupportedMarketplaces check — a setting that appears to save and silently does not.
+    // EbayMarketplace check — a setting that appears to save and silently does not.
     expect(values).toContain('EBAY_DE');
     expect(values).toContain('EBAY_US');
     expect(values).toContain('EBAY_GB');

@@ -17,8 +17,9 @@ Ausgangslage:
 - Der angemeldete Benutzer wird in der Präsentationsschicht aufgelöst und als `userId` nach unten
   gereicht; darunter liest niemand den `SecurityContext`
   ([ADR-0007](0007-watchlist-pro-benutzer.md), per ArchUnit erzwungen).
-- Die eBay-Preisabfrage bucht zwei Calls je Titel auf ein Tagesbudget, das alle Benutzer teilen,
-  und rechnet pro Benutzer ab ([ADR-0017](0017-quota-verwaltung-fuer-die-ebay-browse-api.md)).
+- ~~Die eBay-Preisabfrage bucht zwei Calls je Titel auf ein Tagesbudget, das alle Benutzer teilen,
+  und rechnet pro Benutzer ab~~ ([ADR-0017](0017-quota-verwaltung-fuer-die-ebay-browse-api.md)) —
+  **entfallen (TODO-56).** Diese Ausgangslage gibt es nicht mehr; siehe Punkt 5.
 
 Spring Security bringt `SwitchUserFilter` mit (in 7.1 vorhanden, geprüft). Er tauscht die
 Authentifizierung im `SecurityContext` aus und hinterlegt die ursprüngliche als
@@ -62,6 +63,16 @@ SPA ihn kennt, ohne ihn zu erraten.
 
 ### 5. Preisabfragen sind während einer Impersonierung gesperrt
 
+> **Hinfällig seit 2026-09-07 (TODO-56).** Die Preisabfrage ist zurückgebaut, weil der
+> eBay-Developer-Account nie freigeschaltet wurde; ihr Ersatz ist ein Suchlink, der im Browser
+> entsteht und kein Kontingent verbraucht. Damit gibt es keine Stelle mehr, an der Impersonierung
+> etwas kostet — die Sperre, der Sonderstatus und der `ImpersonationPort`, den sie brauchte, sind
+> ersatzlos entfallen. Die übrigen vier Punkte gelten unverändert.
+>
+> Der Absatz bleibt stehen, weil die Frage „auf wessen Kontingent bucht eine impersonierte
+> Handlung?" beim nächsten kontingentierten Feature wieder auftaucht — und die Antwort dieselbe
+> sein dürfte.
+
 Die einzige Stelle, an der Impersonierung Geld kostet. Auf wessen Kontingent gebucht würde, ist eine
 Frage ohne gute Antwort: auf den impersonierten Benutzer gebucht verbraucht der Admin fremdes
 Budget, und der Benutzer stößt später an ein Limit, das er nicht ausgeschöpft hat; auf den Admin
@@ -92,11 +103,10 @@ Authentifizierung, und die zu lesen ist nach ADR-0007 Sache der Präsentationssc
   muss das Log heranziehen; die Daten selbst sagen es nicht.
 - **Ein neuer, mächtiger Endpunkt.** Er ist auf ADMIN beschränkt und schließt ADMIN-Ziele aus, aber
   er existiert. Eine übernommene Admin-Sitzung wird damit wertvoller als vorher.
-- **Der gesperrte Preisabruf ist eine sichtbare Lücke.** Wer eine Meldung über die Preisanzeige
-  nachstellen will, kann genau das nicht. Bewusst in Kauf genommen; die Alternative wäre gewesen,
-  fremdes Budget zu verbrauchen.
-- **Ein Zustand mehr im Frontend.** Banner, Ausstieg und der zusätzliche Status der Preisabfrage
-  sind drei Stellen, die mitgepflegt werden wollen.
+- ~~**Der gesperrte Preisabruf ist eine sichtbare Lücke.**~~ Mit dem Rückbau der Preisabfrage
+  (TODO-56) gegenstandslos: es gibt keine Preisanzeige mehr, deren Sperre auffallen könnte.
+- **Ein Zustand mehr im Frontend.** Banner und Ausstieg wollen mitgepflegt werden.
+  Der dritte Punkt — der Sonderstatus der Preisabfrage — ist mit ihr entfallen.
 - **Testbarkeit:** dass ADMIN-Ziele abgelehnt werden, ist eine Zusicherung, die nur ein Test hält —
   im Betrieb fällt ihr Fehlen erst auf, wenn sie gebraucht wird.
 

@@ -1,5 +1,24 @@
 # Plan: eBay-Preisabfrage pro Titel im Dashboard
 
+> ## ⚠ Eingestellt — historisches Dokument
+>
+> **Stand 2026-09-07.** Dieses Vorhaben ist nicht umgesetzt worden.
+> Der eBay-Developer-Account, den jede der API-Varianten voraussetzt, wurde nie freigeschaltet;
+> die Browse API hat nie eine einzige Antwort geliefert.
+> Der gebaute Stand ist auf dem Branch `feature/ebay_search` festgehalten
+> und mit TODO-56 aus `dev` zurückgebaut, [ADR-0017](adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md)
+> ist `Superseded`.
+>
+> **Was stattdessen ausgeliefert ist:** Variante A aus Abschnitt 4 — ein Suchlink je Titel,
+> im Browser gebaut, ohne Anfrage, ohne Kontingent, ohne Account (TODO-57).
+> Der Plan hatte sie als „trivial, minimales Risiko, Stunden statt Tage" bewertet
+> und zugunsten von Variante C verworfen.
+> Das war die falsche Reihenfolge: die aufwendigere Variante hing an einer Freigabe,
+> über die wir nicht verfügten, die triviale nicht.
+>
+> Der Rest des Dokuments steht unverändert, inklusive der Empfehlungen, die sich als falsch
+> erwiesen haben — genau darin liegt sein verbliebener Wert.
+
 Ziel dieses Dokuments ist ein Umsetzungsplan für die eBay-Anbindung von w2s.
 Es ist bewusst so geschrieben, dass eine **andere Claude-Code-Session ohne Vorwissen aus dem
 Ursprungsgespräch** direkt damit arbeiten kann: jeder Schritt nennt die konkrete Datei, die

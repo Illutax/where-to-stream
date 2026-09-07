@@ -8,7 +8,7 @@ import en from './en.json';
  * the raw key ("ebay.link") to whoever switched the language.
  */
 describe('i18n', () => {
-  /** Every leaf key as a dotted path, e.g. `offers.buyNow`. */
+  /** Every leaf key as a dotted path, e.g. `ebay.searchFor`. */
   function keys(node: unknown, prefix = ''): string[] {
     if (typeof node !== 'object' || node === null) {
       return [prefix];

@@ -1,7 +1,20 @@
 # 0017. Quota-Verwaltung für die eBay Browse API
 
 - **Date**: 2026-09-05
-- **Status**: Proposed
+- **Status**: Superseded (2026-09-07)
+
+> **Gegenstandslos.** Der eBay-Developer-Account, auf dem diese Entscheidung ruht, wurde nie
+> freigeschaltet — die Browse API hat nie eine Antwort geliefert, und die hier beschriebene
+> Quota-Verwaltung ist nie in Betrieb gegangen.
+> Die Preisabfrage ist mit TODO-56 zurückgebaut, ihre beiden Tabellen sind per Changeset entfernt.
+>
+> An ihre Stelle tritt ein Suchlink je Titel (TODO-57), der im Browser entsteht:
+> keine Anfrage, kein Budget, kein Account — und damit nichts mehr zu rationieren.
+> Die Frage, die diese ADR beantwortet, stellt sich nicht mehr.
+>
+> Das Dokument bleibt, weil die Überlegungen zur Aufteilung eines geteilten Kontingents
+> und zum Vorrang der Auskunft des Anbieters vor dem eigenen Zähler wiederverwendbar sind,
+> falls je wieder eine kontingentierte fremde API dazukommt.
 
 ## Context
 

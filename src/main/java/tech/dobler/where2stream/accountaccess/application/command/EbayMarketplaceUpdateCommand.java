@@ -3,7 +3,7 @@ package tech.dobler.where2stream.accountaccess.application.command;
 import tech.dobler.where2stream.shared.platform.api.ValidationException;
 
 /**
- * Update the current user's eBay marketplace for price lookups.
+ * Update the current user's eBay marketplace, which their search links open.
  *
  * <p>Validates only that something was sent (ADR-0015). Whether the value is an <em>acceptable</em>
  * marketplace is checked in the service, because that answer belongs to another context and a

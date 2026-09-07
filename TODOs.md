@@ -1024,7 +1024,7 @@ Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript
 
 ## eBay-Rückbau und Ersatz (2026-09-06)
 
-### 🔴 TODO-56 — eBay-Preisabfrage zurückbauen
+### ✅ TODO-56 — eBay-Preisabfrage zurückgebaut
 Der eBay-Developer-Account wurde nie freigeschaltet; die Preisabfrage über die Browse API
 (ADR-0017) kann damit nie Daten liefern und wird zurückgebaut.
 Der Stand ist auf einem Branch festgehalten — hier geht nichts verloren, nur aus `dev` raus.
@@ -1085,11 +1085,32 @@ es braucht ein **neues** Changeset, das beide Tabellen droppt.
 - TODO-51 (resilience4j) und TODO-52 (Bundle-Größe) beziehen sich teilweise auf entfallenden Code;
   TODO-52 wird durch den Rückbau eher besser.
 
-- **Akzeptanzkriterium:** `grep -ri ebay` trifft im Produktionscode nichts mehr außer der
-  Marktplatz-Auswahl und dem neuen Deep-Link;
-  der Anwendungskontext startet;
-  alle Tests grün;
+- **Akzeptanzkriterium:** im Produktionscode bleibt von eBay nur die Marktplatz-Auswahl und der
+  Suchlink; der Anwendungskontext startet; alle Tests grün;
   die beiden Quota-Tabellen sind per Changeset entfernt.
+  (Das ursprüngliche „`grep -ri ebay` trifft nichts mehr" war so nicht erreichbar:
+  die Changelogs `016`–`018` sind append-only und bleiben Treffer.)
+
+**Erledigt am 2026-09-07, in fünf Schritten mit je einem grünen Build.**
+Der Plan wurde vorher von einem Subagenten gegen den Code geprüft;
+drei seiner Korrekturen haben die Umsetzung verändert:
+
+1. **`ebay.default-marketplace` bleibt nicht.**
+   Der Plan nahm an, das Property gehöre zur bleibenden Auswahl.
+   Tatsächlich las es nur `EbayProperties` → `TitleOfferService`;
+   der Default der Auswahl steht in `AppUser` und `UserPreferences`.
+   Es entfällt samt `EBAY_DEFAULT_MARKETPLACE` in `compose.yml` und `.env.example`.
+2. **Zwei Ports, die der Plan nicht nannte, wurden aufruferlos:**
+   `UserDirectoryPort` (+`UserDirectoryService`) und `ImpersonationPort` (+`ImpersonationService`).
+   Beide entfallen; das Impersonierungs-Feature selbst ist unberührt,
+   weil `MeApiController` `ImpersonationConfig` direkt liest.
+3. **Die Bestandsaufnahme war an vier Stellen doppeldeutig geworden:**
+   neben jedem `showOffers` steht seit TODO-57 ein `showEbayLink`,
+   neben der `offers`-Spalte eine `ebay`-Spalte, neben `.offer-chip` ein `.ebay-chip`.
+   Ein `grep`-getriebener Rückbau hätte den Ersatz mitgerissen.
+
+**Nicht verifiziert:** das Drop-Changeset lief nur gegen H2.
+Die MariaDB-Tests sind vom Default-Build ausgeschlossen und waren hier nicht ausführbar.
 
 ### ✅ TODO-57 — eBay-Suchlink pro Titel auf dem Dashboard
 Der Ersatz für die zurückgebaute Preisabfrage (TODO-56) — im ursprünglichen Plan
