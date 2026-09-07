@@ -25,12 +25,12 @@ describe('SettingsPage', () => {
   it('renders the settings sections', () => {
     fixture.detectChanges();
 
+    // One assertion so a renamed heading reports every section at once, not just the first
+    // (ADR-0005). "eBay" replaced "Price lookup" when the lookup was withdrawn (TODO-56) — the
+    // card now only picks the marketplace the search link opens.
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Settings');
-    expect(text).toContain('Language');
-    expect(text).toContain('Price lookup');
-    expect(text).toContain('Appearance');
-    expect(text).toContain('Account');
+    expect(['Settings', 'Language', 'eBay', 'Appearance', 'Account'].filter((s) => !text.includes(s)))
+      .toEqual([]);
   });
 
   it('offers exactly the three marketplaces the server accepts', () => {

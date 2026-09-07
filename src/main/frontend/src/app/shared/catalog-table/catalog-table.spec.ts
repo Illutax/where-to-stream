@@ -131,28 +131,6 @@ describe('CatalogTable', () => {
     expect(titles()).toEqual(['Unwatched', 'Watched']); // ascending: not-seen first
   });
 
-  it('has no eBay column by default', () => {
-    fixture.componentRef.setInput('entries', [entry({})]);
-    fixture.detectChanges();
-
-    // Asserted on the element, not on the word "eBay": the search link (TODO-57) renders that word
-    // too, and a text match would make this test the accidental guard of an unrelated feature.
-    expect([
-      fixture.nativeElement.querySelector('app-offer-prices'),
-      fixture.nativeElement.querySelector('th.mat-column-offers'),
-    ]).toEqual([null, null]);
-  });
-
-  it('shows the eBay column when the page asks for it, without loading anything', () => {
-    fixture.componentRef.setInput('entries', [entry({})]);
-    fixture.componentRef.setInput('showOffers', true);
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('app-offer-prices')).not.toBeNull();
-    // Rendering the column must not itself trigger a lookup — only a click may.
-    expect(fixture.nativeElement.querySelector('.offer-load')).not.toBeNull();
-  });
-
   it('has no eBay search column by default', () => {
     fixture.componentRef.setInput('entries', [entry({})]);
     fixture.detectChanges();

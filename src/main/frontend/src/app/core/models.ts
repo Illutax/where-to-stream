@@ -207,35 +207,3 @@ export const PROVIDERS: ProviderInfo[] = [
   { key: 'netflix', label: 'Netflix', hasFlatrate: true, hasPaid: false },
   { key: 'wow', label: 'Sky WOW', hasFlatrate: true, hasPaid: false },
 ];
-
-/**
- * How a price lookup ended (mirrors the server `OfferLookupResult.Status`).
- * None of these is an error — they are the four things the widget has to be able to say.
- */
-export type OfferStatus =
-  | 'FETCHED'
-  | 'UNAVAILABLE'
-  | 'USER_ALLOWANCE_REACHED'
-  | 'GLOBAL_BUDGET_EXHAUSTED'
-  | 'IMPERSONATION_ACTIVE';
-
-/** One eBay offer (mirrors the server OfferDto). */
-export interface Offer {
-  /** Item price in the currency's minor units. */
-  amountCents: number;
-  /** Shipping cost, or `null` when the listing does not state one — `null` is unknown, not free. */
-  shippingCents: number | null;
-  /** ISO currency code, always the queried marketplace's. */
-  currency: string;
-  /** The offer on eBay; the server has already checked it against the marketplace host allowlist. */
-  url: string;
-}
-
-/** The response of `GET /api/titles/{imdbId}/offers` (mirrors the server TitleOffersDto). */
-export interface TitleOffers {
-  status: OfferStatus;
-  buyNow: Offer | null;
-  auction: Offer | null;
-  /** ISO instant the prices were read, or `null` when nothing was read. */
-  fetchedAt: string | null;
-}

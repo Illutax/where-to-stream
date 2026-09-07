@@ -28,12 +28,12 @@
     "changeUsername": "Change username",
     "usernameTaken": "That username is already taken.",
     "usernameError": "Could not change the username.",
-    "prices": "Price lookup",
+    "prices": "eBay",
     "marketplace": "eBay marketplace",
     "marketplaceDe": "ebay.de (euro)",
     "marketplaceUs": "ebay.com (US dollar)",
     "marketplaceGb": "ebay.co.uk (pound)",
-    "marketplaceHint": "Decides which marketplace prices are looked up on, and therefore the currency."
+    "marketplaceHint": "Decides which marketplace the search link next to a title opens."
   },
   "table": {
     "seen": "Seen",
@@ -48,7 +48,6 @@
     "nothingHere": "Nothing here.",
     "markSeen": "Mark seen: {{ name }}",
     "markNotSeen": "Mark not seen: {{ name }}",
-    "offers": "eBay",
     "ebay": "eBay"
   },
   "overview": {
@@ -161,24 +160,6 @@
     "dismiss": "Dismiss",
     "cancel": "Cancel",
     "staleDataBanner": "Some data is being refreshed in the background and may be briefly out of date."
-  },
-  "offers": {
-    "load": "Prices",
-    "loadFor": "Load eBay prices for {{name}}",
-    "loading": "Loading prices",
-    "from": "from {{price}}",
-    "none": "No offers",
-    "unavailable": "Currently unavailable",
-    "userLimit": "Your daily allowance is used up",
-    "globalLimit": "Used up for today",
-    "details": "Show price details",
-    "refresh": "Check prices again",
-    "buyNow": "Buy it now",
-    "auction": "Current bid",
-    "shipping": "plus {{price}} shipping",
-    "shippingUnknown": "shipping cost unknown",
-    "asOf": "As of {{time}}",
-    "impersonating": "Not available while impersonating"
   },
   "impersonation": {
     "banner": "You are viewing the app as {{user}} — signed in as {{admin}}.",

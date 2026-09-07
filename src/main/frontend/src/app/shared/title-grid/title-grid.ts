@@ -78,7 +78,6 @@ const SKELETON_ROWS = 3;
       } @else {
         @for (entry of sorted(); track entry.imdbId) {
           <app-title-tile
-            [showOffers]="showOffers()"
             [showEbayLink]="showEbayLink()"
             [imdbId]="entry.imdbId"
             [name]="entry.name"
@@ -135,9 +134,8 @@ const SKELETON_ROWS = 3;
   `,
 })
 export class TitleGrid {
-  /** Passed through to every tile; the dashboard switches it on, the provider pages do not. */
-  readonly showOffers = input(false);
-  /** Likewise for the eBay search link (TODO-57) — dashboard only. */
+  /** Passed through to every tile; the dashboard switches the eBay search link on (TODO-57), the
+   * provider pages do not. */
   readonly showEbayLink = input(false);
 
   readonly entries = input.required<TileEntry[]>();

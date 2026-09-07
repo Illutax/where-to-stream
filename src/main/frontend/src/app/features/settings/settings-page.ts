@@ -14,7 +14,7 @@ import { AuthStore } from '../../core/auth-store';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 
 /**
- * The user's settings: display language, the eBay marketplace used for price lookups, colour
+ * The user's settings: display language, the eBay marketplace the search links point at, colour
  * theme, age-rating badges, German film titles, and renaming the login username.
  * Reads/writes the preference stores directly;
  * renaming the username ends the session, so it redirects to the login page.

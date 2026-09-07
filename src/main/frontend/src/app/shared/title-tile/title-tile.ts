@@ -5,7 +5,6 @@ import { injectTitleMeta } from '../../core/title-meta';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
 import { EbayLink } from '../ebay-link/ebay-link';
-import { OfferPrices } from '../offer-prices/offer-prices';
 import { splitTitle, titleSizeSteps } from './title-split';
 
 /**
@@ -20,7 +19,7 @@ import { splitTitle, titleSizeSteps } from './title-split';
 @Component({
   selector: 'app-title-tile',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AgeBadge, EbayLink, OfferPrices, TranslocoPipe],
+  imports: [AgeBadge, EbayLink, TranslocoPipe],
   template: `
     <div class="title-tile" [class.recently-changed]="recentlyChanged()">
       <div class="poster-box" [class.watched]="isRated()">
@@ -62,11 +61,6 @@ import { splitTitle, titleSizeSteps } from './title-split';
         [attr.aria-label]="(isRated() ? 'table.markNotSeen' : 'table.markSeen') | transloco: { name: name() }">
         <span aria-hidden="true">✓</span>
       </button>
-      @if (showOffers()) {
-        <div class="offer-chip">
-          <app-offer-prices [imdbId]="imdbId()" [name]="name()" />
-        </div>
-      }
       @if (showEbayLink()) {
         <div class="ebay-chip">
           <app-ebay-link appearance="badge" [imdbId]="imdbId()" [name]="name()" [releaseYear]="releaseYear()" />
@@ -79,13 +73,6 @@ import { splitTitle, titleSizeSteps } from './title-split';
       display: flex;
       justify-content: center;
       padding-top: 0.2rem;
-    }
-
-    .offer-chip {
-      display: flex;
-      justify-content: center;
-      padding-top: 0.35rem;
-      font-size: 0.85rem;
     }
 
     .title-tile {
@@ -283,8 +270,6 @@ import { splitTitle, titleSizeSteps } from './title-split';
   `,
 })
 export class TitleTile {
-  /** Whether to show the eBay price chip; switched on by the dashboard only (decision 6.5). */
-  readonly showOffers = input(false);
   /**
    * Whether to offer the eBay search link. Off by default: the grid is shared with the provider
    * pages, where a jump to a shop has no business being (TODO-57).
