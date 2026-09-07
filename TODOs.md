@@ -1109,8 +1109,15 @@ drei seiner Korrekturen haben die Umsetzung verändert:
    neben der `offers`-Spalte eine `ebay`-Spalte, neben `.offer-chip` ein `.ebay-chip`.
    Ein `grep`-getriebener Rückbau hätte den Ersatz mitgerissen.
 
-**Nicht verifiziert:** das Drop-Changeset lief nur gegen H2.
-Die MariaDB-Tests sind vom Default-Build ausgeschlossen und waren hier nicht ausführbar.
+**Auch gegen MariaDB verifiziert** (nachgeholt am 2026-09-08):
+`mvn -Ptestcontainers verify` läuft in diesem Container — es ist ein Maven-**Profil**,
+kein `-Dgroups`, weshalb der erste Versuch null Tests fand.
+409 statt 391 Tests, alle grün.
+Da `spring.jpa.hibernate.ddl-auto=none` gilt, kann das Schema nur von Liquibase stammen:
+der Kontext ist gegen ein echtes MariaDB gestartet, also hat Liquibase das komplette
+Changelog inklusive `018` angewandt.
+Ein direkter Logeintrag je Changeset liegt nicht vor (Liquibase loggt das auf Default-Level nicht) —
+der Beleg ist der erfolgreiche Kontextstart, nicht die Zeile.
 
 ### ✅ TODO-57 — eBay-Suchlink pro Titel auf dem Dashboard
 Der Ersatz für die zurückgebaute Preisabfrage (TODO-56) — im ursprünglichen Plan
