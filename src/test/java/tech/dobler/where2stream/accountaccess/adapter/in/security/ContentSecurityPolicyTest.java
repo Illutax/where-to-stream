@@ -83,9 +83,13 @@ class ContentSecurityPolicyTest {
     }
 
     @Test
-    void noEbayOriginIsAllowedBecauseTheLookupRunsOnTheServer() throws Exception {
-        // If an eBay origin ever appears here, someone moved the integration into the browser —
-        // which the plan rules out in section 3, and which would put credentials there too.
+    void noEbayOriginIsAllowedBecauseTheOnlyThingWeDoWithEbayIsLinkToIt() throws Exception {
+        // The assertion outlived its original reason. It used to hold because the price lookup ran
+        // on the server, so no eBay origin was ever fetched from the browser; that lookup is gone
+        // (TODO-56). It still holds, for a different reason: what replaced it is an <a href> to an
+        // eBay search, and CSP's fetch directives do not govern navigation.
+        // An eBay origin appearing here would therefore mean someone started *loading* something
+        // from eBay — a logo, a result count — which is a real widening, not a formality.
         assertThat(policy()).doesNotContain("ebay");
     }
 }
