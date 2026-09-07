@@ -53,13 +53,19 @@ COPY src/ ./src/
 # nightly check in upgrade-spring-boot.sh only runs when Spring Boot itself released something, so
 # every ordinary commit would reach production untested.
 #
+#
+# `-Dtest.excluded.groups=testcontainers` is the one exception to "built WITH tests": a build stage
+# has no Docker socket, so the Testcontainers (MariaDB) tests cannot start a database here and would
+# fail for want of a runtime rather than for want of correctness. They are the default everywhere a
+# runtime exists -- a developer's `mvn verify` and CI -- so the gap is one build, not the habit.
+#
 # The version is stamped before the build rather than after, so the tests run against the same
 # coordinates that ship.
 FROM sources AS builder
 ARG DOCKER_IMAGE_TAG
 ENV DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG
 RUN echo "$DOCKER_IMAGE_TAG" | mvn versions:set -DnewVersion= -DgenerateBackupPoms=false
-RUN mvn -B package
+RUN mvn -B package -Dtest.excluded.groups=testcontainers
 
 #############################################################
 # the same toolchain and the same tests, without the version stamping -- built by
@@ -69,7 +75,7 @@ RUN mvn -B package
 # extra frontend compilation along, and this target needs no DOCKER_IMAGE_TAG. Both share the
 # cached `sources` stage, so the duplication is in the file, not in the work.
 FROM sources AS verify
-RUN mvn -B clean package
+RUN mvn -B clean package -Dtest.excluded.groups=testcontainers
 
 #############################################################
 # run

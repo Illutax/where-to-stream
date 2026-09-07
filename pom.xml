@@ -21,8 +21,13 @@
         <lombok.version>1.18.40</lombok.version>
         <bootstrap.version>5.3.8</bootstrap.version>
         <testcontainers.version>1.21.3</testcontainers.version>
-        <!-- JUnit tags excluded from the default test run; cleared by the 'testcontainers' profile. -->
-        <test.excluded.groups>testcontainers</test.excluded.groups>
+        <!-- JUnit tags excluded from the test run. Empty by default: the Testcontainers (MariaDB)
+             tests are the only ones that exercise the Liquibase changelog against the database we
+             actually ship on, and a check that has to be remembered is a check that gets skipped —
+             018-drop-ebay-quota went in unverified against MariaDB for exactly that reason.
+             Set -Dtest.excluded.groups=testcontainers where no container runtime exists; the image
+             build does (see Dockerfile). -->
+        <test.excluded.groups></test.excluded.groups>
         <!-- Angular client build. Set -Dskip.frontend=true for a backend-only build. -->
         <frontend.dir>${project.basedir}/src/main/frontend</frontend.dir>
         <skip.frontend>false</skip.frontend>
@@ -311,8 +316,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!-- Testcontainers (MariaDB) tests need a container runtime + image pull;
-                         excluded by default, enabled via the 'testcontainers' profile. -->
+                    <!-- Testcontainers (MariaDB) tests need a container runtime + image pull.
+                         Included by default; see the property for how to opt out. -->
                     <excludedGroups>${test.excluded.groups}</excludedGroups>
                     <!-- Don't fail a run just because a -Dtest=... pattern matched nothing.
                          Without this, every targeted run has to repeat
@@ -377,11 +382,12 @@
     </build>
 
     <profiles>
-        <!-- Run the Testcontainers (MariaDB) tests too: mvn -Ptestcontainers test -->
+        <!-- Skip the Testcontainers (MariaDB) tests where no container runtime is available:
+             mvn -Pno-testcontainers verify  (equivalently -Dtest.excluded.groups=testcontainers) -->
         <profile>
-            <id>testcontainers</id>
+            <id>no-testcontainers</id>
             <properties>
-                <test.excluded.groups></test.excluded.groups>
+                <test.excluded.groups>testcontainers</test.excluded.groups>
             </properties>
         </profile>
         <!-- On Windows the npm launcher is npm.cmd, not npm. Auto-activated by OS. -->

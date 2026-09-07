@@ -295,12 +295,16 @@ SPRING_PROFILES_ACTIVE=mariadb \
 
 `compose.yml` already wires the `w2s` service to a bundled `mariadb` service via this profile.
 
-**Testcontainers MariaDB tests:** the repository suite also runs against a real MariaDB.
-These are tagged `testcontainers` and excluded from the normal build (they need a container runtime and image-pull access);
-run them with:
+**Testcontainers MariaDB tests:** the repository suite also runs against a real MariaDB, and does so
+**as part of the normal build** — `mvn verify` starts a container.
+They are the only tests that exercise the Liquibase changelog against the database production
+actually uses, so they are not something to remember to run.
+
+They need a container runtime and image-pull access. Where neither exists — notably inside the
+Docker build stages, which have no Docker socket — skip them explicitly:
 
 ```bash
-mvn -Ptestcontainers test
+mvn -Pno-testcontainers verify        # or: -Dtest.excluded.groups=testcontainers
 ```
 
 ## Endpoints
