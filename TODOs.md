@@ -1334,7 +1334,7 @@ Zwei Folgen, beide beim Review von TODO-57 aufgefallen:
   die Formatierung liegt im Client bei `releaseYearDisplay`,
   und `TileEntry.releaseYear` ist nicht mehr nullable.
 
-### 🔴 TODO-61 — Nach abgelaufener Sitzung führt ein erfolgreicher Login nicht zum Dashboard
+### 🟠 TODO-61 — Nach abgelaufener Sitzung führt ein erfolgreicher Login nicht zum Dashboard
 **Gemeldet am 2026-09-08 aus dem Betrieb.**
 
 **Reproduktion (so berichtet):**
@@ -1389,28 +1389,61 @@ Das grenzt ein, beweist aber nichts: die Meldung hängt an echtem Browser-Zustan
 (Cookies aus einer toten Sitzung, `XSRF-TOKEN`, Remember-me, Cache),
 und den bildet MockMvc nicht ab.
 
-**Was beim nächsten Auftreten zu erfassen ist** — ohne das ist jeder weitere Schritt Raten:
+**Spur aus dem Betrieb (2026-09-09) — und daraus ein belegter Fehler:**
 
-1. Die **URL in der Adresszeile**, nachdem der Login abgeschickt wurde.
-   Steht dort `/login?error`, war die Anmeldung abgelehnt und die Meldung deutet in eine
-   ganz andere Richtung als angenommen.
-2. Im Netzwerk-Tab: Was antwortet `POST /login` (302 wohin?), und was `GET /api/me` danach?
-3. Welche Cookies liegen vor dem Login-Versuch an — insbesondere **mehr als ein** `JSESSIONID`
-   oder `SESSION` (unterschiedliche Pfade aus einer früheren Deployment-Variante)?
-   Das würde erklären, warum ein frischer Browser nicht betroffen ist.
-4. Tritt es auch in einem privaten Fenster auf, wenn man sich dort anmeldet, abmeldet
-   und erneut anmeldet?
+```
+http://domain/w2s/     -> 302  http://domain/w2s/login     <- unsere Antwort
+                       -> 307  https://domain/w2s/login    <- Caddy biegt zurück
+                       -> 200
+[Sign in]              -> 302  /w2s/login
+URL von Hand auf /w2s  -> 302  http://domain/w2s/app/      <- unsere Antwort
+                       -> 307  https://domain/w2s/app/     <- Caddy biegt zurück
+                       -> 200  (angemeldet)
+```
 
-**Mögliche Sofortmaßnahme, bewusst nicht umgesetzt:**
-Der Interceptor schickt bei **jedem** 401 hart auf `/login`, ohne Schleifenschutz.
-Käme direkt nach dem Login noch ein 401 herein, landete man wieder auf der Loginseite —
-das entspräche dem gemeldeten Bild.
-Eine Sperre („nicht erneut umleiten, wenn wir gerade von `/login` kommen") wäre billig,
-verdeckt aber die Ursache, falls es eine andere ist.
-Erst messen.
+Zwei Dinge stehen damit fest.
+Erstens: **die Anmeldung funktioniert** — der letzte Schritt kommt ohne neuen Login ins Dashboard.
+Zweitens, und das ist der eigentliche Fund: **jede absolute Weiterleitung, die wir bauen, trägt
+`http://`, obwohl die Anfrage über `https` hereinkam.** Jedes `-> 307` in der Spur ist Caddy,
+das unsere Antwort zurückbiegt.
+
+**Ursache:** In der Infrastruktur terminiert Caddy TLS.
+`server.servlet.context-path=/w2s` war gesetzt (`compose.yml`),
+`server.forward-headers-strategy` **nicht** — Spring Boots Default ist `NONE`.
+Die Anwendung hielt sich also für unverschlüsselt erreichbar
+und baute jede absolute URL mit dem falschen Schema.
+Spring gibt selbst nur ein relatives `Location` aus; absolut macht es erst der Servlet-Container,
+und der kannte bloß den Klartext-Hop vom Proxy.
+
+**Behoben** (`server.forward-headers-strategy=framework`, mit `ProxyForwardedHeadersTest`):
+`framework` nimmt Springs `ForwardedHeaderFilter` statt des Container-Ventils —
+ein Verhalten, unabhängig davon, was uns ausliefert.
+Es vertraut `X-Forwarded-*` bedingungslos, was nur trägt, weil die Anwendung ausschließlich
+über den Proxy erreichbar ist (internes Netz in `compose.yml`);
+ein direkt exponierter Port ließe die Header fälschen.
+**Achtung beim Proxy:** der Kontextpfad wird bei uns gesetzt,
+Caddy darf deshalb **kein** `X-Forwarded-Prefix` senden — sonst wird daraus `/w2s/w2s`.
+
+**Was damit nicht bewiesen ist.**
+Der Sprung nach `[Sign in]` auf `/w2s/login` lässt sich aus dem Code **nicht** herleiten:
+Spring Securitys Erfolgs-Handler kennt nur zwei Ziele — den gemerkten Request
+oder ersatzweise `/` — und keines davon ergibt die Loginseite.
+Der Fix beseitigt den belegten Fehler und räumt die Kette auf;
+ob er auch das gemeldete Symptom beseitigt, ist offen.
+
+**Nachprüfung, sobald ausgeliefert:**
+Der Ablauf oben sollte jetzt ohne ein einziges `307` durchlaufen.
+Bleibt der Sprung auf die Loginseite, ist die nächste Spur ohne den Schema-Lärm lesbar,
+und dann wird genau eine Angabe gebraucht:
+**der `Location`-Header der 302 nach `[Sign in]`** — sowie, falls dort `?error` steht,
+dass die Anmeldung entgegen dem bisherigen Bild doch abgelehnt wurde.
+
+Falls es dann noch klemmt, sind das die nächsten Kandidaten:
+mehr als ein `JSESSIONID`/`SESSION`-Cookie aus einer früheren Deployment-Variante,
+und ein `Secure`-Flag auf dem Sitzungscookie
+(bisher nicht gesetzt — die Anwendung hielt sich ja für `http`).
 
 - **Akzeptanzkriterium:** Eine Anmeldung nach abgelaufener Sitzung landet im Dashboard,
   in derselben Browser-Sitzung wie zuvor, ohne Cookies von Hand zu löschen.
-  Ein Test hält den Fall fest — die Reproduktion hängt an Sitzungszustand,
-  und genau das vergisst man beim nächsten Umbau.
+  Kein `307` mehr in der Kette — jede unserer Weiterleitungen bleibt auf `https`.
 
