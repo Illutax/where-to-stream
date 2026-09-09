@@ -1,110 +1,107 @@
-# 0016. Asynchrone, verzögerte Aktualisierung des Verfügbarkeits-Caches statt synchronem Reload beim Seitenaufruf
+# 0016. Asynchronous, deferred refresh of the availability cache instead of a synchronous reload on page load
 
 - **Date**: 2026-07-30
 - **Status**: Accepted
 
 ## Context
 
-[ADR-0012](0012-permanenter-titel-cache-vs-ttl-verfuegbarkeits-cache.md) legt fest, dass der
-Streaming-Verfügbarkeits-Cache (`query_meta`, `query_result`) TTL-basiert ist
-(`wer-streamt.invalidate.after-days`, Default 28 Tage) und zusätzlich von einem ADMIN gezielt
-vorzeitig invalidiert werden kann (`POST /api/manage/invalidate`, `/manage`-UI, „Cache Verwalten").
+[ADR-0012](0012-permanenter-titel-cache-vs-ttl-verfuegbarkeits-cache.md) established that the
+streaming availability cache (`query_meta`, `query_result`) is TTL-based
+(`wer-streamt.invalidate.after-days`, default 28 days) and can additionally be invalidated early
+and selectively by an ADMIN (`POST /api/manage/invalidate`, the `/manage` UI, "Cache Verwalten").
 
-Was das ADR nicht festhält: **wie** ein abgelaufener oder invalidierter Eintrag tatsächlich neu
-geladen wird. Das passiert heute ausschließlich synchron, innerhalb des HTTP-Requests, der zufällig
-zuerst danach fragt:
+What that ADR does not record: **how** an expired or invalidated entry actually gets reloaded.
+Today this happens exclusively synchronously, inside whichever HTTP request happens to ask for it
+first:
 
-- `StreamInfoService.resolveAll(imdbIds)` (aufgerufen von `CatalogOverviewService.overview()` fürs
-  Dashboard und von `AggregateService.getAll()` für die Provider-Seiten) lädt die aktuell gültigen
-  `QueryMeta`-Zeilen; für jeden Treffer, der fehlt, invalidiert oder über die TTL hinaus ist, wird
-  **im selben Request** `StreamInfoService.resolve(imdbId)` aufgerufen, welches synchron
-  `WerStreamtEsSource.query(imdbId)` scraped (durch den geteilten `RateLimiter`, Default
-  2 req/s) und das Ergebnis persistiert, bevor der Request antwortet.
-- Da der Cache **global** ist (nur nach `imdbId`, nicht pro Nutzer), reicht ein einziger
-  Dashboard-Aufruf durch irgendeinen Nutzer, um jeden invalidierten/abgelaufenen Titel auf dessen
-  Watchlist sofort wieder frisch zu cachen — unabhängig davon, ob und wann ein ADMIN über
-  „Cache Verwalten" gezielt scrapen wollte.
+- `StreamInfoService.resolveAll(imdbIds)` (called by `CatalogOverviewService.overview()` for the
+  dashboard and by `AggregateService.getAll()` for the provider pages) loads the currently valid
+  `QueryMeta` rows; for every hit that is missing, invalidated or past its TTL,
+  `StreamInfoService.resolve(imdbId)` is called **in the same request**, which synchronously
+  scrapes `WerStreamtEsSource.query(imdbId)` (through the shared `RateLimiter`, default
+  2 req/s) and persists the result before the request answers.
+- Because the cache is **global** (keyed by `imdbId` only, not per user), a single dashboard call
+  by any user is enough to immediately re-cache every invalidated/expired title on that user's
+  watchlist — regardless of whether and when an ADMIN wanted to scrape deliberately via
+  "Cache Verwalten".
 
-Das hat zwei Konsequenzen, die dieses ADR adressiert:
+This has two consequences that this ADR addresses:
 
-1. **Die „Cache Verwalten"-Seite hat keinen beobachtbaren Effekt.** Ein ADMIN invalidiert Titel,
-   um sie gezielt neu zu scrapen — aber sobald irgendjemand (oft der ADMIN selbst beim Testen) das
-   Dashboard öffnet, ist der invalidierte Zustand bereits durch den impliziten Reload aufgelöst,
-   bevor der „Scrapen"-Button der Manage-Seite etwas zu tun hätte. Die Seite wirkt wirkungslos,
-   obwohl sie technisch funktioniert — sie wird nur ständig von der automatischen Dashboard-Logik
-   überholt.
-2. **Ein Seitenaufruf kann beliebig lange blockieren.** Sind viele Titel gleichzeitig abgelaufen
-   oder invalidiert (z. B. direkt nach einem großen Watchlist-Import oder einer Massen-Invalidierung
-   über die Manage-Seite), muss der nächste Dashboard-Request potenziell dutzende Titel seriell
-   gegen den ratenlimitierten externen Scraper nachladen (`parallelStream` parallelisiert nur über
-   Worker-Threads, der Request selbst wartet trotzdem auf das langsamste Ergebnis), bevor er
-   überhaupt antwortet.
+1. **The "Cache Verwalten" page has no observable effect.** An ADMIN invalidates titles in order to
+   re-scrape them deliberately — but as soon as anyone (often the ADMIN themselves while testing)
+   opens the dashboard, the invalidated state has already been resolved by the implicit reload
+   before the manage page's "Scrapen" button would have had anything to do. The page appears
+   ineffective even though it works technically — it is simply overtaken all the time by the
+   automatic dashboard logic.
+2. **A page load can block for an arbitrarily long time.** If many titles have expired or been
+   invalidated at the same time (e.g. right after a large watchlist import or a bulk invalidation
+   from the manage page), the next dashboard request potentially has to reload dozens of titles
+   serially against the rate-limited external scraper (`parallelStream` only parallelises across
+   worker threads; the request itself still waits for the slowest result) before it answers at all.
 
 ## Decision
 
-Wir trennen **„zwischengespeicherte Daten anzeigen"** von **„veraltete Daten auffrischen"**:
+We separate **"show cached data"** from **"refresh stale data"**:
 
-1. `StreamInfoService.resolveAll(...)` liefert für einen abgelaufenen/invalidierten, aber
-   **existierenden** Cache-Eintrag sofort die zwischengespeicherten (u. U. veralteten) Werte zurück,
-   statt zu blockieren, und markiert das Ergebnis als `stale`. Nur ein Titel, der **noch nie**
-   gecacht wurde, wird weiterhin synchron aufgelöst (es gibt sonst nichts anzuzeigen).
-2. Für jeden als `stale` erkannten Titel wird — dedupliziert gegen parallele Anfragen für denselben
-   Titel — im Hintergrund (`@Async`) ein Refresh angestoßen, der denselben, bereits vorhandenen
-   `resolve(imdbId, forceRefresh = true)`-Pfad nutzt.
-3. Das Dashboard und die Provider-Seiten zeigen einen kleinen Hinweis-Banner, wenn die angezeigten
-   Daten (teilweise) veraltet sind — eine Aggregat-Information pro Seite, keine Kennzeichnung pro
-   Zeile (YAGNI: nicht mehr Sichtbarkeit bauen als angefragt).
-4. Zusätzlich zum bedarfsgetriebenen (Seitenaufruf-getriggerten) Refresh übernimmt ein
-   **Scheduled Job** proaktiv das Auffrischen von Titeln, die niemand zeitnah ansieht: Er läuft in
-   grobem Takt (initial: täglich) und aktualisiert nur Titel, deren TTL **plus einem zufälligen
-   Jitter-Faktor zwischen dem 1,5- und 2-fachen von `wer-streamt.invalidate.after-days`** bereits
-   verstrichen ist, sowie alle manuell invalidierten Titel. Der Jitter wird **einmalig beim
-   Schreiben** eines Cache-Eintrags gewürfelt und persistiert (`due_for_refresh_at`), nicht bei
-   jedem Job-Lauf neu berechnet — das verteilt die Refresh-Zeitpunkte vieler gleichzeitig
-   importierter/gecachter Titel, statt sie synchron gemeinsam ablaufen zu lassen
-   (Thundering-Herd-Vermeidung), und bleibt stabil nachvollziehbar (derselbe Eintrag hat immer
-   denselben Fälligkeits-Zeitpunkt, unabhängig davon, wie oft der Job seitdem gelaufen ist).
+1. For an expired/invalidated but **existing** cache entry, `StreamInfoService.resolveAll(...)`
+   immediately returns the cached (possibly stale) values instead of blocking, and marks the result
+   as `stale`. Only a title that has **never** been cached is still resolved synchronously (there is
+   nothing else to show).
+2. For every title recognised as `stale`, a refresh is kicked off in the background (`@Async`) —
+   deduplicated against parallel requests for the same title — using the same, already existing
+   `resolve(imdbId, forceRefresh = true)` path.
+3. The dashboard and the provider pages show a small notice banner when the displayed data is
+   (partly) stale — one aggregate piece of information per page, no per-row marking (YAGNI: don't
+   build more visibility than was asked for).
+4. In addition to the demand-driven (page-load-triggered) refresh, a **scheduled job** proactively
+   takes care of refreshing titles nobody looks at any time soon: it runs on a coarse cadence
+   (initially: daily) and only updates titles whose TTL **plus a random jitter factor between 1.5x
+   and 2x of `wer-streamt.invalidate.after-days`** has already passed, as well as all manually
+   invalidated titles. The jitter is rolled **once, when a cache entry is written**, and persisted
+   (`due_for_refresh_at`), rather than being recomputed on every job run — this spreads out the
+   refresh times of many titles imported/cached at the same time instead of letting them expire
+   together in lockstep (thundering-herd avoidance), and it stays reliably traceable (the same entry
+   always has the same due time, no matter how often the job has run since).
 
-Der volle Implementierungsplan (Phasen, betroffene Klassen, Config, Migration, Tests) steht in
+The full implementation plan (phases, affected classes, config, migration, tests) is in
 [`docs/CACHE_REFRESH_PLAN.md`](../CACHE_REFRESH_PLAN.md).
 
 ## Consequences
 
-**Einfacher / vorteilhaft:**
+**Simpler / beneficial:**
 
-- Die „Cache Verwalten"-Seite bekommt ihre Funktion zurück: Invalidieren + gezieltes Scrapen bleibt
-  der einzige Weg, ein Neu-Scrapen **sofort und garantiert** auszulösen; ein Seitenaufruf des
-  Dashboards nimmt ihr das nicht mehr vorweg.
-- Seitenaufrufe bleiben schnell und vorhersehbar — kein Request blockiert mehr auf einer
-  unbekannten Anzahl externer Scrapes.
-- Titel, die niemand aktiv ansieht, veralten nicht unbegrenzt (der Scheduled Job holt sie
-  irgendwann nach), ohne dass dafür ständige, unnötige Last entsteht (grober Takt, Jitter, keine
-  Aktion bei „nichts fällig").
+- The "Cache Verwalten" page gets its purpose back: invalidating + scraping deliberately remains the
+  only way to trigger a re-scrape **immediately and reliably**; a dashboard page load no longer
+  pre-empts it.
+- Page loads stay fast and predictable — no request blocks on an unknown number of external scrapes
+  any more.
+- Titles nobody actively looks at don't go stale indefinitely (the scheduled job picks them up
+  eventually), without causing constant, pointless load in the process (coarse cadence, jitter, no
+  action when "nothing is due").
 
-**Nachteile / bewusst in Kauf genommen:**
+**Drawbacks / deliberately accepted:**
 
-- Nutzer sehen für kurze Zeit (bis der Hintergrund-Refresh durch ist) explizit veraltete Daten
-  statt garantiert frischer Daten — dafür der neue Banner, damit das sichtbar und nicht
-  stillschweigend falsch ist.
-- Erstmals `@Async`/`@EnableAsync` und `@Scheduled`/`@EnableScheduling` im Projekt (bislang nicht
-  verwendet) — neue Infrastruktur, die getestet und betrieblich beobachtet werden will (Executor
-  dimensionieren, Job-Ausführung loggen).
-- Neue Spalte `due_for_refresh_at` auf `query_meta` (Liquibase-Migration).
-- Etwas mehr Komplexität in `StreamInfoService` (stale-vs-fresh-Unterscheidung, In-Flight-Tracking
-  gegen doppelte parallele Refreshes für denselben Titel).
+- For a short while (until the background refresh is through), users explicitly see stale data
+  instead of guaranteed fresh data — hence the new banner, so that this is visible rather than
+  silently wrong.
+- `@Async`/`@EnableAsync` and `@Scheduled`/`@EnableScheduling` appear in the project for the first
+  time (not used so far) — new infrastructure that wants testing and operational observation (size
+  the executor, log job runs).
+- A new `due_for_refresh_at` column on `query_meta` (Liquibase migration).
+- Somewhat more complexity in `StreamInfoService` (stale-vs-fresh distinction, in-flight tracking
+  against duplicate parallel refreshes of the same title).
 
 ## Alternatives Considered
 
-- **Nichts ändern, Manage-Seite nur informativer machen** (Zeitstempel statt Boolean, aber
-  Dashboard-Verhalten unangetastet lassen): behebt nur das kosmetische Symptom, nicht die
-  eigentliche Redundanz — die Seite bliebe weiterhin ständig vom Dashboard überholt. Trotzdem als
-  Teil dieses Plans übernommen (Phase 1), weil die Information für sich genommen nützlich ist,
-  aber nicht als alleinige Lösung ausreichend.
-- **Refresh nur über einen Scheduled Job, kein bedarfsgetriebener Async-Pfad beim Seitenaufruf**:
-  einfacher, aber ein Titel, der frisch invalidiert wurde und sofort angesehen wird, bliebe bis zum
-  nächsten Job-Lauf veraltet, obwohl ein Nutzer gerade aktiv danach schaut — schlechtere UX für den
-  Normalfall.
-- **Jitter bei jedem Job-Lauf neu würfeln statt beim Schreiben zu persistieren**: spart die neue
-  Spalte, macht die Fälligkeit eines Eintrags aber von der Zufallslogik des jeweiligen Laufs
-  abhängig statt von einer stabilen, am Eintrag selbst ablesbaren Eigenschaft — schwerer zu testen
-  und nachzuvollziehen. Verworfen zugunsten des persistierten Werts.
+- **Change nothing, just make the manage page more informative** (a timestamp instead of a boolean,
+  but leave the dashboard behaviour untouched): fixes only the cosmetic symptom, not the actual
+  redundancy — the page would still be overtaken by the dashboard all the time. Adopted as part of
+  this plan anyway (phase 1), because the information is useful in its own right, just not
+  sufficient as the sole solution.
+- **Refresh only via a scheduled job, no demand-driven async path on page load**: simpler, but a
+  title that was just invalidated and is looked at right away would stay stale until the next job
+  run, even though a user is actively looking at it — worse UX for the normal case.
+- **Roll the jitter afresh on every job run instead of persisting it on write**: saves the new
+  column, but makes an entry's due time depend on the random logic of the particular run rather than
+  on a stable property readable off the entry itself — harder to test and to follow. Rejected in
+  favour of the persisted value.

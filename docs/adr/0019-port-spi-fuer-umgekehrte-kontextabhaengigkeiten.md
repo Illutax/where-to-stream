@@ -1,122 +1,117 @@
-# 0019. `port.spi` für umgekehrte Kontextabhängigkeiten statt Ablage in `shared`
+# 0019. `port.spi` for inverted context dependencies instead of parking them in `shared`
 
 - **Date**: 2026-09-05
-- **Status**: Accepted (2026-09-09 nachgetragen — umgesetzt und im Betrieb)
+- **Status**: Accepted (added retrospectively on 2026-09-09 — implemented and in production)
 
 ## Context
 
-[ADR-0014](0014-backend-nach-bounded-contexts-und-ports-adaptern.md) ordnet das Backend nach
-Bounded Contexts mit `port.in` (was andere bei uns aufrufen dürfen) und `port.out` (unsere eigenen
-Abhängigkeiten auf Datenbank und Fremdsysteme). `ArchitectureTest` erzwingt je Kontext, dass von
-außen nur `port.in` erreichbar ist.
+[ADR-0014](0014-backend-nach-bounded-contexts-und-ports-adaptern.md) organises the backend by
+bounded contexts with `port.in` (what others may call on us) and `port.out` (our own dependencies on
+the database and on foreign systems). `ArchitectureTest` enforces per context that only `port.in` is
+reachable from outside.
 
-Beim Bau der eBay-Preisabfrage fiel auf, dass zwischen `accountaccess` und `titlecatalog` ein
-**Zyklus** bestand:
+While building the eBay price lookup we noticed a **cycle** between `accountaccess` and
+`titlecatalog`:
 
-- `MeApiController` (accountaccess) brauchte `titlecatalog.port.in.PosterAttributionPort`, um
-  `MeDto` das Flag „TMDB-Attributionshinweis anzeigen" mitzugeben.
-- `ImdbSearchApiController` (titlecatalog) braucht `accountaccess.port.in.CurrentUserPort`.
+- `MeApiController` (accountaccess) needed `titlecatalog.port.in.PosterAttributionPort` in order to
+  give `MeDto` the "show TMDB attribution notice" flag.
+- `ImdbSearchApiController` (titlecatalog) needs `accountaccess.port.in.CurrentUserPort`.
 
-Beide Kanten liefen über *veröffentlichte* Ports, waren also nach den bestehenden Regeln zulässig.
-Die Regeln haben den Kreis dennoch nicht gemeldet, und das ist keine Nachlässigkeit, sondern
-strukturell: jede Isolationsregel prüft **eine** Richtung. Ein Zyklus besteht aus zwei
-je für sich erlaubten Kanten.
+Both edges ran through *published* ports, so both were permitted under the existing rules. The rules
+still did not report the cycle, and that is not sloppiness but structural: every isolation rule
+checks **one** direction. A cycle consists of two edges each of which is allowed on its own.
 
-Der erste Reparaturversuch war, `PosterAttributionPort` nach `shared/platform/api` zu verschieben.
-Das macht die Regel grün, weil `shared` von den Isolationsregeln ausgenommen ist — aber es
-**beseitigt die Kopplung nicht, es versteckt sie**. Konsequent zu Ende gedacht landet auf diesem Weg
-jedes Interface in `shared`, sobald es unbequem wird, und `shared` verkommt vom Ort
-kontextübergreifender Bausteine zum Ablagefach für ungelöste Abhängigkeiten. Der Versuch wurde
-deshalb verworfen.
+The first attempt at a fix was to move `PosterAttributionPort` to `shared/platform/api`. That turns
+the rule green, because `shared` is exempt from the isolation rules — but it **does not remove the
+coupling, it hides it**. Followed through consistently, this route lands every interface in `shared`
+as soon as it becomes inconvenient, and `shared` degenerates from the place for cross-context
+building blocks into a drawer for unresolved dependencies. The attempt was therefore rejected.
 
-Das eigentliche Problem ist die **Richtung** der Abhängigkeit, nicht ihr Ort:
-`accountaccess` weiß nichts über Posterquellen und soll es auch nicht. Es hat einen *Bedarf*
-(„ein Flag für `/api/me`"), den ein anderer Kontext decken kann.
+The actual problem is the **direction** of the dependency, not its location:
+`accountaccess` knows nothing about poster sources and is not supposed to. What it has is a *need*
+("a flag for `/api/me`") that another context can meet.
 
 ## Decision
 
-Ein Kontext, der etwas braucht, was ein anderer Kontext liefern kann, **deklariert dafür ein eigenes
-Interface und lässt es vom anderen implementieren.** Solche Interfaces liegen in
-`<kontext>/port/spi/` und sind veröffentlicht.
+A context that needs something another context can supply **declares its own interface for it and
+lets the other context implement it.** Such interfaces live in `<context>/port/spi/` and are
+published.
 
-Damit hat jeder Kontext drei Port-Arten mit klar verschiedener Bedeutung:
+Each context therefore has three kinds of port with clearly different meanings:
 
-| Paket | Bedeutung | Von außen sichtbar? |
+| Package | Meaning | Visible from outside? |
 | --- | --- | --- |
-| `port.in` | Was andere bei uns **aufrufen** dürfen | ja |
-| `port.spi` | Was andere für uns **implementieren** dürfen | ja |
-| `port.out` | Unsere eigene Abhängigkeit auf DB/Fremdsystem | **nein** |
+| `port.in` | What others may **call** on us | yes |
+| `port.spi` | What others may **implement** for us | yes |
+| `port.out` | Our own dependency on the DB/a foreign system | **no** |
 
-Konkret umgesetzt:
+Concretely implemented:
 
-- `accountaccess/port/spi/PosterAttributionProvider` deklariert den Bedarf.
-- `TmdbProperties` (titlecatalog) implementiert ihn — der Kontext, der weiß, welche Posterquelle
-  aktiv ist.
-- Die Abhängigkeit zeigt damit nur noch `titlecatalog → accountaccess`, in derselben Richtung wie
-  die bereits bestehende über `CurrentUserPort`. Der Zyklus ist weg, nicht umbenannt.
+- `accountaccess/port/spi/PosterAttributionProvider` declares the need.
+- `TmdbProperties` (titlecatalog) implements it — the context that knows which poster source is
+  active.
+- The dependency now only points `titlecatalog → accountaccess`, in the same direction as the one
+  that already existed via `CurrentUserPort`. The cycle is gone, not renamed.
 
-Ergänzend erzwingt `ArchitectureTest` jetzt **Zyklenfreiheit zwischen den Kontexten**
-(`bounded_contexts_are_free_of_cycles`). `shared` ist dort in beiden Richtungen ausgeklammert:
-`ApiExceptionHandler` bildet die Exception-Typen aller Kontexte ab, `shared` hängt also
-zwangsläufig an allen und alle an `shared`. Ohne diese Ausnahme wäre die Regel dauerhaft rot und
-damit wertlos.
+In addition, `ArchitectureTest` now enforces **freedom from cycles between the contexts**
+(`bounded_contexts_are_free_of_cycles`). `shared` is excluded there in both directions:
+`ApiExceptionHandler` maps the exception types of all contexts, so `shared` inevitably depends on all
+of them and all of them on `shared`. Without that exemption the rule would be permanently red and
+therefore worthless.
 
-**Wann `shared` trotzdem richtig ist:** für Bausteine, die keinem Kontext gehören und keine
-Richtung haben — Wertetypen des Shared Kernel (`ImdbId`), technische Querschnittsdienste
-(`TimeService`, `RateLimiter`, `HttpClientFactory`). Das Unterscheidungsmerkmal ist nicht die
-Bequemlichkeit, sondern die Frage, ob es einen natürlichen Eigentümer gibt. `PosterAttributionProvider`
-hat einen: den Kontext, der den Wert braucht.
+**When `shared` is nevertheless the right place:** for building blocks that belong to no context and
+have no direction — value types of the shared kernel (`ImdbId`), technical cross-cutting services
+(`TimeService`, `RateLimiter`, `HttpClientFactory`). The distinguishing criterion is not convenience
+but the question of whether there is a natural owner. `PosterAttributionProvider` has one: the
+context that needs the value.
 
 ## Consequences
 
-**Was besser wird**
+**What gets better**
 
-- **Die Kopplung ist sichtbar und gerichtet.** Ein Leser sieht an `port.spi`, dass hier ein anderer
-  Kontext etwas beisteuert, und an welchem Ende der Bedarf entsteht.
-- **`shared` bleibt klein.** Es gibt jetzt eine benannte Alternative für den Fall, der es sonst
-  hätte wachsen lassen.
-- **Zyklen werden gemeldet**, und zwar von einer Regel, die verifiziert fehlschlägt, wenn man eine
-  Kante wieder einzieht.
-- Der Dependency-Inversion-Gedanke steht damit einmal aufgeschrieben und muss nicht bei jedem
-  ähnlichen Fall neu hergeleitet werden.
+- **The coupling is visible and directed.** From `port.spi` a reader can see that another context
+  contributes something here, and at which end the need arises.
+- **`shared` stays small.** There is now a named alternative for the case that would otherwise have
+  made it grow.
+- **Cycles get reported**, and by a rule that has been verified to fail when an edge is put back in.
+- The dependency-inversion idea is thereby written down once and doesn't have to be re-derived for
+  every similar case.
 
-**Was schwieriger wird**
+**What gets harder**
 
-- **Eine dritte Port-Art ist eine Begriffslast.** Wer `port.in` und `port.out` kennt, muss
-  `port.spi` dazulernen, und die Grenze zu `port.out` ist erklärungsbedürftig — beide sind formal
-  „ausgehend", nur der Implementierer unterscheidet sich.
-- **Der Nutzen steht und fällt mit der Benennung.** Ein `port.spi`-Interface, das nach dem
-  liefernden Kontext benannt ist statt nach dem Bedarf, hat die Abhängigkeit nur umgedreht, nicht
-  entkoppelt: der Name würde weiterhin Wissen über den anderen Kontext transportieren.
-  `PosterAttributionProvider` ist an dieser Stelle schon grenzwertig — „Poster" ist Vokabular des
-  liefernden Kontexts.
-- **Die Zyklusregel kann `shared` nicht prüfen.** Innerhalb von `shared` bleibt alles ungeprüft,
-  und ein Kontext, der eine Abhängigkeit über `shared` leitet, umgeht die Regel weiterhin. Die
-  Regel schützt vor Versehen, nicht vor Absicht.
-- **Ein Interface allein macht noch keine Entkopplung.** Wenn ein Kontext fünf `port.spi`-Einträge
-  sammelt, ist das ein Hinweis darauf, dass die Kontextgrenze falsch liegt, und nicht ein Erfolg
-  dieses Musters.
+- **A third kind of port is conceptual baggage.** Anyone who knows `port.in` and `port.out` has to
+  learn `port.spi` as well, and the boundary to `port.out` needs explaining — formally both are
+  "outgoing", only the implementer differs.
+- **The benefit stands or falls with the naming.** A `port.spi` interface named after the supplying
+  context instead of after the need has merely reversed the dependency, not decoupled it: the name
+  would still carry knowledge about the other context. `PosterAttributionProvider` is already
+  borderline in this respect — "Poster" is vocabulary of the supplying context.
+- **The cycle rule cannot check `shared`.** Inside `shared` everything stays unchecked, and a
+  context that routes a dependency through `shared` still circumvents the rule. The rule protects
+  against oversight, not against intent.
+- **An interface alone is not decoupling.** If a context accumulates five `port.spi` entries, that is
+  an indication that the context boundary is in the wrong place, not a success of this pattern.
 
 ## Alternatives Considered
 
-**Interface nach `shared` verschieben.**
-Der erste Versuch. Kostet eine Datei-Verschiebung, macht die Regel grün und ändert an der Kopplung
-nichts. Verworfen, weil es den Zyklus aus dem Blickfeld nimmt statt ihn aufzulösen, und weil dieses
-Vorgehen `shared` planmäßig zum Sammelbecken macht.
+**Move the interface to `shared`.**
+The first attempt. Costs one file move, turns the rule green and changes nothing about the coupling.
+Rejected because it takes the cycle out of sight instead of resolving it, and because this approach
+turns `shared` into a catch-all by design.
 
-**Das Flag aus `/api/me` herausnehmen und als eigenen Endpunkt von `titlecatalog` anbieten.**
-Konzeptionell die sauberste Lösung: `/api/me` sammelt heute Daten mehrerer Kontexte, und genau
-daraus entstand die Abhängigkeit. Verworfen für diesen Schritt, weil es den API-Vertrag ändert und
-Frontend-Arbeit plus einen zusätzlichen Bootstrap-Request nach sich zieht — unverhältnismäßig für
-ein einzelnes boolesches Flag. Bleibt die richtige Antwort, falls `MeDto` weitere Fremdfelder
-ansammelt.
+**Take the flag out of `/api/me` and offer it as its own endpoint from `titlecatalog`.**
+Conceptually the cleanest solution: `/api/me` today gathers data from several contexts, and that is
+exactly where the dependency came from. Rejected for this step, because it changes the API contract
+and entails frontend work plus an additional bootstrap request — disproportionate for a single
+boolean flag. Remains the right answer should `MeDto` accumulate further foreign fields.
 
-**Interface in `accountaccess/port/out` legen und in `ArchitectureTest` einzeln ausnehmen.**
-Wäre ohne neues Konzept ausgekommen, nach dem Vorbild der Ausnahme für
-`ImdbEntry`/`WatchlistDate`. Verworfen, weil es die Bedeutung von `port.out` aufweicht: dort stehen
-Abhängigkeiten, die niemanden außerhalb angehen, und eine Ausnahme pro Sonderfall hätte diese
-Aussage Stück für Stück entwertet.
+**Put the interface in `accountaccess/port/out` and exempt it individually in `ArchitectureTest`.**
+Would have got by without a new concept, following the example of the exemption for
+`ImdbEntry`/`WatchlistDate`. Rejected because it waters down the meaning of `port.out`: that is where
+dependencies live that are nobody else's business, and one exemption per special case would have
+devalued that statement bit by bit.
 
-**Registrierung zur Laufzeit statt Interface** (titlecatalog meldet den Wert bei accountaccess an).
-Verworfen als veränderlicher globaler Zustand mit Initialisierungsreihenfolge als zusätzlichem
-Risiko — für einen Wert, den ein Interface statisch und nachvollziehbar liefert.
+**Registration at runtime instead of an interface** (titlecatalog registers the value with
+accountaccess).
+Rejected as mutable global state with initialisation order as an additional risk — for a value that
+an interface supplies statically and traceably.
