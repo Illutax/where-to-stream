@@ -52,6 +52,7 @@ describe('Navbar', () => {
 
     const text = fixture.nativeElement.textContent;
     expect(text).not.toContain('Users');
+    expect(text).not.toContain('Metrics');
     expect(text).not.toContain('Logout');
   });
 
@@ -63,6 +64,7 @@ describe('Navbar', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('alice');
     expect(text).toContain('Users');
+    expect(text).toContain('Metrics');
     expect(text).toContain('Manage Cache');
     expect(text).toContain('Logout');
   });
