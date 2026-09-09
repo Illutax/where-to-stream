@@ -118,6 +118,32 @@ class WatchlistImportServiceTest {
     }
 
     @Test
+    void aChangedExportSchemaAbortsTheImportWithoutDeletingAnything() {
+        // The whole point of TODO-22, so it is asserted end to end with the real reader rather than
+        // a mock that could only prove the service calls things in the order this test assumes.
+        // "Title" is renamed and everything else is intact — the file still looks like a watchlist,
+        // and every row still carries a valid tt… link. Under the old positional mapping it would
+        // have imported as garbage and then removed every stored title it appeared not to contain.
+        final var renamedColumn = """
+                Position,Const,Created,Primary Title,URL,Year,Your Rating
+                1,tt0000001,2012-06-22,"The Prestige",https://www.imdb.com/title/tt0000001/,2006,10
+                """;
+        final var service = new WatchlistImportService(repository, new ExportReader(), currentUserPort, timeService);
+        final var csv = new ByteArrayInputStream(renamedColumn.getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> service.importCsv(USER, csv))
+                .isInstanceOf(InvalidImportException.class)
+                .hasMessageContaining("your watchlist is unchanged");
+
+        // Not merely "nothing was deleted" — the stored watchlist is never even read, because the
+        // file is refused before the full sync begins.
+        verify(repository, never()).findByUserId(any());
+        verify(repository, never()).delete(any());
+        verify(repository, never()).save(any());
+        verify(repository, never()).deleteByUserId(any());
+    }
+
+    @Test
     void reimportUpdatesWhenOnlyTheRatedFlagDiffers() {
         when(timeService.now()).thenReturn(NOW);
         when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(incoming("tt1", "Same", true)));

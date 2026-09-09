@@ -2,6 +2,7 @@ package tech.dobler.where2stream.watchlist.application;
 
 import org.junit.jupiter.api.Test;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
+import tech.dobler.where2stream.watchlist.domain.InvalidImportException;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 class ExportReaderTest {
@@ -24,6 +26,10 @@ class ExportReaderTest {
         final var in = ExportReaderTest.class.getResourceAsStream("/test-assets/2024-12-25_Test.csv");
         assertThat(in).as("sample export fixture present").isNotNull();
         return in;
+    }
+
+    private static InputStream streamOf(String csv) {
+        return new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -95,6 +101,66 @@ class ExportReaderTest {
 
         assertThat(entry).extracting(ImdbEntry::imdbId, ImdbEntry::url)
                 .containsExactly(ImdbId.of("tt1337"), URI.create("https://www.imdb.com/title/tt1337/"));
+    }
+
+    @Test
+    void mapsByColumnNameSoAnInsertedOrReorderedColumnIsHarmless() {
+        // The case TODO-22 was about, and the one the old positional mapping got silently wrong:
+        // columns shuffled and a new one inserted. Read by position this yields a valid-looking
+        // entry built from the wrong fields; read by name it is simply correct.
+        final var csv = """
+                Const,Streaming Provider,Title,URL,Year,Created,Your Rating
+                tt0000001,Netflix,"The Prestige",https://www.imdb.com/title/tt0000001/,2006,2012-06-22,10
+                """;
+
+        final ImdbEntry entry = exportReader.parse(streamOf(csv)).getFirst();
+
+        assertThat(entry)
+                .extracting(ImdbEntry::name, ImdbEntry::imdbId, ImdbEntry::year, ImdbEntry::added, ImdbEntry::isRated)
+                .containsExactly("The Prestige", ImdbId.of("tt0000001"), ReleaseYear.of(2006),
+                        WatchlistDate.of("2012-06-22"), true);
+    }
+
+    @Test
+    void rejectsAFileMissingAColumnWeRead() {
+        // "Title" renamed — every other column intact, and every row still carries a valid tt… link.
+        // This is precisely the file that used to import as garbage and then delete the difference.
+        final var csv = """
+                Position,Const,Created,Primary Title,URL,Year,Your Rating
+                1,tt0000001,2012-06-22,"The Prestige",https://www.imdb.com/title/tt0000001/,2006,10
+                """;
+
+        assertThatThrownBy(() -> exportReader.parse(streamOf(csv)))
+                .isInstanceOf(InvalidImportException.class)
+                .hasMessageContaining("missing the column(s) Title")
+                .hasMessageContaining("your watchlist is unchanged")
+                .hasMessageContaining("Primary Title");
+    }
+
+    @Test
+    void rejectsADuplicateColumnNameRatherThanPickingOne() {
+        final var csv = """
+                Created,Title,Title,URL,Year,Your Rating
+                2012-06-22,"Real","Decoy",https://www.imdb.com/title/tt0000001/,2006,10
+                """;
+
+        assertThatThrownBy(() -> exportReader.parse(streamOf(csv)))
+                .isInstanceOf(InvalidImportException.class)
+                .hasMessageContaining("unusable header row");
+    }
+
+    @Test
+    void readsAFileThatStartsWithAByteOrderMark() {
+        // A BOM would otherwise be glued onto the first column's name. Harmless today (the first
+        // column is one we do not read), which is exactly why it would go unnoticed until it wasn't.
+        final var csv = "\uFEFF" + """
+                Created,Title,URL,Year,Your Rating
+                2012-06-22,"The Prestige",https://www.imdb.com/title/tt0000001/,2006,10
+                """;
+
+        assertThat(exportReader.parse(streamOf(csv)))
+                .extracting(ImdbEntry::name)
+                .containsExactly("The Prestige");
     }
 
     @Test

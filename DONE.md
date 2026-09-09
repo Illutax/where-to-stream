@@ -1861,3 +1861,46 @@ The test now compares the two files; the fix is `npm install --package-lock-only
 
 `engine-strict` itself was verified rather than assumed: setting `engines.node` to `^99.0.0`
 produces `npm error code EBADENGINE`, a hard failure, not a warning.
+
+### ✅ TODO-22 — Hard-coded CSV header array
+`ExportReader` declared all 18 IMDb column names itself and discarded the file's real header row
+via `setSkipHeaderRecord(true)`, so the mapping was purely **positional**.
+A wholly foreign file failed loudly; the dangerous case was in between — IMDb inserting one column
+or reordering them, after which `record.get("Title")` quietly returned a different field. Rows
+still carried a valid `tt…` link and passed, and because the import is a **full sync**, everything
+the misread file appeared not to contain was deleted from the user's watchlist.
+
+- **Acceptance:** read the header from the file and validate the five columns actually needed
+  (`Created`, `Title`, `Year`, `Your Rating`, `URL`) **once** against it, with a message that says
+  what is missing.
+
+**Done on 2026-09-09.** The header comes from the file, the five columns are checked once, and a
+file that fails the check is refused with a message naming the missing column, what was expected,
+and what the file actually has.
+
+**The refusal happens in `ExportReader.parse`, before `WatchlistImportService` has read a single
+stored row** — which is the property that matters: a schema change now aborts the import rather
+than deleting the difference. Pinned end to end with the real reader (not a mocked one) in
+`WatchlistImportServiceTest`, asserting that `findByUserId` is never even called.
+
+**Two things came along that the ticket had not asked for, both because matching by name changes
+what can go wrong:**
+
+- **Duplicate column names are rejected** (`DuplicateHeaderMode.DISALLOW`). With duplicates
+  allowed — the commons-csv default — two columns called `Title` would make `get("Title")` pick one
+  silently, which is the same quiet wrong-field read this change exists to remove.
+- **A leading UTF-8 BOM is stripped.** It was harmless while the header was supplied in code; now
+  that the file's own header is the lookup key, a BOM renames whichever column comes first. Today
+  that is `Position`, which we do not read — so this guards against the day IMDb reorders, not
+  against anything observed.
+
+**The four new tests were checked against the old implementation and all four fail there**, so they
+pin the fix rather than describing it.
+
+**No frontend change was needed, and that was verified rather than assumed:**
+`watchlist-import-page.ts` already surfaces `err?.error?.detail`, and `ApiExceptionHandler` puts
+the message there as an RFC-7807 `detail` on a 400.
+
+**What this does not fix — see TODO-70:** a *partial* format change still deletes. Rows that fail
+to parse are skipped individually, so if IMDb changes, say, the date format for only some rows, the
+survivors drive a full sync and the rest are removed.

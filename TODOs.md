@@ -14,8 +14,8 @@ Priority: 🔴 high · 🟠 medium · 🟡 medium-low · 🟢 low
 1. **Point, don't restate.** Link the authoritative place (ADR, property, class) instead of
    copying its content. Every copy of a fact drifts on its own — `ddl-auto` once stood in three
    places, two of them wrong.
-2. **Cite paths**, not "somewhere in the service" — the way TODO-22 points at
-   `src/main/java/tech/dobler/where2stream/watchlist/application/ExportReader.java`.
+2. **Cite paths**, not "somewhere in the service" — the way TODO-66 names
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbTitleSource.java`.
    `DocumentationConsistencyTest` checks at build time that the file exists; a backticked path
    that does not resolve turns the build red.
 3. **Mark the unverified as unverified.** "Not verified:" is a complete statement; a guess that
@@ -34,7 +34,7 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 | 🟠 | [TODO-65](#todo-65) | A new architecture review, as a dated snapshot |
 | 🟠 | [TODO-66](#todo-66) | Bring resilience4j back, for the outbound adapters |
 | 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: one request per row, never cancelled |
-| 🟢 | [TODO-22](#todo-22) | Hard-coded CSV header array |
+| 🟡 | [TODO-70](#todo-70) | A partly unreadable export still deletes the rows it could not read |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
 
@@ -134,25 +134,37 @@ cancelled — point 1 is untouched.
 - **Acceptance:** switching views leaves no requests in flight; a dashboard with n rows no longer
   produces n metadata requests.
 
+### 🟡 TODO-70 — A partly unreadable export still deletes the rows it could not read
+TODO-22 closed the case where the *header* changes: the columns are matched by name, and a file
+missing one is refused before anything is read
+(`src/main/java/tech/dobler/where2stream/watchlist/application/ExportReader.java`).
+
+**A change to the row *values* still slips through.** Individual rows that fail to parse are
+skipped and logged; the ones that survive then drive a **full sync**, and every stored title absent
+from that shortened list is deleted. So if IMDb changes the date format, or the `Year` column, for
+only part of an export — a re-release, a new title type, a locale difference — the user loses the
+titles whose rows happened to be affected. The import reports success.
+
+The two ends are already handled: an export where *every* row fails yields no entries and is
+rejected, and one where none fail is correct. It is the middle that is unguarded, and the middle is
+what a gradual upstream change looks like.
+
+**Not verified:** whether IMDb has ever shipped such a mixed export. The mechanism is certain from
+the code; the likelihood is not.
+
+**To decide, which is why this is a ticket and not a fix:** what the rule should be. A share of
+skipped rows above which the import aborts (what share?), or never deleting on the strength of a
+file that had any unreadable row at all, or reporting the skipped count and letting the user
+confirm. The safe-by-default reading of "don't delete what you could not read" argues for the
+second, at the cost of refusing imports that today succeed.
+
+- **Acceptance:** a partly unreadable export cannot silently remove stored titles, and whichever
+  rule is chosen is stated in the reader's Javadoc next to the header check.
+
+
 ---
 
 ## 🟢 Low
-
-### 🟢 TODO-22 — Hard-coded CSV header array
-`watchlist/application/ExportReader.headers`: 18 fixed column names, and the file's **real** header
-row is discarded via `setSkipHeaderRecord(true)` — the mapping is purely **positional**.
-
-**The damage is worse than "fails silently" suggests.** A completely foreign format fails loudly:
-every row falls through and `WatchlistImportService` throws `InvalidImportException`. The dangerous
-case is in between — IMDb inserts **one** column or reorders them. Then `record.get("Title")`
-silently reads the wrong field, rows with a valid `tt…` link pass, and because the import is a
-**full sync**, existing entries are deleted for appearing absent from the misread file.
-
-- **Acceptance:** read the header from the file
-  (`CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true)` — commons-csv 1.10) and
-  validate the five columns actually needed (`Created`, `Title`, `Year`, `Your Rating`, `URL`)
-  **once** against it, with a message that says what is missing. Otherwise the user only gets the
-  generic "No valid entries found".
 
 ### 🟢 TODO-42 — No minimum length or complexity for passwords
 `CreateUserCommand` / `ResetPasswordCommand` check only for non-blank in their compact
