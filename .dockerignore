@@ -20,3 +20,8 @@ target
 logs
 db
 *.log
+
+# Real deployment secrets. `docker compose --env-file .env` reads this from the host, so the image
+# build never needs it -- and the sources stage copies the whole tree, which would otherwise bake
+# it into a build layer.
+.env

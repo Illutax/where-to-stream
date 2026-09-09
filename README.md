@@ -126,6 +126,9 @@ On first start the database is empty — sign in and upload an IMDb CSV export u
 ## Configuration
 
 Deployment secrets go in `.env` (copy [`.env.example`](.env.example)).
+[`check-env.sh`](check-env.sh) compares the two before a deploy — variables documented but unset,
+set but blank, or still carrying the placeholder from the example. It prints names only, never
+values, so its output is safe to paste anywhere.
 Key properties (`src/main/resources/application.properties`):
 
 | Property | Default | Description |

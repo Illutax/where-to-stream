@@ -42,9 +42,27 @@ RUN mvn -B -e org.apache.maven.plugins:maven-dependency-plugin:go-offline
 #############################################################
 # toolchain + dependencies + sources; the one place the project is copied in
 FROM toolchain AS sources
-COPY --from=dependencies /opt/app/pom.xml .
 COPY --from=dependencies /root/.m2 /root/.m2
-COPY src/ ./src/
+# The whole working tree, not just src/.
+#
+# Three tests read the repository rather than the classpath: DocumentationConsistencyTest (links
+# and ticket references), EnvExampleIsWiredUpTest (.env.example against compose.yml) and
+# ToolchainVersionsAgreeTest (.nvmrc/engines/Dockerfile). With only src/ here they fail with
+# NoSuchFileException, which blocks a deploy for want of an input rather than for want of
+# correctness -- and that is what happened the first time this was tried.
+#
+# Copying the tree rather than a list of files, because a list has to be extended every time a
+# document links somewhere new: the first attempt named eight paths and still missed
+# `.claude/skills/`, referenced from TODOs.md and CONTRIBUTING.md. `.dockerignore` already says
+# what must not come along, so this reuses that answer instead of maintaining a second one.
+#
+# The alternative -- tagging those tests and excluding them here, as the Testcontainers ones are --
+# was rejected: "checked on every build" is a claim README.md and CLAUDE.md both make, and this is
+# the build that ships. The cost is that editing a Markdown file re-runs the suite; the Maven
+# dependency layer above is untouched, so that is the minute the tests take, not a cold build.
+#
+# None of it reaches the runtime image, which copies only the jar out of `builder`.
+COPY . .
 
 #############################################################
 # the artifact that ships -- built WITH tests.
