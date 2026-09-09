@@ -40,8 +40,9 @@ TODO-Tickets:
 
 - ✅ **TODO-2** — Tabellen-/Spalten-Tippfehler (`QueryMeta`, `query_result_availabilities`).
 - ✅ **TODO-3** — Irreführende Join-Spalte → `query_result_id`.
-- ✅ **TODO-10 / TODO-27** — Liquibase eingeführt, Schema als versioniertes Changelog,
-  `ddl-auto=validate`.
+- ✅ **TODO-10 / TODO-27** — Liquibase eingeführt, Schema als versioniertes Changelog.
+  `ddl-auto` stand zunächst auf `validate`, seit TODO-40 auf **`none`**:
+  Liquibase ist alleinige Schema-Quelle.
 - ✅ **TODO-6** — Cache-Logik in `PreCacheService` extrahiert;
   Controller hängen nicht mehr voneinander ab.
 - ✅ **TODO-7** — `wer-streamt.*` in `WerStreamtProperties` (`@ConfigurationProperties`) gebündelt;
@@ -104,7 +105,7 @@ waren per GET erreichbar und damit von Crawlern/Prefetch triggerbar.
   die neue REST-API nutzt korrekte Verben (`POST /api/refresh`, `POST /api/cache`, …).
 - **Erledigt (Verben):** Mit dem Entfernen des Thymeleaf-Clients
   ([ADR-0008](docs/adr/0008-thymeleaf-client-entfernen.md)) wurden die Legacy-GET-Endpunkte
-  (`/pre-cache`, `/check-pre-cache`, `/refresh/**`) gelöscht — es gibt keine mutierenden GETs mehr;
+  (`/pre-cache`, `/check-pre-cache`, `/refresh/**`) gelöscht — es gibt keine mutierenden GETs **ohne Auth** mehr (schreibende Read-Through-Caches wie `/api/search` und `/api/titles/{id}/meta` gibt es weiterhin — sie hängen hinter `authenticated()`);
   Wartung läuft ausschließlich über `POST /api/**` (ADMIN).
 
 ---
@@ -155,7 +156,8 @@ eine Layout-Änderung bei werstreamt.es konnte NPEs auslösen.
 `application.properties`: `spring.jpa.hibernate.ddl-auto=update`.
 - **Akzeptanzkriterium:** Flyway oder Liquibase einführen für reproduzierbare,
   versionierte Schemata (Voraussetzung für TODO-2 und TODO-3).
-- **Erledigt:** Über TODO-27 (Liquibase) umgesetzt; `ddl-auto=validate`.
+- **Erledigt:** Über TODO-27 (Liquibase) umgesetzt; heute `ddl-auto=none`
+  (`validate` war ein Zwischenstand, seit TODO-40 ist Liquibase alleinige Schema-Quelle).
 
 ---
 
@@ -169,10 +171,20 @@ Die Amazon-Seite (`web/DataAggregateController.getAmazon`) rief `included()` **u
 - **Erledigt:** `AggregateService.contentFor(serviceName)` löst einmal auf und liefert `included` + `paid`
   (Record `ServiceContent`); die Amazon-Seite nutzt das.
 
-### 🟢 TODO-12 — Durchgängiges `FetchType.EAGER`
-`persistence/QueryMeta.java` (`@OneToMany`) und `QueryResultDB.java` (`@ElementCollection`) laden alles eager.
-- **Akzeptanzkriterium:** Auf LAZY umstellen und gezielte Fetch-Joins/Queries einsetzen,
-  wo nötig.
+### ❌ TODO-12 — Durchgängiges `FetchType.EAGER` *(verworfen — durch ADR-0011 überholt)*
+`streamingavailability/domain/QueryMeta.java` (`@OneToMany`) und `QueryResultDB.java`
+(`@ElementCollection`) laden alles eager, ebenso `accountaccess/domain/AppUser.roles`.
+
+- ~~**Akzeptanzkriterium:** Auf LAZY umstellen~~ — **verworfen.**
+  [ADR-0011](docs/adr/0011-kein-open-session-in-view.md) (Accepted) macht EAGER zur bewussten
+  Regel: ohne Open-Session-in-View muss alles geladen sein, bevor die Transaktion endet.
+  Eine pauschale Umstellung auf LAZY würde die ADR brechen, nicht erfüllen.
+- **Das ursprüngliche Risiko ist unabhängig davon entschärft:**
+  `spring.jpa.properties.hibernate.default_batch_fetch_size=50` (Commit `017bd35`,
+  gemessen: 20 Titel × 2 Provider = 3 Statements statt N+1),
+  und der fehlende FK-Index kam mit Changeset `014`.
+- **Der vereinbarte Weg**, falls eine Collection doch einmal zu groß wird,
+  ist ein gezielter Fetch-Join — nicht LAZY und erst recht nicht OSIV.
 
 ---
 
@@ -190,9 +202,20 @@ d. h. der Cron zieht automatisch Milestones/RCs.
   TODO-55 den Arbeitsbaum sauber zurück, statt die Update-Kette zu verklemmen. Ohne diese beiden
   wäre ein instabiler Parent teuer geworden.
 
-### 🟢 TODO-14 — `versions-maven-plugin` ohne Version
-`pom.xml`: Plugin ohne fixierte `<version>`.
-- **Akzeptanzkriterium:** Version festnageln für reproduzierbare Builds.
+### ✅ TODO-14 — `versions-maven-plugin` ohne Version *(faktisch gepinnt — Prämisse war falsch)*
+`pom.xml` deklariert das Plugin ohne eigenes `<version>` — die Annahme „also nicht
+reproduzierbar" trifft aber nicht zu.
+
+Die Version kommt aus dem `pluginManagement` von `spring-boot-dependencies`, aktuell **2.21.0**;
+nachgeprüft am effektiven POM und an der tatsächlichen Auflösung
+(`mvn -B versions:help` protokolliert `--- versions:2.21.0:help ---`).
+Es wird also kein `LATEST` aus den Metadaten gezogen — genau dafür ist der leere Plugin-Block da.
+Pro Commit ist der Build damit reproduzierbar, weil die Parent-Version im POM festliegt.
+
+- **Was bleibt, ist eine schwächere Aussage:** die Plugin-Version wandert mit dem
+  Spring-Boot-Parent mit, und der wird nächtlich aktualisiert, bewusst inklusive Milestones
+  (TODO-13). Ein explizites `<version>` würde `upgrade-spring-boot.sh` von genau dieser
+  Kopplung lösen — das ist ein Abwägungspunkt, kein Mangel.
 
 ### ✅ TODO-15 — Port-Inkonsistenz dokumentieren/vereinheitlichen
 `server.port=8001` (properties), `EXPOSE 8080` (Dockerfile), `SERVER_PORT=8080` (compose).
@@ -271,10 +294,22 @@ einzige kaputte Zeile ließ den gesamten Import (und damit den App-Start) scheit
   Test `skipsMalformedRowsAndKeepsIdsContiguous` ergänzt.
 
 ### 🟢 TODO-22 — Hartkodiertes CSV-Header-Array
-`services/ExportReader.headers`: feste Spaltenliste; bricht still, wenn IMDb das Exportformat ändert.
+`watchlist/application/ExportReader.headers`: 18 feste Spaltennamen, und die **echte** Kopfzeile
+der Datei wird per `setSkipHeaderRecord(true)` verworfen — die Zuordnung ist rein **positionell**.
+
+**Der Schaden ist größer als „bricht still" vermuten lässt.**
+Ein komplett fremdes Format scheitert laut: alle Zeilen fallen durch,
+`WatchlistImportService` wirft `InvalidImportException`.
+Gefährlich ist der Zwischenfall — IMDb fügt **eine** Spalte ein oder sortiert um.
+Dann liest `record.get("Title")` still das falsche Feld, Zeilen mit einem gültigen `tt…`-Link
+laufen durch, und weil der Import ein **Full-Sync** ist, werden Bestandseinträge gelöscht,
+die in der fehlinterpretierten Datei scheinbar fehlen.
+
 - **Akzeptanzkriterium:** Header aus der Datei lesen
-  (`CSVFormat.builder().setHeader().setSkipHeaderRecord(true)`)
-  und nur die benötigten Spalten gezielt referenzieren.
+  (`CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true)` — commons-csv 1.10)
+  und die fünf tatsächlich benötigten Spalten (`Created`, `Title`, `Year`, `Your Rating`, `URL`)
+  **einmalig** gegen den gelesenen Header prüfen, mit sprechender Fehlermeldung.
+  Sonst bekommt der Nutzer nur das generische „No valid entries found".
 
 ### ✅ TODO-23 — `ResponseEntity<?>` mit rohem Wildcard
 `rest/QueryController`: `query(...)` und `search(...)` geben `ResponseEntity<?>` zurück —
@@ -298,7 +333,7 @@ nicht durch Unit-Tests abgedeckt.
 und löste damit sämtliche Einträge sequenziell auf (über TODO-11 hinaus,
 das nur den doppelten `getAll()`-Aufruf der Amazon-Seite betrifft).
 - **Akzeptanzkriterium:** Aggregat-Ergebnisse cachen/vorberechnen
-  bzw. die Batch-Logik aus `resolveAll(...)` (TODO-13/#13) wiederverwenden.
+  bzw. die Batch-Logik aus `resolveAll(...)` (TODO-11/#13 — der Verweis auf TODO-13 war falsch) wiederverwenden.
 - **Erledigt:** `getAll()` nutzt jetzt `streamInfoService.resolveAll(...)`
   → eine Batch-Query statt N Einzelabfragen.
   (Echtes Aggregat-Caching bleibt als optionale spätere Optimierung offen.)
@@ -341,19 +376,32 @@ Das Schema wurde von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-
   und `ddl-auto` auf `validate` umstellen,
   sodass das Schema reproduzierbar und versioniert ist.
   Dies ist auch die Voraussetzung für die Umbenennungen aus TODO-2/TODO-3.
-- **Hinweis:** Die H2-DB hält ausschließlich gecachte Scrape-Ergebnisse;
-  das Baseline-Schema geht von einer frischen DB aus (für bestehende Deployments altes `./db` entfernen
-  — der Cache füllt sich via `/pre-cache` neu).
+- **Hinweis (Stand Juni 2026 — ⚠ heute nicht mehr befolgen):** Damals hielt die H2-DB
+  ausschließlich gecachte Scrape-Ergebnisse, weshalb hier stand, man könne für bestehende
+  Deployments das alte `./db` einfach entfernen.
+  **Das würde heute Benutzerkonten, Watchlists, Sessions und Titel-Metadaten vernichten**
+  — seit den Changesets `003`, `006` und `009` liegt all das in derselben Datenbank.
+  Auch der genannte Endpunkt `/pre-cache` existiert nicht mehr (heute `POST /api/cache`).
 - **Erledigt:** `spring-boot-liquibase` ergänzt;
   Baseline-Changelog unter `src/main/resources/db/changelog/`
   (`db.changelog-master.yaml` → `changes/001-baseline-schema.sql`),
   generiert aus dem Hibernate-Schema (inkl. der TODO-2/TODO-3-Namen);
-  `ddl-auto=validate` in Haupt- und Test-Konfiguration.
+  `ddl-auto=validate` in Haupt- und Test-Konfiguration — **seit TODO-40 `none`**.
   Tests laufen grün gegen das von Liquibase erzeugte Schema.
+  Das Changelog ist inzwischen auf 18 Changesets gewachsen (zuletzt `018-drop-ebay-quota.xml`),
+  die Baseline liegt als `.xml` vor, nicht als `.sql`.
 
 ---
 
 ## Architektur-Review (2026-06-28)
+
+> **Lesehinweis (2026-09-09).** Klassen- und Paketnamen in den Einträgen dieses und der
+> vorangehenden Abschnitte sind der Stand von Juni 2026.
+> Der Umbau nach Bounded Contexts ([ADR-0014](docs/adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md))
+> hat `services/`, `persistence/`, `web/`, `rest/` und `entities/` als Top-Level-Pakete abgelöst;
+> heute gilt `<kontext>/{domain,application,port,adapter}` (siehe `CLAUDE.md`).
+> Die Einträge wurden **nicht** durchgängig umbenannt — das wäre viel Rauschen für wenig Nutzen.
+> Korrigiert ist, wo eine Aussage *sachlich* falsch geworden ist, nicht wo nur ein Pfad alt ist.
 
 Vollständige Analyse: [`docs/ARCHITECTURE_REVIEW.md`](docs/ARCHITECTURE_REVIEW.md).
 Die konkreten, umsetzbaren Punkte daraus:
@@ -378,10 +426,13 @@ Stateful In-Memory-Katalog, benannt wie ein Spring-Data-Repository und in `servi
 `getDisney`/`getNetflix`/`getWow` (und `getAmazon`/`getGoogle`) unterschieden sich nur durch Service-/View-Namen.
 - **Akzeptanzkriterium:** Datengetrieben zusammenfassen (Enum/Map aus Pfad → Service+View),
   ~4 Methoden auf eine reduzieren.
-- **Erledigt:** Gemeinsame Helfer `flatratePage(...)`, `sortedByAdded(...)`, `paidDtos(...)`;
-  die Handler delegieren nur noch.
-  (Explizite Routen beibehalten statt Catch-all-`{path}`,
-  um Routing-Mehrdeutigkeit zu vermeiden.)
+- **Erledigt, und seither weiter getrieben:** Heute gibt es genau **einen** Handler,
+  `@GetMapping("/{provider}")` in `ProviderApiController`, aufgelöst über das Enum
+  `StreamingProvider` (das die Datentabelle trägt) und `ProviderPageService`.
+  Von den damaligen Helfern existiert nur noch `paidDtos(...)`.
+  ~~(Explizite Routen beibehalten statt Catch-all-`{path}`, um Routing-Mehrdeutigkeit zu
+  vermeiden.)~~ — **gilt nicht mehr:** es *ist* jetzt ein Catch-all, unproblematisch, weil
+  `/api/providers` keine konkurrierende Route hat und unbekannte Keys mit 404 enden.
 
 ### ✅ TODO-33 — Transaktionsgrenze auf einem Controller
 `DataAggregateController` war `@Transactional(readOnly = true)` auf Klassenebene.
@@ -464,6 +515,13 @@ Eine UI, die gezielt nur die invalidierten (bzw. nie gecachten) Einträge scrapt
 - **Empfehlung:** Kurzfristig Variante 1 (konkreter `ResponseEntity<List<QueryResult>>`);
   mittelfristig zusammen mit TODO-20 (zentrales Error-Handling) auf reine Body-Rückgaben + `ResponseStatusException` umstellen.
 
+> **Erledigt — und zwar die „mittelfristige" Variante (2026-09-09 nachgetragen).**
+> Umgesetzt wurde nicht der Kompromiss, sondern das saubere Ziel:
+> `SearchApiController.search` liefert `List<QueryResult>`, 404 über `ResponseStatusException`,
+> zentral behandelt vom `ApiExceptionHandler` (TODO-20).
+> `ResponseEntity<?>` kommt im gesamten Produktivcode nicht mehr vor.
+> Dieser Abschnitt stand bis heute im Präsens über Klassen, die es nicht mehr gibt.
+
 ---
 
 ## Bugfixes
@@ -496,6 +554,14 @@ Die Changesets waren H2-spezifisches Roh-SQL (`uuid`, `enum('BUY','RENT')`,
 ### ✅ TODO-41 — MariaDB als First-Class-DB + Testcontainers
 - **Akzeptanzkriterium:** MariaDB als unterstützte DB; Repository-Test-Suite läuft gegen eine
   Testcontainers-MariaDB.
+> **Nachtrag 2026-09-08:** Die MariaDB-Tests laufen inzwischen **im normalen `mvn verify`** mit
+> (409 statt 391 Tests). Sie tragen `@Tag("testcontainers")`; ausgeschlossen werden sie nur noch
+> explizit per `-Pno-testcontainers`, u. a. in den Docker-Build-Stages, die keinen Docker-Socket
+> haben. Der Text unten liest sich so, als liefen sie nur, wenn zufällig eine Container-Runtime
+> da ist — die bewusste Entscheidung ist inzwischen das Gegenteil, weil ein Check, den man sich
+> merken muss, ausfällt (`018-drop-ebay-quota` ging genau deshalb zunächst unverifiziert ein).
+> `disabledWithoutDocker` bleibt als zweites Netz.
+
 - **Erledigt:** MariaDB-Treiber, Profil `mariadb` (`application-mariadb.properties`),
   `mariadb`-Service in `compose.yml`. Repo-Tests in abstrakte Basen ausgelagert; je eine H2-
   und eine MariaDB-Variante (`@ServiceConnection MariaDBContainer`,
@@ -542,18 +608,20 @@ Funde wurden direkt umgesetzt (siehe Commit-Historie); ein Punkt wird hier statt
 Low-Prio-Ticket für später vorgemerkt, statt sofort umgesetzt zu werden.
 
 ### 🟢 TODO-42 — Keine Mindestlänge/Komplexität für Passwörter
-`UserAdminService.create()`/`resetPassword()` prüfen nur `requireText()` (nicht-leer), keine
-Mindestlänge oder Komplexität — ein ADMIN kann einem Account ein Ein-Zeichen-Passwort geben.
+`CreateUserCommand`/`ResetPasswordCommand` prüfen im Compact Constructor nur auf nicht-blank,
+keine Mindestlänge oder Komplexität — ein ADMIN kann einem Account ein Ein-Zeichen-Passwort geben.
+(Die Validierung lag früher in `UserAdminService`; der Service kodiert heute nur noch.)
 Ebenso keine Prüfung für das initiale Admin-Passwort (`w2s.security.initial-admin.password`).
 - **Akzeptanzkriterium:** Sinnvolle Mindestanforderungen (Länge, ggf. Zeichenklassen) einführen,
   serverseitig durchsetzen, Fehlermeldung im Frontend anzeigen.
-- **Bewusst zurückgestellt:** Das bekannte Default-Passwort in `.env.example`
-  (`W2S_ADMIN_PASSWORD=change-me-please`) ist kein eigenständiges Problem — der Platzhaltertext
-  ist die etablierte "bitte ändern"-Konvention dieser Datei (vgl. `MARIADB_ROOT_PASSWORD=change-me`
-  direkt darunter), und `compose.yml` übersetzt die vereinfachten `.env`-Variablennamen bereits
-  korrekt auf die tatsächlichen Spring-Property-Namen (`W2S_SECURITY_INITIALADMIN_PASSWORD` etc.,
-  mit erklärendem Kommentar zur Relaxed-Binding-Eigenheit). Nur die fehlende
-  Längen-/Komplexitätsprüfung selbst bleibt offen.
+- **Der Platzhalter selbst ist kein Problem:** `W2S_ADMIN_PASSWORD=change-me-please` in
+  `.env.example` folgt der etablierten „bitte ändern"-Konvention dieser Datei
+  (vgl. `MARIADB_ROOT_PASSWORD=change-me` direkt darunter).
+- ⚠️ **Der zweite Halbsatz dieses Absatzes war falsch und ist entfernt.** Er behauptete,
+  `compose.yml` übersetze die `.env`-Namen korrekt auf die Spring-Properties.
+  Für das **Passwort** trifft das nicht (mehr) zu — nachgeprüft: `compose.yml` mappt nur noch
+  `W2S_SECURITY_INITIALADMIN_USERNAME`, die Passwort-Zeile fehlt.
+  Als eigener Bug herausgezogen: **TODO-63**.
 
 ## Async Cache-Refresh statt synchronem Dashboard-Reload (2026-07-30/31)
 
@@ -663,9 +731,17 @@ nach Titel/Jahr/hinzugefügt sortierbar sind (`shared/sort/table-sort.ts`, `MatS
   **Name** und nach **Datum** (Zeitpunkt des letzten Scrapes, `lastScrapedAt` aus TODO-43) sortieren,
   auf- und absteigend, nach demselben Muster (`mat-sort-header`) wie die bestehenden Tabellen.
 - **Erledigt:** Neue `sortManageRows(...)` in `shared/sort/table-sort.ts` (eigene kleine Funktion
-  statt Erweiterung von `sortRows`, da die Manage-Tabelle weder `year` noch `added` hat); nie
-  gescrapte Titel (`lastScrapedAt = null`) sortieren aufsteigend ans Ende / absteigend an den
-  Anfang, analog zum bestehenden `year`-Sonderfall „Not yet released". `ManageTable` verdrahtet
+  statt Erweiterung von `sortRows`, da die Manage-Tabelle weder `year` noch `added` hat); Zeilen, die
+  gescrapt werden müssen (`needsScrape` — nie gecacht **oder** invalidiert), sortieren als
+  frühestmöglicher Zeitpunkt (`-Infinity`): aufsteigend an den Anfang, absteigend ans Ende.
+
+  **Umgedreht mit dem Folge-Fix `fc0c5fb`, und das ist der interessante Teil.** Ursprünglich
+  wurde nur `lastScrapedAt = null` gesondert behandelt, und zwar genau andersherum — analog zum
+  `year`-Sonderfall „Not yet released". Das ging an einem Fall vorbei, den dieses Ticket nicht
+  kannte: ein **invalidierter** Titel behält seinen alten Zeitstempel. Er rutschte damit mitten
+  in die Liste, obwohl die Status-Pille gar kein Datum anzeigt.
+  Deshalb hängt die Sortierung heute an `needsScrape` statt an `lastScrapedAt === null`, und
+  `SortableManageRow` trägt das Feld eigens dafür. `ManageTable` verdrahtet
   `MatSortModule`/`matSort` wie `CatalogTable`; die Status-Spalte trägt `mat-sort-header="lastScrapedAt"`
   (abweichend vom `matColumnDef`-Namen `status`), da sie sowohl die „muss gescrapt werden"-Pille als
   auch den Zeitstempel zeigt.
@@ -731,7 +807,8 @@ andere sind Primärschlüssel und die Unique Constraints, die nebenbei einen Ind
 für die tatsächlichen Zugriffspfade reicht, ist **nie geprüft** worden — es ist eine Annahme, kein
 Befund.
 
-Anlass ist die neue Quota-Tabelle aus [ADR-0017](docs/adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md):
+Anlass war die damals neue Quota-Tabelle aus [ADR-0017](docs/adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md)
+(mit TODO-56 entfallen — die Evaluation der übrigen Indizes bleibt davon unberührt):
 `ebay_user_quota_day` wird bei **jeder** Preisabfrage über `(quota_day, user_id)` gelesen. Der
 Unique Constraint `uk_ebay_user_quota_day` deckt genau diese Kombination ab und trägt die Abfrage
 damit vermutlich schon — aber „vermutlich" ist der Grund für dieses Ticket.
@@ -794,7 +871,18 @@ dauert — dann ist er selektiv genug, um sich zu lohnen.
 Mit leeren Tabellen hätte dieselbe Messung „alles bestens" ergeben und den Full Scan auf
 `user_id` nicht gezeigt.
 
-### ✅ TODO-51 — Eigenen Circuit Breaker durch resilience4j ersetzt
+### ✅ TODO-51 — Eigenen Circuit Breaker durch resilience4j ersetzt *(Code inzwischen entfallen)*
+> **Gegenstandslos seit 2026-09-07.** Alles hier Beschriebene lag im Kontext `purchaseoffers`
+> und ist mit dem Rückbau der Preisabfrage (TODO-56) gelöscht — samt der Abhängigkeit
+> `resilience4j-spring-boot4` und dem mit ihr gekommenen `micrometer-core`.
+> Es gibt in der Anwendung derzeit **keinen** Circuit Breaker mehr, weil es keinen
+> ausfallgefährdeten Fremddienst hinter einer Bean-Grenze mehr gibt.
+>
+> Der Eintrag bleibt wegen zweier Erkenntnisse, die den Code überdauern:
+> die Versionsrecherche unten (das Boot-4-Artefakt heißt `2.4.0`, nicht `2.3.0`),
+> und der Grund, warum die Konfiguration in Java statt in Properties gehörte.
+> Beides gilt beim nächsten Anlauf unverändert.
+
 `TitleOfferService` brachte einen handgeschriebenen Circuit Breaker mit: ein Zähler
 aufeinanderfolgender Fehlschläge plus ein `openUntil`-Zeitpunkt, rund 15 Zeilen.
 
@@ -827,9 +915,15 @@ Boot ohnehin da.
   schon.
 
 ### 🟢 TODO-52 — Angular-Bundle-Größe reduzieren (Trigger: 1 MB Initial-Bundle)
-**Nicht jetzt angehen.** Das Initial-Bundle liegt bei 655,85 kB roh / 146,30 kB geschätzt
-komprimiert. Das ist bewusst akzeptiert; dieses Ticket sammelt die gemessenen Hebel für den Tag,
-an dem es eng wird.
+**Nicht jetzt angehen.** Das Initial-Bundle liegt bei **657,75 kB roh / 146,74 kB** geschätzt
+komprimiert (gemessen 2026-09-09). Das ist bewusst akzeptiert; dieses Ticket sammelt die
+gemessenen Hebel für den Tag, an dem es eng wird.
+
+**Bemerkenswert:** Der Rückbau der eBay-Preisabfrage (TODO-56) hat das Initial-Bundle **nicht**
+verkleinert — vorher 655,85 kB, danach 657,75 kB. Der entfallene Code lag vollständig in
+Lazy-Chunks; der neue Suchlink kostet dort ein paar hundert Byte mehr, als das alte Widget
+gekostet hat. Wer beim Aufräumen auf eine Ersparnis im Initial-Bundle hofft, sucht an der
+falschen Stelle: dort liegen Angular, Material und Transloco, nicht unsere Features.
 
 **Der Trigger liegt im Code, nicht in diesem Text:** `angular.json` bricht den Build ab, sobald das
 Initial-Bundle **1 MB** erreicht (`budgets[type=initial].maximumError`), mit einer Vorwarnung ab
@@ -905,7 +999,9 @@ nachzuvollziehen, ohne sich dessen Passwort geben zu lassen.
     hat oder ein Admin in seinem Namen.
   - **Was darf der Impersonierende tun?** Nur lesen oder auch schreiben? Schreiben in fremdem
     Namen ist der Punkt, an dem aus einem Diagnosewerkzeug eine Vertrauensfrage wird.
-  - **Wechselwirkung mit der eBay-Quota (ADR-0017):** Preisabfragen während einer Impersonierung
+  - ~~**Wechselwirkung mit der eBay-Quota (ADR-0017):**~~ — mit dem Rückbau der Preisabfrage
+    (TODO-56) gegenstandslos; `ImpersonationPort` ist ersatzlos entfallen, das Feature selbst
+    unberührt. Der ursprüngliche Punkt lautete: Preisabfragen während einer Impersonierung
     werden auf das Kontingent des *impersonierten* Nutzers gebucht. Ob das gewollt ist, ist zu
     entscheiden — sonst verbraucht ein Admin fremdes Budget.
 - **ADR-pflichtig**, sobald die Antworten stehen: es ist eine Sicherheitsentscheidung, keine
@@ -962,7 +1058,7 @@ auseinanderlaufen:
 - **Hängt zusammen mit TODO-55:** die Versionsfrage wurde erst dadurch akut, dass der
   Auto-Upgrade-Lauf sie ungebremst trifft.
 
-### 🔴 TODO-55 — `upgrade-spring-boot.sh` härten
+### ✅ TODO-55 — `upgrade-spring-boot.sh` gehärtet
 Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript:
 
 1. **Der Rollback rollt nicht zurück.** `handle_error()` ruft
@@ -1013,11 +1109,12 @@ Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript
   von „kaputt" (Exit 1). Vorher brach die Kette in jeder Nacht ohne Spring-Boot-Release ab, und
   `update-and-restart.sh` lief nie — die Anwendung wurde also nur dann neu ausgerollt, wenn
   zufällig auch Spring Boot etwas veröffentlicht hatte.
-- ⬜ **Nicht verifiziert:** der vollständige Docker-Build ließ sich in der Entwicklungsumgebung
-  nicht ausführen (Podman kann dort kein Netzwerk für den Container aufsetzen). Geprüft sind der
-  Stage-Graph, die Shell-Syntax und dass `.dockerignore` weder `src/` noch `pom.xml` ausschließt.
-  **Der erste echte Lauf auf dem Host ist damit die eigentliche Probe** — am besten einmal von
-  Hand, bevor der Cron ihn wieder anfasst.
+- ✅ **Nachgetragen 2026-09-09:** Der Docker-Build ließ sich in der Entwicklungsumgebung nicht
+  ausführen (Podman bekam dort kein Netzwerk auf). Inzwischen ist der Proxy-Fix aus TODO-61 auf
+  dem Host ausgerollt und die Anwendung läuft — der Build ist also durchgelaufen.
+  **Der Beleg ist indirekt**: bestätigt ist, dass gebaut und ausgerollt wurde, nicht dass jeder
+  Zweig des Skripts einmal gelaufen ist. Ungeprüft bleibt insbesondere der Fehlerpfad
+  (`handle_error`) — den sieht man erst, wenn ein Upgrade wirklich scheitert.
 
 
 ---
@@ -1025,9 +1122,31 @@ Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript
 ## eBay-Rückbau und Ersatz (2026-09-06)
 
 ### ✅ TODO-56 — eBay-Preisabfrage zurückgebaut
-Der eBay-Developer-Account wurde nie freigeschaltet; die Preisabfrage über die Browse API
-(ADR-0017) kann damit nie Daten liefern und wird zurückgebaut.
-Der Stand ist auf einem Branch festgehalten — hier geht nichts verloren, nur aus `dev` raus.
+Die Preisabfrage über die Browse API (ADR-0017) **lief** — der Developer-Account war
+freigeschaltet, das Feature war in der Anwendung in Benutzung.
+Es hat sich im Betrieb als nicht gut genug erwiesen und wird deshalb zurückgebaut.
+Der Stand ist auf dem Branch `feature/ebay_search` festgehalten —
+hier geht nichts verloren, nur aus `dev` raus.
+
+**Woran es scheiterte** (aus dem Betrieb, 2026-09-09) — der wichtigste Satz dieses Eintrags,
+weil er den Nächsten davon abhält, dasselbe noch einmal zu bauen:
+
+1. **Intransparent.** Man sah eine Zahl, aber nicht, *worauf* sie sich bezog.
+   Ein Preis ohne das Angebot dahinter ist nicht nachprüfbar —
+   der Nutzer muss ihn glauben oder ignorieren.
+2. **Zu viele Variablen im Angebot.** Zustand und Qualität des Mediums, DVD oder Blu-ray,
+   Director's Cut oder Kinofassung, Sammleredition, Sprachfassung.
+   „Günstigster Preis" fasst Dinge zusammen, die keine Alternativen zueinander sind.
+   Die billigste Scheibe ist regelmäßig nicht die, die jemand haben will.
+
+**Das ist kein Umsetzungsfehler, sondern ein Modellierungsfehler** — und er war unabhängig von
+der API-Variante: Für physische Medien ist „ein Preis je Titel" die falsche Abstraktion.
+Kein Kontingent, kein besserer Suchbegriff und keine Anbieterwahl hätte daran etwas geändert.
+
+Genau deshalb ist der Ersatz (TODO-57) nicht bloß die billigere Lösung, sondern die ehrlichere:
+Der Suchlink beantwortet die Preisfrage gar nicht, sondern stellt den Nutzer vor die
+Angebotsliste, in der diese Variablen sichtbar sind — und überlässt die Entscheidung dem
+Menschen, der als einziger weiß, welche Ausgabe gemeint ist.
 **Die Marktplatz-Auswahl pro Nutzer bleibt**, weil der Ersatz (TODO-57) sie braucht.
 
 **Zuerst klären — zwingend vor dem Löschen, sonst startet die Anwendung nicht mehr:**
@@ -1334,7 +1453,7 @@ Zwei Folgen, beide beim Review von TODO-57 aufgefallen:
   die Formatierung liegt im Client bei `releaseYearDisplay`,
   und `TileEntry.releaseYear` ist nicht mehr nullable.
 
-### 🟠 TODO-61 — Nach abgelaufener Sitzung führt ein erfolgreicher Login nicht zum Dashboard
+### ✅ TODO-61 — Nach abgelaufener Sitzung führt ein erfolgreicher Login nicht zum Dashboard
 **Gemeldet am 2026-09-08 aus dem Betrieb.**
 
 **Reproduktion (so berichtet):**
@@ -1453,19 +1572,98 @@ oder ersatzweise `/` — und keines davon ergibt die Loginseite.
 Der Fix beseitigt den belegten Fehler und räumt die Kette auf;
 ob er auch das gemeldete Symptom beseitigt, ist offen.
 
-**Nachprüfung, sobald ausgeliefert:**
-Der Ablauf oben sollte jetzt ohne ein einziges `307` durchlaufen.
-Bleibt der Sprung auf die Loginseite, ist die nächste Spur ohne den Schema-Lärm lesbar,
-und dann wird genau eine Angabe gebraucht:
-**der `Location`-Header der 302 nach `[Sign in]`** — sowie, falls dort `?error` steht,
-dass die Anmeldung entgegen dem bisherigen Bild doch abgelehnt wurde.
+**Erledigt und im Betrieb bestätigt (2026-09-09):** der Login funktioniert wieder einwandfrei.
 
-Falls es dann noch klemmt, sind das die nächsten Kandidaten:
-mehr als ein `JSESSIONID`/`SESSION`-Cookie aus einer früheren Deployment-Variante,
-und ein `Secure`-Flag auf dem Sitzungscookie
-(bisher nicht gesetzt — die Anwendung hielt sich ja für `http`).
+Damit ist auch die Zurückhaltung von gestern beantwortet.
+Ich hatte geschrieben, der Fix behebe den belegten Fehler, ob er auch das Symptom beseitige,
+sei offen — weil sich der Sprung auf `/w2s/login` aus Spring Securitys Erfolgs-Handler
+nicht herleiten ließ.
+Er ließ sich deshalb nicht herleiten, weil er dort nicht entstand:
+das falsche Schema in unseren absoluten `Location`-Angaben hat die Kette gekippt,
+nicht die Zielauswahl nach dem Login.
+Die Lehre für das nächste Mal: bei einer Weiterleitungskette hinter einem Proxy zuerst
+das **Schema jeder einzelnen Antwort** ansehen, nicht das Ziel der letzten.
 
 - **Akzeptanzkriterium:** Eine Anmeldung nach abgelaufener Sitzung landet im Dashboard,
   in derselben Browser-Sitzung wie zuvor, ohne Cookies von Hand zu löschen.
   Kein `307` mehr in der Kette — jede unserer Weiterleitungen bleibt auf `https`.
+
+---
+
+## Bestandsaufnahme aller TODOs (2026-09-09)
+
+Alle 61 Einträge wurden gegen den Code geprüft — die aus dieser Sitzung von mir selbst,
+die übrigen 46 in Viererbündeln von Subagenten.
+Auslöser war ein Sachfehler, den der Auftraggeber beim Durchsehen der letzten 15 Commits fand:
+die Dokumentation behauptete durchgängig, der eBay-Developer-Account sei nie freigeschaltet worden.
+Er war es; das Feature lief und wurde bewusst zurückgebaut (siehe TODO-56).
+Die drei Einträge unten sind das, was die Prüfung an **neuer** Arbeit zutage gefördert hat.
+
+### 🔴 TODO-63 — `W2S_ADMIN_PASSWORD` aus `.env` bindet an keine Property
+`.env.example:11` dokumentiert `W2S_ADMIN_PASSWORD` als das initiale Admin-Passwort.
+Es bindet an nichts.
+
+`compose.yml` mappt nur noch `W2S_SECURITY_INITIALADMIN_USERNAME` (Zeile 27);
+die zugehörige Passwort-Zeile wurde entfernt, als `env_file: .env` hinzukam.
+Über `env_file` landet `W2S_ADMIN_PASSWORD` zwar im Container, aber der Property-Prefix ist
+`w2s.security` — ein `w2s.admin.password` gibt es nicht.
+
+**Folge:** Wer das dokumentierte Passwort setzt, bekommt es nicht.
+`AdminUserSeeder` hält den Wert für leer, erzeugt ein zufälliges Passwort und **loggt es**.
+Das fällt niemandem auf, der nicht ins Log sieht — man probiert das Passwort aus `.env`,
+es geht nicht, und die naheliegende Vermutung ist ein Tippfehler beim Anlegen.
+
+**Der Kontrast, der den Befund stützt:** `TMDB_API_KEY` flog im selben Commit aus `compose.yml`
+und funktioniert über `env_file` trotzdem — weil `tmdb.api-key` relaxed-binding-fähig ist.
+Beim Admin-Passwort passt der Name nicht.
+
+- **Akzeptanzkriterium:** Entweder die Zeile in `compose.yml` wiederherstellen, oder
+  `.env.example` auf den bindungsfähigen Namen umstellen.
+  Danach einmal mit gesetztem Passwort hochfahren und prüfen, dass der Seeder **kein**
+  generiertes Passwort loggt — das ist die Probe, die den Fehler von Anfang an gezeigt hätte.
+- **Ungeprüft:** `README.md:212` nennt `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`, `compose.yml:26`
+  besteht auf `…INITIALADMIN_…`. Beide binden vermutlich über Spring Boots
+  Underscore-Mapping — verifiziert ist das nicht, und die beiden Aussagen widersprechen sich.
+
+### 🟠 TODO-62 — README gegen den Code abgleichen
+Die README ist an vielen Stellen vom Code überholt.
+Beim Prüfen der TODOs fielen unabhängig voneinander diese Punkte auf:
+
+| Stelle | Steht dort | Tatsächlich |
+| --- | --- | --- |
+| `:12` | „Spring Boot 4.1" | 4.2.0-M1 |
+| `:37` | `WerStreamtEsApiClient` | `WerStreamtEsSource` |
+| `:132` | „`ImdbApiClientTest` ist per Default ausgeschlossen" | Test und Klasse gibt es seit TODO-1 nicht mehr; kein solcher Ausschluss in `pom.xml` |
+| `:201` | `curl … /check-pre-cache` | Endpunkt entfällt; heute `/api/cache/uncached` |
+| `:284` | „Cache füllt sich via `/pre-cache`" | heute `POST /api/cache` |
+| `:264`/`:267` | Rate-Limit-Defaults `2` | `application.properties` setzt `20` bzw. `10`; die `2` ist nur der Code-Fallback |
+| `:298` | „`mvn verify` startet einen Container" | die Tests hängen an Surefire, laufen also schon bei `mvn test` |
+| Endpunkt-Tabelle | — | fehlen u. a. `/api/imdb/…`, `/api/titles/{id}/meta`, die `PUT /api/me/*`, Impersonierung |
+| Feature-Liste | — | weder eBay-Suchlink (TODO-57) noch Admin-Impersonierung (TODO-53) erwähnt |
+
+Nicht in der README, aber deploymentkritisch und nirgends dokumentiert:
+`server.forward-headers-strategy=native` und `server.servlet.context-path=/w2s`
+— beide mit **leisem** Fehlverhalten, wenn sie nicht stimmen (TODO-61).
+
+Auch `http-clients/testing.http` zeigt noch auf die gelöschten `/pre-cache`-Endpunkte.
+
+- **Akzeptanzkriterium:** Die Tabellen und Beispiele der README treffen den Code.
+  Sinnvoll wäre, dabei zu überlegen, was sich **automatisch** prüfen lässt —
+  eine Endpunkt-Tabelle von Hand zu pflegen driftet zuverlässig wieder ab.
+
+### 🟢 TODO-64 — Kleine Aufräumfunde aus der TODO-Prüfung
+Einzeln zu klein für ein Ticket, zusammen eine Stunde Pfadfinderarbeit:
+
+- **Toter Code:** `QueryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(...)` hat keinen
+  Aufrufer mehr — verdrängt von `findByImdbIdIn(...)`.
+- **Verwaistes Javadoc:** `PreCacheService` behauptet, auch der „per-import targeted pre-cache"
+  nutze den Service — `WatchlistImportService` injiziert ihn gar nicht.
+  `CatalogApiController` beschreibt sich als „die Daten hinter der Thymeleaf-`index`-Seite";
+  Thymeleaf ist mit ADR-0008 entfallen.
+- **`docs/ARCHITECTURE_REVIEW.md` widerspricht dem Code:** behauptet, `AggregateService` existiere
+  nicht mehr (existiert), und beschreibt die Schichtung als `api/ → application/ → services/ →
+  persistence/` (Stand vor ADR-0014).
+- **Überflüssige Imports** in `StatusController` (importiert aus dem eigenen Paket).
+- **Nicht erzwungen:** dass in `adapter/in` kein `@Transactional` steht, hält heute — es gibt aber
+  keine ArchUnit-Regel dafür. Eine Regel wäre billiger als der nächste Rückfall.
 

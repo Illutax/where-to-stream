@@ -2,19 +2,22 @@
 
 > ## ⚠ Eingestellt — historisches Dokument
 >
-> **Stand 2026-09-07.** Dieses Vorhaben ist nicht umgesetzt worden.
-> Der eBay-Developer-Account, den jede der API-Varianten voraussetzt, wurde nie freigeschaltet;
-> die Browse API hat nie eine einzige Antwort geliefert.
-> Der gebaute Stand ist auf dem Branch `feature/ebay_search` festgehalten
-> und mit TODO-56 aus `dev` zurückgebaut, [ADR-0017](adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md)
-> ist `Superseded`.
+> **Stand 2026-09-09.** Dieses Vorhaben ist umgesetzt worden — und wieder zurückgebaut.
+> Der Developer-Account wurde freigeschaltet, Variante C lief in der Anwendung und war in Benutzung.
+> Im Betrieb erwies sie sich als nicht gut genug; mit TODO-56 ist sie aus `dev` entfernt,
+> [ADR-0017](adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md) ist `Superseded`.
+> Der gebaute Stand liegt auf dem Branch `feature/ebay_search`.
 >
 > **Was stattdessen ausgeliefert ist:** Variante A aus Abschnitt 4 — ein Suchlink je Titel,
 > im Browser gebaut, ohne Anfrage, ohne Kontingent, ohne Account (TODO-57).
 > Der Plan hatte sie als „trivial, minimales Risiko, Stunden statt Tage" bewertet
 > und zugunsten von Variante C verworfen.
-> Das war die falsche Reihenfolge: die aufwendigere Variante hing an einer Freigabe,
-> über die wir nicht verfügten, die triviale nicht.
+>
+> **Die Lehre steht damit woanders, als man beim Lesen erwartet.** Nicht „die aufwendige Variante
+> war nicht zu bekommen" — sie war zu bekommen, wurde gebaut und lief.
+> Sondern: der Plan hat den Aufwand sorgfältig abgewogen und den **Nutzen** der beiden Varianten
+> als vergleichbar unterstellt. Das war die ungeprüfte Annahme.
+> Am Ende leistete die billige Variante genug und die teure nicht genug.
 >
 > Der Rest des Dokuments steht unverändert, inklusive der Empfehlungen, die sich als falsch
 > erwiesen haben — genau darin liegt sein verbliebener Wert.

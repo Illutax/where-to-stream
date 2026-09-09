@@ -63,9 +63,9 @@ SPA ihn kennt, ohne ihn zu erraten.
 
 ### 5. Preisabfragen sind während einer Impersonierung gesperrt
 
-> **Hinfällig seit 2026-09-07 (TODO-56).** Die Preisabfrage ist zurückgebaut, weil der
-> eBay-Developer-Account nie freigeschaltet wurde; ihr Ersatz ist ein Suchlink, der im Browser
-> entsteht und kein Kontingent verbraucht. Damit gibt es keine Stelle mehr, an der Impersonierung
+> **Hinfällig seit 2026-09-07 (TODO-56).** Die Preisabfrage ist zurückgebaut — sie lief, erwies
+> sich aber als nicht gut genug; ihr Ersatz ist ein Suchlink, der im Browser entsteht und kein
+> Kontingent verbraucht. Damit gibt es keine Stelle mehr, an der Impersonierung
 > etwas kostet — die Sperre, der Sonderstatus und der `ImpersonationPort`, den sie brauchte, sind
 > ersatzlos entfallen. Die übrigen vier Punkte gelten unverändert.
 >

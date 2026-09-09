@@ -7,8 +7,10 @@
  * therefore made as precise as we can make it — category-filtered and sorted by total price —
  * rather than as sparing as possible.
  *
- * <p>Everything here happens in the browser: no server call, no quota, no developer account. That
- * is the point — the predecessor died waiting for one.
+ * <p>Everything here happens in the browser: no server call, no quota, no developer account. The
+ * predecessor had all three — it was built, it ran, and it was in use — and was withdrawn anyway
+ * because what it delivered was not good enough (TODO-56). Cheap is not why this one replaced it;
+ * cheap is why it is worth keeping even if it only ever answers roughly.
  */
 
 import { computed, inject, Signal } from '@angular/core';

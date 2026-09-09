@@ -3,10 +3,11 @@
 - **Date**: 2026-09-05
 - **Status**: Superseded (2026-09-07)
 
-> **Gegenstandslos.** Der eBay-Developer-Account, auf dem diese Entscheidung ruht, wurde nie
-> freigeschaltet — die Browse API hat nie eine Antwort geliefert, und die hier beschriebene
-> Quota-Verwaltung ist nie in Betrieb gegangen.
-> Die Preisabfrage ist mit TODO-56 zurückgebaut, ihre beiden Tabellen sind per Changeset entfernt.
+> **Gegenstandslos, weil das Feature entfallen ist — nicht, weil die Entscheidung falsch war.**
+> Der Developer-Account wurde freigeschaltet, die Preisabfrage lief, und die hier beschriebene
+> Quota-Verwaltung war mit ihr in Betrieb.
+> Im Betrieb erwies sich das Feature als nicht gut genug und ist mit TODO-56 zurückgebaut;
+> die beiden Tabellen sind per Changeset entfernt.
 >
 > An ihre Stelle tritt ein Suchlink je Titel (TODO-57), der im Browser entsteht:
 > keine Anfrage, kein Budget, kein Account — und damit nichts mehr zu rationieren.
