@@ -5,61 +5,84 @@ Manage lists of movies to watch and find **where to stream them**.
 Each signed-in user imports their own [IMDb](https://www.imdb.com/) watchlist CSV export;
 w2s scrapes [werstreamt.es](https://www.werstreamt.es/) for each title's streaming availability,
 caches the results in the database (shared across users),
-and presents each user's list as per-provider web pages (Netflix, Prime Video, Disney+, WOW, YouTube Store).
+and presents each user's list as per-provider pages (Netflix, Prime Video, Disney+, WOW, YouTube Store).
 
-## Tech stack
+It is a personal project, run as a single small deployment for a handful of users.
 
-- Java 25, Spring Boot 4 (Spring MVC, JSON API)
-- **Spring Security**: form + HTTP Basic + optional Google OIDC login, DB-backed users with
-  `USER`/`ADMIN` roles (see [Authentication & users](#authentication--users))
-- **Angular 22** SPA (standalone, zoneless, signals;
-  **Angular Material** M3 UI with self-hosted Roboto, per-user light/dark theme)
-  served under `/app` — the only UI — talking to a JSON API under `/api`.
-  The one server-rendered page left is the login page (the OIDC-ready auth entry).
-- **Poster thumbnails** (small preview + hi-res on hover),
-  scraped from **IMDb** by default or sourced from the **TMDB API** behind a feature flag,
-  cached as BLOBs in the DB (see [Poster images](#poster-images))
-- **FSK age-rating badges** per title (German FSK, or a foreign certificate as fallback),
-  from the same one IMDb metadata fetch as the poster, cached per title;
-  switchable per user (default on)
-- **eBay search link** per title on the dashboard — opens the marketplace the user picked,
-  filtered to discs and sorted by lowest total price. Built in the browser: no API, no quota.
-  (Its predecessor fetched actual prices and was withdrawn; see TODO-56 in `DONE.md` for why.)
-- **Admin impersonation** — an ADMIN can act as another user to reproduce a report,
-  with a permanent banner and a way back ([ADR-0020](docs/adr/0020-admin-impersonierung-ueber-switchuserfilter.md))
-- Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
-- jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
-- MapStruct (entity ↔ persistence mapping), Lombok
-- Build: Maven
+## What you get
 
-## How it works
+- **Your watchlist, sorted by where you can actually watch it** — one page per provider,
+  plus a dashboard over everything.
+- **Poster thumbnails** next to every title, hi-res on hover.
+- **FSK age-rating badges** (German rating, or a foreign certificate as fallback), switchable per user.
+- **German titles**, optionally, instead of the original ones.
+- **An eBay search link** per title — opens your chosen marketplace, filtered to discs and sorted
+  by lowest total price. It is a link, not a price lookup: see
+  [TODO-56 in `DONE.md`](DONE.md) for why the price lookup was built, used, and then withdrawn.
+- **Cache management** for admins: see when each title was last scraped, invalidate, re-scrape.
+- **Impersonation** for admins: act as another user to reproduce a report
+  ([ADR-0020](docs/adr/0020-admin-impersonierung-ueber-switchuserfilter.md)).
 
-1. Sign in, open **My Watchlist** (`/app/#/watchlist`) and upload your IMDb watchlist CSV export.
-   The import is a full sync of *your* list:
-   new titles are added, changed titles updated, and titles missing from the upload removed.
-2. `ExportReader` parses the uploaded CSV stream into `ImdbEntry` records (malformed rows are skipped and logged);
-   `WatchlistImportService` persists them to the `watchlist_entry` table, scoped to your user id.
-3. `WerStreamtEsSource` scrapes werstreamt.es per title.
-   Lookups are cached in the database (`StreamInfoService`)
-   and considered stale after a configurable number of days.
-   The cache is **global** (keyed by IMDb id, shared across users);
-   outbound requests are rate-limited to stay polite.
-   A stale or invalidated title is still served immediately from cache while its refresh runs
-   **in the background** (`hasStaleEntries` on the catalogue/provider pages flags this to the UI);
-   only a title with no cached entry at all blocks the request.
-   A scheduled job proactively refreshes titles nobody is actively viewing (see [ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md)).
-4. The Angular SPA renders each user's aggregated availability per streaming service.
+---
 
-## Prerequisites
+# Getting started
 
-- **JDK 25** and **Maven**.
-- **Node.js 22–24 + npm** (see `src/main/frontend/.nvmrc` / the `engines` field;
-  `.npmrc` has `engine-strict=true`, so a mismatching version fails fast).
-  The Maven build shells out to the system `npm` to build the Angular client.
-  Only needed for a full build — use `-Dskip.frontend=true` for a backend-only build.
+Two ways in. **Docker is the one production uses** and needs the least on your machine;
+the local run is for developing.
 
-Ubuntu's `apt install nodejs npm` ships a Node too old for this project.
-Install a supported version one of these ways:
+## With Docker
+
+Needs a container runtime (Docker or rootless Podman) and nothing else — JDK, Maven and a pinned
+Node all live in the build image.
+
+```bash
+cp .env.example .env        # fill in the secrets
+DOCKER_IMAGE_TAG=local docker build . --build-arg DOCKER_IMAGE_TAG=local -t w2s:local
+DOCKER_IMAGE_TAG=local docker compose up -d
+```
+
+`compose.yml` runs the app on port `8080` under the context path `/w2s`, on an external
+`webserver` network, and starts a bundled **MariaDB** alongside it (Spring profile `mariadb`).
+Its data lives in the `mariadb-data` **named volume** — not a host bind mount, so the directory
+gets the right ownership under rootless Podman and SELinux without any manual `chown`.
+
+Behind a reverse proxy, two settings have to line up with it; the comment next to
+`server.servlet.context-path` in `compose.yml` says exactly which and why. Getting them wrong
+fails *quietly* — the app keeps working and only its redirects point at the wrong scheme.
+
+<details>
+<summary>Host bind mount instead of the named volume (rootless Podman)</summary>
+
+Prefer the named volume unless you need the files visible on the host. For a bind mount, first
+chown the directory to the container's `mysql` uid **from inside its user namespace** — a plain
+`chown` from the host does not reach the right uid mapping:
+
+```bash
+docker run --rm mariadb:lts-ubi id mysql        # find the mysql uid (NNN); UBI vs. Debian images differ
+mkdir -p mariadb-data
+podman unshare chown -R NNN:NNN mariadb-data    # NNN from the previous command
+```
+
+Then point the `db` service at it, keeping `:Z` for SELinux:
+
+```yaml
+    volumes:
+      - ./mariadb-data:/var/lib/mysql:Z
+```
+
+Re-run the `podman unshare chown` whenever you recreate the directory.
+</details>
+
+## Locally
+
+**Prerequisites:** JDK 25, Maven, and Node.js 22–24 with npm.
+
+The Maven build shells out to the system `npm` to build the Angular client
+(`src/main/frontend/.nvmrc` and the `engines` field pin the range; `.npmrc` sets
+`engine-strict=true`, so a mismatching version fails fast rather than half-building).
+Pass `-Dskip.frontend=true` for a backend-only build.
+
+Ubuntu's `apt install nodejs npm` ships a Node too old for this project:
 
 ```bash
 # Option A — nvm (reads .nvmrc):
@@ -71,196 +94,34 @@ cd src/main/frontend && nvm install    # picks up .nvmrc (Node 24); `nvm use` in
 curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt-get install -y nodejs         # includes npm
 
-# verify
 node --version   # v24.x (v22–v24 accepted)
-npm --version
 ```
 
-## Running locally
+**Then pick a database.** Production runs on MariaDB; locally you have two options, and it is
+worth knowing which one you are on:
 
 ```bash
-# run the app (defaults to http://localhost:8001)
+# A — MariaDB, same as production. Needs a server, e.g. the bundled one:
+docker compose up -d db
+SPRING_PROFILES_ACTIVE=mariadb \
+  MARIADB_URL=jdbc:mariadb://localhost:3306/w2s MARIADB_USER=w2s MARIADB_PASSWORD=… \
+  mvn spring-boot:run
+
+# B — H2, no setup at all. File-based at ./db/demo, so your data survives a restart:
 mvn spring-boot:run
-
-# run the tests -- needs a container runtime: the MariaDB repository tests
-# run by default. Without one: mvn test -Pno-testcontainers
-mvn test
 ```
 
-On first start the database is empty;
-sign in and upload an IMDb CSV export under **My Watchlist** (`/watchlist`) to populate your list.
+Option B is the default and fine for most work — Liquibase provisions both databases from the
+same changelog. Anything that touches SQL or the schema, though, deserves option A: H2 and
+MariaDB do diverge, and the [Testcontainers tests](#testing) exist precisely because of it.
 
-`mvn spring-boot:run` (and `mvn package`) also builds the Angular client and folds it into the same jar,
-so once the app is up the SPA is available at `http://localhost:8001/app/` (the root `/` redirects there).
-Pass `-Dskip.frontend=true` for a backend-only build (skips the `npm` steps).
-
-### Architecture
-
-The backend is organised **by bounded context first, ports & adapters second** (see [`docs/adr`](docs/adr/README.md) for the restructuring ADR):
-`accountaccess`, `watchlist`, `titlecatalog`, and `streamingavailability`
-each own a `domain` → `application` → `port` → `adapter` package tree under `tech.dobler.where2stream`,
-plus a deliberately minimal `shared` kernel (`ImdbId`, `ReleaseYear`, the `TimeService` facade, cross-cutting `ApiExceptionHandler`).
-Controllers hold no business logic:
-it lives in view-agnostic **application services** that return DTOs;
-the `@RestController`s under each context's `adapter/in/api` expose them as JSON under `/api`,
-which the Angular SPA consumes.
-A context exposes a capability to the others only through an explicit **published port** (e.g. `WatchlistCatalogPort`, `CurrentUserPort`)
-— enforced by `ArchitectureTest` (ArchUnit), one isolation rule per context.
-The Angular app (`src/main/frontend`) follows a smart/dumb split:
-container components under `features/` own all data loading;
-presentational components under `shared/` only render inputs (the availability tables are sortable by name / year / added date).
-
-Domain concepts are modelled as **value objects** rather than bare primitives (`ImdbId`, `ReleaseYear`, `WatchlistDate`; see [ADR 0009](docs/adr/0009-domainvalues-statt-primitiven.md)):
-the backend keeps the JSON/DB contracts unchanged via Jackson `@JsonValue` + JPA `@Converter`,
-and the Angular client mirrors them as branded types.
-
-### Frontend development
-
-For a fast edit/reload loop, run the backend and the Angular dev server separately:
-
-```bash
-mvn spring-boot:run -Dskip.frontend=true            # backend on :8001
-cd src/main/frontend && npm start                   # ng serve on :4200, proxies /api -> :8001
-```
-
-Frontend unit tests run on **vitest** (via `@angular/build:unit-test`):
-
-```bash
-cd src/main/frontend
-npm test            # watch mode
-npm run test:ci     # single run (CI)
-npm run test:coverage  # single run + v8 coverage report
-```
-
-## Test coverage
-
-- **Backend** — JaCoCo (method & branch), report at `target/site/jacoco/` after `mvn test`
-  Testcontainers-backed tests are excluded with `-Pno-testcontainers` where no container
-  runtime is available.
-- **Angular** — Vitest v8 (`npm run test:coverage` in `src/main/frontend`).
-
-The reads of "now" go through a `TimeService` facade (backend and frontend) instead of `Instant.now()` / `Date.now()`,
-so time-dependent tests use a fixed clock
-— see [`docs/adr/0003`](docs/adr/0003-zeit-ueber-timeservice-facade.md).
-This is **enforced**: the backend `ArchitectureTest` (ArchUnit) checks both the bounded-context isolation and the no-`now()` rule during `mvn test`;
-the Angular client enforces the no-`now()` rule via ESLint (`cd src/main/frontend && npm run lint`).
-Known architecture exceptions are tracked in [`TODOs.md`](./TODOs.md) (ARCH-1).
-Testing conventions are recorded in [`docs/adr/0004`](docs/adr/0004-vitest-als-angular-test-runner.md) (Vitest)
-and [`docs/adr/0005`](docs/adr/0005-assertj-und-mockito-im-backend.md) (AssertJ + Mockito).
-
-## Running with Docker
-
-The image builds everything inside the builder stage
-— JDK, Maven and a **pinned Node** (copied from `node:24-alpine`) —
-so no host Node is needed for the Docker build.
-Host build artifacts are kept out of the build context via `.dockerignore` (notably `src/main/frontend/node_modules`):
-they are platform-specific and would otherwise break the Alpine/musl build (a host `node_modules` from glibc is missing `@rollup/rollup-linux-x64-musl`);
-`npm ci` runs fresh in the image instead.
-
-The image builds the jar and runs it (see `Dockerfile` / `compose.yml`).
-`compose.yml` mounts `./logs`, runs on port `8080`,
-and serves under the context path `/w2s` on an external `webserver` network.
-It also starts a bundled `mariadb` service (activated via the `mariadb` Spring profile)
-whose data lives in the `mariadb-data` **named volume**
-— a named volume (not a host bind mount)
-so the database directory gets the right ownership under rootless Podman/Docker and SELinux without manual `chown`/relabeling.
-
-```bash
-DOCKER_IMAGE_TAG=local docker build . --build-arg DOCKER_IMAGE_TAG=local -t w2s:local
-DOCKER_IMAGE_TAG=local docker compose up -d
-```
-
-### MariaDB data: named volume vs. host bind mount (rootless Podman)
-
-`compose.yml` stores MariaDB data in the **`mariadb-data` named volume** by default
-— it works out of the box under rootless Podman + SELinux.
-Prefer it unless you need the files visible on the host.
-
-For a **host bind mount** instead, first chown the directory to the container's `mysql` uid from inside its user namespace
-(a plain `chown` from the host doesn't reach the right uid mapping):
-
-```bash
-docker run --rm mariadb:lts-ubi id mysql        # find the mysql uid (NNN); UBI vs. Debian images differ
-mkdir -p mariadb-data
-podman unshare chown -R NNN:NNN mariadb-data    # NNN from the previous command
-```
-
-Then point the `db` service at it (keeping `:Z` for SELinux):
-
-```yaml
-    volumes:
-      - ./mariadb-data:/var/lib/mysql:Z
-```
-
-Re-run the `podman unshare chown` whenever you recreate the directory.
-
-The helper scripts `update-and-restart.sh` (pull + rebuild + restart)
-and `upgrade-spring-boot.sh` (bump the Spring Boot parent, test, push) are intended to run on the host, driven by `cron.sh`.
-
-## Authentication & users
-
-The app requires a login.
-Users live in the database with `USER` / `ADMIN` roles;
-read pages and `GET /api/**` need any authenticated user,
-while state-changing / maintenance endpoints and user administration need `ADMIN`.
-Details and rationale: [ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md).
-
-- **Login:** form login and HTTP Basic (e.g. `curl -u admin:… http://localhost:8001/api/status`).
-- **Staying signed in:** HTTP sessions are persisted in the database (Spring Session JDBC),
-  so a redeploy/restart no longer logs everyone out;
-  they still time out after `server.servlet.session.timeout` (default 30m).
-  Tick **"Stay signed in"** for a login that also survives closing the browser,
-  and set a stable `w2s.security.remember-me.key` (env `W2S_SECURITY_REMEMBER_ME_KEY`)
-  so remember-me tokens stay valid across restarts.
-
-Deployment config (docker compose) is documented in [`.env.example`](.env.example)
-— copy it to `.env` and fill in the secrets.
-- **Initial admin:** on an empty user table an `admin` account is seeded.
-  Set its password with `w2s.security.initial-admin.password` (env `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`);
-  if unset, a strong password is generated and logged once at startup
-  — change it after first login.
-- **User management:** `ADMIN`s manage users in the Angular UI (`/app/#/admin/users`),
-  which calls `/api/admin/users`.
-- **Per-user theme:** each account stores a UI colour-scheme preference (`SYSTEM`/`LIGHT`/`DARK`,
-  default `SYSTEM` = follow the OS),
-  chosen in the navbar and persisted via `PUT /api/me/theme`.
-- **Google login (optional):** start with `SPRING_PROFILES_ACTIVE=google`
-  and provide `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (redirect URI `{baseUrl}/login/oauth2/code/google`).
-  Without the profile, OIDC is off and only local accounts are used.
-  First OIDC login provisions a local `USER` keyed by e-mail.
-
-## Poster images
-
-Each title shows a small poster thumbnail next to its name, and a high-resolution poster on hover.
-The image **source** is pluggable (`PosterSource`):
-the app resolves a title's poster reference once,
-downloads the two sizes **pre-sized from the source's CDN** (no server-side image processing),
-and caches both as BLOBs in the DB (per `imdbId`, shared across users)
-so the source is hit at most once per title.
-The browser then caches each image (long, immutable `Cache-Control` + `ETag`).
-
-- **IMDb (default, no key):** the poster URL is looked up via IMDb's public **GraphQL API** (`title(id).primaryImage.url`, an Amazon image-CDN URL);
-  the CDN resizes and re-compresses on the fly via URL params,
-  so the row thumbnail is small and low-quality (`imdb-poster.thumb-width`/`thumb-quality`)
-  and the hover image larger (`imdb-poster.full-*`).
-  Lookups are throttled
-  — `imdb-poster.rate-limit.requests-per-second` (default **10**; the API and CDN tolerate it).
-  (HTML scraping of the title page does not work server-side:
-  `www.imdb.com` returns an empty `202` to datacenter IPs.)
-  **Note:** the API returns IMDb data under their terms (limited non-commercial use);
-  this covers a personal watchlist, but TMDB below is the unambiguous path.
-- **TMDB (opt-in):** set `TMDB_ENABLED=true` **and** a free v3 API key (`TMDB_API_KEY` / `tmdb.api-key`, from https://www.themoviedb.org/settings/api)
-  to source posters from [The Movie Database](https://www.themoviedb.org/) instead (via its `find` endpoint + image CDN).
-  With the flag or key missing, IMDb stays the source.
-- Thumbnails are cached on first view and can be bulk-warmed via the ADMIN pre-cache (`POST /api/cache`);
-  the hi-res image is fetched on first hover.
-  A title with no poster is negatively cached (`poster.negative-cache-days`, default 14).
-- **Attribution:** when **TMDB** is the active source the UI shows the TMDB logo
-  and the required notice ("This product uses the TMDB API but is not endorsed or certified by TMDB.");
-  with IMDb no footer is shown.
+The app comes up on <http://localhost:8001>; `/` redirects to the SPA at `/app/`.
+On first start the database is empty — sign in and upload an IMDb CSV export under
+**My Watchlist** to populate your list.
 
 ## Configuration
 
+Deployment secrets go in `.env` (copy [`.env.example`](.env.example)).
 Key properties (`src/main/resources/application.properties`):
 
 | Property | Default | Description |
@@ -268,98 +129,174 @@ Key properties (`src/main/resources/application.properties`):
 | `server.port` | `8001` | HTTP port (Docker overrides to `8080`) |
 | `server.servlet.context-path` | *(empty)* | Mount point; the Compose deployment sets `/w2s`. Must match what the reverse proxy forwards — see the comment in `compose.yml` |
 | `server.forward-headers-strategy` | `native` | Read the real scheme/host from `X-Forwarded-*` behind the TLS-terminating proxy. **Fails quietly** when the peer is outside Tomcat's trusted ranges: redirects silently go out as `http` again |
+| `server.servlet.session.timeout` | `30m` | Idle timeout for a signed-in session |
 | `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is considered stale |
-| `wer-streamt.invalidate.jitter-min-factor` / `-max-factor` | `1.5` / `2.0` | Staggering window (as a multiple of `after-days`) for the background refresh due date, so titles cached together don't all become due at once (ADR-0016) |
+| `wer-streamt.invalidate.jitter-min-factor` / `-max-factor` | `1.5` / `2.0` | Staggering window (as a multiple of `after-days`) for the background refresh due date, so titles cached together don't all become due at once ([ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md)) |
 | `wer-streamt.rate-limit.requests-per-second` | `20` | Outbound throttle for werstreamt.es (`<= 0` disables) |
-| `wer-streamt.background-refresh.enabled` | `true` | Not-off switch for the proactive scheduled cache-refresh job (ADR-0016) |
-| `wer-streamt.background-refresh.cron` | `0 0 4 * * *` | When the scheduled cache-refresh job runs |
-| `imdb-poster.rate-limit.requests-per-second` | `10` | Outbound throttle for the IMDb poster scraper (`<= 0` disables) |
+| `wer-streamt.background-refresh.enabled` | `true` | Off switch for the proactive scheduled cache-refresh job |
+| `wer-streamt.background-refresh.cron` | `0 0 4 * * *` | When that job runs |
+| `imdb-poster.rate-limit.requests-per-second` | `10` | Outbound throttle for the IMDb poster lookup (`<= 0` disables) |
 | `poster.negative-cache-days` | `14` | How long a "no poster" result is cached before re-checking |
-| `tmdb.enabled` | `false` | Use TMDB (not IMDb) as the poster source; also needs `tmdb.api-key` |
-| `tmdb.api-key` | _(blank)_ | TMDB v3 API key (required when `tmdb.enabled=true`) |
-| `spring.jpa.hibernate.ddl-auto` | `none` | Schema is owned by Liquibase (single source of truth) |
+| `tmdb.enabled` | `false` | Use TMDB instead of IMDb as the poster source; also needs `tmdb.api-key` |
+| `tmdb.api-key` | *(blank)* | TMDB v3 API key (required when `tmdb.enabled=true`) |
+| `spring.jpa.hibernate.ddl-auto` | `none` | The schema belongs to Liquibase alone |
 
-### Database & schema
+---
 
-The database holds the user accounts, their per-user watchlists, persistent HTTP sessions,
-and the **global cached scrape results**.
-The schema is created and versioned by **Liquibase** as portable XML changelogs (`src/main/resources/db/changelog/`),
-so the same changelog provisions both H2 and MariaDB.
-Hibernate neither creates nor validates the schema (`ddl-auto=none`);
-correctness is covered by the repository tests,
-which run on H2 and (via Testcontainers) on a real MariaDB.
-The baseline assumes a fresh database.
-**Do not drop an existing `./db`** to get there — since the security, watchlist and title-meta
-changesets it holds user accounts, watchlists, sessions and cached title metadata, not just
-scrape results.
+# Using it
 
-**H2 (default):** file-based at `./db/demo`, used for local dev and in-memory tests.
+**Sign in.** The app requires a login; there is no anonymous view. On an empty user table an
+`admin` account is seeded — set its password via `w2s.security.initial-admin.password`, otherwise
+a strong one is generated and logged once at startup.
 
-**MariaDB (first-class):** activate the `mariadb` Spring profile and point it at your server:
+**Import your watchlist.** *My Watchlist* → upload your IMDb CSV export. The import is a **full
+sync of your list**: new titles are added, changed ones updated, and titles missing from the
+upload are removed. Malformed rows are skipped and logged rather than failing the whole import.
 
-```bash
-SPRING_PROFILES_ACTIVE=mariadb \
-  MARIADB_URL=jdbc:mariadb://localhost:3306/w2s MARIADB_USER=w2s MARIADB_PASSWORD=… \
-  mvn spring-boot:run
-```
+**Browse.** The dashboard shows everything with the services it is available on; the provider
+pages split one service into what is included in the subscription and what costs extra. Both
+views come as a sortable table or a poster grid, switchable in the navbar.
 
-`compose.yml` already wires the `w2s` service to a bundled `mariadb` service via this profile.
+A title you have just added is resolved on first view, which takes a moment. After that it comes
+from the cache. A title whose cache entry has gone stale is still shown **immediately**, with a
+banner saying so, while the refresh runs in the background — only a title with nothing cached at
+all makes you wait ([ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md)).
 
-**Testcontainers MariaDB tests:** the repository suite also runs against a real MariaDB, and does so
-**as part of the normal build** — they are bound to Surefire, so already `mvn test` starts a
-container.
-They are the only tests that exercise the Liquibase changelog against the database production
-actually uses, so they are not something to remember to run.
+**Adjust it.** *Settings* holds language, theme, German titles, age-rating badges, grid density
+and the eBay marketplace your search links open.
 
-They need a container runtime and image-pull access. Where neither exists — notably inside the
-Docker build stages, which have no Docker socket — skip them explicitly:
+**As an admin.** *Manage cache* lists every title with the time it was last scraped, and lets you
+invalidate or re-scrape a selection. *Users* manages accounts and passwords, and starts an
+impersonation when you need to see what someone else sees.
 
-```bash
-mvn -Pno-testcontainers verify        # or: -Dtest.excluded.groups=testcontainers
-```
+---
+
+# Technical
+
+## Stack
+
+Java 25 · Spring Boot 4 (MVC, JSON API) · Spring Security · Spring Data JPA · Liquibase ·
+MapStruct · Lombok · jsoup · Apache Commons CSV · Maven —
+and an Angular 22 SPA (standalone, zoneless, signals) with Angular Material M3.
+
+The SPA under `/app` is the only UI. The one server-rendered page left is the login page.
+
+## How a title gets resolved
+
+1. `ExportReader` parses the uploaded CSV into `ImdbEntry` records; `WatchlistImportService`
+   persists them per user id.
+2. `WerStreamtEsSource` scrapes werstreamt.es per title. Results are cached in the database
+   (`StreamInfoService`), keyed by IMDb id and **shared across users**; outbound requests are
+   rate-limited to stay polite.
+3. Stale entries are served from cache and refreshed in the background; a scheduled job
+   proactively refreshes titles nobody is currently looking at.
+4. The SPA renders the aggregate per streaming service.
+
+## Architecture
+
+The backend is organised **by bounded context first, ports & adapters second**:
+`accountaccess`, `watchlist`, `titlecatalog` and `streamingavailability`, each with its own
+`domain` → `application` → `port` → `adapter` tree, plus a deliberately minimal `shared`.
+A context reaches another only through a published port — enforced by `ArchitectureTest` (ArchUnit).
+
+The full picture is in [`CLAUDE.md`](CLAUDE.md); the reasoning behind each decision is in
+[`docs/adr/`](docs/adr/README.md). Both are kept current, which is why this section is short.
+
+## Database & schema
+
+The database holds user accounts, per-user watchlists, persistent HTTP sessions and the global
+cached scrape results. The schema is created and versioned by **Liquibase** as portable XML
+changelogs (`src/main/resources/db/changelog/`), so one changelog provisions both MariaDB and H2.
+Hibernate neither creates nor validates it (`ddl-auto=none`).
+
+**Production runs on MariaDB.** H2 is the test database and the zero-setup option for a local
+run (see [Locally](#locally)).
+
+> **Do not delete an existing `./db` to get a clean baseline.** It once held nothing but scrape
+> results — today it also holds user accounts, watchlists, sessions and cached title metadata.
+
+## Authentication & users
+
+Users live in the database with `USER` / `ADMIN` roles: reading needs any authenticated user,
+while maintenance endpoints and user administration need `ADMIN`. Rationale in
+[ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md).
+
+- **Login:** form login and HTTP Basic (`curl -u admin:… http://localhost:8001/api/status`).
+- **Staying signed in:** sessions live in the database (Spring Session JDBC), so a restart does
+  not log everyone out. Tick *Stay signed in* for a login that survives closing the browser, and
+  set a stable `w2s.security.remember-me.key` so those tokens survive restarts too.
+- **Google login (optional):** start with `SPRING_PROFILES_ACTIVE=google` plus
+  `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (redirect URI `{baseUrl}/login/oauth2/code/google`).
+  The first OIDC login provisions a local `USER` keyed by e-mail.
+
+## Poster images
+
+The image **source** is pluggable (`PosterSource`). A title's poster reference is resolved once,
+both sizes are downloaded **pre-sized from the source's CDN** (no server-side image processing)
+and cached as BLOBs per `imdbId`, so the source is hit at most once per title. The browser then
+caches each image (long, immutable `Cache-Control` + `ETag`).
+
+- **IMDb (default, no key):** the URL comes from IMDb's public GraphQL API; the Amazon image CDN
+  resizes on the fly via URL parameters. HTML scraping of the title page does *not* work
+  server-side — `www.imdb.com` answers datacenter IPs with an empty `202`.
+  Note that this returns IMDb data under their terms (limited non-commercial use); TMDB below is
+  the unambiguous path.
+- **TMDB (opt-in):** `TMDB_ENABLED=true` plus a free v3 key. When TMDB is the active source the UI
+  shows the required attribution notice; with IMDb it shows none.
+- A title with no poster is negatively cached (`poster.negative-cache-days`).
 
 ## Endpoints
 
-**Angular SPA:**
+The SPA lives at `/app/` (hash-routed), the JSON API under `/api`, and `/public/status` is an
+unauthenticated health probe. `/` redirects to the SPA.
 
-| Path | Description |
-| --- | --- |
-| `/app/` | Single-page client (hash-routed: `/app/#/`, `/app/#/provider/netflix`, `/app/#/manage`, …) |
+There is deliberately **no endpoint list here**. The SPA is the only consumer of this API and
+lives in the same repository, so a second copy of the paths would only be one more thing to keep
+in step — and it did not stay in step. The authoritative list is the `@RestController`s under
+each context's `adapter/in/api`.
 
-**JSON API (`/api`, consumed by the SPA):**
+## Testing
 
-| Method & Path | Description |
-| --- | --- |
-| `GET /api/catalog` | All entries with their available services |
-| `GET /api/providers/{amazon\|disney\|netflix\|wow\|youtube}` | Per-provider included + paid titles |
-| `GET /api/watchlist` · `POST /api/watchlist/import` · `DELETE /api/watchlist` | Your watchlist: status / CSV import / clear |
-| `PUT /api/watchlist/{imdbId}/seen` | Mark one of your titles seen / not seen (`{ "seen": true }`) |
-| `GET /api/titles/{imdbId}/poster` · `…/poster/full` | Cached poster thumbnail / hi-res image (404 if none) |
-| `GET /api/titles/{imdbId}/rating` | Cached age rating `{system,label}` — FSK or fallback (404 if none) |
-| `GET /api/titles/{imdbId}/meta` | Age rating **and** German title in one call (used by the title cells) |
-| `GET /api/imdb/search?q=…` | IMDb suggest search, for adding titles (not cached — live) |
-| `PUT /api/me/show-age-ratings` | Toggle the current user's age-rating badges (`{ "showAgeRatings": true }`) |
-| `GET /api/manage` · `POST /api/manage/invalidate` · `POST /api/manage/scrape` | Cache management (ADMIN) |
-| `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached (ADMIN) |
-| `POST /api/refresh?scope=seen\|all` | Force-refresh cached results (ADMIN) |
-| `GET /api/search?imdbId=…` | Resolve availability for a title |
-| `GET /api/me` | The current principal (username, roles, admin flag, theme) |
-| `PUT /api/me/theme` | Set the current user's theme (`SYSTEM`/`LIGHT`/`DARK`) |
-| `PUT /api/me/language` · `…/show-german-title` · `…/view-mode` · `…/tiles-per-row` · `…/ebay-marketplace` | The current user's remaining preferences |
-| `POST /api/admin/users/{id}/password` | Reset another user's password (ADMIN) |
-| `POST /api/admin/impersonate?username=…` · `POST /api/impersonate/exit` | Act as another user, and stop (ADR-0020) |
-| `GET /api/admin/users` · `POST` · `PUT`/`DELETE …/{id}` | User administration (ADMIN) |
-| `GET /api/status` | Version & server start time (authenticated) |
+```bash
+mvn verify                          # backend, incl. the MariaDB Testcontainers tests
+mvn verify -Pno-testcontainers      # without a container runtime
+cd src/main/frontend && npm test    # frontend (vitest), watch mode
+```
 
-**Server-rendered / public:**
+The MariaDB tests run **by default** — they are the only ones that exercise the Liquibase
+changelog against the database production actually uses, and a check you have to remember is a
+check that gets skipped. They are excluded only where no Docker socket exists, notably inside the
+image build stages.
 
-| Path | Description |
-| --- | --- |
-| `/` | Redirects to `/app/` |
-| `/login` (GET) / `/logout` (POST) | Login page (form + optional Google) and logout |
-| `/public/status` | Version & server start time, as JSON — public health probe |
+Coverage: JaCoCo for the backend (`target/site/jacoco/`), Vitest v8 for the frontend
+(`npm run test:coverage`).
 
-## Project status
+Two rules are enforced rather than agreed: bounded-context isolation and "no `Instant.now()` /
+`Date.now()` outside the `TimeService` facade" ([ADR-0003](docs/adr/0003-zeit-ueber-timeservice-facade.md))
+— by ArchUnit in `mvn verify` and by ESLint in `npm run lint`.
+`DocumentationConsistencyTest` additionally checks that the open TODOs and the ADR index still
+point at things that exist.
 
-This is a personal project.
-Known issues and planned improvements are tracked in [`TODOs.md`](./TODOs.md).
+## Frontend development
+
+For a fast edit/reload loop, run backend and dev server separately:
+
+```bash
+mvn spring-boot:run -Dskip.frontend=true            # backend on :8001
+cd src/main/frontend && npm start                   # ng serve on :4200, proxies /api -> :8001
+```
+
+The Angular app follows a smart/dumb split: containers under `features/` own all data loading,
+presentational components under `shared/` only render their inputs.
+
+## Operations
+
+`update-and-restart.sh` (pull, rebuild, restart) and `upgrade-spring-boot.sh` (bump the Spring
+Boot parent, test in the image, push) run on the host, driven by `cron.sh`.
+
+---
+
+## Contributing and project status
+
+Conventions, decisions and open work are signposted in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Open items are in [`TODOs.md`](TODOs.md), finished ones in [`DONE.md`](DONE.md).

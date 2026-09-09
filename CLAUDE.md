@@ -38,6 +38,7 @@ Where it belongs:
 | Architecture, stack and convention decisions | `docs/adr/` — via the `adr` skill, indexed in `docs/adr/README.md` |
 | How we work together, review/test conventions | this file (`CLAUDE.md`) |
 | What the project is, how to build and run it | `README.md` |
+| Where a human should look for all of the above | `CONTRIBUTING.md` — signpost only, no content of its own |
 | Outstanding work | `TODOs.md` — **open items only** |
 | Finished and abandoned work | `DONE.md` — history, explicitly **not** maintained |
 | A snapshot of how things stand on a given day | `docs/reviews/YYYY-MM-DD-*.md`, never edited afterwards |

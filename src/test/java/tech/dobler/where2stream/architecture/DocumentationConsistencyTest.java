@@ -85,6 +85,27 @@ class DocumentationConsistencyTest {
     }
 
     @Test
+    void everyDocumentTheEntryPointsLinkToExists() throws IOException {
+        // README.md und CONTRIBUTING.md sind die Türen ins Repository; ein toter Link darin
+        // empfängt jeden Ankömmling. Geprüft werden nur Markdown-Links auf Dateien — Prosa und
+        // Beispiel-URLs bleiben außen vor, sonst wäre der Test Rauschen.
+        final var broken = Stream.of("README.md", "CONTRIBUTING.md").flatMap(file -> {
+            final String text;
+            try {
+                text = Files.readString(REPO.resolve(file));
+            } catch (IOException e) {
+                throw new IllegalStateException(file, e);
+            }
+            return MARKDOWN_LINK.matcher(text).results()
+                    .map(match -> match.group(1))
+                    .filter(link -> !Files.exists(REPO.resolve(link)))
+                    .map(link -> file + " -> " + link);
+        }).toList();
+
+        assertThat(broken).as("tote Markdown-Links in README.md / CONTRIBUTING.md").isEmpty();
+    }
+
+    @Test
     void everyCrossReferencedTicketExistsInEitherFile() throws IOException {
         // Ein Verweis darf auf ein erledigtes Ticket zeigen — TODO-59 verweist zu Recht auf das
         // abgeschlossene TODO-57. Nur ins Nichts darf er nicht zeigen.
