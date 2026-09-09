@@ -1,86 +1,87 @@
 ---
 name: ticket
-description: Legt ein TODO in TODOs.md an, arbeitet eines ab oder schließt es nach DONE.md. Use when opening, updating or closing a TODO/ticket in this repository, or when unsure whether something belongs in TODOs.md, an ADR, or a commit message.
+description: Opens a TODO in TODOs.md, works one, or closes it into DONE.md. Use when opening, updating or closing a TODO/ticket in this repository, or when unsure whether something belongs in TODOs.md, an ADR, or a commit message.
 ---
 
-# Ticketarbeit
+# Working a ticket
 
-Zwei Dateien, zwei Aufgaben:
+Two files, two jobs:
 
-| Datei | Enthält | Wird gepflegt | Wird geprüft |
+| File | Holds | Maintained | Checked |
 | --- | --- | --- | --- |
-| `TODOs.md` | **nur offene Arbeit** | ja — was hier steht, gilt jetzt | `DocumentationConsistencyTest` |
-| `DONE.md` | erledigt und verworfen | **nein**, ausdrücklich | nein |
+| `TODOs.md` | **open work only** | yes — what is in here is true now | `DocumentationConsistencyTest` |
+| `DONE.md` | finished and abandoned | **no**, deliberately | no |
 
-Die Trennung ist der ganze Punkt. Vor dem 2026-09-09 lag beides zusammen, 86 % der Zeilen
-waren Historie im Präsens, und niemand konnte einem Eintrag ansehen, ob ein alter Klassenname
-bloß alt oder die Aussage falsch geworden war. Wer erledigte Einträge in `TODOs.md` abhakt
-statt sie zu verschieben, stellt genau diesen Zustand wieder her.
+The split is the whole point. Before 2026-09-09 both lived together, 86 % of the lines were
+history written in the present tense, and nobody could tell an outdated class name from a claim
+that had become false. Ticking a finished entry off in `TODOs.md` instead of moving it recreates
+exactly that state.
 
-## Ein Ticket anlegen
+## Opening one
 
-Erst die Vorfrage: **gehört es überhaupt hierher?**
+First the prior question: **does it belong here at all?**
 
-| Was | Wohin |
+| What | Where |
 | --- | --- |
-| Etwas ist zu tun | `TODOs.md` |
-| Eine Entscheidung mit Begründung, die dauerhaft gilt | ADR (`adr`-Skill) |
-| Warum diese eine Änderung so aussieht | Commit-Nachricht |
-| Wie man das Projekt baut und betreibt | `README.md` |
-| Wie wir zusammenarbeiten | `CLAUDE.md` |
+| Something needs doing | `TODOs.md` |
+| A decision with reasoning that will keep applying | an ADR (`adr` skill) |
+| Why this one change looks the way it does | the commit message |
+| How to build and run the project | `README.md` |
+| How we work | `CLAUDE.md` |
 
-Ein Ticket, das nur eine Erkenntnis festhält, ohne dass jemand etwas tun soll, ist an dieser
-Stelle falsch — es wird nie abgearbeitet und altert vor sich hin.
+A ticket that only records an insight, with nobody expected to act on it, is in the wrong place —
+it never gets worked and quietly ages.
 
-Dann die nächste freie Nummer aus `TODOs.md` **und** `DONE.md` (die höchste von beiden + 1) und:
+Then take the next free number across `TODOs.md` **and** `DONE.md` (highest of both, plus one):
 
 ```markdown
-### 🟠 TODO-N — Kurzer Titel in der Sache, nicht in der Lösung
-Was ist der Fall, und warum zählt es. Belege mit Pfad.
+### 🟠 TODO-N — Short title naming the problem, not the solution
+What is the case, and why it matters. Cite paths.
 
-- **Akzeptanzkriterium:** Woran man erkennt, dass es fertig ist.
+- **Acceptance:** how you can tell it is finished.
 ```
 
-Dazu die Zeile in die Übersichtstabelle am Kopf der Datei, in der Reihenfolge
-🔴 → 🟠 → 🟡 → 🟢, innerhalb einer Stufe nach Nummer.
+Plus the row in the overview table at the top of the file, ordered 🔴 → 🟠 → 🟡 → 🟢 and by number
+within a level.
 
-### Die vier Regeln, und warum es sie gibt
+### The four rules, and why they exist
 
-1. **Zeigen statt wiederholen.** Verlinke die maßgebliche Stelle, statt ihren Inhalt
-   abzuschreiben. `ddl-auto` stand einmal an drei Stellen — zwei davon behaupteten `validate`,
-   lange nachdem es `none` war. Jede Kopie einer Tatsache driftet für sich.
-2. **Belege mit Pfad.** `src/main/java/.../ExportReader.java` statt „irgendwo im Service".
-   Der Test prüft beim Build, dass es die Datei gibt: ein Pfad in Backticks, den es nicht gibt,
-   macht rot. Das ist kein Formalismus — genau diese Drift war die häufigste von allen.
-3. **Ungeprüftes als ungeprüft kennzeichnen.** „Nicht verifiziert:" ist eine vollwertige
-   Aussage. Eine Vermutung, die wie ein Befund aussieht, kostet später mehr als sie spart:
-   TODO-61 trug einen Tag lang eine plausible Ursache, die sich als falsch erwies, und
-   TODO-14 stand Monate offen wegen einer Prämisse, die nie stimmte.
-4. **Kein ✅ in `TODOs.md`.** Erledigtes wird verschoben, nicht abgehakt. Der Test erzwingt das.
+1. **Point, don't restate.** Link the authoritative place instead of copying its content.
+   `ddl-auto` once stood in three documents — two of them still claiming `validate` long after it
+   had become `none`. Every copy of a fact drifts on its own.
+2. **Cite paths.** `src/main/java/.../ExportReader.java`, not "somewhere in the service".
+   The build checks that the file exists: a backticked path that does not resolve turns the build
+   red. Not a formality — this was the single most common kind of drift.
+3. **Mark the unverified as unverified.** "Not verified:" is a complete statement. A guess that
+   reads like a finding costs more later than it saves: TODO-61 carried a plausible cause for a
+   day that turned out wrong, and TODO-14 stayed open for months on a premise that was never true.
+4. **No ✅ in `TODOs.md`.** Finished work is moved, not ticked off. The test enforces it.
 
-## Ein Ticket abarbeiten
+Everything written into the repository is in English — see the Language section in `CLAUDE.md`.
+That says nothing about the language we talk in.
 
-- **Erst prüfen, ob die Beschreibung noch stimmt.** Tickets altern. Steht dort eine Prämisse,
-  die sich nicht mehr halten lässt, ist das der eigentliche Befund — dann wird das Ticket
-  korrigiert oder verworfen, nicht blind umgesetzt.
-- Änderungen wie üblich: Test dazu, `mvn verify` und `ng test` grün.
-- Fällt unterwegs etwas Neues auf, das nicht zum Ticket gehört: eigenes Ticket, nicht anhängen.
+## Working one
 
-## Ein Ticket schließen
+- **First check that the description still holds.** Tickets age. A premise that no longer stands
+  *is* the finding — then the ticket gets corrected or dropped, not implemented blindly.
+- Change as usual: a test with it, `mvn verify` and `ng test` green.
+- Something unrelated turning up on the way gets its own ticket, not an appendix to this one.
 
-1. **Dauerhaft wertvolle Begründung sichern**, *bevor* verschoben wird — als ADR, wenn sie
-   künftige Entscheidungen bindet. `DONE.md` wird nicht gepflegt; was dort landet, ist ab
-   dann Geschichte und wird nicht mehr gelesen, wenn jemand den Ist-Zustand wissen will.
-2. Statusmarker auf ✅ (erledigt) oder ❌ (verworfen) setzen und einen Absatz ergänzen:
-   **was tatsächlich gemacht wurde**, und was daran vom ursprünglichen Plan abwich.
-   Bei ❌ vor allem: warum verworfen — das hält den Nächsten davon ab, es erneut anzufangen.
-3. Eintrag nach `DONE.md` verschieben, Zeile aus der Übersichtstabelle entfernen.
-4. `mvn verify` — der Test fängt Querverweise ab, die jetzt ins Leere zeigen.
+## Closing one
 
-Verweise **auf** ein geschlossenes Ticket bleiben gültig: der Test sucht in beiden Dateien.
+1. **Save the durable reasoning first**, before moving anything — as an ADR if it will bind future
+   decisions. `DONE.md` is not maintained; what lands there is history, and nobody reads it to
+   find out how things stand today.
+2. Set the marker to ✅ (done) or ❌ (dropped) and add a paragraph: **what was actually done**, and
+   where that departed from the original plan. For ❌ above all: why — that is what stops the next
+   person starting it again.
+3. Move the entry to `DONE.md`, remove its row from the overview table.
+4. `mvn verify` — the test catches cross-references that now point nowhere.
 
-## Was der Test nicht kann
+References *to* a closed ticket stay valid: the test looks in both files.
 
-Er prüft Pfade, Links, Nummern und Marker. Ob eine **Aussage** noch stimmt, sieht er nicht —
-ein Eintrag darf grün sein und trotzdem Unsinn behaupten. Der Test verkleinert die Menge
-dessen, was ein Mensch nachsehen muss; er ersetzt das Nachsehen nicht.
+## What the test cannot do
+
+It checks paths, links, numbers and markers. Whether a **statement** is still true is invisible to
+it — an entry may be green and still talk nonsense. It shrinks what a human has to re-read; it
+does not replace the reading.

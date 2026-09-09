@@ -41,7 +41,7 @@ DOCKER_IMAGE_TAG=local docker build . --build-arg DOCKER_IMAGE_TAG=local -t w2s:
 DOCKER_IMAGE_TAG=local docker compose up -d
 ```
 
-`compose.yml` runs the app on port `8080` under the context path `/w2s`, on an external
+`compose.yml` runs the app under the context path `/w2s` (port `8080`, same as locally), on an external
 `webserver` network, and starts a bundled **MariaDB** alongside it (Spring profile `mariadb`).
 Its data lives in the `mariadb-data` **named volume** — not a host bind mount, so the directory
 gets the right ownership under rootless Podman and SELinux without any manual `chown`.
@@ -115,7 +115,7 @@ Option B is the default and fine for most work — Liquibase provisions both dat
 same changelog. Anything that touches SQL or the schema, though, deserves option A: H2 and
 MariaDB do diverge, and the [Testcontainers tests](#testing) exist precisely because of it.
 
-The app comes up on <http://localhost:8001>; `/` redirects to the SPA at `/app/`.
+The app comes up on <http://localhost:8080>; `/` redirects to the SPA at `/app/`.
 On first start the database is empty — sign in and upload an IMDb CSV export under
 **My Watchlist** to populate your list.
 
@@ -126,7 +126,7 @@ Key properties (`src/main/resources/application.properties`):
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `server.port` | `8001` | HTTP port (Docker overrides to `8080`) |
+| `server.port` | `8080` | HTTP port — the same locally and in the container |
 | `server.servlet.context-path` | *(empty)* | Mount point; the Compose deployment sets `/w2s`. Must match what the reverse proxy forwards — see the comment in `compose.yml` |
 | `server.forward-headers-strategy` | `native` | Read the real scheme/host from `X-Forwarded-*` behind the TLS-terminating proxy. **Fails quietly** when the peer is outside Tomcat's trusted ranges: redirects silently go out as `http` again |
 | `server.servlet.session.timeout` | `30m` | Idle timeout for a signed-in session |
@@ -221,7 +221,7 @@ Users live in the database with `USER` / `ADMIN` roles: reading needs any authen
 while maintenance endpoints and user administration need `ADMIN`. Rationale in
 [ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md).
 
-- **Login:** form login and HTTP Basic (`curl -u admin:… http://localhost:8001/api/status`).
+- **Login:** form login and HTTP Basic (`curl -u admin:… http://localhost:8080/api/status`).
 - **Staying signed in:** sessions live in the database (Spring Session JDBC), so a restart does
   not log everyone out. Tick *Stay signed in* for a login that survives closing the browser, and
   set a stable `w2s.security.remember-me.key` so those tokens survive restarts too.
@@ -282,8 +282,8 @@ point at things that exist.
 For a fast edit/reload loop, run backend and dev server separately:
 
 ```bash
-mvn spring-boot:run -Dskip.frontend=true            # backend on :8001
-cd src/main/frontend && npm start                   # ng serve on :4200, proxies /api -> :8001
+mvn spring-boot:run -Dskip.frontend=true            # backend on :8080
+cd src/main/frontend && npm start                   # ng serve on :4200, proxies /api -> :8080
 ```
 
 The Angular app follows a smart/dumb split: containers under `features/` own all data loading,

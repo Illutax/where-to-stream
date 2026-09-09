@@ -1,353 +1,303 @@
-# TODOs — offene Arbeit
+# TODOs — open work
 
-**Hier steht nur, was noch zu tun ist.** Erledigtes wandert nach [`DONE.md`](DONE.md).
+**Only what still needs doing lives here.** Finished work moves to [`DONE.md`](DONE.md).
 
-Diese Trennung ist keine Kosmetik, sie ist der Grund, warum diese Datei stimmen kann.
-Solange Erledigtes hier lag, waren 86 % der Zeilen Historie im Präsens —
-und man konnte einem Eintrag nicht ansehen, ob ein alter Klassenname bloß alt
-oder die Aussage falsch geworden war. Jetzt gilt: **was hier steht, gilt jetzt.**
+That split is not tidiness, it is the reason this file can be trusted. While finished entries sat
+here too, 86 % of the lines were history written in the present tense — and you could not tell an
+outdated class name from a claim that had become false without checking each one. Now:
+**what is in here is true now.**
 
-Priorität: 🔴 hoch · 🟠 mittel · 🟡 mittel-niedrig · 🟢 niedrig
+Priority: 🔴 high · 🟠 medium · 🟡 medium-low · 🟢 low
 
-## Regeln für Einträge
+## Rules for entries
 
-1. **Zeigen statt wiederholen.** Verlinke die maßgebliche Stelle (ADR, Property, Klasse),
-   statt ihren Inhalt abzuschreiben. Jede Kopie einer Tatsache driftet für sich —
-   `ddl-auto` stand einmal an drei Stellen, zwei davon falsch.
-2. **Belege mit Pfad**, nicht mit „irgendwo im Service" — so wie TODO-22 auf
-   `src/main/java/tech/dobler/where2stream/watchlist/application/ExportReader.java` zeigt.
-   `DocumentationConsistencyTest` prüft beim Build, dass es die Datei gibt;
-   ein Pfad in Backticks, den es nicht gibt, macht den Build rot.
-3. **Ungeprüftes als ungeprüft kennzeichnen.** „Nicht verifiziert:" ist eine vollwertige
-   Aussage; eine Vermutung, die wie ein Befund aussieht, kostet später mehr als sie spart.
-4. **Beim Erledigen:** Eintrag nach [`DONE.md`](DONE.md) verschieben, nicht hier abhaken.
-   Ist die Begründung dauerhaft wertvoll, gehört sie vorher in eine ADR — das Archiv
-   wird nicht gepflegt.
+1. **Point, don't restate.** Link the authoritative place (ADR, property, class) instead of
+   copying its content. Every copy of a fact drifts on its own — `ddl-auto` once stood in three
+   places, two of them wrong.
+2. **Cite paths**, not "somewhere in the service" — the way TODO-22 points at
+   `src/main/java/tech/dobler/where2stream/watchlist/application/ExportReader.java`.
+   `DocumentationConsistencyTest` checks at build time that the file exists; a backticked path
+   that does not resolve turns the build red.
+3. **Mark the unverified as unverified.** "Not verified:" is a complete statement; a guess that
+   reads like a finding costs more later than it saves.
+4. **When finishing:** move the entry to [`DONE.md`](DONE.md), do not tick it off here. If the
+   reasoning has lasting value it belongs in an ADR first — the archive is not maintained.
 
-Der Ablauf im Detail steht als Skill unter
-[`.claude/skills/ticket/SKILL.md`](.claude/skills/ticket/SKILL.md).
+The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/ticket/SKILL.md).
 
 ---
 
-## Übersicht
+## Overview
 
-| | Ticket | Kurz |
+| | Ticket | Summary |
 | --- | --- | --- |
-| 🔴 | [TODO-54](#todo-54) | Node-/npm-Version an einer Stelle verbindlich festlegen |
-| 🟠 | [TODO-65](#todo-65) | Neues Architecture Review als datierte Momentaufnahme |
-| 🟠 | [TODO-66](#todo-66) | resilience4j zurückholen und auf die Outbound-Adapter anwenden |
-| 🟠 | [TODO-67](#todo-67) | ADRs auf Aktualität prüfen |
-| 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: ein Request pro Zeile, unstorniert |
-| 🟢 | [TODO-22](#todo-22) | Hartkodiertes CSV-Header-Array |
-| 🟢 | [TODO-42](#todo-42) | Keine Mindestlänge/Komplexität für Passwörter |
-| 🟢 | [TODO-52](#todo-52) | Angular-Bundle-Größe reduzieren (Trigger: 1 MB Initial-Bundle) |
-| 🟢 | [TODO-60](#todo-60) | `PaidEntryDto.year` als Zahl ausliefern |
+| 🔴 | [TODO-54](#todo-54) | Pin the Node/npm version in one authoritative place |
+| 🟠 | [TODO-65](#todo-65) | A new architecture review, as a dated snapshot |
+| 🟠 | [TODO-66](#todo-66) | Bring resilience4j back, for the outbound adapters |
+| 🟠 | [TODO-67](#todo-67) | Check the ADRs against reality |
+| 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: one request per row, never cancelled |
+| 🟢 | [TODO-22](#todo-22) | Hard-coded CSV header array |
+| 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
+| 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
+| 🟢 | [TODO-60](#todo-60) | Serve `PaidEntryDto.year` as a number |
 
+---
 
-## 🔴 Hoch
+## 🔴 High
 
-### 🔴 TODO-54 — Node-/npm-Version an einer Stelle verbindlich festlegen
-Die zulässige Toolchain steht heute an **vier** Orten, die getrennt gepflegt werden und bereits
-auseinanderlaufen:
+### 🔴 TODO-54 — Pin the Node/npm version in one authoritative place
+The permitted toolchain is stated in **four** places, maintained separately, and they have already
+diverged:
 
-| Ort | Aussage | Stand 2026-09-06 |
+| Place | Says | As of 2026-09-06 |
 | --- | --- | --- |
-| `src/main/frontend/.nvmrc` | `24` | nur Major |
-| `src/main/frontend/package.json` → `engines` | `node >=22 <25`, `npm >=10` | Spanne |
-| `src/main/frontend/package.json` → `packageManager` | `npm@11.16.0` | **exakt, und veraltet** |
-| `Dockerfile` → `NODE_BASE_IMAGE` | `node:24-alpine` | Major, Minor/Patch fließend |
+| `src/main/frontend/.nvmrc` | `24` | major only |
+| `src/main/frontend/package.json` → `engines` | `node >=22 <25`, `npm >=10` | a range |
+| `src/main/frontend/package.json` → `packageManager` | `npm@11.16.0` | **exact, and stale** |
+| `Dockerfile` → `NODE_BASE_IMAGE` | `node:24-alpine` | major pinned, minor/patch floating |
 
-`src/main/frontend/.npmrc` setzt `engine-strict=true` — eine Toolchain außerhalb der Spanne bricht
-`npm ci` also **hart** ab, was richtig ist, aber bedeutet: jede Abweichung legt den Build still.
+`src/main/frontend/.npmrc` sets `engine-strict=true`, so a toolchain outside the range aborts
+`npm ci` **hard**. That is right, but it means any divergence stops the build dead.
 
-**Was aktuell gilt** (gegen die Registry geprüft, nicht geschätzt):
+**What currently holds** (checked against the registry, not guessed):
 
-- Angular 22.0.7 verlangt `node ^22.22.3 || ^24.15.0 || >=26.0.0` — **Node 25 ist ausdrücklich
-  ausgenommen**, die Spanne springt von 24 auf 26.
-- `npm` steht bei **12.0.2**; der letzte 11er ist 11.19.1. Das in `packageManager` gepinnte
-  11.16.0 gibt es also weder in der Node-24-Zeile noch sonstwo als aktuelle Version.
-- Angular selbst ist bei 22.1.5, das Projekt bei 22.0.7 — ein Minor-Rückstand, kein Problem.
+- Angular 22.0.7 requires `node ^22.22.3 || ^24.15.0 || >=26.0.0` — **Node 25 is explicitly
+  excluded**, the range jumps from 24 to 26.
+- `npm` is at **12.0.2**; the last 11.x is 11.19.1. The `11.16.0` pinned in `packageManager` is
+  therefore not current anywhere, neither in the Node 24 line nor elsewhere.
+- Angular itself is at 22.1.5, the project at 22.0.7 — one minor behind, not a problem.
 
-- **Akzeptanzkriterium:** Eine Quelle der Wahrheit für Node und npm, aus der die anderen Orte
-  abgeleitet oder gegen die sie geprüft werden. Mindestens: `packageManager` entweder pflegen oder
-  entfernen, und `NODE_BASE_IMAGE` auf dieselbe Spanne festnageln wie `engines`.
-- **Zu entscheiden:** ob `engines` auf `>=22 <25` bleibt (dann muss jede Node-Aktualisierung auf
-  25 bewusst blockiert werden) oder auf Angulars eigene Spanne umgestellt wird
-  (`^22.22.3 || ^24.15.0 || >=26.0.0`), die die 25er-Lücke korrekt abbildet.
-- **Hängt zusammen mit TODO-55:** die Versionsfrage wurde erst dadurch akut, dass der
-  Auto-Upgrade-Lauf sie ungebremst trifft.
+- **Acceptance:** one source of truth for Node and npm, from which the other places are derived or
+  against which they are checked. At minimum: either maintain `packageManager` or drop it, and pin
+  `NODE_BASE_IMAGE` to the same range as `engines`.
+- **To decide:** whether `engines` stays at `>=22 <25` (then every Node bump to 25 has to be
+  blocked deliberately) or moves to Angular's own range (`^22.22.3 || ^24.15.0 || >=26.0.0`),
+  which models the gap at 25 correctly.
+- **Related to TODO-55** (in `DONE.md`): the version question only became urgent because the
+  auto-upgrade run hits it unguarded.
 
 ---
 
-## eBay-Rückbau und Ersatz (2026-09-06)
+## 🟠 Medium
 
+### 🟠 TODO-65 — A new architecture review, as a dated snapshot
+Its predecessor ([`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md))
+is dated the day **before** [ADR-0014](docs/adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md).
+It triggered the restructuring that then invalidated it, and no successor has been written since.
 
-## 🟠 Mittel
+**The form matters more than the cadence.** A review is a **snapshot with a date in its filename**,
+not a living document. That is exactly where the predecessor failed: it sat undated under `docs/`
+and was read as describing the present. A snapshot that carries its date is allowed to age.
 
+- **Location:** `docs/reviews/`, named **YYYY-MM-DD-architecture-review.md**, **not edited**
+  after writing (typos excepted).
+- **The output is actions, not prose:** what keeps applying becomes an **ADR**, what needs doing
+  becomes a **TODO**. The review document only carries the finding and its reasoning. Without that
+  rule you get a third document drifting away from the other two.
+- **Scope:** the four bounded contexts and their boundaries, `shared`, the frontend structure, the
+  ArchUnit rules (do they still cover what they should?), and explicitly the question of which of
+  the 20 ADRs no longer describe reality.
+- **Run it only after TODO-64** (in `DONE.md`) — otherwise the review examines documentation we
+  already know to be wrong.
+- **Repeatable:** the procedure is a skill,
+  [`.claude/skills/architecture-review/SKILL.md`](.claude/skills/architecture-review/SKILL.md),
+  so the next run is not reinvented.
 
-### 🟠 TODO-65 — Neues Architecture Review als datierte Momentaufnahme
-Der Vorgänger ([`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md))
-ist datiert auf den Tag **vor** [ADR-0014](docs/adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md).
-Er hat den Umbau ausgelöst, der ihn überholt hat — seither ist kein Nachfolger entstanden.
+- **Acceptance:** a dated document under `docs/reviews/` describing the current state, with every
+  resulting action captured as a TODO or an ADR rather than as an open list inside the review.
 
-**Die Form ist wichtiger als der Turnus.**
-Ein Review ist eine **Momentaufnahme mit Datum im Namen**, kein lebendes Dokument.
-Genau daran ist der Vorgänger gescheitert: er stand undatiert unter `docs/` und wurde
-gelesen, als beschriebe er den heutigen Stand.
-Ein Stand, der sein Datum trägt, darf altern.
+### 🟠 TODO-66 — Bring resilience4j back, for the outbound adapters
+Removing `purchaseoffers` (TODO-56) removed the only user of `resilience4j-spring-boot4`, and the
+dependency went with it. The application has had **no** circuit breaker since.
 
-- **Ablage:** **docs/reviews/JJJJ-MM-TT-architecture-review.md**, nach dem Schreiben
-  **nicht mehr geändert** (Tippfehler ausgenommen).
-- **Ergebnis sind Handlungen, nicht Prosa:** Was dauerhaft gilt, wird eine **ADR**;
-  was zu tun ist, wird ein **TODO**. Das Reviewdokument selbst begründet nur den Befund.
-  Ohne diese Regel entsteht ein drittes Dokument, das mit den anderen beiden auseinanderläuft.
-- **Umfang:** die vier Bounded Contexts und ihre Grenzen, `shared`, der Frontend-Aufbau,
-  die ArchUnit-Regeln (decken sie noch ab, was sie sollen?),
-  und ausdrücklich die Frage, welche der 20 ADRs die Realität **nicht** mehr beschreiben.
-- **Ausführen erst nach TODO-62 und TODO-64** — sonst prüft das Review Doku,
-  von der wir schon wissen, dass sie falsch ist.
-- **Wiederholbar:** die Durchführung liegt als Skill unter
-  [`.claude/skills/architecture-review/`](.claude/skills/architecture-review/SKILL.md),
-  damit der nächste Durchlauf nicht wieder neu erfunden wird.
+**The need did not disappear, only the user did.** Three adapters talk to third-party services
+that genuinely go down:
 
-- **Akzeptanzkriterium:** Ein datiertes Dokument unter `docs/reviews/`, das den Ist-Zustand
-  beschreibt; jeder Handlungsbedarf daraus als TODO oder ADR erfasst,
-  nicht als offene Liste im Reviewdokument.
-
-### 🟠 TODO-66 — resilience4j zurückholen und auf die Outbound-Adapter anwenden
-Mit dem Rückbau von `purchaseoffers` (TODO-56) fiel der einzige Nutzer von
-`resilience4j-spring-boot4` weg und die Abhängigkeit mit ihm.
-Die Anwendung hat seither **keinen** Circuit Breaker mehr.
-
-**Der Bedarf ist damit nicht verschwunden**, nur der Nutzer.
-Drei Adapter sprechen mit fremden Diensten, die real ausfallen:
-
-| Adapter | Fremddienst | Heute |
+| Adapter | Service | Today |
 | --- | --- | --- |
-| `src/main/java/tech/dobler/where2stream/streamingavailability/adapter/out/werstreamtes/WerStreamtEsSource.java` | werstreamt.es (Scraping) | `try/catch` je Aufruf, `RateLimiter` |
-| `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbTitleSource.java` | IMDb | `try/catch` je Aufruf |
-| `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/tmdb/TmdbPosterSource.java` | TMDB | `try/catch` je Aufruf |
+| `src/main/java/tech/dobler/where2stream/streamingavailability/adapter/out/werstreamtes/WerStreamtEsSource.java` | werstreamt.es (scraping) | `try/catch` per call, `RateLimiter` |
+| `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbTitleSource.java` | IMDb | `try/catch` per call |
+| `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/tmdb/TmdbPosterSource.java` | TMDB | `try/catch` per call |
 
-Ein `try/catch` fängt den einzelnen Fehlschlag ab, aber es **hört nicht auf zu fragen**.
-Bei einem länger ausgefallenen Dienst läuft jeder Aufruf erneut in den Timeout —
-und `PreCacheService` und `RefreshService` fächern über `parallelStream` auf,
-der Hintergrund-Job ebenso.
-Genau dafür gibt es den Breaker: nach einer Fehlerrate kurzschließen und es
-nach einer Weile mit zwei Probeaufrufen erneut versuchen.
+A `try/catch` absorbs the individual failure, but it **does not stop asking**. With a service down
+for a while, every call runs into the timeout again — and `PreCacheService` and `RefreshService`
+fan out over `parallelStream`, as does the background job. That is what a breaker is for: trip on
+a failure rate, then retry later with two probe calls.
 
-**Was aus dem alten Anlauf übernommen werden kann** (steht ausführlich in TODO-51 in
-[`DONE.md`](DONE.md)): das Boot-4-Artefakt heißt **`2.4.0`**, nicht `2.3.0`;
-die Konfiguration gehört nach Java und nicht in Properties, weil
-`src/test/resources/application.properties` die Produktionsdatei im Testklassenpfad
-überschattet und ein Tippfehler in einem Klassennamen-String still auf die Defaults zurückfällt.
+**What carries over from the first attempt** (written up in TODO-51 in [`DONE.md`](DONE.md)): the
+Boot 4 artefact is **`2.4.0`**, not `2.3.0`; and the configuration belongs in Java rather than in
+properties, because `src/test/resources/application.properties` shadows the production file on the
+test classpath and a typo in a class-name string falls back to the defaults silently.
 
-**Zu entscheiden:** eine Breaker-Instanz je Dienst (drei) oder eine gemeinsame.
-Getrennt, würde ich meinen — ein ausgefallenes TMDB soll die Verfügbarkeitssuche nicht mitreißen.
+**To decide:** one breaker per service (three) or one shared. Separate, I would say — a TMDB
+outage should not take the availability lookup down with it.
 
-- **Akzeptanzkriterium:** Jeder der drei Adapter ist mit einem eigenen Breaker versehen,
-  die Konfiguration liegt in Java, und ein Test belegt je Adapter, dass der Breaker bei
-  anhaltenden Fehlern öffnet — und dass ein geöffneter Breaker die Seite **nicht** kaputt macht,
-  sondern in denselben Zustand mündet wie ein einzelner Fehlschlag heute.
+- **Acceptance:** each of the three adapters has its own breaker, the configuration lives in Java,
+  and a test per adapter shows that the breaker opens under sustained failure — and that an open
+  breaker does **not** break the page, but lands in the same state a single failure does today.
 
-### 🟠 TODO-67 — ADRs auf Aktualität prüfen
-20 ADRs, davon 19 `Accepted` und eine `Superseded`.
-Geprüft wurde zuletzt keine — und dass drei von ihnen bis zum 2026-09-09 auf `Proposed` standen,
-obwohl sie längst liefen, zeigt, dass der Status niemandem auffällt.
+### 🟠 TODO-67 — Check the ADRs against reality
+20 ADRs: 19 `Accepted`, one `Superseded`. None has ever been reviewed — and the fact that three of
+them sat at `Proposed` until 2026-09-09 while already running in production shows that nobody
+notices the status field.
 
-**Eine ADR, die niemand mehr befolgt, ist schlimmer als keine** — sie sieht aus wie eine
-Zusicherung, auf die man sich verlassen kann. Beim Prüfen der TODOs sind zwei Fälle
-aufgefallen, die genau in diese Richtung deuten:
+**An ADR nobody follows is worse than none** — it looks like a guarantee you can rely on. Two cases
+found while checking the TODOs point exactly that way:
 
-- [ADR-0011](docs/adr/0011-kein-open-session-in-view.md) („kein OSIV, alles EAGER") ist gültig —
-  aber TODO-12 forderte jahrelang das Gegenteil, ohne dass der Widerspruch auffiel.
-- [ADR-0019](docs/adr/0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) hat mit dem
-  eBay-Rückbau einen ihrer beiden Anwendungsfälle verloren. Sie gilt weiter, steht jetzt aber
-  auf einem einzigen Bein.
+- [ADR-0011](docs/adr/0011-kein-open-session-in-view.md) ("no OSIV, everything EAGER") holds — but
+  TODO-12 demanded the opposite for a year and nobody noticed the contradiction.
+- [ADR-0019](docs/adr/0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) lost one of its two
+  use cases with the eBay rollback. It still holds, but now stands on one leg.
 
-**Je ADR drei Fragen:** Beschreibt sie die Realität? Wird sie befolgt — nachweisbar, nicht
-dem Anschein nach? Ist ihre Begründung noch die, die heute zählen würde?
+**Three questions per ADR:** does it describe reality? Is it followed — demonstrably, not
+apparently? Is its reasoning still the one that would count today?
 
-- **Ergebnis:** Status nachziehen (`Superseded`, wenn überholt) und die Verweise darauf mit.
-  Eine ADR, die stillschweigend gebrochen wird, ist **kein** Doku-Problem — dann ist entweder
-  der Code oder die Entscheidung falsch, und beides gehört als eigenes Ticket erfasst.
-- **Abgrenzung zu TODO-65:** Das Architecture Review prüft den Code gegen sich selbst,
-  dieses Ticket die Entscheidungen gegen den Code. Sinnvoll zusammen zu machen —
-  der `architecture-review`-Skill führt den ADR-Abgleich als eigenen Bereich.
-
-## 🟡 Mittel-niedrig
-
-### 🟡 TODO-59 — `/api/titles/{id}/meta`: ein Request pro Zeile, unstorniert
-Beim Review von TODO-57 gemessen (nicht geschätzt), Aufbau mit 300 Kacheln:
-`injectTitleMeta` (`src/main/frontend/src/app/core/title-meta.ts`) feuert **einen GET pro Zeile**,
-sobald Altersfreigaben **oder** deutsche Titel eingeschaltet sind —
-Altersfreigaben sind per Default an, also ist das der Normalfall.
-
-Zwei getrennte Probleme:
-
-1. **Keine Stornierung.** Die `subscribe()` im `effect()` hängt an keinem Destroy-Hook.
-   Nach `fixture.destroy()` waren **0 von 300** Requests storniert.
-   Der View-Umschalter auf dem Dashboard (`@if (viewMode() === 'GRID')`) zerstört alle Zeilen
-   und baut sie neu auf — einmal hin und her sind 600 Requests, 300 davon verwaist.
-2. **Kein Dedup, kein Batch.** Jede Zeile fragt einzeln, ohne Client-Cache.
-   Über HTTP/1.1 ergibt das eine Sechserschlange mit Head-of-Line-Blocking.
-
-**Vorbestehend, nicht durch TODO-57 verursacht** — der Suchlink liest das Signal nur mit
-und löst nichts zusätzlich aus (nachgemessen).
-Aufgenommen, weil der Befund sonst mit dem Review verloren geht.
-
-**Zu tun:**
-- `takeUntilDestroyed()` / `DestroyRef` in `injectTitleMeta` — behebt Punkt 1 allein.
-- Für Punkt 2 ein Sammelendpunkt `/api/titles/meta?ids=…`, den die Seite einmal ruft.
-
-**Punkt 2 ist teilweise erledigt (2026-09-07):** `TitleMetaApi` hält jetzt ein geteiltes Signal
-je `ImdbId` plus eine In-Flight-Sperre, weil die neue eBay-Spalte sonst einen **zweiten** Abruf
-je Zeile ausgelöst hätte — die Spalte hätte sich in Traffic selbst bezahlt.
-Damit kostet ein Titel einen Request, egal wie viele Komponenten ihn zeigen,
-und ein Ansichtswechsel fragt nichts erneut ab.
-**Offen bleibt:** n Zeilen sind weiterhin n Requests (dafür braucht es den Sammelendpunkt),
-und storniert wird immer noch nichts — Punkt 1 ist unangetastet.
-
-- **Akzeptanzkriterium:** Ein Wechsel der Ansicht hinterlässt keine offenen Requests;
-  ein Dashboard mit n Zeilen erzeugt nicht mehr n Metadaten-Requests.
-
-
-## 🟢 Niedrig
-
-### 🟢 TODO-22 — Hartkodiertes CSV-Header-Array
-`watchlist/application/ExportReader.headers`: 18 feste Spaltennamen, und die **echte** Kopfzeile
-der Datei wird per `setSkipHeaderRecord(true)` verworfen — die Zuordnung ist rein **positionell**.
-
-**Der Schaden ist größer als „bricht still" vermuten lässt.**
-Ein komplett fremdes Format scheitert laut: alle Zeilen fallen durch,
-`WatchlistImportService` wirft `InvalidImportException`.
-Gefährlich ist der Zwischenfall — IMDb fügt **eine** Spalte ein oder sortiert um.
-Dann liest `record.get("Title")` still das falsche Feld, Zeilen mit einem gültigen `tt…`-Link
-laufen durch, und weil der Import ein **Full-Sync** ist, werden Bestandseinträge gelöscht,
-die in der fehlinterpretierten Datei scheinbar fehlen.
-
-- **Akzeptanzkriterium:** Header aus der Datei lesen
-  (`CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true)` — commons-csv 1.10)
-  und die fünf tatsächlich benötigten Spalten (`Created`, `Title`, `Year`, `Your Rating`, `URL`)
-  **einmalig** gegen den gelesenen Header prüfen, mit sprechender Fehlermeldung.
-  Sonst bekommt der Nutzer nur das generische „No valid entries found".
+- **Outcome:** update the status (`Superseded` where overtaken) and the references to it. An ADR
+  being broken quietly is **not** a documentation problem — then either the code or the decision is
+  wrong, and both deserve their own ticket.
+- **Distinct from TODO-65:** the architecture review checks the code against itself, this ticket
+  checks the decisions against the code. Sensible to do together — the `architecture-review` skill
+  carries the ADR reconciliation as its own area.
 
 ---
 
-## Architektur-Review (2026-07-28)
+## 🟡 Medium-low
 
-Vollständige Analyse: [`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md). Die meisten
-Funde wurden direkt umgesetzt (siehe Commit-Historie); ein Punkt wird hier stattdessen als
-Low-Prio-Ticket für später vorgemerkt, statt sofort umgesetzt zu werden.
+### 🟡 TODO-59 — `/api/titles/{id}/meta`: one request per row, never cancelled
+Measured (not estimated) during the TODO-57 review, with 300 tiles:
+`injectTitleMeta` (`src/main/frontend/src/app/core/title-meta.ts`) fires **one GET per row** as
+soon as age ratings **or** German titles are switched on — age ratings default to on, so that is
+the normal case.
 
-### 🟢 TODO-42 — Keine Mindestlänge/Komplexität für Passwörter
-`CreateUserCommand`/`ResetPasswordCommand` prüfen im Compact Constructor nur auf nicht-blank,
-keine Mindestlänge oder Komplexität — ein ADMIN kann einem Account ein Ein-Zeichen-Passwort geben.
-(Die Validierung lag früher in `UserAdminService`; der Service kodiert heute nur noch.)
-Ebenso keine Prüfung für das initiale Admin-Passwort (`w2s.security.initial-admin.password`).
-- **Akzeptanzkriterium:** Sinnvolle Mindestanforderungen (Länge, ggf. Zeichenklassen) einführen,
-  serverseitig durchsetzen, Fehlermeldung im Frontend anzeigen.
-- **Der Platzhalter selbst ist kein Problem:** `W2S_ADMIN_PASSWORD=change-me-please` in
-  `.env.example` folgt der etablierten „bitte ändern"-Konvention dieser Datei
-  (vgl. `MARIADB_ROOT_PASSWORD=change-me` direkt darunter).
-- ⚠️ **Der zweite Halbsatz dieses Absatzes war falsch und ist entfernt.** Er behauptete,
-  `compose.yml` übersetze die `.env`-Namen korrekt auf die Spring-Properties.
-  Für das **Passwort** trifft das nicht (mehr) zu — nachgeprüft: `compose.yml` mappt nur noch
-  `W2S_SECURITY_INITIALADMIN_USERNAME`, die Passwort-Zeile fehlt.
-  Als eigener Bug herausgezogen: **TODO-63**.
+Two separate problems:
+
+1. **Nothing is cancelled.** The `subscribe()` inside the `effect()` hangs off no destroy hook.
+   After `fixture.destroy()`, **0 of 300** requests had been cancelled. The dashboard's view
+   toggle (`@if (viewMode() === 'GRID')`) destroys every row and rebuilds it — one switch back and
+   forth is 600 requests, 300 of them orphaned.
+2. **No dedup, no batch.** Every row asks separately, with no client cache. Over HTTP/1.1 that is a
+   six-deep queue with head-of-line blocking.
+
+**Pre-existing, not caused by TODO-57** — the search link only reads the signal and triggers
+nothing extra (measured). Recorded here so the finding does not disappear with the review.
+
+**To do:**
+- `takeUntilDestroyed()` / `DestroyRef` in `injectTitleMeta` — fixes point 1 on its own.
+- For point 2, a batch endpoint `/api/titles/meta?ids=…` that the page calls once.
+
+**Point 2 is partly done (2026-09-07):** `TitleMetaApi` now holds one shared signal per `ImdbId`
+plus an in-flight guard, because the new eBay column would otherwise have caused a **second**
+fetch per row — the column would have paid for itself in traffic. A title now costs one request no
+matter how many components show it, and switching views re-fetches nothing.
+**Still open:** n rows are still n requests (that needs the batch endpoint), and nothing is
+cancelled — point 1 is untouched.
+
+- **Acceptance:** switching views leaves no requests in flight; a dashboard with n rows no longer
+  produces n metadata requests.
 
 ---
 
-## eBay-Preisabfrage (2026-09-05)
+## 🟢 Low
 
-### 🟢 TODO-52 — Angular-Bundle-Größe reduzieren (Trigger: 1 MB Initial-Bundle)
-**Nicht jetzt angehen.** Das Initial-Bundle liegt bei **657,75 kB roh / 146,74 kB** geschätzt
-komprimiert (gemessen 2026-09-09). Das ist bewusst akzeptiert; dieses Ticket sammelt die
-gemessenen Hebel für den Tag, an dem es eng wird.
+### 🟢 TODO-22 — Hard-coded CSV header array
+`watchlist/application/ExportReader.headers`: 18 fixed column names, and the file's **real** header
+row is discarded via `setSkipHeaderRecord(true)` — the mapping is purely **positional**.
 
-**Bemerkenswert:** Der Rückbau der eBay-Preisabfrage (TODO-56) hat das Initial-Bundle **nicht**
-verkleinert — vorher 655,85 kB, danach 657,75 kB. Der entfallene Code lag vollständig in
-Lazy-Chunks; der neue Suchlink kostet dort ein paar hundert Byte mehr, als das alte Widget
-gekostet hat. Wer beim Aufräumen auf eine Ersparnis im Initial-Bundle hofft, sucht an der
-falschen Stelle: dort liegen Angular, Material und Transloco, nicht unsere Features.
+**The damage is worse than "fails silently" suggests.** A completely foreign format fails loudly:
+every row falls through and `WatchlistImportService` throws `InvalidImportException`. The dangerous
+case is in between — IMDb inserts **one** column or reorders them. Then `record.get("Title")`
+silently reads the wrong field, rows with a valid `tt…` link pass, and because the import is a
+**full sync**, existing entries are deleted for appearing absent from the misread file.
 
-**Der Trigger liegt im Code, nicht in diesem Text:** `src/main/frontend/angular.json` bricht den Build ab, sobald das
-Initial-Bundle **1 MB** erreicht (`budgets[type=initial].maximumError`), mit einer Vorwarnung ab
-950 kB. Wer diesen Abbruch sieht, landet über den Kommentar dort bei diesem Ticket.
+- **Acceptance:** read the header from the file
+  (`CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true)` — commons-csv 1.10) and
+  validate the five columns actually needed (`Created`, `Title`, `Year`, `Your Rating`, `URL`)
+  **once** against it, with a message that says what is missing. Otherwise the user only gets the
+  generic "No valid entries found".
 
-**Messung vom 2026-09-05** (esbuild-Metafile, `ng build --stats-json`):
+### 🟢 TODO-42 — No minimum length or complexity for passwords
+`CreateUserCommand` / `ResetPasswordCommand` check only for non-blank in their compact
+constructors — no minimum length, no complexity, so an ADMIN can give an account a one-character
+password. (The validation used to live in `UserAdminService`; the service only encodes now.)
+The initial admin password (`w2s.security.initial-admin.password`) is unchecked in the same way.
 
-| Anteil an `main.js` | Paket |
+- **Acceptance:** sensible minimum requirements (length, possibly character classes), enforced
+  server-side, with the message surfaced in the frontend.
+- **The placeholder itself is not the problem:** `W2S_ADMIN_PASSWORD=change-me-please` in
+  `.env.example` follows that file's established "please change me" convention (see
+  `MARIADB_ROOT_PASSWORD=change-me` right below it). That the variable reached no property at all
+  was a separate bug, fixed under TODO-63.
+
+### 🟢 TODO-52 — Reduce the Angular bundle (trigger: 1 MB initial bundle)
+**Not now.** The initial bundle is at **657.75 kB raw / 146.74 kB** estimated compressed (measured
+2026-09-09). That is accepted deliberately; this ticket collects the measured levers for the day it
+gets tight.
+
+**Worth noting:** removing the eBay price lookup (TODO-56) did **not** shrink the initial bundle —
+655.85 kB before, 657.75 kB after. The removed code lived entirely in lazy chunks, and the new
+search link costs a few hundred bytes more there than the old widget did. Anyone hoping a cleanup
+will save initial bytes is looking in the wrong place: that chunk is Angular, Material and
+Transloco, not our features.
+
+**The trigger lives in the code, not in this text:** `src/main/frontend/angular.json` fails the
+build once the initial bundle reaches **1 MB** (`budgets[type=initial].maximumError`), with a
+warning from 950 kB. Whoever hits that lands here via the comment there.
+
+**Measurement from 2026-09-05** (esbuild metafile, `ng build --stats-json`):
+
+| Share of `main.js` | Package |
 | --- | --- |
-| 147,0 kB (24 %) | `@angular/core` |
-| 131,0 kB (21 %) | `@angular/material` |
-| 107,2 kB (18 %) | `@angular/cdk` |
-| 76,5 kB (12 %) | `@angular/router` |
-| **23,8 kB (3,9 %)** | **eigener Anwendungscode** |
+| 147.0 kB (24 %) | `@angular/core` |
+| 131.0 kB (21 %) | `@angular/material` |
+| 107.2 kB (18 %) | `@angular/cdk` |
+| 76.5 kB (12 %) | `@angular/router` |
+| **23.8 kB (3.9 %)** | **our own application code** |
 
-Der wichtigste Befund zuerst: **unser eigener Code macht 3,9 % aus.** Optimierung daran ist per
-Konstruktion wirkungslos. Der Hebel liegt allein darin, welche Framework-Fläche im *Initial*-Chunk
-landet.
+The most important finding first: **our own code is 3.9 %.** Optimising it is ineffective by
+construction. The only lever is which framework surface ends up in the *initial* chunk.
 
-**Vier Hebel, in dieser Reihenfolge:**
+**Four levers, in this order:**
 
-1. **Zuerst die Metrik prüfen, nicht den Code.** Das Budget steht auf der Rohgröße; Nutzer laden die
-   komprimierte. Bevor jemand Bytes jagt, ist zu entscheiden, welche Zahl wir eigentlich verwalten
-   wollen — sonst optimiert man gegen die falsche.
-2. **Suchbox/Dialog aus der App-Hülle lösen — der große Hebel.**
-   `src/main/frontend/src/app/app.ts` lädt `ImdbSearchBox` eager; die injiziert `MatDialog` und zieht damit
-   `material/dialog`, `cdk/dialog` **und** `cdk/overlay` in den Initial-Chunk — für einen Dialog,
-   der erst aufgeht, nachdem jemand getippt *und* ein Ergebnis angeklickt hat.
-   **Gemessen** durch probeweises Entfernen und Neubauen: **−93,98 kB roh / −18,45 kB komprimiert**,
-   also 15 % von `main.js`; Overlay und Dialog verlassen den Initial-Chunk vollständig.
-   Umsetzung: `@defer (on interaction)` um die Suchbox, oder das Dialog-Öffnen in einen dynamisch
-   importierten Teil ziehen.
-   **Preis:** die Suchbox sitzt sichtbar in der Toolbar, `on interaction` bedeutet eine kleine
-   Verzögerung beim ersten Klick ins Suchfeld. Bewusste UX-Entscheidung, keine reine Verbesserung.
-3. **Font-Subsets auf `latin`/`latin-ext` beschränken.**
-   `src/main/frontend/angular.json` bindet `@fontsource/roboto/{400,500,700}.css` ein — **alle** Subsets. Ausgeliefert
-   werden 768 KB Schriften: cyrillic (165 kB), math (115 kB), greek (65 kB), symbols (57 kB),
-   vietnamese (43 kB) — von einer DE/EN-Oberfläche nie gebraucht. Nutzer laden sie dank
-   `unicode-range` zwar nicht herunter, aber sie liegen im Deployment und im Image. Zudem sind
-   **54 % des Initial-Stylesheets** `@font-face`-Regeln (14,8 kB von 26,9 kB), davon nur 2,3 kB
-   latin/latin-ext. Erwartet: ~12 kB weniger Initial-CSS, ~440 kB kleineres Artefakt.
-4. **Danach neu messen** und, falls immer noch zu groß, die Grenze bewusst anheben statt sie zu
-   umgehen.
+1. **Check the metric before the code.** The budget is set on the raw size; users download the
+   compressed one. Before anyone hunts bytes, decide which number we actually want to manage —
+   otherwise you optimise against the wrong one.
+2. **Get the search box and its dialog out of the app shell — the big lever.**
+   `src/main/frontend/src/app/app.ts` loads `ImdbSearchBox` eagerly; that injects `MatDialog` and
+   pulls `material/dialog`, `cdk/dialog` **and** `cdk/overlay` into the initial chunk — for a
+   dialog that only opens after somebody has typed *and* clicked a result.
+   **Measured** by removing it and rebuilding: **−93.98 kB raw / −18.45 kB compressed**, 15 % of
+   `main.js`; overlay and dialog leave the initial chunk entirely.
+   Implementation: `@defer (on interaction)` around the search box, or move the dialog opening into
+   a dynamically imported part.
+   **The price:** the search box sits visibly in the toolbar, and `on interaction` means a small
+   delay on the first click into it. A deliberate UX trade, not a pure win.
+3. **Restrict the font subsets to `latin`/`latin-ext`.**
+   `src/main/frontend/angular.json` includes `@fontsource/roboto/{400,500,700}.css` — **all**
+   subsets. 768 kB of fonts ship: cyrillic (165 kB), math (115 kB), greek (65 kB), symbols
+   (57 kB), vietnamese (43 kB) — none of which a DE/EN interface ever needs. Users do not download
+   them thanks to `unicode-range`, but they sit in the deployment and in the image. On top of that,
+   **54 % of the initial stylesheet** is `@font-face` rules (14.8 kB of 26.9 kB), only 2.3 kB of it
+   latin/latin-ext. Expected: ~12 kB less initial CSS, ~440 kB smaller artefact.
+4. **Then measure again** and, if it is still too large, raise the limit deliberately rather than
+   working around it.
 
-**Was hier ausdrücklich nicht die Antwort ist:** Angular Material gegen handgeschriebene Komponenten
-tauschen (238 kB gegen eine dauerhafte Wartungs- und Barrierefreiheitsschuld), oder weiter
-zerschneiden, nur um eine Zahl zu treffen.
+**What is explicitly not the answer:** swapping Angular Material for hand-written components
+(238 kB against a permanent maintenance and accessibility debt), or splitting further just to hit
+a number.
 
----
+### 🟢 TODO-60 — Serve `PaidEntryDto.year` as a number
+`PaidEntryDto` (`streamingavailability/application/dto`) formats the year on the server
+(`imdbEntry.year().display()`), so it ships `"Not yet released"` as text. Two consequences, both
+found during the TODO-57 review:
 
----
+- **The client cannot compute with it.** `TileEntry.releaseYear` is nullable only for this reason —
+  a finished string cannot be turned back into a year without guessing. The eBay search link is the
+  first case that depends on it, probably not the last.
+- **The text is untranslated English** and lands that way in a bilingual interface, while the
+  client already carries the same constant in
+  `src/main/frontend/src/app/core/domain.ts`.
 
-## Build-Toolchain (2026-09-06)
+`OverviewEntryDto` and `FlatrateEntryDto` already do it right and return `ReleaseYear`.
 
-### 🟢 TODO-60 — `PaidEntryDto.year` als Zahl ausliefern
-`PaidEntryDto` (`streamingavailability/application/dto`) formatiert das Jahr auf dem Server
-(`imdbEntry.year().display()`), liefert also `"Not yet released"` als Text.
-Zwei Folgen, beide beim Review von TODO-57 aufgefallen:
-
-- **Der Client kann damit nicht rechnen.** `TileEntry.releaseYear` ist nur deshalb nullable —
-  aus einem fertigen String lässt sich kein Jahr zurückgewinnen, ohne zu raten.
-  Der eBay-Suchlink ist der erste Fall, der daran hängt, vermutlich nicht der letzte.
-- **Der Text ist unübersetzt englisch** und landet so in einer zweisprachigen Oberfläche,
-  während der Client dieselbe Konstante in `src/main/frontend/src/app/core/domain.ts` ohnehin führt.
-
-`OverviewEntryDto` und `FlatrateEntryDto` machen es bereits richtig und liefern `ReleaseYear`.
-
-- **Akzeptanzkriterium:** `PaidEntryDto.year` ist eine Zahl,
-  die Formatierung liegt im Client bei `releaseYearDisplay`,
-  und `TileEntry.releaseYear` ist nicht mehr nullable.
-
----
-
-## Bestandsaufnahme aller TODOs (2026-09-09)
-
-Alle 61 Einträge wurden gegen den Code geprüft — die aus dieser Sitzung von mir selbst,
-die übrigen 46 in Viererbündeln von Subagenten.
-Auslöser war ein Sachfehler, den der Auftraggeber beim Durchsehen der letzten 15 Commits fand:
-die Dokumentation behauptete durchgängig, der eBay-Developer-Account sei nie freigeschaltet worden.
-Er war es; das Feature lief und wurde bewusst zurückgebaut (siehe TODO-56).
-Die drei Einträge unten sind das, was die Prüfung an **neuer** Arbeit zutage gefördert hat.
-
+- **Acceptance:** `PaidEntryDto.year` is a number, the formatting happens client-side via
+  `releaseYearDisplay`, and `TileEntry.releaseYear` is no longer nullable.

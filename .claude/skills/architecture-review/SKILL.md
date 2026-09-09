@@ -1,75 +1,75 @@
 ---
 name: architecture-review
-description: Führt ein Architecture Review des w2s-Backends und -Frontends durch und schreibt das Ergebnis als datierte Momentaufnahme nach docs/reviews/. Use when the user asks for an architecture review, an Ist-Zustand of the architecture, or wants to check whether the ADRs still describe reality.
+description: Runs an architecture review of the w2s backend and frontend and files the result as a dated snapshot under docs/reviews/. Use when the user asks for an architecture review, for the current state of the architecture, or wants to check whether the ADRs still describe reality.
 ---
 
-# Architecture Review
+# Architecture review
 
-Erzeugt eine **datierte Momentaufnahme** des Architekturzustands unter
-`docs/reviews/JJJJ-MM-TT-architecture-review.md`.
+Produces a **dated snapshot** of the architecture at `docs/reviews/YYYY-MM-DD-architecture-review.md`.
 
-## Warum die Form so streng ist
+## Why the form is strict
 
-Der Vorgänger (`docs/reviews/2026-07-28-architecture-review.md`) stand undatiert unter `docs/`
-und wurde deshalb gelesen, als beschriebe er den heutigen Stand. Einen Tag nach seiner
-Entstehung entschied ADR-0014 den Umbau, den er selbst ausgelöst hatte — und das Dokument
-beschrieb ab da eine Welt, die es nicht mehr gab. Aufgefallen ist das erst Monate später.
+Its predecessor (`docs/reviews/2026-07-28-architecture-review.md`) sat undated under `docs/` and
+was therefore read as describing the present. One day after it was written, ADR-0014 decided the
+restructuring it had itself triggered — and from then on the document described a world that no
+longer existed. Nobody noticed for months.
 
-Daraus die zwei Regeln, von denen nicht abgewichen wird:
+Hence two rules that are not negotiable:
 
-1. **Datum im Dateinamen, und nach dem Schreiben wird nicht mehr geändert** (Tippfehler
-   ausgenommen). Ein Stand darf altern. Ein „so ist die Architektur" darf es nicht.
-2. **Das Reviewdokument ist kein Backlog.** Was dauerhaft gilt, wird eine ADR; was zu tun ist,
-   wird ein TODO. Im Review steht nur der Befund und seine Begründung. Ohne diese Regel
-   entsteht ein drittes Dokument, das mit `TODOs.md` und `docs/adr/` auseinanderläuft — und
-   genau diese Art Drift ist das, was das Review eigentlich finden soll.
+1. **Date in the filename, and no edits after writing** (typos excepted). A snapshot is allowed to
+   age. A "this is the architecture" is not.
+2. **The review document is not a backlog.** What keeps applying becomes an ADR; what needs doing
+   becomes a TODO. The review holds the finding and its reasoning, nothing else. Without this rule
+   you get a third document drifting away from `TODOs.md` and `docs/adr/` — which is precisely the
+   kind of drift a review is supposed to find.
 
-## Vorher prüfen
+Written in English, like everything else in the repository (see `CLAUDE.md`).
 
-- Sind `TODO-62` (README-Abgleich) und `TODO-64` (Aufräumfunde) erledigt? Wenn nicht: nachfragen.
-  Ein Review auf bekannt falscher Doku produziert Befunde, die schon als Ticket existieren.
-- `mvn verify` und `ng test` grün? Ein Review auf rotem Baum vermischt Symptome.
+## Before starting
 
-## Durchführung
+- Are `TODO-62` (README) and `TODO-64` (cleanups) done? If not, ask. A review run against
+  documentation already known to be wrong produces findings that already exist as tickets.
+- `mvn verify` and `ng test` green? A review on a red tree confuses symptoms with findings.
 
-Der Umfang ist zu groß für einen Durchgang. Aufteilen und **parallel** von Subagenten prüfen
-lassen — je Agent ein abgeschlossener Bereich, damit er wirklich lesen kann statt zu greppen:
+## Running it
 
-| Bereich | Kernfrage |
+The scope is too large for one pass. Split it and have subagents work the parts **in parallel** —
+one self-contained area each, so an agent can actually read rather than grep:
+
+| Area | Core question |
 | --- | --- |
-| Kontextgrenzen | Halten die vier Bounded Contexts? Wer greift woran vorbei? Deckt `ArchitectureTest` das ab? |
-| `shared` | Ist `kernel`/`platform` noch die richtige Trennung, oder ist `shared` zur Resterampe geworden? |
-| Persistenz | Entities, Repositories, Liquibase-Changelog, Indizes — passt das Modell noch zur Nutzung? |
-| Outbound-Adapter | werstreamt.es, IMDb, TMDB: Rate-Limits, Fehlerbehandlung, Timeouts, Ausfallverhalten |
-| Frontend | Signals/Stores, Ladezustände, geteilte Komponenten, Bundle-Aufbau |
-| **ADR-Abgleich** | **Welche der ADRs beschreibt die Realität nicht mehr?** Je ADR: gilt sie, ist sie überholt, oder wurde sie stillschweigend gebrochen? |
+| Context boundaries | Do the four bounded contexts hold? Who reaches past one? Does `ArchitectureTest` cover it? |
+| `shared` | Is the `kernel`/`platform` split still right, or has `shared` become the junk drawer? |
+| Persistence | Entities, repositories, Liquibase changelog, indexes — does the model still match the usage? |
+| Outbound adapters | werstreamt.es, IMDb, TMDB: rate limits, error handling, timeouts, behaviour under failure |
+| Frontend | Signals/stores, loading states, shared components, bundle composition |
+| **ADR reconciliation** | **Which ADRs no longer describe reality?** Per ADR: does it hold, is it superseded, or is it being broken quietly? |
 
-Die letzte Zeile ist die wertvollste und wird gern vergessen. Eine ADR, die niemand mehr
-befolgt, ist schlimmer als keine — sie sieht aus wie eine Zusicherung.
+That last row is the most valuable one and the easiest to forget. An ADR nobody follows is worse
+than none — it looks like a guarantee.
 
-Jedem Agenten mitgeben:
-- Er **ändert nichts**, er berichtet.
-- Belege mit `datei:zeile`, keine Vermutungen als Befund.
-- Was er **nicht** prüfen konnte, sagt er.
+Tell every agent:
+- It **changes nothing**, it reports.
+- Cite `file:line`. No guesses presented as findings.
+- Say what it could not check.
 
-## Ergebnis schreiben
+## Writing the result
 
-`docs/reviews/JJJJ-MM-TT-architecture-review.md` mit:
+`docs/reviews/YYYY-MM-DD-architecture-review.md`, containing:
 
-- **Kopf:** Datum, Umfang, was ausdrücklich *nicht* geprüft wurde, Commit-Stand (`git rev-parse --short HEAD`).
-- **Je Befund:** was, wo (`datei:zeile`), warum es zählt — und ob es eine ADR bestätigt,
-  ihr widerspricht oder eine Lücke zeigt.
-- **Kein Maßnahmenteil.** Stattdessen je Befund ein Verweis auf das TODO oder die ADR,
-  die daraus entstanden ist. Diese Verweise werden erst eingetragen, nachdem die Tickets
-  angelegt sind — sonst zeigt das Dokument ins Leere.
+- **Header:** date, scope, what was explicitly *not* examined, commit (`git rev-parse --short HEAD`).
+- **Per finding:** what, where (`file:line`), why it matters — and whether it confirms an ADR,
+  contradicts one, or exposes a gap.
+- **No action section.** Instead, per finding, a reference to the TODO or ADR it produced. Add
+  those references only after the tickets exist, or the document points at nothing.
 
-Danach:
-1. TODOs in `TODOs.md` anlegen (Format und Regeln stehen dort im Kopf).
-2. ADRs über den `adr`-Skill; überholte ADRs auf `Superseded` setzen, den Index nachziehen.
-3. `mvn verify` — `DocumentationConsistencyTest` fängt tote Pfade und Querverweise ab.
+Then:
+1. Open the TODOs in `TODOs.md` (format and rules are in its header, and in the `ticket` skill).
+2. Write ADRs via the `adr` skill; set superseded ones to `Superseded` and update the index.
+3. `mvn verify` — `DocumentationConsistencyTest` catches dead paths and cross-references.
 
-## Turnus
+## Cadence
 
-Kein fester. Sinnvolle Auslöser: ein abgeschlossener größerer Umbau, ein Kontext, der neu
-dazukommt, oder der Eindruck, dass die ADRs die Realität nicht mehr treffen. Ein Review
-„weil ein Quartal um ist" produziert Prosa; ein Review nach einem Umbau produziert Befunde.
+None fixed. Sensible triggers: a finished larger restructuring, a new bounded context, or the
+sense that the ADRs no longer match reality. A review run "because a quarter has passed" produces
+prose; a review after a restructuring produces findings.

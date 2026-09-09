@@ -5,7 +5,6 @@ services:
     volumes:
       - ./logs:/opt/app/logs:Z
     environment:
-      - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-mariadb}
       - MARIADB_URL=jdbc:mariadb://db:3306/w2s
       - MARIADB_USER=w2s

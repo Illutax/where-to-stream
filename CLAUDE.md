@@ -102,6 +102,25 @@ The routine for both lives in `.claude/skills/` — `ticket` for opening/closing
   anti-patterns yet) — actively check both before considering test/review work done, don't
   wait for a reminder.
 
+## Language
+
+**Everything written into this repository is in English** — code, identifiers, comments, commit
+messages, ADRs, tickets, skills, documentation. One language for the artefact, so a reader never
+has to guess which one a given file is in, and so a term means the same thing in the code as in
+the ticket that describes it.
+
+**This says nothing about how we talk.** The conversation runs in whatever language suits;
+switching to German mid-session changes nothing about what gets committed. Do not treat this
+section as a request to reply in English.
+
+Two deliberate exceptions, both about *history* rather than neglect:
+
+- `DONE.md`, the plan documents under `docs/`, and `docs/reviews/` stay as they were written.
+  They are records, not living text — translating them would edit the past for no reader's benefit.
+- Existing German ADRs stay German until one is substantially revised anyway. **New ADRs are
+  written in English.** A mixed `docs/adr/` is the price of not spending a day on translation
+  that changes no decision.
+
 ## Prose formatting (Markdown docs and code comments)
 
 - **Semantic line breaks**: wrap prose at sentence ends (or clause boundaries for long

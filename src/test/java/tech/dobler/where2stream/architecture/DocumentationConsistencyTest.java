@@ -13,48 +13,48 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Hält die <em>offene</em> Dokumentation an der Realität fest.
+ * Keeps the <em>open</em> documentation tied to reality.
  *
- * <p>Am 2026-09-09 wurden alle 63 TODO-Einträge von Hand gegen den Code geprüft. Der Aufwand war
- * erheblich, und die Mehrheit der Funde war mechanischer Natur: ein Pfad, den es nicht mehr gab,
- * ein Querverweis auf ein Ticket mit falscher Nummer, ein Link auf ein verschobenes Dokument.
- * Genau das prüft diese Klasse — damit dieselbe Runde nicht in einem halben Jahr wieder ansteht.
+ * <p>On 2026-09-09 all 63 TODO entries were checked against the code by hand. It cost a day, and
+ * most of what it found was mechanical: a path that no longer existed, a cross-reference to the
+ * wrong ticket number, a link to a document that had moved. That is what this class checks — so
+ * the same exercise is not due again in six months.
  *
- * <p><strong>Bewusst nur über {@code TODOs.md}, nicht über {@code DONE.md}.</strong> Ein
- * abgeschlossenes Ticket beschreibt die Welt, in der es geschrieben wurde; dass es auf
- * {@code services/WerStreamtEsApiClient} zeigt, ist dort richtig und nicht falsch. Erst die
- * Trennung der beiden Dateien macht diesen Test überhaupt möglich — vorher hätte er zwischen
- * „veralteter Name" und „veraltete Aussage" unterscheiden müssen, und das kann er nicht.
+ * <p><strong>Deliberately over {@code TODOs.md} only, never {@code DONE.md}.</strong> A finished
+ * ticket describes the world it was written in; that it points at
+ * {@code services/WerStreamtEsApiClient} is correct there, not wrong. Splitting the two files is
+ * what makes this test possible at all — before that it would have had to tell "outdated name"
+ * from "outdated claim", and it cannot.
  *
- * <p>Was er ebenfalls nicht kann: erkennen, ob eine <em>Aussage</em> noch stimmt. Ein Eintrag
- * darf hier grün sein und trotzdem Unsinn behaupten. Der Test verkleinert die Menge dessen, was
- * ein Mensch nachsehen muss; er ersetzt das Nachsehen nicht.
+ * <p>What it also cannot do: notice that a <em>statement</em> has stopped being true. An entry may
+ * be green here and still talk nonsense. The test shrinks what a human has to re-read; it does not
+ * replace the reading.
  */
 class DocumentationConsistencyTest {
 
-    /** Vom Repository-Wurzelverzeichnis aus, wo Maven den Test startet. */
+    /** Relative to the repository root, which is where Maven starts the test. */
     private static final Path REPO = Path.of(".");
     private static final Path OPEN_TODOS = REPO.resolve("TODOs.md");
     private static final Path ADR_DIR = REPO.resolve("docs/adr");
     private static final Path ADR_INDEX = ADR_DIR.resolve("README.md");
 
     /**
-     * Ein Pfad in Backticks, der wie eine Datei im Repository aussieht.
+     * A backticked path that looks like a file in the repository.
      *
-     * <p>Verlangt eine bekannte Endung. Ohne diese Einschränkung würde jeder Ausdruck mit
-     * Schrägstrich als Pfad gelten — {@code `port.in`/`port.spi`}, {@code `24/7`}, {@code `and/or`} —
-     * und der Test wäre nur noch Rauschen.
+     * <p>A known extension is required. Without that restriction anything containing a slash would
+     * count as a path — {@code `port.in`/`port.spi`}, {@code `24/7`}, {@code `and/or`} — and the
+     * test would be pure noise.
      */
     private static final Pattern FILE_REFERENCE = Pattern.compile(
             "`([A-Za-z0-9_./-]+\\.(?:java|ts|html|scss|json|xml|yaml|yml|properties|md|sh))`");
 
-    /** Ein Markdown-Link auf eine Datei im Repository (keine http-URL). */
+    /** A Markdown link to a file in the repository (not an http URL). */
     private static final Pattern MARKDOWN_LINK = Pattern.compile("]\\((?!https?://)([^)#]+)");
 
     private static final Pattern TODO_HEADING = Pattern.compile("^### (\\S+) (TODO-\\d+) — ", Pattern.MULTILINE);
     private static final Pattern TODO_REFERENCE = Pattern.compile("\\bTODO-(\\d+)\\b");
 
-    /** Die Marker, die {@code TODOs.md} im Kopf als Priorität erklärt. Erledigtes gehört nach DONE.md. */
+    /** The markers {@code TODOs.md} declares as priorities. Anything finished belongs in DONE.md. */
     private static final Set<String> OPEN_STATUS_MARKERS = Set.of("🔴", "🟠", "🟡", "🟢");
 
     private String openTodos() throws IOException {
@@ -71,8 +71,8 @@ class DocumentationConsistencyTest {
                 .filter(reference -> !Files.exists(REPO.resolve(reference)))
                 .toList();
 
-        // Die häufigste Driftform von allen: der Code wird umbenannt, das Ticket nicht.
-        assertThat(missing).as("in TODOs.md referenzierte Dateien, die es nicht gibt").isEmpty();
+        // The most common kind of drift by far: the code gets renamed, the ticket does not.
+        assertThat(missing).as("files referenced in TODOs.md that do not exist").isEmpty();
     }
 
     @Test
@@ -81,14 +81,14 @@ class DocumentationConsistencyTest {
                 .filter(link -> !Files.exists(REPO.resolve(link)))
                 .toList();
 
-        assertThat(broken).as("tote Markdown-Links in TODOs.md").isEmpty();
+        assertThat(broken).as("dead Markdown links in TODOs.md").isEmpty();
     }
 
     @Test
     void everyDocumentTheEntryPointsLinkToExists() throws IOException {
-        // README.md und CONTRIBUTING.md sind die Türen ins Repository; ein toter Link darin
-        // empfängt jeden Ankömmling. Geprüft werden nur Markdown-Links auf Dateien — Prosa und
-        // Beispiel-URLs bleiben außen vor, sonst wäre der Test Rauschen.
+        // README.md and CONTRIBUTING.md are the doors into the repository; a dead link there is
+        // what greets every arrival. Only Markdown links to files are checked — prose and example
+        // URLs stay out of it, or the test would be noise.
         final var broken = Stream.of("README.md", "CONTRIBUTING.md").flatMap(file -> {
             final String text;
             try {
@@ -102,13 +102,13 @@ class DocumentationConsistencyTest {
                     .map(link -> file + " -> " + link);
         }).toList();
 
-        assertThat(broken).as("tote Markdown-Links in README.md / CONTRIBUTING.md").isEmpty();
+        assertThat(broken).as("dead Markdown links in README.md / CONTRIBUTING.md").isEmpty();
     }
 
     @Test
     void everyCrossReferencedTicketExistsInEitherFile() throws IOException {
-        // Ein Verweis darf auf ein erledigtes Ticket zeigen — TODO-59 verweist zu Recht auf das
-        // abgeschlossene TODO-57. Nur ins Nichts darf er nicht zeigen.
+        // A reference may point at a finished ticket — TODO-59 rightly cites the closed TODO-57.
+        // It just must not point at nothing.
         final var known = Stream.concat(
                         TODO_HEADING.matcher(openTodos()).results().map(m -> m.group(2)),
                         TODO_HEADING.matcher(Files.readString(REPO.resolve("DONE.md")))
@@ -119,7 +119,7 @@ class DocumentationConsistencyTest {
                 .filter(reference -> !known.contains(reference))
                 .toList();
 
-        assertThat(dangling).as("Verweise auf Tickets, die weder offen noch erledigt sind").isEmpty();
+        assertThat(dangling).as("references to tickets that are neither open nor done").isEmpty();
     }
 
     @Test
@@ -131,10 +131,10 @@ class DocumentationConsistencyTest {
                 .map(m -> m.group(2) + " (" + m.group(1) + ")")
                 .toList();
 
-        // Ein ✅ in dieser Datei heißt: jemand hat abgehakt statt zu verschieben — und damit
-        // fängt die Vermischung wieder an, die den Drift erzeugt hat.
+        // A ✅ in this file means somebody ticked off instead of moving — and that is exactly how
+        // the mixing that produced the drift starts again.
         assertThat(List.of(ids.stream().distinct().count() == ids.size(), wrongMarker))
-                .as("eindeutige Ticket-Nummern; nur Prioritätsmarker, kein ✅/❌ in TODOs.md")
+                .as("unique ticket numbers; priority markers only, no ✅/❌ in TODOs.md")
                 .isEqualTo(List.of(true, List.of()));
     }
 
@@ -150,8 +150,8 @@ class DocumentationConsistencyTest {
                     .sorted()
                     .toList();
 
-            // Eine ADR, die niemand im Index findet, ist eine Entscheidung, die niemand kennt.
-            assertThat(indexed).as("docs/adr/README.md gegen die vorhandenen ADR-Dateien").isEqualTo(onDisk);
+            // An ADR nobody finds in the index is a decision nobody knows about.
+            assertThat(indexed).as("docs/adr/README.md against the ADR files that exist").isEqualTo(onDisk);
         }
     }
 
@@ -171,9 +171,9 @@ class DocumentationConsistencyTest {
                         .map(link -> path.getFileName() + " -> " + link);
             }).toList();
 
-            // ADRs verlinken einander und die Plan-/Review-Dokumente; ein Umzug wie der von
-            // ARCHITECTURE_REVIEW.md nach docs/reviews/ bricht das sonst unbemerkt.
-            assertThat(broken).as("tote Links in ADRs").isEmpty();
+            // ADRs link each other and the plan/review documents; a move like ARCHITECTURE_REVIEW.md
+            // to docs/reviews/ breaks that silently otherwise.
+            assertThat(broken).as("dead links in ADRs").isEmpty();
         }
     }
 }

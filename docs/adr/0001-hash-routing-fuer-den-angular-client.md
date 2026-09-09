@@ -27,7 +27,7 @@ Beide Clients laufen aus **einem** Spring-Boot-Fat-JAR:
 - Die SPA wird unter `/app/` ausgeliefert; ihr Bundle liegt im JAR unter `static/app/`.
 - In PROD läuft die Anwendung hinter dem Context-Path `/w2s` (`compose.yml` setzt
   `server.servlet.context-path=/w2s`);
-  lokal (JAR oder `mvn spring-boot:run`) ohne Context-Path auf Port 8001;
+  lokal (JAR oder `mvn spring-boot:run`) ohne Context-Path auf Port 8080;
   im Frontend-Dev über `ng serve` auf Port 4200 mit `/api`-Proxy.
 
 Der Angular-Router muss also in **drei** Ausführungsumgebungen mit unterschiedlichen Basis-Pfaden
