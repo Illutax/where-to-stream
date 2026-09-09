@@ -1727,3 +1727,78 @@ page*: the paid table received display text, so "Not yet released" fell through 
 two orders. The two halves could not disagree visibly while only one of them was a string, so it
 took making them the same type to surface it. Unified on "unreleased sorts last" — the half worth
 keeping, since "no year yet" is not "the year zero".
+
+### ✅ TODO-69 — The settings test reaches into `MatSelect` internals
+[ADR-0004](docs/adr/0004-vitest-as-the-angular-test-runner.md) chose Vitest with jsdom and named
+one countermeasure for Material overlays: a native `<select matNativeControl>` instead of
+`mat-select`.
+Both halves had come apart — `matNativeControl` occurred nowhere in the repository any more, and
+`settings-page.spec.ts` drove the select through `By.directive(MatSelect)`, `open()` and
+`.options`, which is the component-internals access the ADR warns against.
+
+- **Acceptance:** either the test goes through a harness, or ADR-0004 says why it does not.
+
+**Done on 2026-09-09. The harness works, so the ADR's escape hatch was never needed.**
+`MatSelectHarness` drives the `mat-select` overlay in jsdom end to end: `open()` clicks the
+trigger, and the panel is resolved through the harness's `documentRootLocatorFactory()`.
+Neither step needs layout, which is the premise the old recommendation rested on.
+
+**The ADR was wrong in a way worth naming.** It generalised "jsdom has no layout" into "CDK
+overlays are limited", and prescribed a workaround for a problem it had not measured. ADR-0004 now
+states the drawback as what it is — nothing has a layout, so no assertion may depend on a measured
+size or position — and records that overlays are reachable, with the mechanism.
+
+**One real restriction did turn up, and it is the harness API rather than jsdom.**
+`MatOptionHarness` exposes an option's text, never its bound value.
+Since the point of the test is that the *value* is one the server accepts, it now picks each
+option and asserts on what the resulting PUT persists.
+That in turn exposed an ordering constraint: `mat-select` emits no `selectionChange` for an
+option that is already selected, and `EBAY_DE` is the default — so the picks are rotated and
+`EBAY_DE` comes last.
+
+**The snackbar claim in the same paragraph was left standing as unmeasured**, rather than quietly
+dropped or re-asserted: no spec renders one, they provide a stub `MatSnackBar` instead.
+
+### ✅ TODO-68 — `ImdbSearchApiController` validates in the controller body
+[ADR-0015](docs/adr/0015-self-validating-commands-instead-of-scattered-request-validation.md) moved
+request validation out of controllers into self-validating command records.
+It found the pattern at nine places and removed all nine — but `ImdbSearchApiController`, written
+days before the ADR, was missed, and `ImdbSearchService.search(UUID, String)` still took loose
+parameters.
+
+- **Acceptance:** an `ImdbSearchCommand(UUID userId, String query)` that validates itself, the
+  controller reduced to mapping, and the `ValidationException` gone from the handler body.
+
+**Done on 2026-09-09.** `ImdbSearchCommand` in a new `titlecatalog/application/command/` package,
+matching the three contexts that already had one; the handler is two lines; the service takes the
+command.
+
+**The point of the ticket was never the tenth site, it was that nothing reported it.**
+So the ArchUnit rule went in as well:
+`no class in ..adapter.in.api.. constructs a ValidationException`.
+Deliberately narrow — this exception type, this package — and it needed **no exemption list**,
+which is the sign the boundary was drawn in the right place.
+Application services still throw `ValidationException` for the checks a record constructor cannot
+make (`UserPreferencesService` needs the database to know a username is taken), and the rule says
+nothing about that.
+
+**Expressed as "constructs", not "throws"**, because an unchecked exception leaves no `throws`
+clause in the bytecode to match on.
+The two coincide here only because nothing catches a `ValidationException` to rethrow it; if that
+ever changes, the rule stops being equivalent to its own description.
+
+**Both halves were verified by making them fail, not by reading them.**
+The old `throw` was temporarily reinstated and the rule reported "was violated (1 times)" — which
+also confirms there is no second violation under `..adapter.in.api..`.
+And the strengthened controller test was first run against the *old* controller-body throw to show
+it passes there too, so it pins the response rather than the implementation:
+`400`, `application/problem+json`, `{"status":400,"title":"Invalid request","detail":"A search
+query is required."}`.
+
+**One trivial behaviour change, flagged rather than hidden:** the controller now resolves the user
+before constructing the command, so a blank `q` costs one user lookup it previously skipped.
+That is the shape ADR-0015 established (`WatchlistApiController` does the same) and it is invisible
+to the client.
+
+**ADR-0015 itself was corrected**: it read as though the pattern was gone, and its count of nine
+was wrong. It now names the tenth site and points at the rule that enforces it.

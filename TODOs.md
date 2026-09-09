@@ -34,12 +34,10 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 | 🔴 | [TODO-54](#todo-54) | Pin the Node/npm version in one authoritative place |
 | 🟠 | [TODO-65](#todo-65) | A new architecture review, as a dated snapshot |
 | 🟠 | [TODO-66](#todo-66) | Bring resilience4j back, for the outbound adapters |
-| 🟠 | [TODO-68](#todo-68) | `ImdbSearchApiController` validates in the controller body (breaks ADR-0015) |
 | 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: one request per row, never cancelled |
 | 🟢 | [TODO-22](#todo-22) | Hard-coded CSV header array |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
-| 🟢 | [TODO-69](#todo-69) | The settings test reaches into `MatSelect` internals (breaks ADR-0004) |
 
 ---
 
@@ -136,25 +134,6 @@ outage should not take the availability lookup down with it.
   and a test per adapter shows that the breaker opens under sustained failure — and that an open
   breaker does **not** break the page, but lands in the same state a single failure does today.
 
-### 🟠 TODO-68 — `ImdbSearchApiController` validates in the controller body
-[ADR-0015](docs/adr/0015-self-validating-commands-instead-of-scattered-request-validation.md)
-moved request validation out of controllers and into self-validating command records. It found the
-pattern at nine places and removed all of them — except this one, which was written days before the
-ADR and simply missed:
-
-`src/main/java/tech/dobler/where2stream/titlecatalog/adapter/in/api/ImdbSearchApiController.java`
-still throws `ValidationException` from the handler body when `q` is blank, and
-`ImdbSearchService.search(UUID, String)` takes loose parameters instead of a command.
-
-**This is the interesting kind of finding**, which is why it is a ticket and not a footnote: the
-ADR reads as though the pattern is gone. It is not — it survived in the one place nobody looked,
-and nothing would have told us. A rule enforced by having tidied up once is not enforced.
-
-- **Acceptance:** an `ImdbSearchCommand(UUID userId, String query)` that validates itself, the
-  controller reduced to mapping, and the `ValidationException` gone from the handler body.
-- **Worth considering while there:** whether an ArchUnit rule can catch the general case —
-  "no class in `adapter.in.api` throws `ValidationException`" would have found this one.
-
 ---
 
 ## 🟡 Medium-low
@@ -194,25 +173,6 @@ cancelled — point 1 is untouched.
 ---
 
 ## 🟢 Low
-
-### 🟢 TODO-69 — The settings test reaches into `MatSelect` internals
-[ADR-0004](docs/adr/0004-vitest-as-the-angular-test-runner.md) chose Vitest with jsdom, and named
-the price: jsdom has no layout, so Material overlays need component harnesses. It listed one
-countermeasure by name — use a native `<select matNativeControl>` instead of `mat-select`.
-
-Both halves have quietly come apart:
-
-- `matNativeControl` no longer exists anywhere in the repository; it went with the watchlist-import
-  rework. `src/main/frontend/src/app/features/settings/settings-page.ts` uses `mat-select` again.
-- Its test does not use a harness either. It queries `By.directive(MatSelect)`, calls `open()` and
-  reads `.options` — component internals, which is exactly what the ADR warns against. There is no
-  `MatSelectHarness` anywhere in the project.
-
-The test is commented and it works. Nobody weighed it against the ADR, though, and that is the
-part worth fixing: either use `MatSelectHarness` here, or record in ADR-0004 that harnesses are the
-rule with a named exception. Both are fine; the current silence is not.
-
-- **Acceptance:** either the test goes through a harness, or ADR-0004 says why it does not.
 
 ### 🟢 TODO-22 — Hard-coded CSV header array
 `watchlist/application/ExportReader.headers`: 18 fixed column names, and the file's **real** header

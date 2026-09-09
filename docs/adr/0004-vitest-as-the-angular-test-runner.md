@@ -23,8 +23,10 @@ Specific choices:
   `types: ["vitest/globals"]`.
 - Scripts: `npm test` (watch), `npm run test:ci` (single run, `ng test --watch=false`).
 - For Material DOM, **Angular CDK component harnesses** are used instead of fragile CSS
-  selectors (e.g. `MatCheckboxHarness` in `manage-table.spec.ts`), loaded via
-  `TestbedHarnessEnvironment` from `@angular/cdk/testing/testbed`.
+  selectors (e.g. `MatCheckboxHarness` in `manage-table.spec.ts`, `MatSelectHarness` in
+  `settings-page.spec.ts`), loaded via `TestbedHarnessEnvironment` from
+  `@angular/cdk/testing/testbed`.
+  That includes the overlay-backed harnesses — see the drawbacks below for what was measured.
 - HTTP is tested with `provideHttpClientTesting` / `HttpTestingController`; smart containers
   are driven through the outputs of their child components (`By.directive(...)`).
 - The frontend tests are **decoupled from the Maven build** (they run via npm), so that
@@ -35,15 +37,30 @@ Specific choices:
 **Easier / better:**
 
 - The Angular 22 standard: fast ESM-native execution, works with a zoneless TestBed
-  without extra setup; CDK harnesses (checkbox/button/table) work with jsdom.
+  without extra setup; CDK harnesses work with jsdom — checkbox, button-toggle group, sort, and
+  the overlay-backed select, which is the full set in use here.
 - No browser/Karma setup needed; `test:ci` runs headless in a single pass.
 
 **Harder / drawbacks:**
 
-- jsdom is not a real browser: layout and CDK overlays (e.g. the `mat-select` overlay,
-  the snackbar container) are limited.
-  Countermeasures: a native `<select matNativeControl>` instead of `mat-select`, harnesses instead
-  of DOM internals, no assertions that need real layout.
+- jsdom is not a real browser: nothing has a layout, so no assertion may depend on a measured
+  size or position.
+  Countermeasures: harnesses instead of DOM internals, and no assertion that needs real layout.
+- What does *not* follow is that CDK overlays are out of reach.
+  This ADR originally named one further countermeasure — a native `<select matNativeControl>`
+  instead of `mat-select` — and it has been dropped: `matNativeControl` no longer occurs anywhere
+  in the repository, and it is not needed.
+  Measured on 2026-09-09 (TODO-69) in `settings-page.spec.ts`: `MatSelectHarness`
+  (`@angular/material/select/testing`) drives the `mat-select` overlay in jsdom end to end —
+  opening the panel, reading the option labels, and clicking an option so that the resulting
+  `selectionChange` reaches the store and its PUT.
+  Neither step needs layout: `open()` clicks the trigger, and the panel is found through the
+  harness's `documentRootLocatorFactory()`.
+  The one restriction that did show up is the harness API, not jsdom: `MatOptionHarness` exposes
+  an option's text, never its bound value, so a test that has to pin the value down picks the
+  option and asserts on what is then persisted.
+  The snackbar overlay is a separate question and remains unmeasured — no spec renders one, they
+  provide a stub `MatSnackBar` instead (`seen-store.spec.ts`).
 - Two separate test toolchains (Vitest at the front, JUnit at the back) — deliberately accepted,
   since frontend and backend are separate build steps.
 

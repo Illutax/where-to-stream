@@ -10,6 +10,7 @@ import com.tngtech.archunit.library.dependencies.SliceRule;
 import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition;
 import org.springframework.data.repository.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import tech.dobler.where2stream.shared.platform.api.ValidationException;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
@@ -19,8 +20,11 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.belongToAnyOf;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.type;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
@@ -220,6 +224,36 @@ class ArchitectureTest {
             .that().areDeclaredInClassesThat().resideInAPackage("..adapter.in.api..")
             .should().beAnnotatedWith(Transactional.class)
             .because(TRANSACTION_BOUNDARY_REASON);
+
+    /**
+     * Request validation belongs in the command's compact constructor, not in a handler body
+     * (ADR-0015).
+     *
+     * <p>ADR-0015 found the {@code if (… == null) throw new ValidationException(…)} block in nine
+     * controllers and removed all nine — but it removed them by hand, and a tenth
+     * ({@code ImdbSearchApiController}, written days earlier) was simply missed.
+     * Nothing reported it for months, because "we tidied this up once" is not enforcement.
+     * This rule is.
+     *
+     * <p>Deliberately narrow: this exception type, this package.
+     * It says nothing about other exceptions thrown from a handler
+     * ({@code ResponseStatusException} and the contexts' own business exceptions are a separate
+     * question) and nothing about {@code ValidationException} elsewhere — application services
+     * still throw it for the checks a record constructor cannot make
+     * ({@code UserPreferencesService} needs the database to know a username is taken).
+     *
+     * <p>Expressed as "constructs a {@code ValidationException}" rather than "throws" one, because
+     * an unchecked exception leaves no {@code throws} clause in the bytecode to match on.
+     * The two coincide here: nothing catches a {@code ValidationException} to rethrow it, so
+     * constructing one in an inbound API adapter <em>is</em> throwing one.
+     */
+    @ArchTest
+    static final ArchRule inbound_adapter_classes_do_not_throw_validation_exceptions = noClasses()
+            .that().resideInAPackage("..adapter.in.api..")
+            .should().callConstructorWhere(target(owner(type(ValidationException.class))))
+            .because("a controller validates nothing itself — it maps the request onto a command "
+                    + "whose compact constructor throws ValidationException on its behalf "
+                    + "(ADR-0015)");
 
     /**
      * A Spring Data repository interface is itself the outbound port to the database: Spring Data

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.dobler.where2stream.titlecatalog.application.command.ImdbSearchCommand;
 import tech.dobler.where2stream.titlecatalog.application.dto.ImdbSearchResultDto;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.shared.kernel.domain.ReleaseYear;
@@ -39,7 +40,7 @@ class ImdbSearchServiceTest {
         when(watchlistCatalogPort.isOnWatchlist(USER, ImdbId.of("tt0133093"))).thenReturn(true);
         when(watchlistCatalogPort.isOnWatchlist(USER, ImdbId.of("tt10838180"))).thenReturn(false);
 
-        final var results = service.search(USER, "matrix");
+        final var results = service.search(new ImdbSearchCommand(USER, "matrix"));
 
         assertThat(results).extracting(ImdbSearchResultDto::name, ImdbSearchResultDto::onWatchlist)
                 .containsExactly(tuple("The Matrix", true), tuple("The Matrix Resurrections", false));
@@ -49,6 +50,6 @@ class ImdbSearchServiceTest {
     void isEmptyWhenTheClientFindsNothing() {
         when(imdbSuggestionSource.search("zzz")).thenReturn(List.of());
 
-        assertThat(service.search(USER, "zzz")).isEmpty();
+        assertThat(service.search(new ImdbSearchCommand(USER, "zzz"))).isEmpty();
     }
 }

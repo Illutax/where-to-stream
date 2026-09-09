@@ -2,12 +2,12 @@ package tech.dobler.where2stream.titlecatalog.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tech.dobler.where2stream.titlecatalog.application.command.ImdbSearchCommand;
 import tech.dobler.where2stream.titlecatalog.application.dto.ImdbSearchResultDto;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.titlecatalog.adapter.out.imdb.ImdbSuggestionSource;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Title search for the navbar search box: delegates the actual IMDb lookup to
@@ -24,10 +24,10 @@ public class ImdbSearchService {
     private final ImdbSuggestionSource imdbSuggestionSource;
     private final WatchlistCatalogPort watchlistCatalogPort;
 
-    public List<ImdbSearchResultDto> search(UUID userId, String query) {
-        return imdbSuggestionSource.search(query).stream()
+    public List<ImdbSearchResultDto> search(ImdbSearchCommand command) {
+        return imdbSuggestionSource.search(command.query()).stream()
                 .map(hit -> new ImdbSearchResultDto(hit.imdbId(), hit.name(), hit.year(),
-                        watchlistCatalogPort.isOnWatchlist(userId, hit.imdbId())))
+                        watchlistCatalogPort.isOnWatchlist(command.userId(), hit.imdbId())))
                 .toList();
     }
 }

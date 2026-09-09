@@ -1,15 +1,27 @@
+import { HarnessLoader, parallel } from '@angular/cdk/testing';
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { MatSelect } from '@angular/material/select';
+import { MatSelectHarness } from '@angular/material/select/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { SettingsPage } from './settings-page';
 import { translocoTesting } from '../../testing/transloco-testing';
 
+/** The marketplace options in template order: the label the user picks, the value the server gets. */
+const MARKETPLACES = [
+  { label: 'ebay.de (euro)', value: 'EBAY_DE' },
+  { label: 'ebay.com (US dollar)', value: 'EBAY_US' },
+  { label: 'ebay.co.uk (pound)', value: 'EBAY_GB' },
+];
+
+/** Same three, rotated so no option is ever picked while it is the selected one (see the spec below). */
+const PICK_ORDER = [MARKETPLACES[1], MARKETPLACES[2], MARKETPLACES[0]];
+
 describe('SettingsPage', () => {
   let fixture: ComponentFixture<SettingsPage>;
   let httpMock: HttpTestingController;
+  let loader: HarnessLoader;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -18,6 +30,7 @@ describe('SettingsPage', () => {
     });
     fixture = TestBed.createComponent(SettingsPage);
     httpMock = TestBed.inject(HttpTestingController);
+    loader = TestbedHarnessEnvironment.loader(fixture);
   });
 
   afterEach(() => httpMock.verify());
@@ -33,25 +46,30 @@ describe('SettingsPage', () => {
       .toEqual([]);
   });
 
-  it('offers exactly the three marketplaces the server accepts', () => {
+  it('offers exactly the three marketplaces the server accepts', async () => {
     fixture.detectChanges();
+    const select = await loader.getHarness(MatSelectHarness.with({ label: 'eBay marketplace' }));
 
-    // mat-option lives in a lazily instantiated template, so the options only exist once the panel
-    // is opened — querying the DOM beforehand finds nothing.
-    const selects = fixture.debugElement.queryAll(By.directive(MatSelect));
-    const values = selects.flatMap((select) => {
-      const matSelect = select.componentInstance as MatSelect;
-      matSelect.open();
-      fixture.detectChanges();
-      return matSelect.options.map((option) => option.value as string);
-    });
+    await select.open();
+    const options = await select.getOptions();
+    const labels = await parallel(() => options.map((option) => option.getText()));
+    expect(labels).toEqual(MARKETPLACES.map(({ label }) => label));
+    await select.close();
 
     // A fourth option here, or a renamed value, would be stored and then refused by the server's
     // EbayMarketplace check — a setting that appears to save and silently does not.
-    expect(values).toContain('EBAY_DE');
-    expect(values).toContain('EBAY_US');
-    expect(values).toContain('EBAY_GB');
-    expect(values.filter((value) => value.startsWith('EBAY_'))).toHaveLength(3);
+    // The harness sees what the user sees (the label), while it is the bound value the server has
+    // to accept, so each option is picked and the value it persists is read off the PUT it fires.
+    // Order matters: mat-select emits no selectionChange for the option that is already selected,
+    // and EBAY_DE is the default — so it is picked last, after the value has moved away from it.
+    const persisted: string[] = [];
+    for (const { label } of PICK_ORDER) {
+      await select.clickOptions({ text: label });
+      const req = httpMock.expectOne((r) => r.url.endsWith('/api/me/ebay-marketplace'));
+      persisted.push((req.request.body as { marketplace: string }).marketplace);
+      req.flush(null);
+    }
+    expect(persisted).toEqual(PICK_ORDER.map(({ value }) => value));
   });
 
   it('toggling the age-rating switch persists the preference', () => {

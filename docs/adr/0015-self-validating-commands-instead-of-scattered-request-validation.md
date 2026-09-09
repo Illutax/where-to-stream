@@ -92,6 +92,15 @@ matching `@ExceptionHandler` — the status, the `application/problem+json` cont
   `InvalidateRequest` (in the controller **and** the service) — now once, in
   `InvalidateCommand`'s compact constructor.
 
+**Correction, TODO-68 (2026-09-09):** the nine places were found and fixed by hand, and the count was
+wrong — a tenth, `ImdbSearchApiController`, had been written days before this ADR and was missed.
+Nothing reported it for over a month, because "we tidied this up once" is not enforcement.
+It now has an `ImdbSearchCommand` like the rest, and the rule is enforced by
+`ArchitectureTest.inbound_adapter_classes_do_not_throw_validation_exceptions`: no class under
+`..adapter.in.api..` may construct a `ValidationException`.
+The rule is deliberately that narrow — it says nothing about other exception types or other
+packages, and needs no exemption list.
+
 **Harder / drawbacks:**
 
 - More files: seven preference commands still need their dumb wire requests alongside them
