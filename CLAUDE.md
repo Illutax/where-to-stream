@@ -83,6 +83,8 @@ So the rules are:
 
 The routine for both lives in `.claude/skills/` — `ticket` for opening/closing work,
 `architecture-review` for the periodic snapshot.
+The same directory holds the mechanical procedures that would otherwise be re-derived each
+session: `run-tests`, `probe`, `consolidate-test-assertions`.
 
 ## Before writing or reviewing code
 
@@ -137,6 +139,14 @@ would have meant guessing the language of each file before opening it.
 
 ## Testing
 
+- **How to run them is a skill, not a habit**: `.claude/skills/run-tests/`.
+  It has the two modes and the measured numbers behind them — the short inner loop that runs
+  backend and frontend in parallel, and the full run that must precede a commit because it is the
+  only one that puts the Liquibase changelog in front of a real MariaDB.
+- When an answer depends on how Spring, Liquibase, Maven or an external API *actually* behaves,
+  run the experiment: `.claude/skills/probe/`.
+  Every belief this project has acted on and had to retract was one that could have been checked
+  in two minutes.
 - Backend: AssertJ + Mockito + JUnit 5 only (ADR-0005).
   No Hamcrest, no JUnit `Assertions.*` in test bodies — both are structurally still on the
   classpath (Testcontainers needs `junit:junit`'s `TestRule` interface at class-load time;
