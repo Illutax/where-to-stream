@@ -40,8 +40,7 @@ export interface PaidEntry {
   price: string;
   added: WatchlistDate;
   isRated: boolean;
-  /** Year as text; "Not yet released" for unreleased titles (formatted on the server). */
-  year: string;
+  year: ReleaseYear;
   languages: string | null;
 }
 

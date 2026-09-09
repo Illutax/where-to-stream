@@ -1693,3 +1693,37 @@ written. Correcting something that was never true is not editing history.
   ADR-0011; only the ADR does not know. Worth one sentence the next time it is touched.
 - ADR-0019 now stands on a single use case. It still holds, but a rule with one instance is a rule
   waiting to be questioned.
+
+---
+
+### ✅ TODO-60 — Serve `PaidEntryDto.year` as a number
+`PaidEntryDto` (`streamingavailability/application/dto`) formats the year on the server
+(`imdbEntry.year().display()`), so it ships `"Not yet released"` as text. Two consequences, both
+found during the TODO-57 review:
+
+- **The client cannot compute with it.** `TileEntry.releaseYear` is nullable only for this reason —
+  a finished string cannot be turned back into a year without guessing. The eBay search link is the
+  first case that depends on it, probably not the last.
+- **The text is untranslated English** and lands that way in a bilingual interface, while the
+  client already carries the same constant in
+  `src/main/frontend/src/app/core/domain.ts`.
+
+`OverviewEntryDto` and `FlatrateEntryDto` already do it right and return `ReleaseYear`.
+
+- **Acceptance:** `PaidEntryDto.year` is a number, the formatting happens client-side via
+  `releaseYearDisplay`, and `TileEntry.releaseYear` is no longer nullable.
+
+**Done on 2026-09-09.** `PaidEntryDto.year` is a `ReleaseYear`; the client formats it through
+`releaseYearDisplay`, which it already owned.
+
+**The change was larger than the ticket, and in the right direction.** Making the year a number
+removed the reason `TileEntry` carried it twice — a formatted `year` plus a nullable `releaseYear`,
+with nothing binding the two together. `TileEntry` now has one numeric `year`, and `TitleTile`
+formats it where it is shown. That was the acceptance criterion's real intent.
+
+**It also exposed a bug nobody had seen.** The year column sorted *differently depending on the
+page*: the paid table received display text, so "Not yet released" fell through `parseInt` to
+`NaN` and sorted last; every other table received the number 0 and sorted it first. One column,
+two orders. The two halves could not disagree visibly while only one of them was a string, so it
+took making them the same type to surface it. Unified on "unreleased sorts last" — the half worth
+keeping, since "no year yet" is not "the year zero".

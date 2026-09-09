@@ -4,7 +4,7 @@ import { Sort } from '@angular/material/sort';
 interface SortableRow {
   isRated: boolean;
   name: string;
-  year: number | string;
+  year: number;
   added: string;
 }
 
@@ -40,10 +40,20 @@ function compare(a: SortableRow, b: SortableRow, column: string): number {
   }
 }
 
-/** Numeric year; the paid table's "Not yet released" placeholder sorts after real years. */
-function yearValue(year: number | string): number {
-  const n = typeof year === 'number' ? year : parseInt(year, 10);
-  return Number.isNaN(n) ? Number.POSITIVE_INFINITY : n;
+/**
+ * An unreleased title (`ReleaseYear` 0) sorts after every real year, ascending.
+ *
+ * <p>The two halves of this used to disagree without anyone noticing. The paid table received its
+ * year as the display string and fell through `parseInt` to `NaN`, which this function mapped to
+ * the end; every other table received the number 0 and sorted it to the *front*. The same column,
+ * two orders, depending on which page you were on. It only became visible when the paid table
+ * started receiving a number as well (TODO-60).
+ *
+ * <p>Sorting last is the half worth keeping: "no year yet" is not "the year zero", and a reader
+ * scanning by year wants the known ones first.
+ */
+function yearValue(year: number): number {
+  return year > 0 ? year : Number.POSITIVE_INFINITY;
 }
 
 /** Row shape the "Cache Verwalten" manage table sorts by (title, last scraped at). */

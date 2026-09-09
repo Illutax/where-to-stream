@@ -5,7 +5,7 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatSortHarness } from '@angular/material/sort/testing';
 import { PaidTable } from './paid-table';
-import { imdbId, watchlistDate } from '../../core/domain';
+import { imdbId, releaseYear, watchlistDate } from '../../core/domain';
 import { PaidEntry } from '../../core/models';
 
 describe('PaidTable', () => {
@@ -17,7 +17,7 @@ describe('PaidTable', () => {
     price: 'kaufen: HD: 9,99 ',
     added: watchlistDate('2020-01-01'),
     isRated: false,
-    year: '2020',
+    year: releaseYear(2020),
     languages: null,
     ...over,
   });
@@ -77,8 +77,8 @@ describe('PaidTable', () => {
 
   it('sorts by year with the "Not yet released" placeholder last (ascending)', async () => {
     fixture.componentRef.setInput('entries', [
-      entry({ name: 'Upcoming', imdbId: imdbId('tt2'), year: 'Not yet released' }),
-      entry({ name: 'Released', imdbId: imdbId('tt1'), year: '2020' }),
+      entry({ name: 'Upcoming', imdbId: imdbId('tt2'), year: releaseYear(0) }),
+      entry({ name: 'Released', imdbId: imdbId('tt1'), year: releaseYear(2020) }),
     ]);
     fixture.detectChanges();
 

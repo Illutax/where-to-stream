@@ -43,10 +43,10 @@ describe('sortRows', () => {
     expect(rows).toEqual(original);
   });
 
-  it('treats a non-numeric year (e.g. "Not yet released") as sorting after real years ascending', () => {
+  it('sorts an unreleased title (year 0) after every real year, ascending', () => {
     const paid = [
-      { isRated: false, name: 'Released', year: '2020', added: '2020-01-01' },
-      { isRated: false, name: 'Upcoming', year: 'Not yet released', added: '2020-01-01' },
+      { isRated: false, name: 'Released', year: 2020, added: '2020-01-01' },
+      { isRated: false, name: 'Upcoming', year: 0, added: '2020-01-01' },
     ];
     expect(names(sortRows(paid, sort('year', 'asc')))).toEqual(['Released', 'Upcoming']);
     expect(names(sortRows(paid, sort('year', 'desc')))).toEqual(['Upcoming', 'Released']);

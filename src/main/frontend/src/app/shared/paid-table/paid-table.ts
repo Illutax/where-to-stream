@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
-import { ImdbId, imdbId, watchlistDate } from '../../core/domain';
+import { ImdbId, imdbId, releaseYear, releaseYearDisplay, watchlistDate } from '../../core/domain';
 import { PaidEntry } from '../../core/models';
 import { TitleCell } from '../title-cell/title-cell';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -14,7 +14,7 @@ const SKELETON_ROWS: PaidEntry[] = Array.from({ length: 6 }, (_, i) => ({
   price: '',
   added: watchlistDate('1970-01-01'),
   isRated: false,
-  year: '',
+  year: releaseYear(0),
   languages: null,
 }));
 
@@ -78,7 +78,7 @@ const SKELETON_ROWS: PaidEntry[] = Array.from({ length: 6 }, (_, i) => ({
           @if (loading()) {
             <span class="skeleton-bar skeleton-bar--narrow"></span>
           } @else {
-            {{ entry.year }}
+            {{ releaseYearDisplay(entry.year) }}
           }
         </td>
       </ng-container>
@@ -112,6 +112,7 @@ export class PaidTable {
   readonly seenToggle = output<{ imdbId: ImdbId; seen: boolean }>();
   protected readonly sort = signal<Sort>({ active: '', direction: '' });
   protected readonly sorted = computed(() => (this.loading() ? SKELETON_ROWS : sortRows(this.entries(), this.sort())));
+  protected readonly releaseYearDisplay = releaseYearDisplay;
   protected readonly displayedColumns = ['rated', 'title', 'price', 'languages', 'year', 'added'];
   protected readonly trackByRow = (_: number, entry: PaidEntry) => entry.imdbId + entry.languages;
 }

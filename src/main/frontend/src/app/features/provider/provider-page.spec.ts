@@ -112,7 +112,7 @@ describe('ProviderPage', () => {
     httpMock
       .expectOne((r) => r.url.endsWith('/api/providers/youtube'))
       .flush(page({ provider: 'youtube', paid: [
-        { name: 'Buyable', imdbId: imdbId('tt5'), price: 'kaufen: HD: 9,99 ', added: watchlistDate('2021-01-01'), isRated: false, year: '2021', languages: null },
+        { name: 'Buyable', imdbId: imdbId('tt5'), price: 'kaufen: HD: 9,99 ', added: watchlistDate('2021-01-01'), isRated: false, year: releaseYear(2021), languages: null },
       ] }));
     fixture.detectChanges();
 

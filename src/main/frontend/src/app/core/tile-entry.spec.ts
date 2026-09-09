@@ -2,7 +2,7 @@ import { imdbId, releaseYear, watchlistDate } from './domain';
 import { flatrateToTile, overviewToTile, paidToTile } from './tile-entry';
 
 describe('tile-entry adapters', () => {
-  it('overviewToTile normalizes an OverviewEntry, formatting the numeric year', () => {
+  it('overviewToTile normalizes an OverviewEntry, keeping the year numeric', () => {
     const tile = overviewToTile({
       isRated: true,
       name: 'Vertigo',
@@ -15,14 +15,13 @@ describe('tile-entry adapters', () => {
     expect(tile).toEqual({
       imdbId: imdbId('tt1'),
       name: 'Vertigo',
-      year: '1958',
-      releaseYear: releaseYear(1958),
+      year: releaseYear(1958),
       added: watchlistDate('2024-11-03'),
       isRated: true,
     });
   });
 
-  it('overviewToTile renders an unreleased title as "Not yet released"', () => {
+  it('overviewToTile passes an unreleased title through as year 0', () => {
     const tile = overviewToTile({
       isRated: false,
       name: 'Upcoming',
@@ -32,7 +31,7 @@ describe('tile-entry adapters', () => {
       services: null,
     });
 
-    expect(tile.year).toBe('Not yet released');
+    expect(tile.year).toBe(releaseYear(0));
   });
 
   it('flatrateToTile normalizes a FlatrateEntry the same way', () => {
@@ -47,31 +46,27 @@ describe('tile-entry adapters', () => {
     expect(tile).toEqual({
       imdbId: imdbId('tt3'),
       name: 'Stalker',
-      year: '1979',
-      releaseYear: releaseYear(1979),
+      year: releaseYear(1979),
       added: watchlistDate('2025-01-18'),
       isRated: false,
     });
   });
 
-  it('paidToTile passes through the already-formatted year string unchanged', () => {
+  it('paidToTile is now the same shape as the others: the server sends a number', () => {
     const tile = paidToTile({
       name: 'Drive',
       imdbId: imdbId('tt4'),
       price: '3,99 €',
       added: watchlistDate('2026-02-14'),
       isRated: true,
-      year: 'Not yet released',
+      year: releaseYear(0),
       languages: 'DE, EN',
     });
 
     expect(tile).toEqual({
       imdbId: imdbId('tt4'),
       name: 'Drive',
-      year: 'Not yet released',
-      // No number to hand on: the server already formatted this row's year, and parsing it back
-      // would invent a value. The eBay link is dashboard-only, so nothing here needs one.
-      releaseYear: null,
+      year: releaseYear(0),
       added: watchlistDate('2026-02-14'),
       isRated: true,
     });

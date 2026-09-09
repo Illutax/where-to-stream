@@ -15,8 +15,7 @@ describe('TitleGrid', () => {
     isRated: false,
     name: 'Movie',
     imdbId: imdbId('tt1'),
-    year: '2020',
-    releaseYear: releaseYear(2020),
+    year: releaseYear(2020),
     added: watchlistDate('2020-01-01'),
     ...over,
   });

@@ -99,8 +99,10 @@ class ProviderPageServiceTest {
 
         assertThat(page.included()).isEmpty();
         assertThat(page.paid()).extracting(PaidEntryDto::added).containsExactly(WatchlistDate.of("2020-01-01"), WatchlistDate.of("2021-05-05"));
-        // year 0 becomes the "Not yet released" placeholder
-        assertThat(page.paid().get(0).year()).isEqualTo("Not yet released");
+        // Year 0 goes out as 0. It used to be rendered here as "Not yet released"; formatting the
+        // year on the server cost the client the ability to compute with it (TODO-60), so the
+        // placeholder now lives in the client's releaseYearDisplay.
+        assertThat(page.paid().get(0).year()).isEqualTo(ReleaseYear.of(0));
     }
 
     @Test

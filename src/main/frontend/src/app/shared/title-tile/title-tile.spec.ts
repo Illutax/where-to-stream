@@ -18,7 +18,7 @@ describe('TitleTile', () => {
     fixture = TestBed.createComponent(TitleTile);
     fixture.componentRef.setInput('imdbId', imdbId('tt1'));
     fixture.componentRef.setInput('name', 'Old School - Wir lassen absolut nichts anbrennen');
-    fixture.componentRef.setInput('year', '2003');
+    fixture.componentRef.setInput('releaseYear', releaseYear(2003));
     fixture.componentRef.setInput('added', watchlistDate('2026-07-02'));
     fixture.componentRef.setInput('isRated', false);
     httpMock = TestBed.inject(HttpTestingController);
@@ -101,7 +101,6 @@ describe('TitleTile', () => {
   it('offers a labelled eBay search on the dashboard, for the marketplace the user picked', () => {
     TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false, ebayMarketplace: 'EBAY_GB' });
     fixture.componentRef.setInput('showEbayLink', true);
-    fixture.componentRef.setInput('releaseYear', releaseYear(2003));
     fixture.detectChanges();
 
     const url = new URL(ebayLink()!.href);
@@ -120,7 +119,6 @@ describe('TitleTile', () => {
     // where a silent fall-back to the original title would go unnoticed longest.
     TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: true, ebayMarketplace: 'EBAY_DE' });
     fixture.componentRef.setInput('showEbayLink', true);
-    fixture.componentRef.setInput('releaseYear', releaseYear(2003));
     fixture.detectChanges();
 
     httpMock.expectOne((r) => r.url.endsWith('/api/titles/tt1/meta'))
@@ -130,20 +128,20 @@ describe('TitleTile', () => {
     expect(new URL(ebayLink()!.href).searchParams.get('_nkw')).toBe('Old School 2003');
   });
 
-  it('offers no eBay search for a row that has no machine-readable year', () => {
-    // `releaseYear` stays null for the paid-provider rows: the server hands those a formatted
-    // string, and the link must not guess a number out of it. Asserted with the link switched ON,
-    // so it is this guard that holds and not the enabling flag.
+  it('shows the placeholder and offers no eBay search for an unreleased title', () => {
+    // Since TODO-60 every row carries a real number, so "no year" is now exactly one case: 0.
+    // Asserted with the link switched ON, so it is this guard that holds and not the enabling flag.
     TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
     fixture.componentRef.setInput('showEbayLink', true);
+    fixture.componentRef.setInput('releaseYear', releaseYear(0));
     fixture.detectChanges();
 
-    expect(ebayLink()).toBeNull();
+    const chip = fixture.nativeElement.querySelector('.year-chip') as HTMLElement;
+    expect([chip.textContent?.trim(), ebayLink()]).toEqual(['Not yet released', null]);
   });
 
   it('offers no eBay search where the tile is reused outside the dashboard', () => {
     TestBed.inject(UserPrefsStore).init({ showAgeRatings: false, showGermanTitle: false });
-    fixture.componentRef.setInput('releaseYear', releaseYear(2003));
     fixture.detectChanges();
 
     expect(ebayLink()).toBeNull();

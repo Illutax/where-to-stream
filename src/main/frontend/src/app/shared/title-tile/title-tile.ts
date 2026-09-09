@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ImdbId, imdbUrl, posterFullUrl, ReleaseYear, WatchlistDate } from '../../core/domain';
+import { ImdbId, imdbUrl, posterFullUrl, ReleaseYear, releaseYearDisplay, WatchlistDate } from '../../core/domain';
 import { injectTitleMeta } from '../../core/title-meta';
 import { UserPrefsStore } from '../../core/user-prefs-store';
 import { AgeBadge } from '../age-badge/age-badge';
@@ -45,7 +45,7 @@ import { splitTitle, titleSizeSteps } from './title-split';
           }
         </div>
         <div class="badge-stack">
-          <span class="year-chip">{{ year() }}</span>
+          <span class="year-chip">{{ releaseYearDisplay(releaseYear()) }}</span>
           @if (userPrefsStore.showAgeRatings() && meta()?.rating; as rating) {
             <app-age-badge [rating]="rating" />
           }
@@ -278,9 +278,9 @@ export class TitleTile {
 
   readonly imdbId = input.required<ImdbId>();
   readonly name = input<string>('');
-  readonly year = input.required<string>();
-  /** The year as a number for the eBay link; null where the row never carried one. */
-  readonly releaseYear = input<ReleaseYear | null>(null);
+
+  /** Shown on the poster chip, and used for the eBay link. */
+  readonly releaseYear = input.required<ReleaseYear>();
   readonly added = input.required<WatchlistDate>();
   readonly isRated = input.required<boolean>();
   readonly recentlyChanged = input(false);
@@ -288,6 +288,7 @@ export class TitleTile {
 
   protected readonly userPrefsStore = inject(UserPrefsStore);
   protected readonly imdbUrl = imdbUrl;
+  protected readonly releaseYearDisplay = releaseYearDisplay;
   protected readonly posterFullUrl = posterFullUrl;
   protected readonly hidden = signal(false);
   protected readonly meta = injectTitleMeta(() => this.imdbId());

@@ -39,7 +39,6 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 | 🟢 | [TODO-22](#todo-22) | Hard-coded CSV header array |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
-| 🟢 | [TODO-60](#todo-60) | Serve `PaidEntryDto.year` as a number |
 | 🟢 | [TODO-69](#todo-69) | The settings test reaches into `MatSelect` internals (breaks ADR-0004) |
 
 ---
@@ -300,20 +299,3 @@ construction. The only lever is which framework surface ends up in the *initial*
 **What is explicitly not the answer:** swapping Angular Material for hand-written components
 (238 kB against a permanent maintenance and accessibility debt), or splitting further just to hit
 a number.
-
-### 🟢 TODO-60 — Serve `PaidEntryDto.year` as a number
-`PaidEntryDto` (`streamingavailability/application/dto`) formats the year on the server
-(`imdbEntry.year().display()`), so it ships `"Not yet released"` as text. Two consequences, both
-found during the TODO-57 review:
-
-- **The client cannot compute with it.** `TileEntry.releaseYear` is nullable only for this reason —
-  a finished string cannot be turned back into a year without guessing. The eBay search link is the
-  first case that depends on it, probably not the last.
-- **The text is untranslated English** and lands that way in a bilingual interface, while the
-  client already carries the same constant in
-  `src/main/frontend/src/app/core/domain.ts`.
-
-`OverviewEntryDto` and `FlatrateEntryDto` already do it right and return `ReleaseYear`.
-
-- **Acceptance:** `PaidEntryDto.year` is a number, the formatting happens client-side via
-  `releaseYearDisplay`, and `TileEntry.releaseYear` is no longer nullable.
