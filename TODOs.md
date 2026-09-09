@@ -1415,14 +1415,36 @@ und baute jede absolute URL mit dem falschen Schema.
 Spring gibt selbst nur ein relatives `Location` aus; absolut macht es erst der Servlet-Container,
 und der kannte bloß den Klartext-Hop vom Proxy.
 
-**Behoben** (`server.forward-headers-strategy=framework`, mit `ProxyForwardedHeadersTest`):
-`framework` nimmt Springs `ForwardedHeaderFilter` statt des Container-Ventils —
-ein Verhalten, unabhängig davon, was uns ausliefert.
-Es vertraut `X-Forwarded-*` bedingungslos, was nur trägt, weil die Anwendung ausschließlich
-über den Proxy erreichbar ist (internes Netz in `compose.yml`);
-ein direkt exponierter Port ließe die Header fälschen.
-**Achtung beim Proxy:** der Kontextpfad wird bei uns gesetzt,
-Caddy darf deshalb **kein** `X-Forwarded-Prefix` senden — sonst wird daraus `/w2s/w2s`.
+**Behoben** mit `server.forward-headers-strategy=native`, abgesichert durch
+`ProxyForwardedHeadersTest` (echter Port, weil `native` ein Tomcat-Ventil ist,
+das MockMvc nie erreichen würde — der Test wäre sonst leer wahr).
+
+`native` statt `framework`, und zwar wegen der Vertrauensgrenze:
+Tomcats `RemoteIpValve` wertet `X-Forwarded-*` nur aus, wenn der Peer zu
+`server.tomcat.remoteip.internal-proxies` passt (private Bereiche per Default),
+Springs `ForwardedHeaderFilter` glaubt jedem.
+Direkt erreichbar sind wir heute nicht — `compose.yml` veröffentlicht keinen Port —,
+aber „sicher, weil es zufällig so deployt ist" ist die schwächere Zusicherung als
+„sicher, weil der Code prüft".
+
+Der Preis: es **scheitert leise**.
+Ein Peer außerhalb dieser Bereiche heißt, die Header werden ignoriert
+und die `http`-URLs sind zurück, ohne Logeintrag.
+Ein Blick auf das `Location` einer beliebigen Weiterleitung sagt nach jeder Infrastrukturänderung,
+auf welcher Seite dieser Grenze man steht.
+Realistischer Stolperstein: ein IPv6-fähiges Docker-Netz —
+der Default kennt dort nur `::1`.
+
+**Kontextpfad bleibt, wo er ist.**
+Die Caddyfile nutzt `handle`, nicht `handle_path`, das Präfix kommt also unverändert an —
+womit `server.servlet.context-path=/w2s` das passende Gegenstück ist.
+Die Abhängigkeiten zwischen beiden Seiten stehen bei der Einstellung selbst
+in [`compose.yml`](compose.yml), nicht hier und nicht im Code.
+
+**Randnotiz zu den `307` in der Spur:** die stammen vermutlich gar nicht von Caddy.
+Chrome zeigt HSTS-Aufwertungen als „307 Internal Redirect".
+Der Browser hat unsere falschen `Location`-Angaben also stillschweigend repariert —
+weshalb es überhaupt so lange unauffällig funktioniert hat.
 
 **Was damit nicht bewiesen ist.**
 Der Sprung nach `[Sign in]` auf `/w2s/login` lässt sich aus dem Code **nicht** herleiten:

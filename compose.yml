@@ -11,6 +11,16 @@ services:
       - MARIADB_USER=w2s
       - MARIADB_PASSWORD=${MARIADB_PASSWORD:-w2s}
 #      - logging.level.org.springframework.web.servlet.DispatcherServlet=TRACE
+      # Mounted under /w2s, and the reverse proxy in front of us must agree on three things.
+      # The Caddyfile is `handle /w2s* { reverse_proxy w2s:8080 }`:
+      #  - `handle`, not `handle_path`: the /w2s prefix arrives intact, which is what makes setting
+      #    it here the right counterpart. Strip it at the proxy instead and Caddy would have to send
+      #    X-Forwarded-Prefix -- which RemoteIpValve does not read, so that variant needs
+      #    server.forward-headers-strategy=framework. Doing both yields /w2s/w2s.
+      #  - `reverse_proxy` already sends X-Forwarded-For/-Proto/-Host; nothing to configure.
+      #  - Caddy reaches us over the `webserver` network below, and Tomcat only trusts X-Forwarded-*
+      #    from a peer in a private range. Docker's IPv4 pools qualify; an IPv6-enabled network
+      #    would not, and the symptom is silent -- redirects quietly go out as http again.
       - server.servlet.context-path=/w2s
       - SERVER_SERVLET_SESSION_TIMEOUT=${W2S_SESSION_TIMEOUT:-30m}
       # NOTE: property is initial-admin.USERNAME -> env must be ...INITIALADMIN_USERNAME.
