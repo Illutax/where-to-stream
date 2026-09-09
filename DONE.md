@@ -1573,3 +1573,60 @@ Einzeln zu klein für ein Ticket, zusammen eine Stunde Pfadfinderarbeit:
   fanden sie drei Verstöße, die sich als **legitim** herausstellten (ein Startup-Runner und ein
   Security-Callback, beide keine HTTP-Handler). Die Regel wurde daraufhin auf `adapter.in.api`
   eingeengt: eine Regel, deren Begründung ihre eigenen Verstöße nicht deckt, glaubt niemand.
+
+---
+
+### ✅ TODO-63 — `W2S_ADMIN_PASSWORD` aus `.env` bindet an keine Property
+`.env.example:11` dokumentiert `W2S_ADMIN_PASSWORD` als das initiale Admin-Passwort.
+Es bindet an nichts.
+
+`compose.yml` mappt nur noch `W2S_SECURITY_INITIALADMIN_USERNAME` (Zeile 27);
+die zugehörige Passwort-Zeile wurde entfernt, als `env_file: .env` hinzukam.
+Über `env_file` landet `W2S_ADMIN_PASSWORD` zwar im Container, aber der Property-Prefix ist
+`w2s.security` — ein `w2s.admin.password` gibt es nicht.
+
+**Folge:** Wer das dokumentierte Passwort setzt, bekommt es nicht.
+`AdminUserSeeder` hält den Wert für leer, erzeugt ein zufälliges Passwort und **loggt es**.
+Das fällt niemandem auf, der nicht ins Log sieht — man probiert das Passwort aus `.env`,
+es geht nicht, und die naheliegende Vermutung ist ein Tippfehler beim Anlegen.
+
+**Der Kontrast, der den Befund stützt:** `TMDB_API_KEY` flog im selben Commit aus `compose.yml`
+und funktioniert über `env_file` trotzdem — weil `tmdb.api-key` relaxed-binding-fähig ist.
+Beim Admin-Passwort passt der Name nicht.
+
+- **Akzeptanzkriterium:** Entweder die Zeile in `compose.yml` wiederherstellen, oder
+  `.env.example` auf den bindungsfähigen Namen umstellen.
+  Danach einmal mit gesetztem Passwort hochfahren und prüfen, dass der Seeder **kein**
+  generiertes Passwort loggt — das ist die Probe, die den Fehler von Anfang an gezeigt hätte.
+- **Ungeprüft:** `README.md:212` nennt `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`, `compose.yml:26`
+  besteht auf `…INITIALADMIN_…`. Beide binden vermutlich über Spring Boots
+  Underscore-Mapping — verifiziert ist das nicht, und die beiden Aussagen widersprechen sich.
+
+**Erledigt am 2026-09-09.** Der Befund war größer als das eine fehlende Mapping: es gibt **drei**
+Wege, auf denen eine `.env`-Variable eine Property erreicht, und man sieht einer Variablen nicht
+an, welchen sie nimmt — Mapping in `compose.yml`, Platzhalter in einer Properties-Datei, oder
+Relaxed Binding über den Namen selbst. `W2S_ADMIN_PASSWORD` nahm keinen, `TMDB_API_KEY` den
+unsichtbaren.
+
+**Gelöst über Platzhalter**, symmetrisch für Username und Passwort, plus eine sichtbare Zeile für
+`tmdb.api-key`. Ein Platzhalter umgeht die Namensregel vollständig — `${W2S_ADMIN_PASSWORD}` ist
+eine gewöhnliche Substitution, bei der weder Bindestriche noch Groß/Kleinschreibung zählen — und
+wirkt zusätzlich beim lokalen Start, nicht nur in Compose. Das Mapping für den Username entfällt
+damit aus `compose.yml`.
+
+**Zur Namensfrage, weil sie unterwegs strittig war:** Spring Boots Referenz sagt für
+Umgebungsvariablen „Replace dots with underscores. **Remove any dashes.** Convert to uppercase" —
+dokumentiert ist also `W2S_SECURITY_INITIALADMIN_PASSWORD`. Gemessen bindet
+`W2S_SECURITY_INITIAL_ADMIN_PASSWORD` ebenfalls, aber über einen zusätzlichen Pfad in Spring
+Frameworks Namensauflösung, nicht über Boots dokumentiertes Relaxed Binding. Ich hatte die beiden
+Formen zunächst als gleichwertig dargestellt; das war zu großzügig — „funktioniert" und „ist
+zugesichert" sind zweierlei. Der Kommentar in `compose.yml` gab den richtigen Rat.
+
+**Abgesichert** durch `EnvExampleIsWiredUpTest`: jede Variable aus `.env.example` muss wörtlich in
+`compose.yml` oder einer `application*.properties` vorkommen. Bewusst stumpf — ob Relaxed Binding
+sie ohnehin auflösen würde, prüft der Test nicht, denn eine Verdrahtung, die man nicht greppen
+kann, kann auch niemand nachvollziehen.
+
+Der Test hat sich bei seiner eigenen Entstehung bewährt: die Ausnahmeliste, mit der ich ihn
+schrieb, stellte sich als überflüssig heraus — beide vermeintlichen Tooling-Variablen stehen in
+`compose.yml`. Sie ist ersatzlos entfallen.

@@ -34,7 +34,6 @@ Der Ablauf im Detail steht als Skill unter
 | | Ticket | Kurz |
 | --- | --- | --- |
 | 🔴 | [TODO-54](#todo-54) | Node-/npm-Version an einer Stelle verbindlich festlegen |
-| 🔴 | [TODO-63](#todo-63) | `W2S_ADMIN_PASSWORD` aus `.env` bindet an keine Property |
 | 🟠 | [TODO-65](#todo-65) | Neues Architecture Review als datierte Momentaufnahme |
 | 🟠 | [TODO-66](#todo-66) | resilience4j zurückholen und auf die Outbound-Adapter anwenden |
 | 🟠 | [TODO-67](#todo-67) | ADRs auf Aktualität prüfen |
@@ -81,32 +80,6 @@ auseinanderlaufen:
 ---
 
 ## eBay-Rückbau und Ersatz (2026-09-06)
-
-### 🔴 TODO-63 — `W2S_ADMIN_PASSWORD` aus `.env` bindet an keine Property
-`.env.example:11` dokumentiert `W2S_ADMIN_PASSWORD` als das initiale Admin-Passwort.
-Es bindet an nichts.
-
-`compose.yml` mappt nur noch `W2S_SECURITY_INITIALADMIN_USERNAME` (Zeile 27);
-die zugehörige Passwort-Zeile wurde entfernt, als `env_file: .env` hinzukam.
-Über `env_file` landet `W2S_ADMIN_PASSWORD` zwar im Container, aber der Property-Prefix ist
-`w2s.security` — ein `w2s.admin.password` gibt es nicht.
-
-**Folge:** Wer das dokumentierte Passwort setzt, bekommt es nicht.
-`AdminUserSeeder` hält den Wert für leer, erzeugt ein zufälliges Passwort und **loggt es**.
-Das fällt niemandem auf, der nicht ins Log sieht — man probiert das Passwort aus `.env`,
-es geht nicht, und die naheliegende Vermutung ist ein Tippfehler beim Anlegen.
-
-**Der Kontrast, der den Befund stützt:** `TMDB_API_KEY` flog im selben Commit aus `compose.yml`
-und funktioniert über `env_file` trotzdem — weil `tmdb.api-key` relaxed-binding-fähig ist.
-Beim Admin-Passwort passt der Name nicht.
-
-- **Akzeptanzkriterium:** Entweder die Zeile in `compose.yml` wiederherstellen, oder
-  `.env.example` auf den bindungsfähigen Namen umstellen.
-  Danach einmal mit gesetztem Passwort hochfahren und prüfen, dass der Seeder **kein**
-  generiertes Passwort loggt — das ist die Probe, die den Fehler von Anfang an gezeigt hätte.
-- **Ungeprüft:** `README.md:212` nennt `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`, `compose.yml:26`
-  besteht auf `…INITIALADMIN_…`. Beide binden vermutlich über Spring Boots
-  Underscore-Mapping — verifiziert ist das nicht, und die beiden Aussagen widersprechen sich.
 
 
 ## 🟠 Mittel

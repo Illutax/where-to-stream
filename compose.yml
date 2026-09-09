@@ -23,8 +23,8 @@ services:
       #    would not, and the symptom is silent -- redirects quietly go out as http again.
       - server.servlet.context-path=/w2s
       - SERVER_SERVLET_SESSION_TIMEOUT=${W2S_SESSION_TIMEOUT:-30m}
-      # NOTE: property is initial-admin.USERNAME -> env must be ...INITIALADMIN_USERNAME.
-      - W2S_SECURITY_INITIALADMIN_USERNAME=${W2S_ADMIN_USER:-admin}
+      # W2S_ADMIN_USER / W2S_ADMIN_PASSWORD need no mapping: application.properties reads them
+      # as placeholders, and env_file below hands them to the container.
       # Stable secret so remember-me / persistent login survives restarts (see .env.example).
       - W2S_SECURITY_REMEMBERME_KEY=${W2S_REMEMBER_ME_KEY}
       # Posters come from IMDb by default. Set TMDB_ENABLED=true + a key to use TMDB instead.
