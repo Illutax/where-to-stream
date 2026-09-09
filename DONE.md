@@ -1802,3 +1802,62 @@ to the client.
 
 **ADR-0015 itself was corrected**: it read as though the pattern was gone, and its count of nine
 was wrong. It now names the tenth site and points at the rule that enforces it.
+
+### ✅ TODO-54 — Pin the Node/npm version in one authoritative place
+The permitted toolchain was stated in four places, maintained separately, and they had diverged:
+`.nvmrc` said `24`, `engines` allowed `node >=22 <25`, `packageManager` pinned `npm@11.16.0`, and
+`NODE_BASE_IMAGE` built on `node:24-alpine`.
+With `engine-strict=true` in `.npmrc`, divergence does not warn — it aborts `npm ci`.
+
+- **Acceptance:** one source of truth for Node and npm, from which the other places are derived or
+  against which they are checked.
+- **To decide:** whether `engines` follows Angular's own range (`^22.22.3 || ^24.15.0 ||
+  >=26.0.0`), which models the gap at 25 correctly.
+
+**Done on 2026-09-09**, as [ADR-0021](docs/adr/0021-track-one-node-lts-major-checked-by-a-test.md):
+one Node major at a time, the Active LTS, with `ToolchainVersionsAgreeTest` failing the build the
+moment `.nvmrc`, `engines` and the Dockerfile stop agreeing.
+
+**The decision the ticket asked for was made against Angular's range, not with it.** Angular 22
+allows `^22.22.3 || ^24.15.0 || >=26.0.0` — a range with a hole in it, because 25 was never an LTS.
+Writing that into `engines` would claim support for three majors nothing here builds or tests on.
+`engines.node` is now `^24.15.0`: one major, the caret floor taken from Angular.
+
+**Two things turned up that the ticket had wrong, both by measuring rather than reasoning:**
+
+- **Node 25 has been end-of-life since 2026-06-01.** The old upper bound `<25` was carefully
+  excluding something already dead. Node 24 is the Active LTS until 2026-10-20; Node 26 becomes
+  LTS on 2026-10-28. Read out of the `node-releases` release schedule, because `nodejs.org` is not
+  reachable from this environment.
+- **`packageManager` cannot be pinned to a major.** The plan had been to keep the field and pin
+  only `npm@12`. Corepack rejects that: `npm@12`, `npm@^12` and `npm@12.x` all fail with
+  *"Invalid package manager specification … expected a semver version"*; only `npm@12.0.2`
+  resolves. Verified with a working Corepack pulled from the registry, since the container's own
+  is broken.
+
+  So the field can hold a snapshot or nothing. It was removed — **nothing in this repository
+  invokes Corepack** (the Docker build symlinks `npm-cli.js` directly), so it constrained nothing
+  while going stale in plain sight. A declaration that binds nothing is worse than none: it reads
+  like a guarantee.
+
+**`engines.npm` is `>=11` and deliberately loose:** npm ships with Node, every Node 24 carries at
+least npm 11, so a tighter pin could only contradict the interpreter it comes with.
+
+**Checked, not derived.** Generating `.nvmrc` or templating the Dockerfile would buy less than it
+costs. The test was verified by breaking it both ways — drifting `.nvmrc` to `26`, and
+reintroducing `packageManager` — and it named the offending file in each case.
+
+**What it cannot do, stated in the test itself:** it compares the repository against itself, never
+against the outside world. It would not have caught Node 25's EOL, and it will not announce Node 26
+becoming LTS in seven weeks.
+
+**A fourth place turned up, by making the mistake.** npm copies `engines` verbatim into
+`package-lock.json`, and editing `package.json` alone does not update it — the lockfile sat at
+`>=22 <25` for a while with everything green. The Maven build hides it further: its `npm ci` step
+is guarded by an `uptodate` check against `package-lock.json`, so a `package.json` edit skips the
+install and never revisits the question. `npm ci` therefore did not run in the first full build
+after the change, and the claim "this run exercised engine-strict" was wrong until checked.
+The test now compares the two files; the fix is `npm install --package-lock-only`.
+
+`engine-strict` itself was verified rather than assumed: setting `engines.node` to `^99.0.0`
+produces `npm error code EBADENGINE`, a hard failure, not a warning.

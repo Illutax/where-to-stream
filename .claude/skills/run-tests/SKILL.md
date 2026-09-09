@@ -91,9 +91,15 @@ Parallel JVMs did not help, because the cost was container boots, not CPU.
 - **Testcontainers are a Maven profile, not a JUnit group.**
   `-Dgroups=testcontainers` silently runs zero tests.
   It is `-Pno-testcontainers` to leave them out; they are on by default.
-- **A stale class file can fake a run.**
-  After deleting or renaming a test, clear the matching file under `target/test-classes/` —
-  otherwise Surefire may still find the old class.
+- **`target/` remembers deleted tests, in two different ways.**
+  A leftover `target/test-classes/…` class can still be picked up by Surefire after the source is
+  gone, so clear it when you delete or rename a test.
+  And `target/surefire-reports/` is never pruned: it currently holds 19 report files for classes
+  that no longer exist (`…probe.*`, `…purchaseoffers.*`), worth 157 phantom tests.
+  Anyone counting by summing those files gets 584 instead of 427 — which is why the count that
+  counts is the `Tests run:` summary line, not an aggregate you build yourself.
+  `mvn clean` settles both; needing it is a hint that something is being read from `target/` that
+  should be read from the build output.
 - Surefire only picks up classes matching `*Test`, `Test*`, `*Tests`, `*TestCase`.
   A throwaway named `SomethingProbe` compiles and never runs.
 - In zsh, quote `-Dtest` patterns: `'-Dtest=*MariaDbTest'`.

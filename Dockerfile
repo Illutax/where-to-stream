@@ -2,8 +2,9 @@
 # Global args
 ARG MVN_BASE_IMAGE=maven:3-amazoncorretto-25-alpine
 ARG JDK_BASE_IMAGE=amazoncorretto:25-alpine
-# Pin the Node.js used to build the Angular client to a fixed version (matches the range in
-# src/main/frontend/package.json "engines" and .nvmrc), independent of the Alpine repo state.
+# Pin the Node.js major used to build the Angular client, independent of the Alpine repo state.
+# This is one of three places naming that major; ToolchainVersionsAgreeTest fails the build if they
+# drift apart. To move to the next Node LTS, change all three (see ADR-0021).
 ARG NODE_BASE_IMAGE=node:24-alpine
 ARG DOCKER_IMAGE_TAG
 

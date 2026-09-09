@@ -75,11 +75,14 @@ Re-run the `podman unshare chown` whenever you recreate the directory.
 
 ## Locally
 
-**Prerequisites:** JDK 25, Maven, and Node.js 22–24 with npm.
+**Prerequisites:** JDK 25, Maven, and Node.js 24 (the current LTS) with npm.
 
-The Maven build shells out to the system `npm` to build the Angular client
-(`src/main/frontend/.nvmrc` and the `engines` field pin the range; `.npmrc` sets
-`engine-strict=true`, so a mismatching version fails fast rather than half-building).
+The Maven build shells out to the system `npm` to build the Angular client.
+Node 24 is not a recommendation but a requirement: `.npmrc` sets `engine-strict=true`, so a
+different major fails `npm ci` outright instead of half-building.
+[ADR-0021](docs/adr/0021-track-one-node-lts-major-checked-by-a-test.md) explains why it is one
+major rather than a range, and `ToolchainVersionsAgreeTest` keeps `.nvmrc`, `engines` and the
+Dockerfile from drifting apart.
 Pass `-Dskip.frontend=true` for a backend-only build.
 
 Ubuntu's `apt install nodejs npm` ships a Node too old for this project:

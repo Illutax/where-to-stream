@@ -31,48 +31,12 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 
 | | Ticket | Summary |
 | --- | --- | --- |
-| 🔴 | [TODO-54](#todo-54) | Pin the Node/npm version in one authoritative place |
 | 🟠 | [TODO-65](#todo-65) | A new architecture review, as a dated snapshot |
 | 🟠 | [TODO-66](#todo-66) | Bring resilience4j back, for the outbound adapters |
 | 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: one request per row, never cancelled |
 | 🟢 | [TODO-22](#todo-22) | Hard-coded CSV header array |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
-
----
-
-## 🔴 High
-
-### 🔴 TODO-54 — Pin the Node/npm version in one authoritative place
-The permitted toolchain is stated in **four** places, maintained separately, and they have already
-diverged:
-
-| Place | Says | As of 2026-09-06 |
-| --- | --- | --- |
-| `src/main/frontend/.nvmrc` | `24` | major only |
-| `src/main/frontend/package.json` → `engines` | `node >=22 <25`, `npm >=10` | a range |
-| `src/main/frontend/package.json` → `packageManager` | `npm@11.16.0` | **exact, and stale** |
-| `Dockerfile` → `NODE_BASE_IMAGE` | `node:24-alpine` | major pinned, minor/patch floating |
-
-`src/main/frontend/.npmrc` sets `engine-strict=true`, so a toolchain outside the range aborts
-`npm ci` **hard**. That is right, but it means any divergence stops the build dead.
-
-**What currently holds** (checked against the registry, not guessed):
-
-- Angular 22.0.7 requires `node ^22.22.3 || ^24.15.0 || >=26.0.0` — **Node 25 is explicitly
-  excluded**, the range jumps from 24 to 26.
-- `npm` is at **12.0.2**; the last 11.x is 11.19.1. The `11.16.0` pinned in `packageManager` is
-  therefore not current anywhere, neither in the Node 24 line nor elsewhere.
-- Angular itself is at 22.1.5, the project at 22.0.7 — one minor behind, not a problem.
-
-- **Acceptance:** one source of truth for Node and npm, from which the other places are derived or
-  against which they are checked. At minimum: either maintain `packageManager` or drop it, and pin
-  `NODE_BASE_IMAGE` to the same range as `engines`.
-- **To decide:** whether `engines` stays at `>=22 <25` (then every Node bump to 25 has to be
-  blocked deliberately) or moves to Angular's own range (`^22.22.3 || ^24.15.0 || >=26.0.0`),
-  which models the gap at 25 correctly.
-- **Related to TODO-55** (in `DONE.md`): the version question only became urgent because the
-  auto-upgrade run hits it unguarded.
 
 ---
 
