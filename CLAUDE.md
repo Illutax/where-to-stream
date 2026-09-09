@@ -140,9 +140,11 @@ would have meant guessing the language of each file before opening it.
 ## Testing
 
 - **How to run them is a skill, not a habit**: `.claude/skills/run-tests/`.
-  It has the two modes and the measured numbers behind them — the short inner loop that runs
-  backend and frontend in parallel, and the full run that must precede a commit because it is the
-  only one that puts the Liquibase changelog in front of a real MariaDB.
+  It has the commands, the measured numbers behind them, and the variants that were tried and did
+  not pay off.
+  The MariaDB Testcontainers tests run by default and cost 11 s, so there is no fast mode to
+  choose between — `-Pno-testcontainers` exists for environments without a container runtime,
+  not for saving time.
 - When an answer depends on how Spring, Liquibase, Maven or an external API *actually* behaves,
   run the experiment: `.claude/skills/probe/`.
   Every belief this project has acted on and had to retract was one that could have been checked

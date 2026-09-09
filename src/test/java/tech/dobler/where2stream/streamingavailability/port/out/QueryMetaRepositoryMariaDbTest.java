@@ -3,26 +3,21 @@ package tech.dobler.where2stream.streamingavailability.port.out;
 import org.junit.jupiter.api.Tag;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.MariaDBContainer;
-import org.testcontainers.junit.jupiter.Container;
+import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import tech.dobler.where2stream.testing.SharedMariaDb;
 
 /**
  * Runs the same repository behaviour against a real MariaDB started by Testcontainers,
  * proving the Liquibase XML schema and the JPA mappings work on the production database.
- * Tagged {@code testcontainers} and excluded from the default build
- * (needs a container runtime + image pull access);
- * run with {@code mvn -Ptestcontainers test}.
- * Also skipped where no Docker is found.
+ * Part of the default build; leave it out with {@code -Pno-testcontainers} where no container
+ * runtime exists.
+ * The container is shared with the other {@code *MariaDbTest} classes — see {@link SharedMariaDb}.
  */
 @Tag("testcontainers")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers(disabledWithoutDocker = true)
+@ImportTestcontainers(SharedMariaDb.class)
 class QueryMetaRepositoryMariaDbTest extends AbstractQueryMetaRepositoryTests {
-
-    @Container
-    @ServiceConnection
-    static MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:lts-ubi");
 }
