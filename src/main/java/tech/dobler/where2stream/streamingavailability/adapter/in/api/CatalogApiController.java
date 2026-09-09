@@ -10,7 +10,7 @@ import tech.dobler.where2stream.accountaccess.port.in.CurrentUserPort;
 import tech.dobler.where2stream.streamingavailability.application.dto.CatalogPageDto;
 import tech.dobler.where2stream.shared.platform.observability.LogExecutionTime;
 
-/** JSON catalogue overview for the current user — the data behind the Thymeleaf {@code index} page. */
+/** JSON catalogue overview for the current user — the data behind the SPA's dashboard. */
 @RestController
 @RequestMapping("/api/catalog")
 @RequiredArgsConstructor

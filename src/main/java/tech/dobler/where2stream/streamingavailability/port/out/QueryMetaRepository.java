@@ -17,10 +17,6 @@ import java.util.UUID;
 public interface QueryMetaRepository extends CrudRepository<QueryMeta, UUID> {
     Optional<QueryMeta> findFirstByImdbIdAndInvalidatedIsFalseOrderByCreationTimeDesc(ImdbId imdbId);
 
-    // Batch variant used to resolve many imdbIds with a single query (avoids N+1 on the
-    // index page). May return several rows per imdbId; the caller picks the latest.
-    List<QueryMeta> findByImdbIdInAndInvalidatedIsFalse(Collection<ImdbId> imdbIds);
-
     // Like the above, but without the invalidated filter — used where an invalidated row's
     // creationTime is still of interest (e.g. "last scraped at" on the manage table).
     // May return several rows per imdbId; the caller picks the latest.

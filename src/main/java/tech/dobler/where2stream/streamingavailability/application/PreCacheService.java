@@ -15,8 +15,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Pre-resolves stream availability so later page views hit the cache.
  * Operates on the union of every user's watchlist titles (distinct imdbIds), since the
- * werstreamt.es cache is global — the global (ADMIN) cache maintenance and the per-import
- * targeted pre-cache both use this service.
+ * werstreamt.es cache is global. Reached through {@code CacheManagementService}, which serves the
+ * ADMIN maintenance endpoints — that is the only caller. An import does *not* pre-cache: those
+ * titles are resolved lazily on the first page view.
  */
 @Slf4j
 @Service

@@ -9,7 +9,7 @@ and presents each user's list as per-provider web pages (Netflix, Prime Video, D
 
 ## Tech stack
 
-- Java 25, Spring Boot 4.1 (Spring MVC, JSON API)
+- Java 25, Spring Boot 4 (Spring MVC, JSON API)
 - **Spring Security**: form + HTTP Basic + optional Google OIDC login, DB-backed users with
   `USER`/`ADMIN` roles (see [Authentication & users](#authentication--users))
 - **Angular 22** SPA (standalone, zoneless, signals;
@@ -22,6 +22,11 @@ and presents each user's list as per-provider web pages (Netflix, Prime Video, D
 - **FSK age-rating badges** per title (German FSK, or a foreign certificate as fallback),
   from the same one IMDb metadata fetch as the poster, cached per title;
   switchable per user (default on)
+- **eBay search link** per title on the dashboard — opens the marketplace the user picked,
+  filtered to discs and sorted by lowest total price. Built in the browser: no API, no quota.
+  (Its predecessor fetched actual prices and was withdrawn; see TODO-56 in `DONE.md` for why.)
+- **Admin impersonation** — an ADMIN can act as another user to reproduce a report,
+  with a permanent banner and a way back ([ADR-0020](docs/adr/0020-admin-impersonierung-ueber-switchuserfilter.md))
 - Spring Data JPA on H2 (default) or MariaDB, schema managed by **Liquibase** (XML changelogs)
 - jsoup (HTML scraping), Apache Commons CSV (IMDb export parsing)
 - MapStruct (entity ↔ persistence mapping), Lombok
@@ -34,7 +39,7 @@ and presents each user's list as per-provider web pages (Netflix, Prime Video, D
    new titles are added, changed titles updated, and titles missing from the upload removed.
 2. `ExportReader` parses the uploaded CSV stream into `ImdbEntry` records (malformed rows are skipped and logged);
    `WatchlistImportService` persists them to the `watchlist_entry` table, scoped to your user id.
-3. `WerStreamtEsApiClient` scrapes werstreamt.es per title.
+3. `WerStreamtEsSource` scrapes werstreamt.es per title.
    Lookups are cached in the database (`StreamInfoService`)
    and considered stale after a configurable number of days.
    The cache is **global** (keyed by IMDb id, shared across users);
@@ -77,7 +82,8 @@ npm --version
 # run the app (defaults to http://localhost:8001)
 mvn spring-boot:run
 
-# run the tests
+# run the tests -- needs a container runtime: the MariaDB repository tests
+# run by default. Without one: mvn test -Pno-testcontainers
 mvn test
 ```
 
@@ -129,7 +135,8 @@ npm run test:coverage  # single run + v8 coverage report
 ## Test coverage
 
 - **Backend** — JaCoCo (method & branch), report at `target/site/jacoco/` after `mvn test`
-  (the network-only `ImdbApiClientTest` is excluded by default).
+  Testcontainers-backed tests are excluded with `-Pno-testcontainers` where no container
+  runtime is available.
 - **Angular** — Vitest v8 (`npm run test:coverage` in `src/main/frontend`).
 
 The reads of "now" go through a `TimeService` facade (backend and frontend) instead of `Instant.now()` / `Date.now()`,
@@ -198,7 +205,7 @@ read pages and `GET /api/**` need any authenticated user,
 while state-changing / maintenance endpoints and user administration need `ADMIN`.
 Details and rationale: [ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md).
 
-- **Login:** form login and HTTP Basic (e.g. `curl -u admin:… http://localhost:8001/check-pre-cache`).
+- **Login:** form login and HTTP Basic (e.g. `curl -u admin:… http://localhost:8001/api/status`).
 - **Staying signed in:** HTTP sessions are persisted in the database (Spring Session JDBC),
   so a redeploy/restart no longer logs everyone out;
   they still time out after `server.servlet.session.timeout` (default 30m).
@@ -259,12 +266,14 @@ Key properties (`src/main/resources/application.properties`):
 | Property | Default | Description |
 | --- | --- | --- |
 | `server.port` | `8001` | HTTP port (Docker overrides to `8080`) |
+| `server.servlet.context-path` | *(empty)* | Mount point; the Compose deployment sets `/w2s`. Must match what the reverse proxy forwards — see the comment in `compose.yml` |
+| `server.forward-headers-strategy` | `native` | Read the real scheme/host from `X-Forwarded-*` behind the TLS-terminating proxy. **Fails quietly** when the peer is outside Tomcat's trusted ranges: redirects silently go out as `http` again |
 | `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is considered stale |
 | `wer-streamt.invalidate.jitter-min-factor` / `-max-factor` | `1.5` / `2.0` | Staggering window (as a multiple of `after-days`) for the background refresh due date, so titles cached together don't all become due at once (ADR-0016) |
-| `wer-streamt.rate-limit.requests-per-second` | `2` | Outbound throttle for werstreamt.es (`<= 0` disables) |
+| `wer-streamt.rate-limit.requests-per-second` | `20` | Outbound throttle for werstreamt.es (`<= 0` disables) |
 | `wer-streamt.background-refresh.enabled` | `true` | Not-off switch for the proactive scheduled cache-refresh job (ADR-0016) |
 | `wer-streamt.background-refresh.cron` | `0 0 4 * * *` | When the scheduled cache-refresh job runs |
-| `imdb-poster.rate-limit.requests-per-second` | `2` | Outbound throttle for the IMDb poster scraper (`<= 0` disables) |
+| `imdb-poster.rate-limit.requests-per-second` | `10` | Outbound throttle for the IMDb poster scraper (`<= 0` disables) |
 | `poster.negative-cache-days` | `14` | How long a "no poster" result is cached before re-checking |
 | `tmdb.enabled` | `false` | Use TMDB (not IMDb) as the poster source; also needs `tmdb.api-key` |
 | `tmdb.api-key` | _(blank)_ | TMDB v3 API key (required when `tmdb.enabled=true`) |
@@ -279,9 +288,10 @@ so the same changelog provisions both H2 and MariaDB.
 Hibernate neither creates nor validates the schema (`ddl-auto=none`);
 correctness is covered by the repository tests,
 which run on H2 and (via Testcontainers) on a real MariaDB.
-The baseline assumes a fresh database
-— for an existing deployment, drop the old data before the first Liquibase run;
-the cache repopulates via `/pre-cache`.
+The baseline assumes a fresh database.
+**Do not drop an existing `./db`** to get there — since the security, watchlist and title-meta
+changesets it holds user accounts, watchlists, sessions and cached title metadata, not just
+scrape results.
 
 **H2 (default):** file-based at `./db/demo`, used for local dev and in-memory tests.
 
@@ -296,7 +306,8 @@ SPRING_PROFILES_ACTIVE=mariadb \
 `compose.yml` already wires the `w2s` service to a bundled `mariadb` service via this profile.
 
 **Testcontainers MariaDB tests:** the repository suite also runs against a real MariaDB, and does so
-**as part of the normal build** — `mvn verify` starts a container.
+**as part of the normal build** — they are bound to Surefire, so already `mvn test` starts a
+container.
 They are the only tests that exercise the Liquibase changelog against the database production
 actually uses, so they are not something to remember to run.
 
@@ -325,6 +336,8 @@ mvn -Pno-testcontainers verify        # or: -Dtest.excluded.groups=testcontainer
 | `PUT /api/watchlist/{imdbId}/seen` | Mark one of your titles seen / not seen (`{ "seen": true }`) |
 | `GET /api/titles/{imdbId}/poster` · `…/poster/full` | Cached poster thumbnail / hi-res image (404 if none) |
 | `GET /api/titles/{imdbId}/rating` | Cached age rating `{system,label}` — FSK or fallback (404 if none) |
+| `GET /api/titles/{imdbId}/meta` | Age rating **and** German title in one call (used by the title cells) |
+| `GET /api/imdb/search?q=…` | IMDb suggest search, for adding titles (not cached — live) |
 | `PUT /api/me/show-age-ratings` | Toggle the current user's age-rating badges (`{ "showAgeRatings": true }`) |
 | `GET /api/manage` · `POST /api/manage/invalidate` · `POST /api/manage/scrape` | Cache management (ADMIN) |
 | `POST /api/cache` · `GET /api/cache/uncached` | Pre-cache all / count uncached (ADMIN) |
@@ -332,6 +345,9 @@ mvn -Pno-testcontainers verify        # or: -Dtest.excluded.groups=testcontainer
 | `GET /api/search?imdbId=…` | Resolve availability for a title |
 | `GET /api/me` | The current principal (username, roles, admin flag, theme) |
 | `PUT /api/me/theme` | Set the current user's theme (`SYSTEM`/`LIGHT`/`DARK`) |
+| `PUT /api/me/language` · `…/show-german-title` · `…/view-mode` · `…/tiles-per-row` · `…/ebay-marketplace` | The current user's remaining preferences |
+| `POST /api/admin/users/{id}/password` | Reset another user's password (ADMIN) |
+| `POST /api/admin/impersonate?username=…` · `POST /api/impersonate/exit` | Act as another user, and stop (ADR-0020) |
 | `GET /api/admin/users` · `POST` · `PUT`/`DELETE …/{id}` | User administration (ADMIN) |
 | `GET /api/status` | Version & server start time (authenticated) |
 

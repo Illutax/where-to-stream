@@ -35,14 +35,14 @@ Der Ablauf im Detail steht als Skill unter
 | --- | --- | --- |
 | 🔴 | [TODO-54](#todo-54) | Node-/npm-Version an einer Stelle verbindlich festlegen |
 | 🔴 | [TODO-63](#todo-63) | `W2S_ADMIN_PASSWORD` aus `.env` bindet an keine Property |
-| 🟠 | [TODO-62](#todo-62) | README gegen den Code abgleichen |
 | 🟠 | [TODO-65](#todo-65) | Neues Architecture Review als datierte Momentaufnahme |
+| 🟠 | [TODO-66](#todo-66) | resilience4j zurückholen und auf die Outbound-Adapter anwenden |
+| 🟠 | [TODO-67](#todo-67) | ADRs auf Aktualität prüfen |
 | 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: ein Request pro Zeile, unstorniert |
 | 🟢 | [TODO-22](#todo-22) | Hartkodiertes CSV-Header-Array |
 | 🟢 | [TODO-42](#todo-42) | Keine Mindestlänge/Komplexität für Passwörter |
 | 🟢 | [TODO-52](#todo-52) | Angular-Bundle-Größe reduzieren (Trigger: 1 MB Initial-Bundle) |
 | 🟢 | [TODO-60](#todo-60) | `PaidEntryDto.year` als Zahl ausliefern |
-| 🟢 | [TODO-64](#todo-64) | Kleine Aufräumfunde aus der TODO-Prüfung |
 
 
 ## 🔴 Hoch
@@ -111,32 +111,6 @@ Beim Admin-Passwort passt der Name nicht.
 
 ## 🟠 Mittel
 
-### 🟠 TODO-62 — README gegen den Code abgleichen
-Die README ist an vielen Stellen vom Code überholt.
-Beim Prüfen der TODOs fielen unabhängig voneinander diese Punkte auf:
-
-| Stelle | Steht dort | Tatsächlich |
-| --- | --- | --- |
-| `:12` | „Spring Boot 4.1" | 4.2.0-M1 |
-| `:37` | `WerStreamtEsApiClient` | `WerStreamtEsSource` |
-| `:132` | „`ImdbApiClientTest` ist per Default ausgeschlossen" | Test und Klasse gibt es seit TODO-1 nicht mehr; kein solcher Ausschluss in `pom.xml` |
-| `:201` | `curl … /check-pre-cache` | Endpunkt entfällt; heute `/api/cache/uncached` |
-| `:284` | „Cache füllt sich via `/pre-cache`" | heute `POST /api/cache` |
-| `:264`/`:267` | Rate-Limit-Defaults `2` | `src/main/resources/application.properties` setzt `20` bzw. `10`; die `2` ist nur der Code-Fallback |
-| `:298` | „`mvn verify` startet einen Container" | die Tests hängen an Surefire, laufen also schon bei `mvn test` |
-| Endpunkt-Tabelle | — | fehlen u. a. `/api/imdb/…`, `/api/titles/{id}/meta`, die `PUT /api/me/*`, Impersonierung |
-| Feature-Liste | — | weder eBay-Suchlink (TODO-57) noch Admin-Impersonierung (TODO-53) erwähnt |
-
-Nicht in der README, aber deploymentkritisch und nirgends dokumentiert:
-`server.forward-headers-strategy=native` und `server.servlet.context-path=/w2s`
-— beide mit **leisem** Fehlverhalten, wenn sie nicht stimmen (TODO-61).
-
-Auch `http-clients/testing.http` zeigt noch auf die gelöschten `/pre-cache`-Endpunkte.
-
-- **Akzeptanzkriterium:** Die Tabellen und Beispiele der README treffen den Code.
-  Sinnvoll wäre, dabei zu überlegen, was sich **automatisch** prüfen lässt —
-  eine Endpunkt-Tabelle von Hand zu pflegen driftet zuverlässig wieder ab.
-
 
 ### 🟠 TODO-65 — Neues Architecture Review als datierte Momentaufnahme
 Der Vorgänger ([`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md))
@@ -166,6 +140,66 @@ Ein Stand, der sein Datum trägt, darf altern.
 - **Akzeptanzkriterium:** Ein datiertes Dokument unter `docs/reviews/`, das den Ist-Zustand
   beschreibt; jeder Handlungsbedarf daraus als TODO oder ADR erfasst,
   nicht als offene Liste im Reviewdokument.
+
+### 🟠 TODO-66 — resilience4j zurückholen und auf die Outbound-Adapter anwenden
+Mit dem Rückbau von `purchaseoffers` (TODO-56) fiel der einzige Nutzer von
+`resilience4j-spring-boot4` weg und die Abhängigkeit mit ihm.
+Die Anwendung hat seither **keinen** Circuit Breaker mehr.
+
+**Der Bedarf ist damit nicht verschwunden**, nur der Nutzer.
+Drei Adapter sprechen mit fremden Diensten, die real ausfallen:
+
+| Adapter | Fremddienst | Heute |
+| --- | --- | --- |
+| `src/main/java/tech/dobler/where2stream/streamingavailability/adapter/out/werstreamtes/WerStreamtEsSource.java` | werstreamt.es (Scraping) | `try/catch` je Aufruf, `RateLimiter` |
+| `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbTitleSource.java` | IMDb | `try/catch` je Aufruf |
+| `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/tmdb/TmdbPosterSource.java` | TMDB | `try/catch` je Aufruf |
+
+Ein `try/catch` fängt den einzelnen Fehlschlag ab, aber es **hört nicht auf zu fragen**.
+Bei einem länger ausgefallenen Dienst läuft jeder Aufruf erneut in den Timeout —
+und `PreCacheService` und `RefreshService` fächern über `parallelStream` auf,
+der Hintergrund-Job ebenso.
+Genau dafür gibt es den Breaker: nach einer Fehlerrate kurzschließen und es
+nach einer Weile mit zwei Probeaufrufen erneut versuchen.
+
+**Was aus dem alten Anlauf übernommen werden kann** (steht ausführlich in TODO-51 in
+[`DONE.md`](DONE.md)): das Boot-4-Artefakt heißt **`2.4.0`**, nicht `2.3.0`;
+die Konfiguration gehört nach Java und nicht in Properties, weil
+`src/test/resources/application.properties` die Produktionsdatei im Testklassenpfad
+überschattet und ein Tippfehler in einem Klassennamen-String still auf die Defaults zurückfällt.
+
+**Zu entscheiden:** eine Breaker-Instanz je Dienst (drei) oder eine gemeinsame.
+Getrennt, würde ich meinen — ein ausgefallenes TMDB soll die Verfügbarkeitssuche nicht mitreißen.
+
+- **Akzeptanzkriterium:** Jeder der drei Adapter ist mit einem eigenen Breaker versehen,
+  die Konfiguration liegt in Java, und ein Test belegt je Adapter, dass der Breaker bei
+  anhaltenden Fehlern öffnet — und dass ein geöffneter Breaker die Seite **nicht** kaputt macht,
+  sondern in denselben Zustand mündet wie ein einzelner Fehlschlag heute.
+
+### 🟠 TODO-67 — ADRs auf Aktualität prüfen
+20 ADRs, davon 19 `Accepted` und eine `Superseded`.
+Geprüft wurde zuletzt keine — und dass drei von ihnen bis zum 2026-09-09 auf `Proposed` standen,
+obwohl sie längst liefen, zeigt, dass der Status niemandem auffällt.
+
+**Eine ADR, die niemand mehr befolgt, ist schlimmer als keine** — sie sieht aus wie eine
+Zusicherung, auf die man sich verlassen kann. Beim Prüfen der TODOs sind zwei Fälle
+aufgefallen, die genau in diese Richtung deuten:
+
+- [ADR-0011](docs/adr/0011-kein-open-session-in-view.md) („kein OSIV, alles EAGER") ist gültig —
+  aber TODO-12 forderte jahrelang das Gegenteil, ohne dass der Widerspruch auffiel.
+- [ADR-0019](docs/adr/0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) hat mit dem
+  eBay-Rückbau einen ihrer beiden Anwendungsfälle verloren. Sie gilt weiter, steht jetzt aber
+  auf einem einzigen Bein.
+
+**Je ADR drei Fragen:** Beschreibt sie die Realität? Wird sie befolgt — nachweisbar, nicht
+dem Anschein nach? Ist ihre Begründung noch die, die heute zählen würde?
+
+- **Ergebnis:** Status nachziehen (`Superseded`, wenn überholt) und die Verweise darauf mit.
+  Eine ADR, die stillschweigend gebrochen wird, ist **kein** Doku-Problem — dann ist entweder
+  der Code oder die Entscheidung falsch, und beides gehört als eigenes Ticket erfasst.
+- **Abgrenzung zu TODO-65:** Das Architecture Review prüft den Code gegen sich selbst,
+  dieses Ticket die Entscheidungen gegen den Code. Sinnvoll zusammen zu machen —
+  der `architecture-review`-Skill führt den ADR-Abgleich als eigenen Bereich.
 
 ## 🟡 Mittel-niedrig
 
@@ -344,18 +378,3 @@ die Dokumentation behauptete durchgängig, der eBay-Developer-Account sei nie fr
 Er war es; das Feature lief und wurde bewusst zurückgebaut (siehe TODO-56).
 Die drei Einträge unten sind das, was die Prüfung an **neuer** Arbeit zutage gefördert hat.
 
-### 🟢 TODO-64 — Kleine Aufräumfunde aus der TODO-Prüfung
-Einzeln zu klein für ein Ticket, zusammen eine Stunde Pfadfinderarbeit:
-
-- **Toter Code:** `QueryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(...)` hat keinen
-  Aufrufer mehr — verdrängt von `findByImdbIdIn(...)`.
-- **Verwaistes Javadoc:** `PreCacheService` behauptet, auch der „per-import targeted pre-cache"
-  nutze den Service — `WatchlistImportService` injiziert ihn gar nicht.
-  `CatalogApiController` beschreibt sich als „die Daten hinter der Thymeleaf-`index`-Seite";
-  Thymeleaf ist mit ADR-0008 entfallen.
-- **`docs/reviews/2026-07-28-architecture-review.md` widerspricht dem Code:** behauptet, `AggregateService` existiere
-  nicht mehr (existiert), und beschreibt die Schichtung als `api/ → application/ → services/ →
-  persistence/` (Stand vor ADR-0014).
-- **Überflüssige Imports** in `StatusController` (importiert aus dem eigenen Paket).
-- **Nicht erzwungen:** dass in `adapter/in` kein `@Transactional` steht, hält heute — es gibt aber
-  keine ArchUnit-Regel dafür. Eine Regel wäre billiger als der nächste Rückfall.

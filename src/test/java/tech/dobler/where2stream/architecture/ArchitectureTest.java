@@ -9,6 +9,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.library.dependencies.SliceRule;
 import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition;
 import org.springframework.data.repository.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import tech.dobler.where2stream.watchlist.domain.ImdbEntry;
 import tech.dobler.where2stream.watchlist.domain.WatchlistDate;
 
@@ -22,6 +23,7 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.belongToAnyO
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 
 /**
  * Enforced architecture rules.
@@ -182,6 +184,42 @@ class ArchitectureTest {
             .should().beFreeOfCycles()
             .ignoreDependency(resideInAPackage("..shared.."), DescribedPredicate.<JavaClass>alwaysTrue())
             .ignoreDependency(DescribedPredicate.<JavaClass>alwaysTrue(), resideInAPackage("..shared.."));
+
+    private static final String TRANSACTION_BOUNDARY_REASON =
+            "a transaction started at the edge spans the whole request, which is "
+                    + "Open-Session-in-View by another name (ADR-0011). The boundary belongs in "
+                    + "the application service that owns the use case.";
+
+    /**
+     * Transaction boundaries belong in the application layer, not on the way in.
+     *
+     * <p>TODO-33 moved {@code @Transactional} off two controllers and the rule has held ever since —
+     * but only by habit: nothing checked it. That is exactly the kind of arrangement that survives
+     * until someone reaches for the quickest fix for a lazy-loading error, and a transaction that
+     * spans the whole request re-introduces Open-Session-in-View through the back door
+     * (ADR-0011 rules it out on purpose).
+     *
+     * <p>Scoped to {@code adapter.in.api}, i.e. the HTTP handlers, rather than to all of
+     * {@code adapter.in} — because that is as far as the reason reaches. The two classes under
+     * {@code adapter.in.security} that do carry the annotation are neither:
+     * {@code AdminUserSeeder} is an {@code ApplicationRunner} with no request around it at all,
+     * and {@code GoogleOidcUserService} is a framework callback during login that has to write the
+     * user it just learned about. Whether that write would be better off in an application service
+     * is a fair question — but it is a design question, not this rule's business, and a rule whose
+     * stated reason does not cover its own violations is a rule nobody will trust.
+     */
+    @ArchTest
+    static final ArchRule inbound_adapter_classes_do_not_open_transactions = noClasses()
+            .that().resideInAPackage("..adapter.in.api..")
+            .should().beAnnotatedWith(Transactional.class)
+            .because(TRANSACTION_BOUNDARY_REASON);
+
+    /** Same rule, for the annotation on a single handler method. @see #inbound_adapter_classes_do_not_open_transactions */
+    @ArchTest
+    static final ArchRule inbound_adapter_methods_do_not_open_transactions = noMethods()
+            .that().areDeclaredInClassesThat().resideInAPackage("..adapter.in.api..")
+            .should().beAnnotatedWith(Transactional.class)
+            .because(TRANSACTION_BOUNDARY_REASON);
 
     /**
      * A Spring Data repository interface is itself the outbound port to the database: Spring Data

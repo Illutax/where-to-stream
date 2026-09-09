@@ -3,8 +3,6 @@ package tech.dobler.where2stream.shared.platform.web;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import tech.dobler.where2stream.shared.platform.web.StatusService;
-import tech.dobler.where2stream.shared.platform.web.StatusDto;
 
 /**
  * Public health/status probe (version + server start time) as JSON.

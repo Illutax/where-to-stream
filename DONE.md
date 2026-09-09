@@ -894,8 +894,12 @@ Mit leeren Tabellen hätte dieselbe Messung „alles bestens" ergeben und den Fu
 > **Gegenstandslos seit 2026-09-07.** Alles hier Beschriebene lag im Kontext `purchaseoffers`
 > und ist mit dem Rückbau der Preisabfrage (TODO-56) gelöscht — samt der Abhängigkeit
 > `resilience4j-spring-boot4` und dem mit ihr gekommenen `micrometer-core`.
-> Es gibt in der Anwendung derzeit **keinen** Circuit Breaker mehr, weil es keinen
-> ausfallgefährdeten Fremddienst hinter einer Bean-Grenze mehr gibt.
+> Es gibt in der Anwendung derzeit **keinen** Circuit Breaker mehr.
+>
+> **Die Begründung, die hier zunächst stand, war falsch** („weil es keinen ausfallgefährdeten
+> Fremddienst hinter einer Bean-Grenze mehr gibt"). Es gibt drei: werstreamt.es, IMDb und TMDB.
+> Richtig ist nur, dass mit `purchaseoffers` der einzige Nutzer der Abhängigkeit wegfiel —
+> nicht, dass der Bedarf verschwunden wäre. Zurückgeholt wird sie unter TODO-66.
 >
 > Der Eintrag bleibt wegen zweier Erkenntnisse, die den Code überdauern:
 > die Versionsrecherche unten (das Boot-4-Artefakt heißt `2.4.0`, nicht `2.3.0`),
@@ -1484,3 +1488,88 @@ das **Schema jeder einzelnen Antwort** ansehen, nicht das Ziel der letzten.
   Kein `307` mehr in der Kette — jede unserer Weiterleitungen bleibt auf `https`.
 
 ---
+
+---
+
+### ✅ TODO-62 — README gegen den Code abgleichen
+Die README ist an vielen Stellen vom Code überholt.
+Beim Prüfen der TODOs fielen unabhängig voneinander diese Punkte auf:
+
+| Stelle | Steht dort | Tatsächlich |
+| --- | --- | --- |
+| `:12` | „Spring Boot 4.1" | 4.2.0-M1 |
+| `:37` | `WerStreamtEsApiClient` | `WerStreamtEsSource` |
+| `:132` | „`ImdbApiClientTest` ist per Default ausgeschlossen" | Test und Klasse gibt es seit TODO-1 nicht mehr; kein solcher Ausschluss in `pom.xml` |
+| `:201` | `curl … /check-pre-cache` | Endpunkt entfällt; heute `/api/cache/uncached` |
+| `:284` | „Cache füllt sich via `/pre-cache`" | heute `POST /api/cache` |
+| `:264`/`:267` | Rate-Limit-Defaults `2` | `src/main/resources/application.properties` setzt `20` bzw. `10`; die `2` ist nur der Code-Fallback |
+| `:298` | „`mvn verify` startet einen Container" | die Tests hängen an Surefire, laufen also schon bei `mvn test` |
+| Endpunkt-Tabelle | — | fehlen u. a. `/api/imdb/…`, `/api/titles/{id}/meta`, die `PUT /api/me/*`, Impersonierung |
+| Feature-Liste | — | weder eBay-Suchlink (TODO-57) noch Admin-Impersonierung (TODO-53) erwähnt |
+
+Nicht in der README, aber deploymentkritisch und nirgends dokumentiert:
+`server.forward-headers-strategy=native` und `server.servlet.context-path=/w2s`
+— beide mit **leisem** Fehlverhalten, wenn sie nicht stimmen (TODO-61).
+
+Auch `http-clients/testing.http` zeigt noch auf die gelöschten `/pre-cache`-Endpunkte.
+
+- **Akzeptanzkriterium:** Die Tabellen und Beispiele der README treffen den Code.
+  Sinnvoll wäre, dabei zu überlegen, was sich **automatisch** prüfen lässt —
+  eine Endpunkt-Tabelle von Hand zu pflegen driftet zuverlässig wieder ab.
+
+**Erledigt am 2026-09-09.** Alle neun Punkte der Tabelle abgearbeitet, jeder vorher am Code
+verifiziert statt aus dem Bericht übernommen (die Rate-Limit-Defaults etwa stehen tatsächlich
+auf 20 bzw. 10, die `2` war nur der `@DefaultValue`-Fallback).
+Dazu ergänzt: die Endpunkt-Tabelle um `/api/titles/{id}/meta`, `/api/imdb/search`,
+die übrigen `PUT /api/me/*`, den Passwort-Reset und die Impersonierung;
+die Feature-Liste um den eBay-Suchlink und die Admin-Impersonierung;
+die Konfigurationstabelle um `context-path` und `forward-headers-strategy`
+— beide deploymentkritisch und beide mit **leisem** Fehlverhalten.
+`http-clients/testing.http` zeigte noch auf die gelöschten `/pre-cache`-Endpunkte.
+
+Der gefährlichste Fund war nicht in der Tabelle: die README riet, für ein bestehendes Deployment
+„die alten Daten zu löschen, der Cache füllt sich neu". Das galt, als die DB nur Scrape-Ergebnisse
+hielt — heute lägen dort Benutzerkonten, Watchlists und Sessions.
+
+**Was nicht gelöst ist:** eine von Hand gepflegte Endpunkt-Tabelle driftet wieder.
+Das Akzeptanzkriterium fragte danach; eine Antwort habe ich nicht.
+`DocumentationConsistencyTest` prüft die README bewusst **nicht** — sie enthält
+Beispiel-URLs und Prosa, an denen ein Pfad-Test nur Rauschen produzieren würde.
+
+
+---
+
+### ✅ TODO-64 — Kleine Aufräumfunde aus der TODO-Prüfung
+Einzeln zu klein für ein Ticket, zusammen eine Stunde Pfadfinderarbeit:
+
+- **Toter Code:** `QueryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(...)` hat keinen
+  Aufrufer mehr — verdrängt von `findByImdbIdIn(...)`.
+- **Verwaistes Javadoc:** `PreCacheService` behauptet, auch der „per-import targeted pre-cache"
+  nutze den Service — `WatchlistImportService` injiziert ihn gar nicht.
+  `CatalogApiController` beschreibt sich als „die Daten hinter der Thymeleaf-`index`-Seite";
+  Thymeleaf ist mit ADR-0008 entfallen.
+- **`docs/reviews/2026-07-28-architecture-review.md` widerspricht dem Code:** behauptet, `AggregateService` existiere
+  nicht mehr (existiert), und beschreibt die Schichtung als `api/ → application/ → services/ →
+  persistence/` (Stand vor ADR-0014).
+- **Überflüssige Imports** in `StatusController` (importiert aus dem eigenen Paket).
+- **Nicht erzwungen:** dass in `adapter/in` kein `@Transactional` steht, hält heute — es gibt aber
+  keine ArchUnit-Regel dafür. Eine Regel wäre billiger als der nächste Rückfall.
+
+**Erledigt am 2026-09-09**, jeder Punkt vorher am Code geprüft:
+
+- `QueryMetaRepository.findByImdbIdInAndInvalidatedIsFalse` hatte tatsächlich keinen Aufrufer
+  mehr — entfernt.
+- `PreCacheService` behauptete, auch der Import nutze ihn. Tut er nicht: importierte Titel werden
+  beim ersten Seitenaufruf aufgelöst. Javadoc korrigiert.
+- `CatalogApiController` beschrieb sich als „die Daten hinter der Thymeleaf-`index`-Seite" —
+  Thymeleaf ist seit ADR-0008 weg.
+- Überflüssige Importe aus dem eigenen Paket in `StatusController` entfernt.
+- **Der Widerspruch im Architecture Review hat sich von selbst erledigt:** das Dokument liegt
+  jetzt als datierte Momentaufnahme unter `docs/reviews/` und darf veraltet sein — sein Banner
+  nennt den `AggregateService`-Fehler sogar als Beispiel. Eine Momentaufnahme zu korrigieren
+  hieße, sie zu fälschen.
+- **Neu dazu, weil es beim Prüfen auffiel:** die Regel „kein `@Transactional` in `adapter.in`"
+  hielt zwar, war aber von nichts erzwungen. Jetzt zwei ArchUnit-Regeln — und beim ersten Lauf
+  fanden sie drei Verstöße, die sich als **legitim** herausstellten (ein Startup-Runner und ein
+  Security-Callback, beide keine HTTP-Handler). Die Regel wurde daraufhin auf `adapter.in.api`
+  eingeengt: eine Regel, deren Begründung ihre eigenen Verstöße nicht deckt, glaubt niemand.
