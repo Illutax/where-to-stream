@@ -113,13 +113,14 @@ the ticket that describes it.
 switching to German mid-session changes nothing about what gets committed. Do not treat this
 section as a request to reply in English.
 
-Two deliberate exceptions, both about *history* rather than neglect:
+One deliberate exception, and it is about *history* rather than neglect: the plan documents under
+`docs/` and the dated snapshots in `docs/reviews/` stay as they were written. They are records of
+a moment, not living text, and translating them would edit the past for no reader's benefit.
 
-- `DONE.md`, the plan documents under `docs/`, and `docs/reviews/` stay as they were written.
-  They are records, not living text — translating them would edit the past for no reader's benefit.
-- Existing German ADRs stay German until one is substantially revised anyway. **New ADRs are
-  written in English.** A mixed `docs/adr/` is the price of not spending a day on translation
-  that changes no decision.
+Everything else was converted on 2026-09-09: all 20 ADRs (checked against the code in the same
+pass — see TODO-67 in `DONE.md`), `TODOs.md`, `DONE.md`, and the skills. The earlier plan of
+letting German ADRs age out one revision at a time was dropped — a half-translated `docs/adr/`
+would have meant guessing the language of each file before opening it.
 
 ## Prose formatting (Markdown docs and code comments)
 

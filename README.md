@@ -21,7 +21,7 @@ It is a personal project, run as a single small deployment for a handful of user
   [TODO-56 in `DONE.md`](DONE.md) for why the price lookup was built, used, and then withdrawn.
 - **Cache management** for admins: see when each title was last scraped, invalidate, re-scrape.
 - **Impersonation** for admins: act as another user to reproduce a report
-  ([ADR-0020](docs/adr/0020-admin-impersonierung-ueber-switchuserfilter.md)).
+  ([ADR-0020](docs/adr/0020-admin-impersonation-via-switchuserfilter.md)).
 
 ---
 
@@ -131,7 +131,7 @@ Key properties (`src/main/resources/application.properties`):
 | `server.forward-headers-strategy` | `native` | Read the real scheme/host from `X-Forwarded-*` behind the TLS-terminating proxy. **Fails quietly** when the peer is outside Tomcat's trusted ranges: redirects silently go out as `http` again |
 | `server.servlet.session.timeout` | `30m` | Idle timeout for a signed-in session |
 | `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is considered stale |
-| `wer-streamt.invalidate.jitter-min-factor` / `-max-factor` | `1.5` / `2.0` | Staggering window (as a multiple of `after-days`) for the background refresh due date, so titles cached together don't all become due at once ([ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md)) |
+| `wer-streamt.invalidate.jitter-min-factor` / `-max-factor` | `1.5` / `2.0` | Staggering window (as a multiple of `after-days`) for the background refresh due date, so titles cached together don't all become due at once ([ADR-0016](docs/adr/0016-asynchronous-deferred-cache-refresh.md)) |
 | `wer-streamt.rate-limit.requests-per-second` | `20` | Outbound throttle for werstreamt.es (`<= 0` disables) |
 | `wer-streamt.background-refresh.enabled` | `true` | Off switch for the proactive scheduled cache-refresh job |
 | `wer-streamt.background-refresh.cron` | `0 0 4 * * *` | When that job runs |
@@ -160,7 +160,7 @@ views come as a sortable table or a poster grid, switchable in the navbar.
 A title you have just added is resolved on first view, which takes a moment. After that it comes
 from the cache. A title whose cache entry has gone stale is still shown **immediately**, with a
 banner saying so, while the refresh runs in the background — only a title with nothing cached at
-all makes you wait ([ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md)).
+all makes you wait ([ADR-0016](docs/adr/0016-asynchronous-deferred-cache-refresh.md)).
 
 **Adjust it.** *Settings* holds language, theme, German titles, age-rating badges, grid density
 and the eBay marketplace your search links open.
@@ -219,7 +219,7 @@ run (see [Locally](#locally)).
 
 Users live in the database with `USER` / `ADMIN` roles: reading needs any authenticated user,
 while maintenance endpoints and user administration need `ADMIN`. Rationale in
-[ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md).
+[ADR-0006](docs/adr/0006-authentication-and-authorisation.md).
 
 - **Login:** form login and HTTP Basic (`curl -u admin:… http://localhost:8080/api/status`).
 - **Staying signed in:** sessions live in the database (Spring Session JDBC), so a restart does
@@ -272,7 +272,7 @@ Coverage: JaCoCo for the backend (`target/site/jacoco/`), Vitest v8 for the fron
 (`npm run test:coverage`).
 
 Two rules are enforced rather than agreed: bounded-context isolation and "no `Instant.now()` /
-`Date.now()` outside the `TimeService` facade" ([ADR-0003](docs/adr/0003-zeit-ueber-timeservice-facade.md))
+`Date.now()` outside the `TimeService` facade" ([ADR-0003](docs/adr/0003-time-through-a-timeservice-facade.md))
 — by ArchUnit in `mvn verify` and by ESLint in `npm run lint`.
 `DocumentationConsistencyTest` additionally checks that the open TODOs and the ADR index still
 point at things that exist.

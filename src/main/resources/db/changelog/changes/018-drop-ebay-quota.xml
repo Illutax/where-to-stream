@@ -6,10 +6,15 @@
 
     <changeSet id="018-drop-ebay-quota" author="claude">
         <comment>
-            Removes the two quota tables from 016-ebay-quota.xml. The eBay developer account they
-            were built for was never granted, so the price lookup (ADR-0017) never ran and is now
-            withdrawn (TODO-56); a dashboard search link replaced it (TODO-57), which needs no
-            budget and therefore no counter.
+            Removes the two quota tables from 016-ebay-quota.xml. The price lookup they served
+            (ADR-0017) ran in production and was then withdrawn as not good enough (TODO-56);
+            a dashboard search link replaced it (TODO-57), which needs no budget and therefore
+            no counter.
+
+            (Corrected on 2026-09-09: this comment previously claimed the developer account had
+            never been granted and the lookup had never run. Both were wrong. Safe to edit --
+            Liquibase computes a changeset's checksum without its comment, verified by rerunning
+            an already-migrated database against a changed comment.)
 
             A new changeset rather than an edit of 016: applied changesets are immutable, and
             rewriting one would leave every database that already ran it with tables Liquibase

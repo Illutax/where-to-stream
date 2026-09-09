@@ -4,7 +4,7 @@ This document tells the story of one restructuring effort: turning the backend f
 purely technical layering (`api/` → `application/` → `services/` → `persistence/`) into
 four domain-first bounded contexts, each internally organised with pragmatic ports &
 adapters.
-It complements [ADR-0014](adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md),
+It complements [ADR-0014](adr/0014-backend-by-bounded-context-and-ports-adapters.md),
 which records the *decision* in Nygard format.
 This document instead narrates the *journey*: why we started, the design questions that
 came up along the way, what we learned, and what tripped us up — the kind of context an

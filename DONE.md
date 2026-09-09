@@ -1,136 +1,136 @@
-# DONE — erledigte und verworfene TODOs
+# DONE — finished and abandoned TODOs
 
-> **Historisch. Wird nicht gepflegt.**
+> **Historical. Not maintained.**
 >
-> Klassen-, Paket- und Pfadnamen sind der Stand **zum Zeitpunkt der Erledigung**.
-> Der Umbau nach Bounded Contexts ([ADR-0014](docs/adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md))
-> hat `services/`, `persistence/`, `web/`, `rest/` und `entities/` als Top-Level-Pakete abgelöst;
-> viele Einträge hier zeigen noch dorthin. Das ist **kein Fehler, sondern erwartet** —
-> ein Ticket beschreibt die Welt, in der es geschrieben wurde.
+> Class, package and path names are as they stood **at the time the entry was closed**.
+> The move to bounded contexts ([ADR-0014](docs/adr/0014-backend-by-bounded-context-and-ports-adapters.md))
+> replaced `services/`, `persistence/`, `web/`, `rest/` and `entities/` as top-level packages;
+> many entries here still point at those. That is **not an error, it is expected** —
+> a ticket describes the world it was written in.
 >
-> Für den heutigen Aufbau: [`CLAUDE.md`](CLAUDE.md) und [`docs/adr/`](docs/adr/).
-> Für offene Arbeit: [`TODOs.md`](TODOs.md).
+> For how things stand today: [`CLAUDE.md`](CLAUDE.md) and [`docs/adr/`](docs/adr/).
+> For open work: [`TODOs.md`](TODOs.md).
 >
-> Deshalb läuft `DocumentationConsistencyTest` über `TODOs.md`, aber **nicht** über diese Datei.
+> This is why `DocumentationConsistencyTest` runs over `TODOs.md` but **not** over this file.
 
-Status: ✅ erledigt · ❌ verworfen
+Status: ✅ done · ❌ abandoned
 
 ---
 
-## Bugs / Korrektheit
+## Bugs / Correctness
 
 ---
 
-### ✅ TODO-1 — `ImdbApiClient.search()` ist kaputt / ungenutzt
-`services/ImdbApiClient.java`: lädt das Dokument mit `connect.get()`
-und gibt dann hart `return null;` zurück.
-Die Klasse ist außerdem kein Spring-Bean (kein `@Service`) und wird nirgends produktiv verwendet.
-- **Akzeptanzkriterium:** Entweder das Parsen der IMDb-Listenseite korrekt implementieren
-  (Rückgabe `List<SearchResult>` statt `null`) **oder** Klasse + zugehörigen Test löschen.
-- **Anmerkung:** Der bestehende `ImdbApiClientTest` macht einen echten Netzwerk-Aufruf gegen imdb.com ohne Assertion
-  und schlägt in der Sandbox am Egress-Proxy (403) fehl.
-  Beim Aufräumen mitnehmen (durch einen Test gegen ein gespeichertes HTML-Fixture ersetzen).
+### ✅ TODO-1 — `ImdbApiClient.search()` is broken / unused
+`services/ImdbApiClient.java`: loads the document with `connect.get()`
+and then hard-codes `return null;`.
+The class is also not a Spring bean (no `@Service`) and is not used anywhere in production.
+- **Acceptance criterion:** Either implement parsing of the IMDb list page properly
+  (return `List<SearchResult>` instead of `null`) **or** delete the class along with its test.
+- **Note:** The existing `ImdbApiClientTest` makes a real network call against imdb.com without any assertion
+  and fails in the sandbox at the egress proxy (403).
+  Clean it up along the way (replace it with a test against a stored HTML fixture).
 
 ---
 
-### ✅ TODO-2 — Tabellen-/Spalten-Tippfehler
+### ✅ TODO-2 — Table/column typos
 - `persistence/QueryMeta.java`: `@Table(name = "QeryMeta")` → `QueryMeta`.
 - `persistence/QueryResultDB.java`: `query_result_availablilities` → `query_result_availabilities`.
-- **Achtung:** Schema-Migration nötig (siehe TODO-10), `ddl-auto=update` benennt Tabellen nicht automatisch um
-  → bestehende Daten gehen sonst verloren.
-- **Erledigt:** Entity-Annotationen korrigiert;
-  das korrigierte Schema steckt im Liquibase-Baseline (TODO-27).
+- **Careful:** A schema migration is required (see TODO-10), `ddl-auto=update` does not rename tables automatically
+  → existing data would otherwise be lost.
+- **Done:** Entity annotations corrected;
+  the corrected schema is part of the Liquibase baseline (TODO-27).
 
 ---
 
-### ✅ TODO-3 — Irreführender Join-Spaltenname
+### ✅ TODO-3 — Misleading join column name
 `persistence/QueryResultDB.java`: `@CollectionTable(joinColumns = @JoinColumn(name = "imdb_id"))`
-joint tatsächlich auf die UUID-PK von `QueryResultDB`, nicht auf eine IMDb-ID.
-- **Akzeptanzkriterium:** Spalte z. B. in `query_result_id` umbenennen (mit Migration).
-- **Erledigt:** Join-Spalte heißt jetzt `query_result_id`; Schema via Liquibase (TODO-27).
+actually joins on the UUID primary key of `QueryResultDB`, not on an IMDb ID.
+- **Acceptance criterion:** Rename the column to something like `query_result_id` (with a migration).
+- **Done:** The join column is now called `query_result_id`; schema via Liquibase (TODO-27).
 
 ---
 
 ---
 
-## Sicherheit
+## Security
 
 ---
 
-### ✅ TODO-5 — Zustandsändernde Endpunkte als GET ohne Auth
-`/pre-cache`, `/check-pre-cache`, `/refresh/all`, `/refresh/seen` lösten teure Remote-Crawls aus,
-waren per GET erreichbar und damit von Crawlern/Prefetch triggerbar.
-- **Akzeptanzkriterium:** Auf `POST` umstellen;
-  Endpunkte hinter Authentifizierung legen (Spring Security ergänzen — die App war komplett offen).
-- **Erledigt (Auth):** Spring Security ergänzt ([ADR-0006](docs/adr/0006-authentifizierung-und-autorisierung.md));
-  die neue REST-API nutzt korrekte Verben (`POST /api/refresh`, `POST /api/cache`, …).
-- **Erledigt (Verben):** Mit dem Entfernen des Thymeleaf-Clients
-  ([ADR-0008](docs/adr/0008-thymeleaf-client-entfernen.md)) wurden die Legacy-GET-Endpunkte
-  (`/pre-cache`, `/check-pre-cache`, `/refresh/**`) gelöscht — es gibt keine mutierenden GETs **ohne Auth** mehr (schreibende Read-Through-Caches wie `/api/search` und `/api/titles/{id}/meta` gibt es weiterhin — sie hängen hinter `authenticated()`);
-  Wartung läuft ausschließlich über `POST /api/**` (ADMIN).
+### ✅ TODO-5 — State-changing endpoints as GET without auth
+`/pre-cache`, `/check-pre-cache`, `/refresh/all`, `/refresh/seen` triggered expensive remote crawls,
+were reachable via GET and could therefore be triggered by crawlers/prefetch.
+- **Acceptance criterion:** Switch to `POST`;
+  put the endpoints behind authentication (add Spring Security — the app was wide open).
+- **Done (auth):** Spring Security added ([ADR-0006](docs/adr/0006-authentication-and-authorisation.md));
+  the new REST API uses the correct verbs (`POST /api/refresh`, `POST /api/cache`, …).
+- **Done (verbs):** Removing the Thymeleaf client
+  ([ADR-0008](docs/adr/0008-remove-the-thymeleaf-client.md)) deleted the legacy GET endpoints
+  (`/pre-cache`, `/check-pre-cache`, `/refresh/**`) — there are no more mutating GETs **without auth** (writing read-through caches such as `/api/search` and `/api/titles/{id}/meta` still exist — they sit behind `authenticated()`);
+  maintenance runs exclusively through `POST /api/**` (ADMIN).
 
 ---
 
 ---
 
-## Architektur / Design
+## Architecture / Design
 
 ---
 
-### ✅ TODO-6 — Controller ruft Controller
-`web/ChangeListController.java` injizierte `rest/PreCacheController` und rief
+### ✅ TODO-6 — Controller calls controller
+`web/ChangeListController.java` injected `rest/PreCacheController` and called
 `cacheController.cache()`.
-- **Akzeptanzkriterium:** Cache-Logik in einen `PreCacheService` extrahieren, den
-  beide Controller verwenden.
-- **Erledigt:** `PreCacheService.cacheAll()` / `findUncached()` eingeführt;
-  `PreCacheController` und `ChangeListController` nutzen den Service.
+- **Acceptance criterion:** Extract the cache logic into a `PreCacheService` used by
+  both controllers.
+- **Done:** Introduced `PreCacheService.cacheAll()` / `findUncached()`;
+  `PreCacheController` and `ChangeListController` use the service.
 
 ---
 
-### ✅ TODO-7 — Verstreute Konfiguration per `@Value`
-`wer-streamt.path` wurde in `ExportReader` und `FileUtils` separat injiziert,
+### ✅ TODO-7 — Configuration scattered across `@Value`
+`wer-streamt.path` was injected separately in `ExportReader` and `FileUtils`,
 `wer-streamt.invalidate.after-days` in `StreamInfoService`.
-- **Akzeptanzkriterium:** In ein `@ConfigurationProperties`-Record `WerStreamtProperties`
-  bündeln. Damit entfällt auch die fragile `@Value`-Field-Injection in `FileUtils`
-  (wird in `JpaConfig` per `new FileUtils()` erzeugt).
-- **Erledigt:** `WerStreamtProperties` (mit `Invalidate.afterDays`, Default 28) per
-  `@ConfigurationPropertiesScan` aktiviert. `FileUtils` ist jetzt `@Component` mit
-  Konstruktor-Injection; `JpaConfig` injiziert es, statt `new FileUtils()` zu bauen.
+- **Acceptance criterion:** Bundle them into a `@ConfigurationProperties` record `WerStreamtProperties`.
+  That also gets rid of the fragile `@Value` field injection in `FileUtils`
+  (which is created via `new FileUtils()` in `JpaConfig`).
+- **Done:** `WerStreamtProperties` (with `Invalidate.afterDays`, default 28) enabled via
+  `@ConfigurationPropertiesScan`. `FileUtils` is now a `@Component` with
+  constructor injection; `JpaConfig` injects it instead of building `new FileUtils()`.
 
 ---
 
-### ✅ TODO-8 — `ImdbEntryRepository` ist nicht thread-safe
-`services/ImdbEntryRepository.java`: In-Memory-Store auf `HashMap`, wurde aber während
-laufender `parallelStream`-Requests via `clear()`/`init()` aus `ChangeListController`
-neu befüllt → Race-Potenzial.
-- **Akzeptanzkriterium:** `ConcurrentHashMap` + atomarer Austausch der Maps beim Reload,
-  oder Reload synchronisieren.
-- **Erledigt:** Gesamter Zustand (beide Maps + Listenname) als unveränderliches `State`-Record
-  hinter einer `AtomicReference`; `init`/`clear` tauschen den Snapshot atomar, Reads sind
-  lock-frei und konsistent.
+### ✅ TODO-8 — `ImdbEntryRepository` is not thread-safe
+`services/ImdbEntryRepository.java`: in-memory store backed by a `HashMap`, but it was
+repopulated via `clear()`/`init()` from `ChangeListController` while `parallelStream` requests
+were still running → potential race.
+- **Acceptance criterion:** `ConcurrentHashMap` + atomic swap of the maps on reload,
+  or synchronize the reload.
+- **Done:** The entire state (both maps + list name) lives as an immutable `State` record
+  behind an `AtomicReference`; `init`/`clear` swap the snapshot atomically, reads are
+  lock-free and consistent.
 
 ---
 
-### ✅ TODO-9 — Robustes Scraping (NPE-Schutz)
-`services/WerStreamtEsApiClient.java`: `selectFirst(...).childNode(0)` u. ä. ohne Null-Checks;
-eine Layout-Änderung bei werstreamt.es konnte NPEs auslösen.
-(Review-Punkt #4, Korrektheit; wurde aber bewusst zurückgestellt.)
-- **Akzeptanzkriterium:** Null-Guards + try/catch pro Eintrag,
-  damit ein fehlerhafter Eintrag nicht den ganzen Lauf abbricht.
-  Veralteter User-Agent (Firefox 2.0.0.6, 2007) aktualisieren.
-- **Erledigt:** `parseProvider` kapselt jeden Provider in try/catch
-  und prüft die Spalten-Anzahl vor dem Indexzugriff;
-  `qualityLabel`/`priceText` und `toSearchResult` sind null-sicher; User-Agent auf aktuellen Chrome aktualisiert.
-  Tests `skipsProviderWithUnexpectedColumnCount` / `skipsMalformedEmWithoutCrashing` ergänzt.
+### ✅ TODO-9 — Robust scraping (NPE protection)
+`services/WerStreamtEsApiClient.java`: `selectFirst(...).childNode(0)` and similar without null checks;
+a layout change at werstreamt.es could trigger NPEs.
+(Review item #4, correctness; deliberately deferred at the time.)
+- **Acceptance criterion:** Null guards + try/catch per entry,
+  so that one faulty entry does not abort the whole run.
+  Update the outdated user agent (Firefox 2.0.0.6, 2007).
+- **Done:** `parseProvider` wraps each provider in try/catch
+  and checks the column count before indexing;
+  `qualityLabel`/`priceText` and `toSearchResult` are null-safe; user agent updated to a current Chrome.
+  Added tests `skipsProviderWithUnexpectedColumnCount` / `skipsMalformedEmWithoutCrashing`.
 
 ---
 
-### ✅ TODO-10 — Schema-Versionierung statt `ddl-auto=update`
+### ✅ TODO-10 — Schema versioning instead of `ddl-auto=update`
 `application.properties`: `spring.jpa.hibernate.ddl-auto=update`.
-- **Akzeptanzkriterium:** Flyway oder Liquibase einführen für reproduzierbare,
-  versionierte Schemata (Voraussetzung für TODO-2 und TODO-3).
-- **Erledigt:** Über TODO-27 (Liquibase) umgesetzt; heute `ddl-auto=none`
-  (`validate` war ein Zwischenstand, seit TODO-40 ist Liquibase alleinige Schema-Quelle).
+- **Acceptance criterion:** Introduce Flyway or Liquibase for reproducible,
+  versioned schemas (prerequisite for TODO-2 and TODO-3).
+- **Done:** Implemented via TODO-27 (Liquibase); today `ddl-auto=none`
+  (`validate` was an intermediate state, since TODO-40 Liquibase is the only source of the schema).
 
 ---
 
@@ -140,386 +140,386 @@ eine Layout-Änderung bei werstreamt.es konnte NPEs auslösen.
 
 ---
 
-### ✅ TODO-11 — Mehrfache Voll-Auflösung pro Seitenaufruf
-`services/AggregateService.java`: `getAll()` löst alle Einträge sequenziell auf.
-Die Amazon-Seite (`web/DataAggregateController.getAmazon`) rief `included()` **und** `paid()` auf
-→ `getAll()` lief **zweimal** pro Request.
-- **Akzeptanzkriterium:** `getAll()` einmal aufrufen und beide Filter auf das Ergebnis anwenden.
-- **Erledigt:** `AggregateService.contentFor(serviceName)` löst einmal auf und liefert `included` + `paid`
-  (Record `ServiceContent`); die Amazon-Seite nutzt das.
+### ✅ TODO-11 — Multiple full resolutions per page view
+`services/AggregateService.java`: `getAll()` resolves all entries sequentially.
+The Amazon page (`web/DataAggregateController.getAmazon`) called `included()` **and** `paid()`
+→ `getAll()` ran **twice** per request.
+- **Acceptance criterion:** Call `getAll()` once and apply both filters to the result.
+- **Done:** `AggregateService.contentFor(serviceName)` resolves once and returns `included` + `paid`
+  (record `ServiceContent`); the Amazon page uses it.
 
 ---
 
-### ❌ TODO-12 — Durchgängiges `FetchType.EAGER` *(verworfen — durch ADR-0011 überholt)*
-`streamingavailability/domain/QueryMeta.java` (`@OneToMany`) und `QueryResultDB.java`
-(`@ElementCollection`) laden alles eager, ebenso `accountaccess/domain/AppUser.roles`.
+### ❌ TODO-12 — `FetchType.EAGER` throughout *(dropped — superseded by ADR-0011)*
+`streamingavailability/domain/QueryMeta.java` (`@OneToMany`) and `QueryResultDB.java`
+(`@ElementCollection`) load everything eagerly, as does `accountaccess/domain/AppUser.roles`.
 
-- ~~**Akzeptanzkriterium:** Auf LAZY umstellen~~ — **verworfen.**
-  [ADR-0011](docs/adr/0011-kein-open-session-in-view.md) (Accepted) macht EAGER zur bewussten
-  Regel: ohne Open-Session-in-View muss alles geladen sein, bevor die Transaktion endet.
-  Eine pauschale Umstellung auf LAZY würde die ADR brechen, nicht erfüllen.
-- **Das ursprüngliche Risiko ist unabhängig davon entschärft:**
-  `spring.jpa.properties.hibernate.default_batch_fetch_size=50` (Commit `017bd35`,
-  gemessen: 20 Titel × 2 Provider = 3 Statements statt N+1),
-  und der fehlende FK-Index kam mit Changeset `014`.
-- **Der vereinbarte Weg**, falls eine Collection doch einmal zu groß wird,
-  ist ein gezielter Fetch-Join — nicht LAZY und erst recht nicht OSIV.
-
----
+- ~~**Acceptance criterion:** Switch to LAZY~~ — **dropped.**
+  [ADR-0011](docs/adr/0011-no-open-session-in-view.md) (Accepted) makes EAGER a deliberate
+  rule: without Open Session in View, everything has to be loaded before the transaction ends.
+  A blanket switch to LAZY would break the ADR, not fulfil it.
+- **The original risk has been defused independently:**
+  `spring.jpa.properties.hibernate.default_batch_fetch_size=50` (commit `017bd35`,
+  measured: 20 titles × 2 providers = 3 statements instead of N+1),
+  and the missing FK index arrived with changeset `014`.
+- **The agreed approach**, should a collection ever grow too large after all,
+  is a targeted fetch join — not LAZY, and certainly not OSIV.
 
 ---
 
-## Build / Betrieb
+---
+
+## Build / Operations
 
 ---
 
-### ✅ TODO-13 — Cron zieht Pre-Release-Spring-Boot — **bewusst so belassen**
-Git-History: `4.1.0-M1 → M2 → M3 → M4 → RC1 → 4.1.0`.
-`upgrade-spring-boot.sh` nutzt `versions:update-parent` ohne `-DallowSnapshots=false` und ohne Milestone-Filter,
-d. h. der Cron zieht automatisch Milestones/RCs.
-- **Entscheidung des Auftraggebers (2026-09-06): so gewollt.** Milestones mitzunehmen ist hier kein
-  Versehen, sondern der Zweck — das Projekt sammelt darüber früh Erkenntnisse über kommende
-  Spring-Boot-Versionen, und ein privates Projekt mit fünf Nutzern kann sich das leisten.
-- **Was diese Entscheidung tragfähig macht**, ist die Absicherung drumherum, nicht die Stabilität
-  des Parents: der Prüflauf baut mit Tests durch die `verify`-Stufe, und ein Fehlschlag setzt seit
-  TODO-55 den Arbeitsbaum sauber zurück, statt die Update-Kette zu verklemmen. Ohne diese beiden
-  wäre ein instabiler Parent teuer geworden.
+### ✅ TODO-13 — Cron pulls pre-release Spring Boot — **deliberately left as is**
+Git history: `4.1.0-M1 → M2 → M3 → M4 → RC1 → 4.1.0`.
+`upgrade-spring-boot.sh` uses `versions:update-parent` without `-DallowSnapshots=false` and without a milestone filter,
+i.e. the cron job automatically pulls milestones/RCs.
+- **Decision by the client (2026-09-06): intended.** Picking up milestones is not an
+  oversight here, it is the point — it is how the project learns early about upcoming
+  Spring Boot versions, and a private project with five users can afford that.
+- **What makes this decision viable** is the safety net around it, not the stability
+  of the parent: the check run builds with tests through the `verify` phase, and since
+  TODO-55 a failure resets the working tree cleanly instead of jamming the update chain. Without those two,
+  an unstable parent would have become expensive.
 
 ---
 
-### ✅ TODO-14 — `versions-maven-plugin` ohne Version *(faktisch gepinnt — Prämisse war falsch)*
-`pom.xml` deklariert das Plugin ohne eigenes `<version>` — die Annahme „also nicht
-reproduzierbar" trifft aber nicht zu.
+### ✅ TODO-14 — `versions-maven-plugin` without a version *(effectively pinned — the premise was wrong)*
+`pom.xml` declares the plugin without its own `<version>` — but the assumption that this makes it
+"not reproducible" does not hold.
 
-Die Version kommt aus dem `pluginManagement` von `spring-boot-dependencies`, aktuell **2.21.0**;
-nachgeprüft am effektiven POM und an der tatsächlichen Auflösung
-(`mvn -B versions:help` protokolliert `--- versions:2.21.0:help ---`).
-Es wird also kein `LATEST` aus den Metadaten gezogen — genau dafür ist der leere Plugin-Block da.
-Pro Commit ist der Build damit reproduzierbar, weil die Parent-Version im POM festliegt.
+The version comes from the `pluginManagement` of `spring-boot-dependencies`, currently **2.21.0**;
+verified against the effective POM and against the actual resolution
+(`mvn -B versions:help` logs `--- versions:2.21.0:help ---`).
+So no `LATEST` is pulled from the metadata — that is exactly what the empty plugin block is for.
+Per commit the build is therefore reproducible, because the parent version is fixed in the POM.
 
-- **Was bleibt, ist eine schwächere Aussage:** die Plugin-Version wandert mit dem
-  Spring-Boot-Parent mit, und der wird nächtlich aktualisiert, bewusst inklusive Milestones
-  (TODO-13). Ein explizites `<version>` würde `upgrade-spring-boot.sh` von genau dieser
-  Kopplung lösen — das ist ein Abwägungspunkt, kein Mangel.
+- **What remains is a weaker statement:** the plugin version travels with the
+  Spring Boot parent, and that parent is updated nightly, deliberately including milestones
+  (TODO-13). An explicit `<version>` would decouple `upgrade-spring-boot.sh` from exactly that
+  coupling — that is a trade-off, not a defect.
 
 ---
 
-### ✅ TODO-15 — Port-Inkonsistenz dokumentieren/vereinheitlichen
+### ✅ TODO-15 — Document/unify the port inconsistency
 `server.port=8001` (properties), `EXPOSE 8080` (Dockerfile), `SERVER_PORT=8080` (compose).
-Funktioniert, weil compose überschreibt.
-- **Akzeptanzkriterium:** Werte angleichen oder in der README erklären.
-- **Erledigt:** Werte bleiben bewusst unterschiedlich (Compose überschreibt),
-  sind aber jetzt in der README-Konfigurationstabelle dokumentiert (`server.port` → „HTTP port (Docker overrides to 8080)").
+It works because compose overrides.
+- **Acceptance criterion:** Align the values or explain them in the README.
+- **Done:** The values deliberately stay different (compose overrides),
+  but are now documented in the README configuration table (`server.port` → "HTTP port (Docker overrides to 8080)").
 
 ---
 
-### ✅ TODO-16 — README fehlt
-Kein Setup-Dokument vorhanden.
-- **Akzeptanzkriterium:** README mit Setup (CSV in `assets/` ablegen, Profile, Port,
-  verfügbare Endpunkte) ergänzen.
-- **Erledigt:** Umfassende README (Setup, Prerequisites, Profile inkl. `mariadb`/`google`,
-  Konfigurationstabelle, vollständige `## Endpoints`-Übersicht).
-
----
-
----
-
-## Kleinigkeiten
-
----
-
-### ✅ TODO-17 — Aufräumarbeiten
-- `configurations/JpaConfig.java`: ungenutzter Import `org.springframework.beans.factory.annotation.Value`.
-  → in TODO-7 entfernt (Klasse umgebaut).
-- `services/WerStreamtEsApiClient.java` (`search`) und `services/ImdbApiClient.java` (`search`):
-  String-Konkatenation im Logging (`"Searching for: " + ...`) → parametrisiertes Logging.
-  → erledigt (WerStreamtEsApiClient in TODO-9, ImdbApiClient hier).
-- `web/StatusController.java`: `@GetMapping("public/status")` ohne führenden Slash
-  (inkonsistent zu den übrigen Mappings). → erledigt: `@GetMapping("/public/status")`.
-
----
-
-### ✅ TODO-18 — `Price` wrappt fehlende Werte statt `null`
-`services/WerStreamtEsApiClient.parseAvailability(...)`: fehlende Qualitäten werden als `new Price(null)` gespeichert,
-d. h. `availability.sd()` etc. ist nie `null`, sondern ein Price-Objekt mit `value() == null`.
-Aufrufer (z. B. `DataAggregateController.prettyPrint`) prüfen aber auf `a.fourK() != null`
-— das ist dadurch immer wahr und `value()` kann `null` ausgegeben werden.
-- **Akzeptanzkriterium:** Fehlende Preise konsistent als `null`-`Price` (Optional/echtes `null`)
-  modellieren und die Aufrufer entsprechend anpassen.
-  (Beim Code-Review-Test #15 aufgefallen.)
-- **Erledigt:** `priceOrNull(...)` liefert `null` für nicht angebotene Qualitäten;
-  `prettyPrint` (das bereits auf `!= null` prüft) gibt damit keine `null`-Werte mehr aus.
+### ✅ TODO-16 — README missing
+No setup document existed.
+- **Acceptance criterion:** Add a README with setup (place the CSV in `assets/`, profiles, port,
+  available endpoints).
+- **Done:** Comprehensive README (setup, prerequisites, profiles including `mariadb`/`google`,
+  configuration table, complete `## Endpoints` overview).
 
 ---
 
 ---
 
-## Aus dem Re-Scan (2026-06-27, nach Umsetzung von TODO-6/7/8/9/17/18)
+## Minor items
 
 ---
 
-### ✅ TODO-19 — `/query` umgeht den Cache
-`rest/QueryController.query(...)` ruft `werStreamtEsApiClient.query(...)` **direkt** auf
-und scrapet damit bei jedem Aufruf live, während `/search` über `StreamInfoService` (gecacht) geht.
-Inkonsistent und teuer.
-- **Akzeptanzkriterium:** `/query` ebenfalls über `StreamInfoService.resolve(...)` laufen lassen
-  (oder den Endpunkt entfernen, falls redundant zu `/search`).
-- **Erledigt (obsolet):** `QueryController`/`/query` existiert nicht mehr.
-  Der heutige Lookup-by-id-Endpunkt `GET /api/search?imdbId=` (`SearchApiController` →
-  `SearchService.resolveByImdbId` → `StreamInfoService.resolve`) läuft bereits über den Cache.
+### ✅ TODO-17 — Cleanup work
+- `configurations/JpaConfig.java`: unused import `org.springframework.beans.factory.annotation.Value`.
+  → removed in TODO-7 (class was reworked).
+- `services/WerStreamtEsApiClient.java` (`search`) and `services/ImdbApiClient.java` (`search`):
+  string concatenation in logging (`"Searching for: " + ...`) → parameterized logging.
+  → done (WerStreamtEsApiClient in TODO-9, ImdbApiClient here).
+- `web/StatusController.java`: `@GetMapping("public/status")` without a leading slash
+  (inconsistent with the other mappings). → done: `@GetMapping("/public/status")`.
 
 ---
 
-### ✅ TODO-20 — Kein zentrales Fehler-Handling
-Scraping-/IO-Fehler wurden in `WerStreamtEsApiClient` als nacktes `new RuntimeException(e)` weitergeworfen
-und landeten ungefiltert als HTTP 500.
-- **Erledigt:** Neue `domain.ScrapingException` (bewusst in `domain`, nicht `services`,
-  da `ApiExceptionHandler` in der Presentation-Schicht sonst laut `ArchitectureTest` nicht
-  darauf zugreifen dürfte) kapselt den `IOException`-Fall in `search()`/`query()`.
-  `ApiExceptionHandler` bildet sie neu auf **502 Bad Gateway** ab.
-  Live gegen `mvn spring-boot:run` verifiziert: `GET /api/search?imdbId=tt0111161` lieferte in dieser
-  Umgebung einen echten IO-Fehler (Egress-Proxy) und kam sauber als
+### ✅ TODO-18 — `Price` wraps missing values instead of `null`
+`services/WerStreamtEsApiClient.parseAvailability(...)`: missing qualities are stored as `new Price(null)`,
+i.e. `availability.sd()` and friends are never `null` but a Price object with `value() == null`.
+Callers (e.g. `DataAggregateController.prettyPrint`) however check for `a.fourK() != null`
+— which is therefore always true, and `value()` may print `null`.
+- **Acceptance criterion:** Model missing prices consistently as a `null` `Price` (Optional/real `null`)
+  and adjust the callers accordingly.
+  (Spotted during code review test #15.)
+- **Done:** `priceOrNull(...)` returns `null` for qualities that are not offered;
+  `prettyPrint` (which already checks for `!= null`) therefore no longer prints `null` values.
+
+---
+
+---
+
+## From the re-scan (2026-06-27, after implementing TODO-6/7/8/9/17/18)
+
+---
+
+### ✅ TODO-19 — `/query` bypasses the cache
+`rest/QueryController.query(...)` calls `werStreamtEsApiClient.query(...)` **directly**
+and therefore scrapes live on every call, while `/search` goes through `StreamInfoService` (cached).
+Inconsistent and expensive.
+- **Acceptance criterion:** Route `/query` through `StreamInfoService.resolve(...)` as well
+  (or remove the endpoint if it is redundant with `/search`).
+- **Done (obsolete):** `QueryController`/`/query` no longer exists.
+  Today's lookup-by-id endpoint `GET /api/search?imdbId=` (`SearchApiController` →
+  `SearchService.resolveByImdbId` → `StreamInfoService.resolve`) already goes through the cache.
+
+---
+
+### ✅ TODO-20 — No central error handling
+Scraping/IO errors were rethrown in `WerStreamtEsApiClient` as a bare `new RuntimeException(e)`
+and ended up unfiltered as HTTP 500.
+- **Done:** A new `domain.ScrapingException` (deliberately in `domain`, not `services`,
+  because `ApiExceptionHandler` in the presentation layer would otherwise not be allowed to
+  access it according to `ArchitectureTest`) wraps the `IOException` case in `search()`/`query()`.
+  `ApiExceptionHandler` maps it to **502 Bad Gateway**.
+  Verified live against `mvn spring-boot:run`: `GET /api/search?imdbId=tt0111161` produced a real
+  IO error in this environment (egress proxy) and came back cleanly as
   `{"status":502,"title":"Upstream lookup failed","detail":"Query for imdbId 'tt0111161' failed"}`
-  zurück statt als leeres 500.
-  Siehe auch F12 (Validierungsfehler derselben Lücke).
+  instead of an empty 500.
+  See also F12 (validation error for the same gap).
 
 ---
 
-### ✅ TODO-21 — `ExportReader` bricht beim ganzen Import ab, wenn eine Zeile fehlerhaft ist
-`services/ExportReader.parse(...)`: `Integer.parseInt(year)` (NumberFormatException) bzw.
-`extractImdbId(url)` (IllegalArgumentException) waren nicht pro Zeile abgesichert — eine
-einzige kaputte Zeile ließ den gesamten Import (und damit den App-Start) scheitern.
-- **Akzeptanzkriterium:** Pro Zeile try/catch, fehlerhafte Zeilen loggen und überspringen
-  (analog zur Provider-Robustheit aus TODO-9).
-- **Erledigt:** Zeilen-Parsing in `toEntry(...)` extrahiert;
-  der Loop fängt `RuntimeException` pro Zeile, loggt die Zeilennummer und überspringt.
-  Der id-Zähler läuft nur bei Erfolg weiter (kontinuierliche ids).
-  Test `skipsMalformedRowsAndKeepsIdsContiguous` ergänzt.
+### ✅ TODO-21 — `ExportReader` aborts the entire import when one row is malformed
+`services/ExportReader.parse(...)`: `Integer.parseInt(year)` (NumberFormatException) and
+`extractImdbId(url)` (IllegalArgumentException) were not guarded per row — a
+single broken row made the whole import (and thus the app startup) fail.
+- **Acceptance criterion:** try/catch per row, log and skip malformed rows
+  (analogous to the provider robustness from TODO-9).
+- **Done:** Row parsing extracted into `toEntry(...)`;
+  the loop catches `RuntimeException` per row, logs the line number and skips it.
+  The id counter only advances on success (contiguous ids).
+  Added test `skipsMalformedRowsAndKeepsIdsContiguous`.
 
 ---
 
-### ✅ TODO-23 — `ResponseEntity<?>` mit rohem Wildcard
-`rest/QueryController`: `query(...)` und `search(...)` geben `ResponseEntity<?>` zurück —
-keine Typsicherheit für die Aufrufer/Tests.
-- **Akzeptanzkriterium:** Konkrete Rückgabetypen (`ResponseEntity<List<QueryResult>>` o. ä.).
-- **Erledigt (obsolet):** `QueryController` existiert nicht mehr;
-  kein Controller im Codebase gibt heute noch `ResponseEntity<?>` zurück (`grep` liefert keine Treffer)
-  — alle REST-Controller haben konkrete Rückgabetypen.
+### ✅ TODO-23 — `ResponseEntity<?>` with a raw wildcard
+`rest/QueryController`: `query(...)` and `search(...)` return `ResponseEntity<?>` —
+no type safety for callers/tests.
+- **Acceptance criterion:** Concrete return types (`ResponseEntity<List<QueryResult>>` or similar).
+- **Done (obsolete):** `QueryController` no longer exists;
+  no controller in the codebase returns `ResponseEntity<?>` today (`grep` finds no hits)
+  — all REST controllers have concrete return types.
 
 ---
 
-### ✅ TODO-24 — Tests für neue/ungetestete Service-Logik fehlen
-Nach den Refactorings waren `PreCacheService`, `StreamInfoService.resolveAll(...)`
-(Caching/Threshold/Batch-Miss-Fetch) und das atomare Reload-Verhalten von `ImdbEntryRepository`
-nicht durch Unit-Tests abgedeckt.
-- **Akzeptanzkriterium:** Gezielte Unit-Tests ergänzen (Mockito für die Repos/Clients).
-- **Erledigt:** `ImdbEntryRepositoryTest`, `PreCacheServiceTest`, `StreamInfoServiceTest`
-  (Cache-Hit/Miss/Expiry/forceRefresh/Batch).
-  Beim Schreiben fiel TODO-28 auf.
+### ✅ TODO-24 — Tests for new/untested service logic are missing
+After the refactorings, `PreCacheService`, `StreamInfoService.resolveAll(...)`
+(caching/threshold/batch miss fetch) and the atomic reload behaviour of `ImdbEntryRepository`
+were not covered by unit tests.
+- **Acceptance criterion:** Add targeted unit tests (Mockito for the repos/clients).
+- **Done:** `ImdbEntryRepositoryTest`, `PreCacheServiceTest`, `StreamInfoServiceTest`
+  (cache hit/miss/expiry/forceRefresh/batch).
+  TODO-28 surfaced while writing them.
 
 ---
 
-### ✅ TODO-25 — Aggregat-Seiten berechnen bei jedem Request alles neu
-`web/DataAggregateController` + `services/AggregateService`: jede Anbieter-Seite ruft `getAll()` auf
-und löste damit sämtliche Einträge sequenziell auf (über TODO-11 hinaus,
-das nur den doppelten `getAll()`-Aufruf der Amazon-Seite betrifft).
-- **Akzeptanzkriterium:** Aggregat-Ergebnisse cachen/vorberechnen
-  bzw. die Batch-Logik aus `resolveAll(...)` (TODO-11/#13 — der Verweis auf TODO-13 war falsch) wiederverwenden.
-- **Erledigt:** `getAll()` nutzt jetzt `streamInfoService.resolveAll(...)`
-  → eine Batch-Query statt N Einzelabfragen.
-  (Echtes Aggregat-Caching bleibt als optionale spätere Optimierung offen.)
+### ✅ TODO-25 — Aggregate pages recompute everything on every request
+`web/DataAggregateController` + `services/AggregateService`: every provider page calls `getAll()`
+and thereby resolved all entries sequentially (beyond TODO-11,
+which only concerns the duplicate `getAll()` call on the Amazon page).
+- **Acceptance criterion:** Cache/precompute the aggregate results,
+  or reuse the batch logic from `resolveAll(...)` (TODO-11/#13 — the reference to TODO-13 was wrong).
+- **Done:** `getAll()` now uses `streamInfoService.resolveAll(...)`
+  → one batch query instead of N individual queries.
+  (Real aggregate caching remains open as an optional later optimization.)
 
 ---
 
 ---
 
-## Aus dem Re-Scan (2026-06-28)
+## From the re-scan (2026-06-28)
 
 ---
 
-### ✅ TODO-26 — Fehler-Logs ohne Query-Kontext
-`services/WerStreamtEsApiClient`: Die `catch`-Blöcke in `query(...)` und `search(...)` loggten
-`log.error("Not found %s".formatted(e.getMessage()))` bzw. warfen `new RuntimeException(e)`,
-ohne anzugeben, **für welche Query/imdbId** der Fehler auftrat.
-Bei den `parallelStream`-Läufen (Pre-Cache/Refresh) war so nicht nachvollziehbar,
-welcher Eintrag fehlschlug.
-- **Akzeptanzkriterium:** In allen Fehlerausgaben des Clients die betroffene Query
-  (imdbId bzw. Suchbegriff) mitloggen.
-- **Erledigt:** `query`/`search` loggen bzw. wrappen Fehler jetzt mit imdbId/Suchbegriff.
+### ✅ TODO-26 — Error logs without query context
+`services/WerStreamtEsApiClient`: the `catch` blocks in `query(...)` and `search(...)` logged
+`log.error("Not found %s".formatted(e.getMessage()))` or threw `new RuntimeException(e)`,
+without stating **which query/imdbId** the error occurred for.
+During the `parallelStream` runs (pre-cache/refresh) there was no way to tell
+which entry had failed.
+- **Acceptance criterion:** Log the affected query (imdbId or search term) in all error
+  output from the client.
+- **Done:** `query`/`search` now log and wrap errors with the imdbId/search term.
 
 ---
 
-### ✅ TODO-29 — Requests/Sekunde gegen werstreamt.es begrenzen
-Pre-Cache/Refresh feuern via `parallelStream` viele Requests gleichzeitig gegen werstreamt.es
-— unhöflich und ein Block-Risiko.
-- **Akzeptanzkriterium:** Outbound-Requests drosseln;
-  konfigurierbares, sinnvoll vorbelegtes Property.
-- **Erledigt:** `RateLimiter` (global, `synchronized`, mindest-Abstand zwischen Requests),
-  `WerStreamtEsApiClient.query/search` rufen `acquire()` vor dem HTTP-Get;
-  Property `wer-streamt.rate-limit.requests-per-second` (Default `2`, `<= 0` deaktiviert).
+### ✅ TODO-29 — Limit requests per second against werstreamt.es
+Pre-cache/refresh fire many concurrent requests at werstreamt.es via `parallelStream`
+— impolite and a risk of getting blocked.
+- **Acceptance criterion:** Throttle outbound requests;
+  configurable property with a sensible default.
+- **Done:** `RateLimiter` (global, `synchronized`, minimum interval between requests),
+  `WerStreamtEsApiClient.query/search` call `acquire()` before the HTTP GET;
+  property `wer-streamt.rate-limit.requests-per-second` (default `2`, `<= 0` disables it).
 
 ---
 
-### ✅ TODO-28 — `forceRefresh` war invertiert (Refresh refetchte nie)
-`services/StreamInfoService.resolve(imdbId, forceRefresh)`: Der Filter lautete `forceRefresh || isFresh(...)`.
-Bei `forceRefresh == true` wurde der gecachte Eintrag dadurch **behalten** statt neu geholt
-— d. h. die `/refresh/*`-Endpunkte (die `resolve(id, true)` aufrufen) aktualisierten die Daten nie.
-- **Akzeptanzkriterium:** `forceRefresh == true` erzwingt einen erneuten Fetch.
-- **Erledigt:** Bedingung zu `!forceRefresh && isFresh(...)` korrigiert;
-  beim Schreiben der Tests (TODO-24) aufgefallen.
-  Test `resolveForceRefreshAlwaysFetches` deckt es ab.
+### ✅ TODO-28 — `forceRefresh` was inverted (refresh never refetched)
+`services/StreamInfoService.resolve(imdbId, forceRefresh)`: the filter read `forceRefresh || isFresh(...)`.
+With `forceRefresh == true` the cached entry was therefore **kept** instead of refetched
+— i.e. the `/refresh/*` endpoints (which call `resolve(id, true)`) never updated the data.
+- **Acceptance criterion:** `forceRefresh == true` forces a refetch.
+- **Done:** Condition corrected to `!forceRefresh && isFresh(...)`;
+  spotted while writing the tests (TODO-24).
+  Test `resolveForceRefreshAlwaysFetches` covers it.
 
 ---
 
-### ✅ TODO-27 — Liquibase einführen und DB-Schema als Changelog ablegen
-Das Schema wurde von Hibernate per `ddl-auto=update` verwaltet (siehe auch TODO-10).
-- **Akzeptanzkriterium:** Liquibase einbinden, das vollständige Schema als Changelog hinterlegen
-  und `ddl-auto` auf `validate` umstellen,
-  sodass das Schema reproduzierbar und versioniert ist.
-  Dies ist auch die Voraussetzung für die Umbenennungen aus TODO-2/TODO-3.
-- **Hinweis (Stand Juni 2026 — ⚠ heute nicht mehr befolgen):** Damals hielt die H2-DB
-  ausschließlich gecachte Scrape-Ergebnisse, weshalb hier stand, man könne für bestehende
-  Deployments das alte `./db` einfach entfernen.
-  **Das würde heute Benutzerkonten, Watchlists, Sessions und Titel-Metadaten vernichten**
-  — seit den Changesets `003`, `006` und `009` liegt all das in derselben Datenbank.
-  Auch der genannte Endpunkt `/pre-cache` existiert nicht mehr (heute `POST /api/cache`).
-- **Erledigt:** `spring-boot-liquibase` ergänzt;
-  Baseline-Changelog unter `src/main/resources/db/changelog/`
+### ✅ TODO-27 — Introduce Liquibase and keep the DB schema as a changelog
+The schema was managed by Hibernate via `ddl-auto=update` (see also TODO-10).
+- **Acceptance criterion:** Wire in Liquibase, store the complete schema as a changelog
+  and switch `ddl-auto` to `validate`,
+  so that the schema is reproducible and versioned.
+  This is also the prerequisite for the renames from TODO-2/TODO-3.
+- **Note (as of June 2026 — ⚠ do not follow this today):** Back then the H2 database held
+  nothing but cached scrape results, which is why this entry said that existing deployments
+  could simply delete the old `./db`.
+  **Today that would destroy user accounts, watchlists, sessions and title metadata**
+  — since changesets `003`, `006` and `009` all of that lives in the same database.
+  The `/pre-cache` endpoint mentioned here no longer exists either (today `POST /api/cache`).
+- **Done:** `spring-boot-liquibase` added;
+  baseline changelog under `src/main/resources/db/changelog/`
   (`db.changelog-master.yaml` → `changes/001-baseline-schema.sql`),
-  generiert aus dem Hibernate-Schema (inkl. der TODO-2/TODO-3-Namen);
-  `ddl-auto=validate` in Haupt- und Test-Konfiguration — **seit TODO-40 `none`**.
-  Tests laufen grün gegen das von Liquibase erzeugte Schema.
-  Das Changelog ist inzwischen auf 18 Changesets gewachsen (zuletzt `018-drop-ebay-quota.xml`),
-  die Baseline liegt als `.xml` vor, nicht als `.sql`.
+  generated from the Hibernate schema (including the TODO-2/TODO-3 names);
+  `ddl-auto=validate` in the main and test configuration — **`none` since TODO-40**.
+  Tests pass against the schema created by Liquibase.
+  The changelog has since grown to 18 changesets (most recently `018-drop-ebay-quota.xml`),
+  and the baseline is now an `.xml` file, not a `.sql` one.
 
 ---
 
 ---
 
-## Architektur-Review (2026-06-28)
+## Architecture review (2026-06-28)
 
-> **Lesehinweis (2026-09-09).** Klassen- und Paketnamen in den Einträgen dieses und der
-> vorangehenden Abschnitte sind der Stand von Juni 2026.
-> Der Umbau nach Bounded Contexts ([ADR-0014](docs/adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md))
-> hat `services/`, `persistence/`, `web/`, `rest/` und `entities/` als Top-Level-Pakete abgelöst;
-> heute gilt `<kontext>/{domain,application,port,adapter}` (siehe `CLAUDE.md`).
-> Die Einträge wurden **nicht** durchgängig umbenannt — das wäre viel Rauschen für wenig Nutzen.
-> Korrigiert ist, wo eine Aussage *sachlich* falsch geworden ist, nicht wo nur ein Pfad alt ist.
+> **Reading note (2026-09-09).** Class and package names in the entries of this and the
+> preceding sections reflect the state of June 2026.
+> The rework into bounded contexts ([ADR-0014](docs/adr/0014-backend-by-bounded-context-and-ports-adapters.md))
+> replaced `services/`, `persistence/`, `web/`, `rest/` and `entities/` as top-level packages;
+> today `<context>/{domain,application,port,adapter}` applies (see `CLAUDE.md`).
+> The entries have **not** been renamed throughout — that would be a lot of noise for little benefit.
+> What has been corrected is where a statement became *factually* wrong, not where a path is merely outdated.
 
-Vollständige Analyse: [`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md).
-Die konkreten, umsetzbaren Punkte daraus:
-
----
-
-### ✅ TODO-30 — `entities/` ist irreführend benannt
-Das Paket `entities/` enthielt reine Domänen-Records (keine JPA-Entities);
-die echten `@Entity`-Klassen liegen in `persistence/`.
-- **Akzeptanzkriterium:** `entities/` → `domain/` umbenennen (ggf. `domainvalues/` hineinziehen);
-  JPA-Entities bleiben in `persistence/`.
-- **Erledigt:** `entities/` und `domainvalues/` zu `domain/` zusammengeführt
-  (`ImdbEntry`, `QueryResult`, `SearchResult` + die `@Embeddable`-Werte `Availability`,
-  `Price`, Enum `AvailabilityType`).
-  JPA-`@Entity`-Klassen bleiben in `persistence/`.
+Full analysis: [`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md).
+The concrete, actionable items from it:
 
 ---
 
-### ✅ TODO-31 — `ImdbEntryRepository` ist kein Repository
-Stateful In-Memory-Katalog, benannt wie ein Spring-Data-Repository und in `services/`.
-- **Akzeptanzkriterium:** In `ImdbCatalog`/`WatchlistStore` umbenennen,
-  klar von den Spring-Data-Repos in `persistence/` abgrenzen.
-- **Erledigt:** Klasse → `ImdbCatalog` (Felder/Variablen/Bean-Methode `imdbCatalog`).
+### ✅ TODO-30 — `entities/` is misleadingly named
+The package `entities/` contained pure domain records (no JPA entities);
+the actual `@Entity` classes live in `persistence/`.
+- **Acceptance criterion:** Rename `entities/` → `domain/` (possibly pulling `domainvalues/` in);
+  JPA entities stay in `persistence/`.
+- **Done:** `entities/` and `domainvalues/` merged into `domain/`
+  (`ImdbEntry`, `QueryResult`, `SearchResult` plus the `@Embeddable` values `Availability`,
+  `Price`, enum `AvailabilityType`).
+  JPA `@Entity` classes stay in `persistence/`.
 
 ---
 
-### ✅ TODO-32 — Nahezu identische Provider-Handler in `DataAggregateController`
-`getDisney`/`getNetflix`/`getWow` (und `getAmazon`/`getGoogle`) unterschieden sich nur durch Service-/View-Namen.
-- **Akzeptanzkriterium:** Datengetrieben zusammenfassen (Enum/Map aus Pfad → Service+View),
-  ~4 Methoden auf eine reduzieren.
-- **Erledigt, und seither weiter getrieben:** Heute gibt es genau **einen** Handler,
-  `@GetMapping("/{provider}")` in `ProviderApiController`, aufgelöst über das Enum
-  `StreamingProvider` (das die Datentabelle trägt) und `ProviderPageService`.
-  Von den damaligen Helfern existiert nur noch `paidDtos(...)`.
-  ~~(Explizite Routen beibehalten statt Catch-all-`{path}`, um Routing-Mehrdeutigkeit zu
-  vermeiden.)~~ — **gilt nicht mehr:** es *ist* jetzt ein Catch-all, unproblematisch, weil
-  `/api/providers` keine konkurrierende Route hat und unbekannte Keys mit 404 enden.
+### ✅ TODO-31 — `ImdbEntryRepository` is not a repository
+A stateful in-memory catalog, named like a Spring Data repository and placed in `services/`.
+- **Acceptance criterion:** Rename to `ImdbCatalog`/`WatchlistStore`,
+  clearly separating it from the Spring Data repos in `persistence/`.
+- **Done:** Class → `ImdbCatalog` (fields/variables/bean method `imdbCatalog`).
 
 ---
 
-### ✅ TODO-33 — Transaktionsgrenze auf einem Controller
-`DataAggregateController` war `@Transactional(readOnly = true)` auf Klassenebene.
-- **Akzeptanzkriterium:** Transaktionsgrenzen in die Service-Schicht verschieben;
-  Controller nicht transaktional.
-- **Erledigt:** `@Transactional` von `DataAggregateController` **und** `ChangeListController` entfernt.
-  DB-Zugriffe laufen über transaktionale Service-Methoden (`StreamInfoService.resolve/resolveAll`);
-  die zurückgegebenen Records sind losgelöst, daher kein Open-Session-in-View nötig.
-  (Nebeneffekt: Cache-Writes bei Miss laufen jetzt in einer Read-Write-Tx statt in einer Read-only-Tx.)
+### ✅ TODO-32 — Nearly identical provider handlers in `DataAggregateController`
+`getDisney`/`getNetflix`/`getWow` (and `getAmazon`/`getGoogle`) differed only in service/view names.
+- **Acceptance criterion:** Consolidate data-driven (enum/map from path → service+view),
+  reducing ~4 methods to one.
+- **Done, and taken further since:** Today there is exactly **one** handler,
+  `@GetMapping("/{provider}")` in `ProviderApiController`, resolved via the enum
+  `StreamingProvider` (which carries the data table) and `ProviderPageService`.
+  Of the helpers from back then only `paidDtos(...)` remains.
+  ~~(Explicit routes kept instead of a catch-all `{path}` to avoid routing
+  ambiguity.)~~ — **no longer true:** it *is* a catch-all now, which is unproblematic because
+  `/api/providers` has no competing route and unknown keys end in a 404.
 
 ---
 
-### ✅ TODO-34 — View-Model-Aufbau im Controller
-`IndexDto`, `PaidDto` und `prettyPrint(...)` stecken im `DataAggregateController`.
-- **Akzeptanzkriterium:** In einen Assembler/Formatter (oder DTO-Factory-Methoden) auslagern;
-  Controller ruft nur noch den Assembler.
-- **Erledigt (obsolet):** `DataAggregateController` existiert nicht mehr.
-  Die heutigen Controller (`api/CatalogApiController`, `api/ProviderApiController`, …) sind dünn;
-  die View-Model-Zusammenstellung sitzt in der Application-Schicht
+### ✅ TODO-33 — Transaction boundary on a controller
+`DataAggregateController` was annotated `@Transactional(readOnly = true)` at class level.
+- **Acceptance criterion:** Move transaction boundaries into the service layer;
+  controllers must not be transactional.
+- **Done:** `@Transactional` removed from `DataAggregateController` **and** `ChangeListController`.
+  DB access goes through transactional service methods (`StreamInfoService.resolve/resolveAll`);
+  the records returned are detached, so no Open Session in View is needed.
+  (Side effect: cache writes on a miss now run in a read-write transaction instead of a read-only one.)
+
+---
+
+### ✅ TODO-34 — View model assembly in the controller
+`IndexDto`, `PaidDto` and `prettyPrint(...)` sit inside `DataAggregateController`.
+- **Acceptance criterion:** Extract into an assembler/formatter (or DTO factory methods);
+  the controller only calls the assembler.
+- **Done (obsolete):** `DataAggregateController` no longer exists.
+  Today's controllers (`api/CatalogApiController`, `api/ProviderApiController`, …) are thin;
+  view model assembly lives in the application layer
   (`application/CatalogOverviewService`, `application/ProviderPageService`).
 
 ---
 
-### ✅ TODO-35 — `invalidated`-Flag ist faktisch tot
-`QueryMeta.invalidated` wurde nie auf `true` gesetzt, aber überall mitgefiltert.
-- **Akzeptanzkriterium:** Invalidierung tatsächlich umsetzen (z. B. beim Refresh alte Zeilen invalidieren)
-  **oder** Flag + Query-Suffix entfernen.
-- **Erledigt:** Über TODO-38/TODO-39 zum Leben erweckt
-  — `invalidateByImdbIds(...)` setzt das Flag;
-  invalidierte Einträge gelten als „uncached" und werden gezielt neu gescraped.
+### ✅ TODO-35 — The `invalidated` flag is effectively dead
+`QueryMeta.invalidated` was never set to `true`, yet it was filtered on everywhere.
+- **Acceptance criterion:** Actually implement invalidation (e.g. invalidate old rows on refresh)
+  **or** remove the flag and the query suffix.
+- **Done:** Brought to life via TODO-38/TODO-39
+  — `invalidateByImdbIds(...)` sets the flag;
+  invalidated entries count as "uncached" and get re-scraped deliberately.
 
 ---
 
-### ✅ TODO-36 — Provider-Abstraktion fürs Scraping
-Kein Interface über „Stream-Verfügbarkeits-Provider";
-fest an jsoup/werstreamt.es gekoppelt (`ImdbApiClient` ist tot, siehe TODO-1).
-- **Akzeptanzkriterium:** Interface `StreamAvailabilityProvider`
-  (z. B. `List<QueryResult> query(String imdbId)`), implementiert von `WerStreamtEsApiClient`;
-  Verbindungs-/User-Agent-/Rate-Limit-Belange dahinter bündeln.
-- **Erledigt:** Interface `StreamAvailabilityProvider.query(imdbId)` eingeführt,
-  von `WerStreamtEsApiClient` implementiert;
-  `StreamInfoService` und `QueryController` hängen jetzt am Interface (Test mockt das Interface).
+### ✅ TODO-36 — Provider abstraction for scraping
+No interface over "stream availability provider";
+hard-wired to jsoup/werstreamt.es (`ImdbApiClient` is dead, see TODO-1).
+- **Acceptance criterion:** Interface `StreamAvailabilityProvider`
+  (e.g. `List<QueryResult> query(String imdbId)`), implemented by `WerStreamtEsApiClient`;
+  bundle connection, user-agent and rate-limit concerns behind it.
+- **Done:** Interface `StreamAvailabilityProvider.query(imdbId)` introduced,
+  implemented by `WerStreamtEsApiClient`;
+  `StreamInfoService` and `QueryController` now depend on the interface (tests mock the interface).
 
 ---
 
-### ✅ TODO-37 — `AggregateService.getAll()` liefert `List<List<QueryResult>>`
-Verschachtelte Form, die Aufrufer sofort flachklopfen.
-- **Akzeptanzkriterium:** Flaches `List<QueryResult>` bzw. `Map` (wie `resolveAll`) zurückgeben;
-  `included`/`paid` als ein Filter mit Prädikat.
-- **Erledigt:** `getAll()` liefert flaches `List<QueryResult>`;
-  `included`/`paid` teilen das Prädikat `on(serviceName)` (kombiniert mit `flatrate` bzw. dessen Negation).
+### ✅ TODO-37 — `AggregateService.getAll()` returns `List<List<QueryResult>>`
+A nested shape that callers immediately flatten.
+- **Acceptance criterion:** Return a flat `List<QueryResult>` or a `Map` (like `resolveAll`);
+  `included`/`paid` as a single filter with a predicate.
+- **Done:** `getAll()` returns a flat `List<QueryResult>`;
+  `included`/`paid` share the predicate `on(serviceName)` (combined with `flatrate` or its negation).
 
 ---
 
 ---
 
-## Invalidierungs-Feature (2026-06-28)
+## Invalidation feature (2026-06-28)
 
 ---
 
-### ✅ TODO-38 — Einträge gezielt invalidieren (UI)
-Eintrage in der UI auswählen und deren Cache invalidieren (für bewusstes Neu-Scrapen).
-- **Akzeptanzkriterium:** Auswahl in der UI → markierte Einträge werden invalidiert.
-- **Erledigt:** `QueryMetaRepository.invalidateByImdbIds(...)` (`@Modifying`),
-  `PreCacheService.invalidate(...)`, Web-Endpunkt `POST /invalidate` und die `/manage`-Seite
-  (Checkbox-Auswahl).
-  Integrationstest gegen H2 + Mockito-Tests ergänzt.
+### ✅ TODO-38 — Invalidate selected entries (UI)
+Select entries in the UI and invalidate their cache (for deliberate re-scraping).
+- **Acceptance criterion:** Selection in the UI → the marked entries get invalidated.
+- **Done:** `QueryMetaRepository.invalidateByImdbIds(...)` (`@Modifying`),
+  `PreCacheService.invalidate(...)`, web endpoint `POST /invalidate` and the `/manage` page
+  (checkbox selection).
+  Integration test against H2 plus Mockito tests added.
 
 ---
 
-### ✅ TODO-39 — Nur invalidierte/fehlende Einträge scrapen (UI)
-Eine UI, die gezielt nur die invalidierten (bzw. nie gecachten) Einträge scrapt.
-- **Akzeptanzkriterium:** Button/Endpunkt scrapt nur die Einträge ohne gültigen Cache.
-- **Erledigt:** `PreCacheService.cacheUncached()` (nutzt `findUncached()`),
-  Endpunkt `POST /scrape-invalidated`, Button auf `/manage`;
-  Navbar-Link „Manage Cache".
+### ✅ TODO-39 — Scrape only invalidated/missing entries (UI)
+A UI that scrapes only the invalidated (or never cached) entries.
+- **Acceptance criterion:** A button/endpoint scrapes only the entries without a valid cache.
+- **Done:** `PreCacheService.cacheUncached()` (uses `findUncached()`),
+  endpoint `POST /scrape-invalidated`, button on `/manage`;
+  navbar link "Manage Cache".
 
 ---
 
@@ -529,158 +529,158 @@ Eine UI, die gezielt nur die invalidierten (bzw. nie gecachten) Einträge scrapt
 
 ---
 
-### ✅ BUG — Provider mit mehreren Sprach-Listings wurde komplett verworfen
-`WerStreamtEsApiClient` verarbeitete nur 3 oder 6 `.columns.small-4` pro Anbieter. Listet ein
-Anbieter denselben Titel mehrfach (z. B. Prime Video „Priest" in 3 Sprachen → 9 Spalten), wurde
-mit `Unexpected column count 9` der **ganze Anbieter** fallen gelassen.
-- **Erledigt:** Parser arbeitet jetzt pro Listing-Zeile (`.panel.available`), liest die Sprache
-  aus dem Titelblock und dedupliziert nach (Flatrate + Preise + Sprache). Mehrere distinkte
-  Listings ergeben je einen Eintrag, per Sprache unterschieden (`label()` = „Prime Video (…)"),
-  ein einzelnes Listing bleibt ohne Suffix. Neues Feld `QueryResult.languages` +
-  Spalte `query_result.languages` (Liquibase `002`). `included()` dedupliziert nach `imdbId`.
-  Integrationstest gegen eine bereinigte echte Detailseite (`priest-tt0822847.html`).
+### ✅ BUG — A provider with multiple language listings was dropped entirely
+`WerStreamtEsApiClient` only handled 3 or 6 `.columns.small-4` per provider. If a provider listed
+the same title more than once (e.g. Prime Video "Priest" in 3 languages → 9 columns), the
+**entire provider** was discarded with `Unexpected column count 9`.
+- **Done:** The parser now works per listing row (`.panel.available`), reads the language
+  from the title block and deduplicates by (flatrate + prices + language). Several distinct
+  listings yield one entry each, distinguished by language (`label()` = "Prime Video (…)");
+  a single listing stays without a suffix. New field `QueryResult.languages` +
+  column `query_result.languages` (Liquibase `002`). `included()` deduplicates by `imdbId`.
+  Integration test against a cleaned-up real detail page (`priest-tt0822847.html`).
 
 ---
 
 ---
 
-## DB / Portierbarkeit
+## DB / portability
 
 ---
 
-### ✅ TODO-40 — Liquibase-Changesets von SQL auf XML
-Die Changesets waren H2-spezifisches Roh-SQL (`uuid`, `enum('BUY','RENT')`,
-`timestamp(6) with time zone`) und damit nicht portabel.
-- **Akzeptanzkriterium:** Changesets als XML mit dialekt-portablen Change-Types; Schema läuft
-  auf H2 **und** MariaDB.
-- **Erledigt:** `001-baseline-schema.xml` / `002-add-query-result-languages.xml`
-  (`createTable`/`addColumn`/`addForeignKeyConstraint`); dialektabhängige Typen via
-  `${uuid.type}`/`${timestamp.type}`-Properties. `ddl-auto=none` (Liquibase ist alleinige
-  Schema-Quelle; Korrektheit über die Repository-Tests auf H2 + MariaDB).
+### ✅ TODO-40 — Liquibase changesets from SQL to XML
+The changesets were H2-specific raw SQL (`uuid`, `enum('BUY','RENT')`,
+`timestamp(6) with time zone`) and therefore not portable.
+- **Acceptance criterion:** Changesets as XML using dialect-portable change types; the schema runs
+  on H2 **and** MariaDB.
+- **Done:** `001-baseline-schema.xml` / `002-add-query-result-languages.xml`
+  (`createTable`/`addColumn`/`addForeignKeyConstraint`); dialect-dependent types via
+  `${uuid.type}`/`${timestamp.type}` properties. `ddl-auto=none` (Liquibase is the sole
+  source of the schema; correctness is covered by the repository tests on H2 + MariaDB).
 
 ---
 
-### ✅ TODO-41 — MariaDB als First-Class-DB + Testcontainers
-- **Akzeptanzkriterium:** MariaDB als unterstützte DB; Repository-Test-Suite läuft gegen eine
-  Testcontainers-MariaDB.
-> **Nachtrag 2026-09-08:** Die MariaDB-Tests laufen inzwischen **im normalen `mvn verify`** mit
-> (409 statt 391 Tests). Sie tragen `@Tag("testcontainers")`; ausgeschlossen werden sie nur noch
-> explizit per `-Pno-testcontainers`, u. a. in den Docker-Build-Stages, die keinen Docker-Socket
-> haben. Der Text unten liest sich so, als liefen sie nur, wenn zufällig eine Container-Runtime
-> da ist — die bewusste Entscheidung ist inzwischen das Gegenteil, weil ein Check, den man sich
-> merken muss, ausfällt (`018-drop-ebay-quota` ging genau deshalb zunächst unverifiziert ein).
-> `disabledWithoutDocker` bleibt als zweites Netz.
+### ✅ TODO-41 — MariaDB as a first-class DB + Testcontainers
+- **Acceptance criterion:** MariaDB as a supported DB; the repository test suite runs against a
+  Testcontainers MariaDB.
+> **Addendum 2026-09-08:** The MariaDB tests now run **as part of the normal `mvn verify`**
+> (409 tests instead of 391). They carry `@Tag("testcontainers")`; they are only excluded
+> explicitly via `-Pno-testcontainers`, among others in the Docker build stages, which have no
+> Docker socket. The text below reads as if they only run when a container runtime happens to
+> be around — the deliberate decision is now the opposite, because a check you have to remember
+> to run is a check that fails you (`018-drop-ebay-quota` went in unverified for exactly that
+> reason). `disabledWithoutDocker` stays as a second net.
 
-- **Erledigt:** MariaDB-Treiber, Profil `mariadb` (`application-mariadb.properties`),
-  `mariadb`-Service in `compose.yml`. Repo-Tests in abstrakte Basen ausgelagert; je eine H2-
-  und eine MariaDB-Variante (`@ServiceConnection MariaDBContainer`,
-  `@Testcontainers(disabledWithoutDocker = true)` → ohne Container-Runtime übersprungen, nicht
-  rot). H2 bleibt Default für Dev & In-Memory-Tests.
-
----
-
----
-
-## Architektur-Enforcement (2026-07-20)
-
-> **Update (2026-07-29):** Die hier beschriebene Schichtenarchitektur (Presentation → Application
-> → Services → Persistence) ist durch die fachliche Gliederung nach Bounded Context ersetzt worden
-> (`accountaccess`/`watchlist`/`titlecatalog`/`streamingavailability`, je mit eigenem
-> `domain`/`application`/`port`/`adapter`-Baum) — siehe die neue ADR unter
-> [`docs/adr`](docs/adr/README.md). `ArchitectureTest` erzwingt jetzt stattdessen die
-> Context-Isolation (eine Regel pro Context) plus weiterhin die `now()`-Regel; die alte
-> Schichtenregel wurde entfernt, da die "Services"-Schicht durch die Umstellung endgültig leer war.
-
-Die Schichtenarchitektur (Presentation → Application → Services → Persistence, über dem
-Domain-Leaf) und die „keine statischen `now()`-Aufrufe"-Regel ([ADR-0003](docs/adr/0003-zeit-ueber-timeservice-facade.md))
-werden per **ArchUnit** erzwungen (`ArchitectureTest`); im Frontend prüft ESLint die
-`now()`-Regel. Bekannte Verstöße sind als Ausnahmen eingetragen und hier zur Auflösung notiert.
-
----
-
-### ✅ ARCH-1 — `CommonAttributeService` lag in der Services-Schicht, gehörte aber zur Präsentation
-`CommonAttributeService` schreibt das `selectedList`-Attribut ins Thymeleaf-`Model` und wird nur
-von den `web`-Controllern genutzt — lag aber im `services`-Paket, sodass die Präsentationsschicht
-direkt auf die Services-Schicht zugriff (einziger Verstoß gegen „Presentation hängt nur von
-Application (+ Domain) ab").
-- **Erledigt:** Nach `tech.dobler.werstreamt.web` verschoben (jetzt `@Component` der
-  Präsentationsschicht) und die Datenquelle von `ImdbCatalog` (Services) auf
-  `ListSelectionService.currentList()` (Application) umgestellt — damit hängt kein Controller
-  mehr an der Services-Schicht. Die `ignoreDependency`-Ausnahme in `ArchitectureTest` ist
-  entfernt; die Schichtenregel greift jetzt ohne Ausnahme. (Historische Notiz: Klassen- und
-  Paketnamen von damals sind seither mehrfach umgezogen, s.o.)
-- **Hinweis:** Für den Angular-Client gibt es kein Äquivalent (die aktive Liste kommt dort über
-  `GET /api/lists`), d. h. der Service ist rein Thymeleaf-spezifisch.
+- **Done:** MariaDB driver, profile `mariadb` (`application-mariadb.properties`),
+  `mariadb` service in `compose.yml`. Repo tests extracted into abstract bases; one H2 variant
+  and one MariaDB variant each (`@ServiceConnection MariaDBContainer`,
+  `@Testcontainers(disabledWithoutDocker = true)` → skipped without a container runtime, not
+  red). H2 stays the default for dev and in-memory tests.
 
 ---
 
 ---
 
-## Async Cache-Refresh statt synchronem Dashboard-Reload (2026-07-30/31)
+## Architecture enforcement (2026-07-20)
 
-Vollständiger Plan: [`docs/CACHE_REFRESH_PLAN.md`](docs/CACHE_REFRESH_PLAN.md),
-Entscheidung: [ADR-0016](docs/adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md).
-Auslöser: die „Cache Verwalten"-Seite (`/manage`) hatte keinen beobachtbaren Effekt, weil
-`StreamInfoService.resolveAll(...)` (Dashboard/Provider-Seiten) invalidierte/abgelaufene Einträge
-synchron im selben Request nachlud — ein einziger Dashboard-Aufruf hob jede manuelle
-Invalidierung sofort wieder auf, bevor die Manage-Seite etwas zu tun hätte.
+> **Update (2026-07-29):** The layered architecture described here (presentation → application
+> → services → persistence) has been replaced by a functional split along bounded contexts
+> (`accountaccess`/`watchlist`/`titlecatalog`/`streamingavailability`, each with its own
+> `domain`/`application`/`port`/`adapter` tree) — see the new ADR under
+> [`docs/adr`](docs/adr/README.md). `ArchitectureTest` now enforces context isolation instead
+> (one rule per context) plus, as before, the `now()` rule; the old layering rule was removed,
+> since the "services" layer ended up definitively empty after the switch.
 
----
-
-### ✅ TODO-43 — Manage-Tabelle: Zeitstempel statt reinem „gecacht"-Boolean
-`ManageRowDto`/`ManageTable` zeigten nur `needsScrape` (ja/nein), keinen Zeitpunkt.
-- **Akzeptanzkriterium:** Pro Titel wird der Zeitpunkt des letzten Scrapes angezeigt (oder „nie"),
-  nicht mehr nur ein binärer Pill; ein invalidierter Titel zeigt weiterhin „muss gescrapt werden".
-- **Erledigt:** `QueryMetaRepository.findByImdbIdIn(...)` (ohne Invalidiert-Filter) + `ManageRowDto.lastScrapedAt`;
-  `manage-table.ts` zeigt bei `needsScrape=false` den formatierten Zeitpunkt (Angular `DatePipe`)
-  statt der bisherigen „gecacht"-Pill (`manage.statusCached` entfernt).
-  Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 1.
+The layered architecture (presentation → application → services → persistence, on top of the
+domain leaf) and the "no static `now()` calls" rule ([ADR-0003](docs/adr/0003-time-through-a-timeservice-facade.md))
+are enforced with **ArchUnit** (`ArchitectureTest`); in the frontend, ESLint checks the
+`now()` rule. Known violations are registered as exceptions and noted here for resolution.
 
 ---
 
-### ✅ TODO-44 — `resolveAll` liefert veraltete Daten sofort + Refresh im Hintergrund
-`StreamInfoService.resolveAll(...)` blockierte den Request auf jedem invalidierten/abgelaufenen
-Treffer, statt die vorhandenen Werte sofort zu liefern und asynchron nachzuladen.
-- **Akzeptanzkriterium:** Ein vorhandener, aber veralteter Cache-Eintrag wird sofort (mit
-  `stale = true`) zurückgegeben; der Refresh läuft dedupliziert im Hintergrund (`@Async`). Nur ein
-  nie gecachter Titel bleibt synchron. Neue Spalte `due_for_refresh_at` (Jitter, beim Schreiben
-  gewürfelt) legt den Grundstein für TODO-46.
-- **Erledigt:** `resolveAll` liefert `Map<ImdbId, ResolvedEntry>` (`results`, `stale`); ein
-  vorhandener invalidierter/abgelaufener Eintrag wird sofort mit `stale=true` zurückgegeben und
-  löst `StreamInfoService.refreshInBackground(imdbId)` (`@Async("cacheRefreshExecutor")`,
-  aufgerufen über den bestehenden `self`-Proxy) an, dedupliziert über die neue
-  `RefreshInFlightTracker`-Komponente (`shared/platform/concurrency`); ein nie gecachter Titel
-  bleibt synchron. Liquibase `015-query-meta-due-for-refresh-at.xml` ergänzt `due_for_refresh_at`;
-  `StreamInfoService.fetch(...)` würfelt ihn beim Schreiben (`wer-streamt.invalidate.jitter-min-factor`/
-  `-max-factor`, Default 1.5/2.0). Neue `AsyncConfig` (`@EnableAsync`, `cacheRefreshExecutor`,
-  Pool-Größe 2 — der bestehende `RateLimiter` drosselt ohnehin).
-  Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 2.
+### ✅ ARCH-1 — `CommonAttributeService` lived in the services layer but belonged to presentation
+`CommonAttributeService` writes the `selectedList` attribute into the Thymeleaf `Model` and is used
+only by the `web` controllers — but it sat in the `services` package, so the presentation layer
+reached straight into the services layer (the only violation of "presentation depends only on
+application (+ domain)").
+- **Done:** Moved to `tech.dobler.werstreamt.web` (now a `@Component` of the
+  presentation layer) and switched the data source from `ImdbCatalog` (services) to
+  `ListSelectionService.currentList()` (application) — so no controller depends on the services
+  layer any more. The `ignoreDependency` exception in `ArchitectureTest` has been
+  removed; the layering rule now holds without exceptions. (Historical note: the class and
+  package names of that time have moved several times since, see above.)
+- **Note:** There is no equivalent for the Angular client (the active list comes in there via
+  `GET /api/lists`), i.e. the service is purely Thymeleaf-specific.
 
 ---
 
-### ✅ TODO-45 — „Veraltet"-Banner auf Dashboard und Provider-Seiten
-Es gab keine Kennzeichnung, wenn angezeigte Streaming-Verfügbarkeiten veraltet sind.
-- **Akzeptanzkriterium:** Ein kleiner, seitenweiter Hinweis-Banner (kein Fehler) erscheint, wenn
-  mind. ein angezeigter Titel `stale` ist (kein Per-Zeile-Flag, YAGNI).
-- **Erledigt:** `CatalogPageDto` (`entries` + `hasStaleEntries`) und `ProviderPageDto.hasStaleEntries`;
-  neue `StaleDataBanner`-Komponente (Vorlage `ErrorAlert`, eigenes Token
-  `--mat-sys-secondary-container`) auf Dashboard und Provider-Seite eingebunden.
-  Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 3.
+---
+
+## Async cache refresh instead of a synchronous dashboard reload (2026-07-30/31)
+
+Full plan: [`docs/CACHE_REFRESH_PLAN.md`](docs/CACHE_REFRESH_PLAN.md),
+decision: [ADR-0016](docs/adr/0016-asynchronous-deferred-cache-refresh.md).
+Trigger: the "Manage Cache" page (`/manage`) had no observable effect, because
+`StreamInfoService.resolveAll(...)` (dashboard/provider pages) reloaded invalidated/expired entries
+synchronously within the same request — a single dashboard visit immediately undid every manual
+invalidation before the manage page had anything left to do.
 
 ---
 
-### ✅ TODO-46 — Scheduled Job für proaktives, gestaffeltes Nachladen
-Titel, die niemand ansieht, veralten unbegrenzt, bis sie zufällig wieder aufgerufen werden.
-- **Akzeptanzkriterium:** Ein täglicher (konfigurierbarer) Job aktualisiert nur fällige Titel
-  (invalidiert, oder TTL × Jitter-Faktor 1,5–2,0 verstrichen) unter den aktuell gewatchlisteten
-  Titeln — kein Effekt, wenn nichts fällig ist (keine unnötige Last bei Nichtnutzung).
-- **Erledigt:** `BackgroundCacheRefreshService.refreshDueEntries()` (batch-lädt wie
-  `CacheManagementService.managePage()` und reduziert auf die jeweils neueste `QueryMeta`-Zeile pro
-  Titel, statt einer eigenen `@Query`) + `adapter/in/scheduled/CacheRefreshScheduler`
+### ✅ TODO-43 — Manage table: timestamp instead of a plain "cached" boolean
+`ManageRowDto`/`ManageTable` only showed `needsScrape` (yes/no), no point in time.
+- **Acceptance criterion:** Each title shows the time of its last scrape (or "never"),
+  no longer just a binary pill; an invalidated title still shows "needs scraping".
+- **Done:** `QueryMetaRepository.findByImdbIdIn(...)` (without the invalidated filter) + `ManageRowDto.lastScrapedAt`;
+  for `needsScrape=false`, `manage-table.ts` shows the formatted timestamp (Angular `DatePipe`)
+  instead of the previous "cached" pill (`manage.statusCached` removed).
+  Details: `docs/CACHE_REFRESH_PLAN.md`, phase 1.
+
+---
+
+### ✅ TODO-44 — `resolveAll` returns stale data immediately + refreshes in the background
+`StreamInfoService.resolveAll(...)` blocked the request on every invalidated/expired
+hit instead of returning the values it already had and reloading asynchronously.
+- **Acceptance criterion:** An existing but stale cache entry is returned immediately (with
+  `stale = true`); the refresh runs deduplicated in the background (`@Async`). Only a
+  never-cached title stays synchronous. A new column `due_for_refresh_at` (jitter, rolled on write)
+  lays the groundwork for TODO-46.
+- **Done:** `resolveAll` returns `Map<ImdbId, ResolvedEntry>` (`results`, `stale`); an
+  existing invalidated/expired entry is returned immediately with `stale=true` and
+  triggers `StreamInfoService.refreshInBackground(imdbId)` (`@Async("cacheRefreshExecutor")`,
+  called via the existing `self` proxy), deduplicated through the new
+  `RefreshInFlightTracker` component (`shared/platform/concurrency`); a never-cached title
+  stays synchronous. Liquibase `015-query-meta-due-for-refresh-at.xml` adds `due_for_refresh_at`;
+  `StreamInfoService.fetch(...)` rolls it on write (`wer-streamt.invalidate.jitter-min-factor`/
+  `-max-factor`, default 1.5/2.0). New `AsyncConfig` (`@EnableAsync`, `cacheRefreshExecutor`,
+  pool size 2 — the existing `RateLimiter` throttles anyway).
+  Details: `docs/CACHE_REFRESH_PLAN.md`, phase 2.
+
+---
+
+### ✅ TODO-45 — "Stale" banner on the dashboard and provider pages
+There was no indication when the streaming availability being displayed was out of date.
+- **Acceptance criterion:** A small, page-wide notice banner (not an error) appears when
+  at least one displayed title is `stale` (no per-row flag, YAGNI).
+- **Done:** `CatalogPageDto` (`entries` + `hasStaleEntries`) and `ProviderPageDto.hasStaleEntries`;
+  new `StaleDataBanner` component (modelled on `ErrorAlert`, with its own token
+  `--mat-sys-secondary-container`) wired into the dashboard and the provider page.
+  Details: `docs/CACHE_REFRESH_PLAN.md`, phase 3.
+
+---
+
+### ✅ TODO-46 — Scheduled job for proactive, staggered reloading
+Titles nobody looks at go stale indefinitely until they happen to be opened again.
+- **Acceptance criterion:** A daily (configurable) job refreshes only the titles that are due
+  (invalidated, or TTL × jitter factor 1.5–2.0 elapsed) among the currently watchlisted
+  titles — no effect when nothing is due (no needless load when the app isn't used).
+- **Done:** `BackgroundCacheRefreshService.refreshDueEntries()` (batch-loads like
+  `CacheManagementService.managePage()` and reduces to the newest `QueryMeta` row per
+  title, instead of using its own `@Query`) + `adapter/in/scheduled/CacheRefreshScheduler`
   (`@Scheduled(cron = "${wer-streamt.background-refresh.cron:0 0 4 * * *}")`,
-  `wer-streamt.background-refresh.enabled` als Not-Aus). Teilt sich `RefreshInFlightTracker` und
-  `StreamInfoService.refreshInBackground(...)` mit dem bedarfsgetriebenen Pfad aus TODO-44.
-  Details: `docs/CACHE_REFRESH_PLAN.md`, Phase 4.
+  `wer-streamt.background-refresh.enabled` as a kill switch). Shares `RefreshInFlightTracker` and
+  `StreamInfoService.refreshInBackground(...)` with the demand-driven path from TODO-44.
+  Details: `docs/CACHE_REFRESH_PLAN.md`, phase 4.
 
 ---
 
@@ -690,39 +690,39 @@ Titel, die niemand ansieht, veralten unbegrenzt, bis sie zufällig wieder aufger
 
 ---
 
-### ✅ TODO-47 — TMDB-Posterdownload schlägt fehl, wenn `title_poster.poster_path` von der IMDb-Quelle stammt
-Produktions-Log (`tmdb.enabled=true`):
+### ✅ TODO-47 — TMDB poster download fails when `title_poster.poster_path` came from the IMDb source
+Production log (`tmdb.enabled=true`):
 ```
 WARN t.d.w.t.a.out.tmdb.TmdbPosterSource : TMDB FULL image download
   https://image.tmdb.org/t/p/w500https://m.media-amazon.com/images/M/MV5BMjIzNTA0OTIxNV5BMl5BanBnXkFtZTcwMzA3MTM2Nw@@._V1_.jpg
   returned HTTP 404 (1957 bytes)
 ```
 `TmdbPosterSource.download(posterPath, size)` (`titlecatalog/adapter/out/tmdb/TmdbPosterSource.java`)
-baut die Download-URL immer als `imageBaseUrl + "/" + tmdbSize(size) + posterPath` — es wird
-angenommen, dass `posterPath` ein TMDB-relativer Pfad ist (z. B. `/abc123.jpg`).
-`title_poster.poster_path` ist aber eine einzige, quellenunabhängige Spalte (`PosterService.classify`/`storePath`):
-Wurde der Pfad ursprünglich von `ImdbPosterSource` ermittelt, ist er eine **volle** Amazon-CDN-URL
-(`https://m.media-amazon.com/...`). Läuft die Instanz später (oder gleichzeitig, je nach Konfiguration)
-mit `tmdb.enabled=true`, liest `PosterService.get(...)` diesen alten Pfad aus `title_poster` (Zeile hat
-noch keine Bytes für die angefragte Größe → `Cached.needsDownload(row.getPosterPath())`) und reicht ihn
-unverändert an `TmdbPosterSource.download(...)` durch — die beiden URLs werden ohne Trenner
-zusammengeklebt, TMDB antwortet mit 404, der Poster bleibt dauerhaft leer für diesen Titel
-(kein Retry-Mechanismus für „Pfad vorhanden, aber falsches Format").
-- **Akzeptanzkriterium:** Ein `posterPath`, der nicht zur aktiven Quelle passt (z. B. beginnt er
-  bereits mit `http`, obwohl TMDB aktiv ist), darf nicht blind an die Bild-CDN-URL angehängt werden.
-  Entweder den Pfad pro Quelle kennzeichnen/trennen (z. B. eigene Spalte oder ein Präfix, das beim
-  Quellenwechsel invalidiert), oder `TmdbPosterSource.download(...)` defensiv prüfen und bei einem
-  bereits absoluten `posterPath` (nicht TMDB-Format) wie bei „kein Poster" behandeln (negativ cachen,
-  damit `findPosterPath` erneut über TMDB auflöst statt denselben falschen Pfad endlos wiederzuverwenden).
-- **Hinweis:** Betrifft vermutlich jede Instanz, die die Poster-Quelle nach dem ersten Befüllen von
-  `title_poster` umgestellt hat (`imdb.enabled`/`tmdb.enabled` getauscht) — kein Einzelfall.
-- **Erledigt:** Neue `PosterPort.isValidPosterPath(String)` (Default `true`), von `TmdbPosterSource`
-  (`posterPath.startsWith("/")`) und `ImdbPosterSource` (`startsWith("http://"/"https://")`) jeweils
-  auf ihr eigenes Pfad-Format eingeschränkt überschrieben. `PosterService.classify(...)` behandelt
-  einen zur aktiven Quelle nicht passenden `posterPath` wie „noch nicht aufgelöst"
-  (`Cached.needsDiscovery()`) statt ihn blind an `download(...)` durchzureichen — der nächste
-  Zugriff löst über die aktuell aktive Quelle neu auf und überschreibt Pfad **und** alte Bytes
-  (`TitlePoster.refresh(...)`, self-healing ohne manuellen Eingriff).
+always builds the download URL as `imageBaseUrl + "/" + tmdbSize(size) + posterPath` — assuming
+that `posterPath` is a TMDB-relative path (e.g. `/abc123.jpg`).
+But `title_poster.poster_path` is a single, source-agnostic column (`PosterService.classify`/`storePath`):
+if the path was originally determined by `ImdbPosterSource`, it is a **full** Amazon CDN URL
+(`https://m.media-amazon.com/...`). If the instance later runs (or runs concurrently, depending on configuration)
+with `tmdb.enabled=true`, `PosterService.get(...)` reads that old path from `title_poster` (the row has
+no bytes yet for the requested size → `Cached.needsDownload(row.getPosterPath())`) and passes it
+through to `TmdbPosterSource.download(...)` unchanged — the two URLs get glued together without a
+separator, TMDB answers with a 404, and the poster stays permanently empty for that title
+(there is no retry mechanism for "path present, but wrong format").
+- **Acceptance criterion:** A `posterPath` that does not match the active source (e.g. it already
+  starts with `http` even though TMDB is active) must not be blindly appended to the image CDN URL.
+  Either mark/separate the path per source (e.g. a dedicated column or a prefix that is invalidated
+  when the source changes), or have `TmdbPosterSource.download(...)` check defensively and treat an
+  already absolute `posterPath` (not in TMDB format) like "no poster" (cache negatively, so that
+  `findPosterPath` resolves again via TMDB instead of endlessly reusing the same wrong path).
+- **Note:** Probably affects every instance that switched its poster source after `title_poster`
+  was first populated (`imdb.enabled`/`tmdb.enabled` swapped) — not a one-off.
+- **Done:** New `PosterPort.isValidPosterPath(String)` (default `true`), overridden by `TmdbPosterSource`
+  (`posterPath.startsWith("/")`) and `ImdbPosterSource` (`startsWith("http://"/"https://")`), each
+  narrowed to its own path format. `PosterService.classify(...)` treats a
+  `posterPath` that doesn't match the active source as "not resolved yet"
+  (`Cached.needsDiscovery()`) instead of passing it blindly on to `download(...)` — the next
+  access resolves anew via the currently active source and overwrites both the path **and** the old
+  bytes (`TitlePoster.refresh(...)`, self-healing without manual intervention).
 
 ---
 
@@ -732,210 +732,210 @@ zusammengeklebt, TMDB antwortet mit 404, der Poster bleibt dauerhaft leer für d
 
 ---
 
-### ✅ TODO-48 — Sortierbarkeit der „Cache Verwalten"-Oberfläche
-Die Manage-Tabelle (`/manage`, `ManageTable`) hatte keine Sortierung — anders als die
-Verfügbarkeits-Tabellen (Dashboard/Provider-Seiten), die bereits per Klick auf die Spaltenüberschrift
-nach Titel/Jahr/hinzugefügt sortierbar sind (`shared/sort/table-sort.ts`, `MatSortModule`).
-- **Akzeptanzkriterium:** Die Manage-Tabelle lässt sich per Klick auf die Spaltenüberschrift nach
-  **Name** und nach **Datum** (Zeitpunkt des letzten Scrapes, `lastScrapedAt` aus TODO-43) sortieren,
-  auf- und absteigend, nach demselben Muster (`mat-sort-header`) wie die bestehenden Tabellen.
-- **Erledigt:** Neue `sortManageRows(...)` in `shared/sort/table-sort.ts` (eigene kleine Funktion
-  statt Erweiterung von `sortRows`, da die Manage-Tabelle weder `year` noch `added` hat); Zeilen, die
-  gescrapt werden müssen (`needsScrape` — nie gecacht **oder** invalidiert), sortieren als
-  frühestmöglicher Zeitpunkt (`-Infinity`): aufsteigend an den Anfang, absteigend ans Ende.
+### ✅ TODO-48 — Make the "Manage Cache" UI sortable
+The manage table (`/manage`, `ManageTable`) had no sorting — unlike the
+availability tables (dashboard/provider pages), which can already be sorted by
+title/year/added by clicking the column header (`shared/sort/table-sort.ts`, `MatSortModule`).
+- **Acceptance criterion:** The manage table can be sorted by clicking the column header, by
+  **name** and by **date** (time of the last scrape, `lastScrapedAt` from TODO-43),
+  ascending and descending, following the same pattern (`mat-sort-header`) as the existing tables.
+- **Done:** New `sortManageRows(...)` in `shared/sort/table-sort.ts` (a small function of its own
+  rather than an extension of `sortRows`, since the manage table has neither `year` nor `added`); rows that
+  need scraping (`needsScrape` — never cached **or** invalidated) sort as the
+  earliest possible point in time (`-Infinity`): ascending to the top, descending to the bottom.
 
-  **Umgedreht mit dem Folge-Fix `fc0c5fb`, und das ist der interessante Teil.** Ursprünglich
-  wurde nur `lastScrapedAt = null` gesondert behandelt, und zwar genau andersherum — analog zum
-  `year`-Sonderfall „Not yet released". Das ging an einem Fall vorbei, den dieses Ticket nicht
-  kannte: ein **invalidierter** Titel behält seinen alten Zeitstempel. Er rutschte damit mitten
-  in die Liste, obwohl die Status-Pille gar kein Datum anzeigt.
-  Deshalb hängt die Sortierung heute an `needsScrape` statt an `lastScrapedAt === null`, und
-  `SortableManageRow` trägt das Feld eigens dafür. `ManageTable` verdrahtet
-  `MatSortModule`/`matSort` wie `CatalogTable`; die Status-Spalte trägt `mat-sort-header="lastScrapedAt"`
-  (abweichend vom `matColumnDef`-Namen `status`), da sie sowohl die „muss gescrapt werden"-Pille als
-  auch den Zeitstempel zeigt.
-
----
-
----
-
-### ✅ F12 — Controller umgehen `ApiExceptionHandler` via rohem `ResponseStatusException`
-`MeApiController` (6×), `WatchlistApiController` (2×) und `ImdbSearchApiController` (1×) warfen
-`ResponseStatusException` direkt statt einer gemappten Exception, wodurch die Fehlermeldung ohne
-`spring.mvc.problemdetails.enabled`/`server.error.include-message` verloren gehen konnte.
-- **Erledigt:** Neue `application.ValidationException` (trägt optional einen `HttpStatus`, Default
-  `BAD_REQUEST`, analog zu `UserManagementException`) ersetzt alle 9 Stellen. `ApiExceptionHandler`
-  bildet sie auf eine `ProblemDetail` mit dem jeweiligen Status ab. Live verifiziert: fehlendes
-  `theme`-Feld → `400` mit `{"detail":"A theme is required.", "title":"Invalid request", ...}` statt
-  einer leeren Standard-Fehlerseite; `tilesPerRow`-Bereichsprüfung ebenso. Die beiden
-  `ResponseStatusException`-404-Fälle (`SearchApiController`, `ProviderApiController`, "unbekannte
-  Ressource" statt Validierung) wurden bewusst nicht angefasst — andere Fehlerkategorie, außerhalb
-  von F12s "400-Validierung"-Fokus.
+  **Reversed by the follow-up fix `fc0c5fb`, and that's the interesting part.** Originally
+  only `lastScrapedAt = null` was special-cased, and in exactly the opposite direction — by analogy
+  with the `year` special case "Not yet released". That missed a case this ticket didn't
+  know about: an **invalidated** title keeps its old timestamp. It therefore ended up in the middle
+  of the list even though the status pill shows no date at all.
+  That's why sorting today hangs off `needsScrape` rather than `lastScrapedAt === null`, and
+  `SortableManageRow` carries the field specifically for that. `ManageTable` wires up
+  `MatSortModule`/`matSort` like `CatalogTable`; the status column carries `mat-sort-header="lastScrapedAt"`
+  (differing from the `matColumnDef` name `status`), since it shows both the "needs scraping" pill and
+  the timestamp.
 
 ---
 
 ---
 
-## eBay-Preisabfrage (2026-09-05)
+### ✅ F12 — Controllers bypass `ApiExceptionHandler` via a raw `ResponseStatusException`
+`MeApiController` (6×), `WatchlistApiController` (2×) and `ImdbSearchApiController` (1×) threw
+`ResponseStatusException` directly instead of a mapped exception, which meant the error message could
+be lost without `spring.mvc.problemdetails.enabled`/`server.error.include-message`.
+- **Done:** A new `application.ValidationException` (optionally carrying an `HttpStatus`, default
+  `BAD_REQUEST`, analogous to `UserManagementException`) replaces all 9 places. `ApiExceptionHandler`
+  maps it to a `ProblemDetail` with the respective status. Verified live: a missing
+  `theme` field → `400` with `{"detail":"A theme is required.", "title":"Invalid request", ...}` instead
+  of an empty default error page; the `tilesPerRow` range check likewise. The two
+  `ResponseStatusException` 404 cases (`SearchApiController`, `ProviderApiController`, "unknown
+  resource" rather than validation) were deliberately left alone — a different error category, outside
+  F12's "400 validation" focus.
 
 ---
 
-### ✅ TODO-49 — Bestehende `save()`-Aufrufe auf Dirty Checking umgestellt (ADR-0018)
-[ADR-0018](docs/adr/0018-dirty-checking-statt-explizitem-save.md) legt fest, dass innerhalb einer
-Transaktion geladene Entitäten mutiert und **nicht** gespeichert werden — Hibernates Dirty Checking
-schreibt beim Commit. Der Bestand folgt dem noch nicht; fünf Stellen rufen `save()` auf einer
-bereits verwalteten Entität:
+---
 
-- `accountaccess/application/UserPreferencesService.java` — `update(...)`, das alle sechs
-  Präferenz-Setter bündelt
-- `accountaccess/application/UserAdminService.java` — zwei Stellen (`update`, `deactivate`)
-- `titlecatalog/application/PosterService.java` — zwei Stellen (Zeile 151, 166)
-- `titlecatalog/application/TitleMetaService.java` — Zeile 96
-- `watchlist/application/WatchlistImportService.java` — Zeile 73 und 102
+## eBay price lookup (2026-09-05)
 
-- **Akzeptanzkriterium:** Kein `save()` mehr auf einer Entität, die in derselben Transaktion
-  geladen wurde. Die `of(...)`/`new`-Zweige derselben Methoden behalten ihren Aufruf — dort ist er
-  zwingend.
-- **Bewusst kein Sammel-Commit:** Nach der Pfadfinder-Konvention umzustellen, wer die Methode
-  ohnehin anfasst. Die Änderung ist **nicht mechanisch** — bei jeder Stelle ist zu prüfen, ob die
-  Entität wirklich in derselben Transaktion geladen wurde. Ein pauschales Streichen aller Aufrufe
-  würde die tragenden mitreißen.
-- **Risiko beim Umstellen:** Ein Fehler ist still. Wird eine Stelle umgestellt, deren Entität doch
-  detached war, verfällt die Änderung ohne Exception und ohne Logeintrag. Mockito-Tests können das
-  nicht aufdecken — sie sehen kein Dirty Checking. Wo das Schreiben die eigentliche Zusage ist,
-  gehört ein Test gegen eine echte Persistenzschicht dazu.
-- **Erledigt am 2026-09-05.** Sieben Aufrufe entfernt, einer bewusst behalten:
-  `PosterService.storeBytes` lädt über `orElseGet(() -> TitlePoster.of(...))`, die Entität kann also
-  verwaltet **oder** brandneu sein, und der eine `save` deckt beide Wege ab — ihn zu streichen hätte
-  jedes erstmalige Poster still verloren. Genau der nicht-mechanische Fall, vor dem dieses Ticket
-  warnt.
-  Die Tests prüfen jetzt die Wirkung statt des Mechanismus (`verify(..., never()).save(any())` plus
-  Zusicherung auf der mutierten Entität).
-  Dazu `DirtyCheckingPersistenceTest`: ein nicht-transaktionaler `@SpringBootTest`, der nach dem
-  Commit des Service neu liest — der einzige Test, der das Schreiben tatsächlich belegt. Verifiziert,
-  dass er den Fehlerfall fängt: ohne `@Transactional` an der Service-Methode schlägt er fehl
+---
+
+### ✅ TODO-49 — Existing `save()` calls switched to dirty checking (ADR-0018)
+[ADR-0018](docs/adr/0018-dirty-checking-instead-of-an-explicit-save.md) states that entities loaded within a
+transaction are mutated and **not** saved — Hibernate's dirty checking writes on commit.
+The existing code doesn't follow that yet; five places call `save()` on an
+already managed entity:
+
+- `accountaccess/application/UserPreferencesService.java` — `update(...)`, which bundles all six
+  preference setters
+- `accountaccess/application/UserAdminService.java` — two places (`update`, `deactivate`)
+- `titlecatalog/application/PosterService.java` — two places (lines 151, 166)
+- `titlecatalog/application/TitleMetaService.java` — line 96
+- `watchlist/application/WatchlistImportService.java` — lines 73 and 102
+
+- **Acceptance criterion:** No more `save()` on an entity that was loaded in the same
+  transaction. The `of(...)`/`new` branches of the same methods keep their call — there it is
+  mandatory.
+- **Deliberately not one big commit:** Following the boy-scout convention, whoever touches the
+  method anyway converts it. The change is **not mechanical** — for each place you have to check whether the
+  entity really was loaded in the same transaction. Blanket-deleting every call
+  would take the load-bearing ones with it.
+- **Risk when converting:** A mistake is silent. If a place gets converted whose entity was in fact
+  detached, the change is lost without an exception and without a log entry. Mockito tests can't
+  reveal that — they don't see dirty checking. Where the write is the actual promise,
+  a test against a real persistence layer belongs with it.
+- **Done on 2026-09-05.** Seven calls removed, one deliberately kept:
+  `PosterService.storeBytes` loads via `orElseGet(() -> TitlePoster.of(...))`, so the entity can be
+  managed **or** brand new, and the single `save` covers both paths — deleting it would have
+  silently lost every first-time poster. Exactly the non-mechanical case this ticket
+  warns about.
+  The tests now check the effect rather than the mechanism (`verify(..., never()).save(any())` plus
+  an assertion on the mutated entity).
+  Plus `DirtyCheckingPersistenceTest`: a non-transactional `@SpringBootTest` that re-reads after the
+  service commits — the only test that actually proves the write. Verified
+  that it catches the failure case: without `@Transactional` on the service method it fails
   (`expected: DARK but was: SYSTEM`).
 
 ---
 
-### ✅ TODO-50 — Indizes der Datenbank evaluiert
-Bisher gibt es genau einen bewusst gesetzten Index (`014-index-query-cache-imdb-id.xml`); alles
-andere sind Primärschlüssel und die Unique Constraints, die nebenbei einen Index mitbringen. Ob das
-für die tatsächlichen Zugriffspfade reicht, ist **nie geprüft** worden — es ist eine Annahme, kein
-Befund.
+### ✅ TODO-50 — Database indexes evaluated
+So far there is exactly one deliberately created index (`014-index-query-cache-imdb-id.xml`); everything
+else is primary keys and the unique constraints that bring an index along as a side effect. Whether that
+is enough for the actual access paths has **never been checked** — it's an assumption, not a
+finding.
 
-Anlass war die damals neue Quota-Tabelle aus [ADR-0017](docs/adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md)
-(mit TODO-56 entfallen — die Evaluation der übrigen Indizes bleibt davon unberührt):
-`ebay_user_quota_day` wird bei **jeder** Preisabfrage über `(quota_day, user_id)` gelesen. Der
-Unique Constraint `uk_ebay_user_quota_day` deckt genau diese Kombination ab und trägt die Abfrage
-damit vermutlich schon — aber „vermutlich" ist der Grund für dieses Ticket.
+The trigger was the then-new quota table from [ADR-0017](docs/adr/0017-quota-management-for-the-ebay-browse-api.md)
+(dropped with TODO-56 — the evaluation of the remaining indexes is unaffected by that):
+`ebay_user_quota_day` is read on **every** price lookup via `(quota_day, user_id)`. The
+unique constraint `uk_ebay_user_quota_day` covers exactly that combination and therefore probably
+already carries the query — but "probably" is the reason for this ticket.
 
-- **Akzeptanzkriterium:** Für die heißen Abfragepfade liegt ein `EXPLAIN`-Befund vor, aus dem
-  hervorgeht, welcher Index benutzt wird bzw. wo ein Full Scan stattfindet. Fehlende Indizes werden
-  als eigenes Liquibase-Changelog ergänzt, überflüssige benannt.
-- **Kandidaten für die Prüfung:**
-  - `ebay_user_quota_day` über `(quota_day, user_id)` — pro Preisabfrage
-  - `watchlist_entry` über `user_id` — jeder Dashboard-Aufruf
-  - `query_meta` über `due_for_refresh_at` — der gestaffelte Hintergrund-Refresh aus ADR-0016
-    scannt danach
-  - `title_meta` / `title_poster` über `imdb_id`
-  - `spring_session` — kommt aus dem Spring-Session-Schema, nicht von uns, aber zu kennen
-- **Zu bedenken:** Bei fünf Nutzern und wenigen tausend Zeilen wird der Optimizer manches ohnehin
-  per Full Scan lösen, und zwar zu Recht. Das Ticket soll Indizes **begründet** setzen, nicht
-  vorsorglich streuen — jeder Index kostet bei jedem Schreibvorgang.
-- **Vorher zu klären:** Der Befund ist gegen **MariaDB** zu erheben, nicht gegen H2. Die
-  Entwicklungs- und Testumgebung läuft auf H2, dessen Optimizer sich anders entscheidet.
+- **Acceptance criterion:** For the hot query paths there is an `EXPLAIN` finding showing
+  which index is used, or where a full scan happens. Missing indexes get added
+  as their own Liquibase changelog, superfluous ones get named.
+- **Candidates for the check:**
+  - `ebay_user_quota_day` via `(quota_day, user_id)` — per price lookup
+  - `watchlist_entry` via `user_id` — every dashboard visit
+  - `query_meta` via `due_for_refresh_at` — the staggered background refresh from ADR-0016
+    scans on it
+  - `title_meta` / `title_poster` via `imdb_id`
+  - `spring_session` — comes from the Spring Session schema, not from us, but worth knowing about
+- **To keep in mind:** With five users and a few thousand rows, the optimizer will solve some things
+  with a full scan anyway, and rightly so. This ticket is about setting indexes **with a reason**, not
+  scattering them pre-emptively — every index costs on every write.
+- **To clarify first:** The finding has to be gathered against **MariaDB**, not against H2. The
+  development and test environment runs on H2, whose optimizer decides differently.
 
-**Erledigt am 2026-09-06.** Erhoben gegen MariaDB 12.3 in einem Wegwerf-Container, mit 2000
-geseedeten `watchlist_entry`- und `query_meta`-Zeilen — leere Tabellen liefern nur
-„Impossible WHERE" und damit keine Aussage.
+**Done on 2026-09-06.** Gathered against MariaDB 12.3 in a throwaway container, with 2000
+seeded `watchlist_entry` and `query_meta` rows — empty tables only yield
+"Impossible WHERE" and hence say nothing.
 
-| Zugriffspfad | Ergebnis |
+| Access path | Result |
 | --- | --- |
-| `ebay_user_quota_day` über `(quota_day, user_id)` | nutzt `uk_ebay_user_quota_day` — die Vermutung des Tickets bestätigt, **kein** zusätzlicher Index nötig |
-| `watchlist_entry` über `(user_id, imdb_id)` | `type=const` über den zusammengesetzten Unique-Index |
-| `watchlist_entry` über `user_id` allein | **`type=ALL`**, beide Indizes verfügbar, keiner gewählt |
-| `query_meta` über `imdb_id` | nutzt `ix_query_meta_imdb_id` |
-| `query_meta` über `due_for_refresh_at` | **`type=ALL`, `possible_keys=null`** — kein Index vorhanden |
-| `app_user` über `username`, `query_result` über `imdb_id`, `title_meta`/`title_poster` über `imdb_id` | jeweils passender Unique-/Normalindex vorhanden und genutzt |
+| `ebay_user_quota_day` via `(quota_day, user_id)` | uses `uk_ebay_user_quota_day` — the ticket's assumption confirmed, **no** additional index needed |
+| `watchlist_entry` via `(user_id, imdb_id)` | `type=const` via the composite unique index |
+| `watchlist_entry` via `user_id` alone | **`type=ALL`**, both indexes available, neither chosen |
+| `query_meta` via `imdb_id` | uses `ix_query_meta_imdb_id` |
+| `query_meta` via `due_for_refresh_at` | **`type=ALL`, `possible_keys=null`** — no index present |
+| `app_user` via `username`, `query_result` via `imdb_id`, `title_meta`/`title_poster` via `imdb_id` | a matching unique/regular index present and used in each case |
 
-**Ein Kandidat gefunden, bewusst nicht umgesetzt:** `ix_watchlist_entry_user` ist überflüssig —
-strukturell, weil `uq_watchlist_entry_user_imdb` `(user_id, imdb_id)` abdeckt und `user_id` dessen
-linkes Präfix ist, und praktisch, weil der Optimizer ihn nachweislich nicht wählt (bei fünf Nutzern
-trifft einer 20 % der Tabelle, da ist ein Full Scan billiger als 400 Index-Lookups). Jeder
-Schreibvorgang pflegt ihn umsonst.
+**One candidate found, deliberately not acted on:** `ix_watchlist_entry_user` is superfluous —
+structurally, because `uq_watchlist_entry_user_imdb` covers `(user_id, imdb_id)` and `user_id` is its
+left prefix, and practically, because the optimizer demonstrably doesn't pick it (with five users
+one of them hits 20% of the table, and there a full scan is cheaper than 400 index lookups). Every
+write maintains it for nothing.
 
-**Warum er trotzdem bleibt — der eigentliche Erkenntnisgewinn dieses Tickets:** die beiden
-Datenbanken sind sich uneinig. MariaDB/InnoDB lässt den Drop zu, weil der Fremdschlüssel
-`fk_watchlist_entry_user` seinen Pflichtindex im zusammengesetzten Unique-Index findet (geprüft:
-`DROP` erfolgreich, Plan danach unverändert). **H2 verweigert ihn**
-(`Index "IX_WATCHLIST_ENTRY_USER" belongs to constraint "FK_WATCHLIST_ENTRY_USER"`) — dort ist der
-Index an die Zwangsbedingung gebunden. Ein Changeset, das nur auf MariaDB läuft, ließe
-Entwicklungs- und Produktionsschema auseinanderlaufen; der Umweg über Fremdschlüssel löschen,
-Index löschen, Fremdschlüssel neu anlegen wäre gegen beide Datenbanken zu verifizieren.
+**Why it stays anyway — the real insight of this ticket:** the two
+databases disagree. MariaDB/InnoDB allows the drop, because the foreign key
+`fk_watchlist_entry_user` finds its mandatory index in the composite unique index (verified:
+`DROP` succeeded, plan unchanged afterwards). **H2 refuses it**
+(`Index "IX_WATCHLIST_ENTRY_USER" belongs to constraint "FK_WATCHLIST_ENTRY_USER"`) — there the
+index is tied to the constraint. A changeset that only runs on MariaDB would let the
+development and production schemas drift apart; the detour of dropping the foreign key,
+dropping the index and re-creating the foreign key would have to be verified against both databases.
 
-Für eine Tabelle mit wenigen tausend Zeilen und fünf Nutzern steht dieser Aufwand in keinem
-Verhältnis zum eingesparten Index-Unterhalt. **Neu bewerten, wenn** `watchlist_entry` deutlich
-wächst oder H2 als Entwicklungsdatenbank ohnehin abgelöst wird.
+For a table with a few thousand rows and five users, that effort is out of all
+proportion to the index maintenance it would save. **Re-evaluate when** `watchlist_entry` grows
+substantially, or when H2 gets replaced as the development database anyway.
 
-**Bewusst *kein* Index auf `due_for_refresh_at`.** Der gestaffelte Hintergrund-Refresh (ADR-0016)
-scannt die Tabelle voll. Das ist heute richtig: die Tabelle hat eine Zeile je gecachtem Titel,
-der Lauf ist geplant und nicht anfragegebunden, und ein Index würde jeden Scrape-Schreibvorgang
-verteuern. **Neu bewerten, wenn** `query_meta` fünfstellig wird oder der Refresh-Lauf spürbar
-dauert — dann ist er selektiv genug, um sich zu lohnen.
+**Deliberately *no* index on `due_for_refresh_at`.** The staggered background refresh (ADR-0016)
+scans the whole table. That is right today: the table has one row per cached title,
+the run is scheduled and not request-bound, and an index would make every scrape write
+more expensive. **Re-evaluate when** `query_meta` reaches five figures or the refresh run takes
+noticeably long — then it's selective enough to pay off.
 
-**Methodischer Hinweis für die nächste Runde:** die Aussagekraft hängt an realistischen Zeilenzahlen.
-Mit leeren Tabellen hätte dieselbe Messung „alles bestens" ergeben und den Full Scan auf
-`user_id` nicht gezeigt.
+**Methodological note for the next round:** the meaningfulness depends on realistic row counts.
+With empty tables the same measurement would have said "all fine" and would not have shown the full scan on
+`user_id`.
 
 ---
 
-### ✅ TODO-51 — Eigenen Circuit Breaker durch resilience4j ersetzt *(Code inzwischen entfallen)*
-> **Gegenstandslos seit 2026-09-07.** Alles hier Beschriebene lag im Kontext `purchaseoffers`
-> und ist mit dem Rückbau der Preisabfrage (TODO-56) gelöscht — samt der Abhängigkeit
-> `resilience4j-spring-boot4` und dem mit ihr gekommenen `micrometer-core`.
-> Es gibt in der Anwendung derzeit **keinen** Circuit Breaker mehr.
+### ✅ TODO-51 — Replaced our own circuit breaker with resilience4j *(code has since been removed)*
+> **Moot since 2026-09-07.** Everything described here lived in the `purchaseoffers` context
+> and was deleted along with the removal of the price lookup (TODO-56) — including the dependency
+> `resilience4j-spring-boot4` and the `micrometer-core` that came with it.
+> There is currently **no** circuit breaker left in the application.
 >
-> **Die Begründung, die hier zunächst stand, war falsch** („weil es keinen ausfallgefährdeten
-> Fremddienst hinter einer Bean-Grenze mehr gibt"). Es gibt drei: werstreamt.es, IMDb und TMDB.
-> Richtig ist nur, dass mit `purchaseoffers` der einzige Nutzer der Abhängigkeit wegfiel —
-> nicht, dass der Bedarf verschwunden wäre. Zurückgeholt wird sie unter TODO-66.
+> **The rationale originally given here was wrong** ("because there is no longer any
+> outage-prone third-party service behind a bean boundary"). There are three: werstreamt.es, IMDb and TMDB.
+> All that is true is that with `purchaseoffers` the dependency's only user went away —
+> not that the need had disappeared. It will be brought back under TODO-66.
 >
-> Der Eintrag bleibt wegen zweier Erkenntnisse, die den Code überdauern:
-> die Versionsrecherche unten (das Boot-4-Artefakt heißt `2.4.0`, nicht `2.3.0`),
-> und der Grund, warum die Konfiguration in Java statt in Properties gehörte.
-> Beides gilt beim nächsten Anlauf unverändert.
+> The entry stays because of two insights that outlive the code:
+> the version research below (the Boot 4 artifact is called `2.4.0`, not `2.3.0`),
+> and the reason why the configuration belonged in Java rather than in properties.
+> Both still hold for the next attempt.
 
-`TitleOfferService` brachte einen handgeschriebenen Circuit Breaker mit: ein Zähler
-aufeinanderfolgender Fehlschläge plus ein `openUntil`-Zeitpunkt, rund 15 Zeilen.
+`TitleOfferService` came with a hand-written circuit breaker: a counter of
+consecutive failures plus an `openUntil` timestamp, roughly 15 lines.
 
-**Erste Bewertung war falsch und wurde korrigiert.** Zunächst hatte ich nur
-`resilience4j-spring-boot4:2.3.0` geprüft, den Fehlschlag als „es gibt kein Boot-4-Artefakt"
-gedeutet und deshalb zur Beibehaltung geraten. Tatsächlich existiert **`2.4.0`**. Damit fielen zwei
-der drei Gegenargumente weg: das Artefakt zielt auf diese Boot-Generation, und es zieht **kein**
-`kotlin-stdlib` nach (das kam vom `-spring-boot3`-Artefakt). Neu hinzu kommt nur `micrometer-core`,
-das zugleich die Breaker-Metriken mitbringt; `micrometer-observation`/`-commons` waren über Spring
-Boot ohnehin da.
+**The first assessment was wrong and has been corrected.** Initially I had only checked
+`resilience4j-spring-boot4:2.3.0`, read the failure as "there is no Boot 4 artifact"
+and therefore advised keeping things as they were. In fact **`2.4.0`** exists. That knocked out two
+of the three counter-arguments: the artifact targets this Boot generation, and it does **not** pull in
+`kotlin-stdlib` (that came from the `-spring-boot3` artifact). The only new arrival is `micrometer-core`,
+which at the same time brings the breaker metrics along; `micrometer-observation`/`-commons` were already
+there via Spring Boot anyway.
 
-- **Erledigt:** `@CircuitBreaker(name = "ebay")` auf `EbayBrowseApiSource.findOffers` — dort, wo
-  tatsächlich mit eBay gesprochen wird, und an einer Bean-Grenze, die der Aspekt abfangen kann.
-  `TitleOfferService` prüft den Zustand **vor** der Quota-Reservierung, damit ein kurzgeschlossener
-  Aufruf nicht trotzdem zwei Calls vom Tagesbudget kostet, und behandelt
-  `CallNotPermittedException` für das schmale Zeitfenster dazwischen.
-- **Was der Wechsel behebt:** Der eigene Breaker zählte *aufeinanderfolgende* Fehlschläge und hätte
-  bei einer Quelle, die jeden zweiten Aufruf ablehnt, **nie** ausgelöst — während die Hälfte des
-  Budgets in Fehlschläge lief. Jetzt entscheidet die Fehlerrate über ein Sliding Window. Dazu kommt
-  ein Half-Open-Zustand mit zwei Probeaufrufen statt der vollen Wiederöffnung.
-- **Konfiguration in Java** (`EbayCircuitBreakerConfig`), nicht in `application.properties`, aus
-  zwei Gründen, die beide beim Bauen auffielen: `ignoreExceptions` wäre dort ein voll
-  qualifizierter Klassenname als **String**, dessen Tippfehler still auf die Defaults zurückfällt —
-  ausgerechnet bei der Regel, die verhindert, dass ein erschöpftes Tagesbudget den Breaker öffnet.
-  Und `src/test/resources/application.properties` **überschattet** die Produktionsdatei im
-  Test-Classpath, womit Property-Werte für jeden `@SpringBootTest` unsichtbar sind.
-- **Verifiziert:** `EbayCircuitBreakerConfigurationTest` prüft im echten Kontext, dass der
-  Customizer greift (sonst stünden dort die resilience4j-Defaults 100/60 s) und dass eine
-  erschöpfte Quota den Breaker nachweislich **nicht** öffnet, eine gewöhnliche Störung dagegen
-  schon.
+- **Done:** `@CircuitBreaker(name = "ebay")` on `EbayBrowseApiSource.findOffers` — where
+  we actually talk to eBay, and at a bean boundary the aspect can intercept.
+  `TitleOfferService` checks the state **before** reserving quota, so that a short-circuited
+  call doesn't cost two calls from the daily budget anyway, and handles
+  `CallNotPermittedException` for the narrow window in between.
+- **What the switch fixes:** Our own breaker counted *consecutive* failures and would **never**
+  have tripped against a source that rejects every second call — while half the
+  budget ran into failures. Now the error rate over a sliding window decides. On top of that there is
+  a half-open state with two probe calls instead of fully reopening.
+- **Configuration in Java** (`EbayCircuitBreakerConfig`), not in `application.properties`, for
+  two reasons, both of which surfaced during the build: `ignoreExceptions` would be a fully
+  qualified class name as a **string** there, and a typo in it silently falls back to the defaults —
+  of all places in the rule that keeps an exhausted daily budget from opening the breaker.
+  And `src/test/resources/application.properties` **shadows** the production file on the
+  test classpath, which makes property values invisible to every `@SpringBootTest`.
+- **Verified:** `EbayCircuitBreakerConfigurationTest` checks in the real context that the
+  customizer takes effect (otherwise the resilience4j defaults 100/60 s would be in place) and that an
+  exhausted quota demonstrably does **not** open the breaker, whereas an ordinary failure
+  does.
 
 ---
 
@@ -943,690 +943,753 @@ Boot ohnehin da.
 
 ---
 
-### ✅ TODO-53 — Als Admin andere Nutzer impersonieren
-Ein ADMIN soll die Anwendung vorübergehend als ein anderer Nutzer sehen können, um Meldungen
-nachzuvollziehen, ohne sich dessen Passwort geben zu lassen.
+### ✅ TODO-53 — Impersonate other users as an admin
+An ADMIN should be able to see the application temporarily as another user, in order to
+follow up on reports without having to be given that user's password.
 
-- **Akzeptanzkriterium:** Ein ADMIN kann aus der Benutzerverwaltung heraus in die Sicht eines
-  anderen Nutzers wechseln, sieht dessen Watchlist und Einstellungen, und kann den Wechsel wieder
-  beenden — zurück in die eigene Sitzung, ohne erneute Anmeldung.
-- **Naheliegender Weg:** Spring Security bringt dafür `SwitchUserFilter` mit
-  (`/login/impersonate?username=…`, `/logout/impersonate`) — kein Eigenbau nötig. Der Filter legt
-  die ursprüngliche Authentifizierung als `SwitchUserGrantedAuthority` ab, worüber der Rückweg
-  läuft.
-- **Was vor der Umsetzung zu klären ist — das ist hier der eigentliche Inhalt:**
-  - **Wer darf wen?** Ein ADMIN, der einen anderen ADMIN impersoniert, ist ein Weg zur
-    Rechteausweitung ohne Spur. Mindestens: keine Impersonierung von ADMINs, und niemals von sich
-    selbst aus wieder hoch.
-  - **Was ist sichtbar?** Ein Wechsel, den man nicht bemerkt, ist der gefährlichere Fehler. Die
-    Oberfläche braucht einen dauerhaften, unübersehbaren Hinweis („Du siehst die Anwendung als
-    …") mit dem Ausstieg direkt daneben.
-  - **Was wird protokolliert?** Beginn und Ende jeder Impersonierung gehören ins Log, mit beiden
-    Identitäten. Ohne das ist im Nachhinein nicht unterscheidbar, ob ein Nutzer etwas selbst getan
-    hat oder ein Admin in seinem Namen.
-  - **Was darf der Impersonierende tun?** Nur lesen oder auch schreiben? Schreiben in fremdem
-    Namen ist der Punkt, an dem aus einem Diagnosewerkzeug eine Vertrauensfrage wird.
-  - ~~**Wechselwirkung mit der eBay-Quota (ADR-0017):**~~ — mit dem Rückbau der Preisabfrage
-    (TODO-56) gegenstandslos; `ImpersonationPort` ist ersatzlos entfallen, das Feature selbst
-    unberührt. Der ursprüngliche Punkt lautete: Preisabfragen während einer Impersonierung
-    werden auf das Kontingent des *impersonierten* Nutzers gebucht. Ob das gewollt ist, ist zu
-    entscheiden — sonst verbraucht ein Admin fremdes Budget.
-- **ADR-pflichtig**, sobald die Antworten stehen: es ist eine Sicherheitsentscheidung, keine
-  Bedienkomfort-Frage.
+- **Acceptance criterion:** An ADMIN can switch into another user's view from the user
+  administration, sees that user's watchlist and settings, and can end the switch again —
+  back into their own session, without logging in again.
+- **The obvious route:** Spring Security ships `SwitchUserFilter` for this
+  (`/login/impersonate?username=…`, `/logout/impersonate`) — no need to build our own. The filter stores
+  the original authentication as a `SwitchUserGrantedAuthority`, which is what the way back
+  runs on.
+- **What has to be settled before implementation — that's the real content here:**
+  - **Who may impersonate whom?** An ADMIN impersonating another ADMIN is a path to
+    privilege escalation without a trace. At minimum: no impersonating ADMINs, and never
+    climbing back up from within an impersonation.
+  - **What is visible?** A switch you don't notice is the more dangerous failure. The
+    UI needs a permanent, unmissable notice ("You are viewing the application as
+    …") with the exit right next to it.
+  - **What gets logged?** The start and end of every impersonation belong in the log, with both
+    identities. Without that there is no telling after the fact whether a user did something
+    themselves or an admin did it in their name.
+  - **What may the impersonator do?** Read only, or write as well? Writing in someone else's
+    name is the point where a diagnostic tool becomes a question of trust.
+  - ~~**Interaction with the eBay quota (ADR-0017):**~~ — moot with the removal of the price lookup
+    (TODO-56); `ImpersonationPort` was dropped without replacement, the feature itself
+    untouched. The original point read: price lookups during an impersonation
+    are charged against the *impersonated* user's quota. Whether that is intended has to be
+    decided — otherwise an admin burns someone else's budget.
+- **Requires an ADR** as soon as the answers are in: this is a security decision, not a
+  question of convenience.
 
-**Erledigt am 2026-09-06**, dokumentiert in
-[ADR-0020](docs/adr/0020-admin-impersonierung-ueber-switchuserfilter.md). Entscheidungen des
-Auftraggebers: Schreiben ist erlaubt, ADMIN-Ziele sind ausgeschlossen, Preisabfragen sind während
-einer Impersonierung gesperrt.
+**Done on 2026-09-06**, documented in
+[ADR-0020](docs/adr/0020-admin-impersonation-via-switchuserfilter.md). Decisions made by the
+client: writing is allowed, ADMIN targets are excluded, price lookups are blocked during
+an impersonation.
 
-Zwei Punkte, die erst beim Bauen sichtbar wurden:
+Two points that only became visible during the build:
 
-- **Der Rückweg darf nicht unter `/api/admin/**` liegen.** Während eines Wechsels trägt die Sitzung
-  die Rollen des Ziels, also kein `ROLE_ADMIN` — ein Ausstieg hinter der Admin-Regel wäre
-  ausgerechnet für die Sitzung geschlossen, die ihn braucht. Er liegt jetzt auf
-  `/api/impersonate/exit` und ist über `ROLE_PREVIOUS_ADMINISTRATOR` geschützt, die Berechtigung,
-  die nur eine gewechselte Sitzung hat.
-- **Ein Nicht-Admin erfährt nichts.** Das Banner hängt allein an `impersonatedBy` aus `/api/me`, und
-  dieses Feld ist für einen gewöhnlichen Nutzer immer `null`. Die Startaktion liegt in der
-  Benutzerverwaltung, die ohnehin ADMIN-only ist.
-
----
-
----
-
-## Build-Toolchain (2026-09-06)
-
----
-
-### ✅ TODO-55 — `upgrade-spring-boot.sh` gehärtet
-Der nächtliche Lauf hat die Anwendung lahmgelegt. Drei Ursachen, alle im Skript:
-
-1. **Der Rollback rollt nicht zurück.** `handle_error()` ruft
-   `git reset --hard "$CURRENT_HEAD"` — **`CURRENT_HEAD` wird nirgends gesetzt** (einzige
-   Fundstelle im Skript ist diese Verwendung). Der Befehl scheitert an einem leeren Argument, der
-   Reset findet nicht statt, und die von `versions:update-parent` geänderte `pom.xml` bleibt im
-   Arbeitsbaum liegen. Der nächste Lauf startet auf einem verschmutzten Baum, `update-and-restart.sh`
-   bricht bei `git pull --rebase` ab — **die gesamte Update-Kette steht, bis jemand von Hand
-   aufräumt.** Das ist der eigentliche Grund, warum ein einzelner fehlgeschlagener Build zum
-   Dauerzustand wurde.
-2. **Getestet wird gegen die Toolchain des Hosts, ausgeliefert wird aus Docker.**
-   `mvn clean package` im Skript nutzt Node/npm des Hosts; der spätere `docker build` nutzt
-   `node:24-alpine`. Eine Node-Aktualisierung auf dem Host bricht damit den Prüflauf, obwohl das
-   Artefakt selbst gebaut werden könnte — und umgekehrt kann der Prüflauf grün sein, während der
-   Docker-Build scheitert. Die beiden sollten dieselbe Toolchain benutzen.
-3. **Milestones und RCs werden automatisch gezogen** (TODO-13). Das ist inzwischen als gewollt
-   entschieden — es macht den Punkt (1) allerdings umso wichtiger: ein instabiler Parent lässt den
-   Build häufiger scheitern, und ohne funktionierenden Rollback bleibt jeder dieser Fehlschläge
-   stehen.
-
-- **Akzeptanzkriterium:**
-  - `CURRENT_HEAD="$(git rev-parse HEAD)"` **vor** der ersten Änderung setzen; zusätzlich im
-    Fehlerfall `git checkout -- pom.xml` als Gürtel-und-Hosenträger.
-  - Der Prüflauf verwendet dieselbe Node-Version wie der Docker-Build (entweder im Container
-    bauen oder die Version aus einer gemeinsamen Quelle beziehen, siehe TODO-54).
-  - ~~Kein automatisches Update auf Milestones/RCs~~ — verworfen, siehe TODO-13.
-  - Ein fehlgeschlagener Lauf hinterlässt einen **sauberen** Arbeitsbaum — prüfbar, indem man den
-    Fehlerfall einmal absichtlich auslöst.
-- **Nicht verifiziert:** Welcher der drei Punkte den konkreten Ausfall ausgelöst hat, lässt sich
-  von hier aus nicht sagen — die Fehlermeldung des Hosts liegt nicht vor. Punkt 1 erklärt
-  allerdings, warum aus einem einmaligen Fehlschlag ein Dauerzustand wurde, unabhängig davon, was
-  ihn ausgelöst hat.
-
-**Teilweise erledigt am 2026-09-06:**
-
-- ✅ Punkt 1: `CURRENT_HEAD` wird vor der ersten Änderung gesetzt, mit Abbruch falls leer, plus
-  `git checkout -- pom.xml` im Fehlerpfad. Ein fehlgeschlagener Lauf hinterlässt damit einen
-  sauberen Arbeitsbaum.
-- ✅ Punkt 2: Der Prüflauf geht über `docker build . --target verify` statt `mvn clean package`
-  auf dem Host. Prüfung und Auslieferung leiten sich jetzt von derselben `toolchain`-Stufe im
-  Dockerfile ab.
-- ✅ Punkt 3: Milestones/RCs weiterhin automatisch — auf Entscheidung des Auftraggebers so
-  gewollt, siehe TODO-13. Der Punkt entfällt damit als Mangel.
-- ✅ Nachgezogen am 2026-09-06: Die ausgelieferte `builder`-Stufe baut jetzt **mit** Tests. Ohne
-  das wäre jeder gewöhnliche Commit ungetestet in den Betrieb gegangen — der nächtliche Prüflauf
-  greift ja nur, wenn Spring Boot selbst etwas veröffentlicht hat.
-- ✅ `cron.sh` entkoppelt: `upgrade-spring-boot.sh` unterscheidet jetzt „nichts zu tun" (Exit 2)
-  von „kaputt" (Exit 1). Vorher brach die Kette in jeder Nacht ohne Spring-Boot-Release ab, und
-  `update-and-restart.sh` lief nie — die Anwendung wurde also nur dann neu ausgerollt, wenn
-  zufällig auch Spring Boot etwas veröffentlicht hatte.
-- ✅ **Nachgetragen 2026-09-09:** Der Docker-Build ließ sich in der Entwicklungsumgebung nicht
-  ausführen (Podman bekam dort kein Netzwerk auf). Inzwischen ist der Proxy-Fix aus TODO-61 auf
-  dem Host ausgerollt und die Anwendung läuft — der Build ist also durchgelaufen.
-  **Der Beleg ist indirekt**: bestätigt ist, dass gebaut und ausgerollt wurde, nicht dass jeder
-  Zweig des Skripts einmal gelaufen ist. Ungeprüft bleibt insbesondere der Fehlerpfad
-  (`handle_error`) — den sieht man erst, wenn ein Upgrade wirklich scheitert.
-
+- **The way back must not sit under `/api/admin/**`.** During a switch the session carries
+  the target's roles, so no `ROLE_ADMIN` — an exit behind the admin rule would be closed
+  precisely to the session that needs it. It now lives at
+  `/api/impersonate/exit` and is protected by `ROLE_PREVIOUS_ADMINISTRATOR`, the authority
+  only a switched session has.
+- **A non-admin learns nothing.** The banner hangs solely off `impersonatedBy` from `/api/me`, and
+  that field is always `null` for an ordinary user. The action that starts it sits in
+  user administration, which is ADMIN-only anyway.
 
 ---
 
 ---
 
-## eBay-Rückbau und Ersatz (2026-09-06)
+## Build toolchain (2026-09-06)
 
 ---
 
-### ✅ TODO-56 — eBay-Preisabfrage zurückgebaut
-Die Preisabfrage über die Browse API (ADR-0017) **lief** — der Developer-Account war
-freigeschaltet, das Feature war in der Anwendung in Benutzung.
-Es hat sich im Betrieb als nicht gut genug erwiesen und wird deshalb zurückgebaut.
-Der Stand ist auf dem Branch `feature/ebay_search` festgehalten —
-hier geht nichts verloren, nur aus `dev` raus.
+### ✅ TODO-55 — Hardened `upgrade-spring-boot.sh`
+The nightly run took the application down. Three causes, all in the script:
 
-**Woran es scheiterte** (aus dem Betrieb, 2026-09-09) — der wichtigste Satz dieses Eintrags,
-weil er den Nächsten davon abhält, dasselbe noch einmal zu bauen:
+1. **The rollback doesn't roll back.** `handle_error()` calls
+   `git reset --hard "$CURRENT_HEAD"` — **`CURRENT_HEAD` is never set anywhere** (the only
+   occurrence in the script is this use). The command fails on an empty argument, the
+   reset doesn't happen, and the `pom.xml` modified by `versions:update-parent` stays behind in the
+   working tree. The next run starts on a dirty tree, `update-and-restart.sh`
+   aborts at `git pull --rebase` — **the entire update chain is stuck until someone cleans up
+   by hand.** That's the real reason a single failed build turned into a permanent
+   state.
+2. **We test against the host's toolchain and ship out of Docker.**
+   `mvn clean package` in the script uses the host's Node/npm; the later `docker build` uses
+   `node:24-alpine`. A Node update on the host therefore breaks the verification run even though the
+   artifact itself could be built — and conversely the verification run can be green while the
+   Docker build fails. The two should use the same toolchain.
+3. **Milestones and RCs are pulled in automatically** (TODO-13). This has since been
+   decided to be intentional — it does make point (1) all the more important, though: an unstable parent makes the
+   build fail more often, and without a working rollback every one of those failures
+   sticks.
 
-1. **Intransparent.** Man sah eine Zahl, aber nicht, *worauf* sie sich bezog.
-   Ein Preis ohne das Angebot dahinter ist nicht nachprüfbar —
-   der Nutzer muss ihn glauben oder ignorieren.
-2. **Zu viele Variablen im Angebot.** Zustand und Qualität des Mediums, DVD oder Blu-ray,
-   Director's Cut oder Kinofassung, Sammleredition, Sprachfassung.
-   „Günstigster Preis" fasst Dinge zusammen, die keine Alternativen zueinander sind.
-   Die billigste Scheibe ist regelmäßig nicht die, die jemand haben will.
+- **Acceptance criterion:**
+  - Set `CURRENT_HEAD="$(git rev-parse HEAD)"` **before** the first change; additionally,
+    on failure, `git checkout -- pom.xml` as belt and braces.
+  - The verification run uses the same Node version as the Docker build (either build in the
+    container or take the version from a shared source, see TODO-54).
+  - ~~No automatic updates to milestones/RCs~~ — rejected, see TODO-13.
+  - A failed run leaves behind a **clean** working tree — testable by deliberately triggering the
+    error case once.
+- **Not verified:** which of the three points caused the actual outage cannot be said
+  from here — the host's error message isn't available. Point 1 does explain,
+  however, why a one-off failure turned into a permanent state, regardless of what
+  triggered it.
 
-**Das ist kein Umsetzungsfehler, sondern ein Modellierungsfehler** — und er war unabhängig von
-der API-Variante: Für physische Medien ist „ein Preis je Titel" die falsche Abstraktion.
-Kein Kontingent, kein besserer Suchbegriff und keine Anbieterwahl hätte daran etwas geändert.
+**Partially done on 2026-09-06:**
 
-Genau deshalb ist der Ersatz (TODO-57) nicht bloß die billigere Lösung, sondern die ehrlichere:
-Der Suchlink beantwortet die Preisfrage gar nicht, sondern stellt den Nutzer vor die
-Angebotsliste, in der diese Variablen sichtbar sind — und überlässt die Entscheidung dem
-Menschen, der als einziger weiß, welche Ausgabe gemeint ist.
-**Die Marktplatz-Auswahl pro Nutzer bleibt**, weil der Ersatz (TODO-57) sie braucht.
+- ✅ Point 1: `CURRENT_HEAD` is set before the first change, aborting if empty, plus
+  `git checkout -- pom.xml` on the error path. A failed run therefore leaves behind a
+  clean working tree.
+- ✅ Point 2: The verification run goes through `docker build . --target verify` instead of `mvn clean package`
+  on the host. Verification and delivery now both derive from the same `toolchain` stage in the
+  Dockerfile.
+- ✅ Point 3: Milestones/RCs are still pulled automatically — intended that way by the client's
+  decision, see TODO-13. The point therefore no longer counts as a defect.
+- ✅ Followed up on 2026-09-06: The shipped `builder` stage now builds **with** tests. Without
+  that, every ordinary commit would have gone into production untested — the nightly verification run
+  only kicks in when Spring Boot itself has released something.
+- ✅ `cron.sh` decoupled: `upgrade-spring-boot.sh` now distinguishes "nothing to do" (exit 2)
+  from "broken" (exit 1). Previously the chain aborted every night without a Spring Boot release, and
+  `update-and-restart.sh` never ran — so the application was only redeployed when
+  Spring Boot happened to have released something as well.
+- ✅ **Added 2026-09-09:** The Docker build could not be run in the development environment
+  (Podman got no network there). The proxy fix from TODO-61 has since been rolled out on
+  the host and the application is running — so the build did go through.
+  **The evidence is indirect**: what's confirmed is that it built and deployed, not that every
+  branch of the script has run once. In particular the error path (`handle_error`) remains
+  unverified — you only see that when an upgrade really fails.
 
-**Zuerst klären — zwingend vor dem Löschen, sonst startet die Anwendung nicht mehr:**
-Die bleibende Marktplatz-Auswahl hängt an zwei Dingen, die im wegfallenden Kontext liegen.
+---
 
-1. Das Enum `Marketplace` (EBAY_DE/EBAY_US/EBAY_GB mit Marktplatz-Id, Währung, Basisdomain)
-   liegt in `purchaseoffers/domain`.
-2. `MarketplaceCatalog` (`purchaseoffers/adapter/in/spi`) implementiert
-   `accountaccess.port.spi.SupportedMarketplaces` — und ist die **einzige** Implementierung.
-   Fällt sie ersatzlos weg, findet Spring keine Bean für den SPI,
-   `UserPreferencesService` bekommt sie injiziert, und **der Anwendungskontext startet nicht mehr**.
-   Zusätzlich entfiele die Validierung der Marktplatz-Eingabe —
-   `app_user.ebay_marketplace` würde zum Freitextfeld.
+---
 
-**Geklärt durch TODO-57 (2026-09-06):** Der Deep-Link entsteht vollständig im Client,
-aus `EbayMarketplace` in `core/models.ts`.
-Das Backend liefert dazu nichts — es braucht `Marketplace` nur noch, um die Einstellung eines
-Nutzers zu validieren.
-Damit gehört das Enum in `accountaccess`, den Kontext, dem die Einstellung ohnehin gehört.
+## eBay removal and replacement (2026-09-06)
 
-Das erledigt Punkt 2 gleich mit: liegt das Enum dort, gibt es keine kontextübergreifende
-Abhängigkeit mehr, die umzudrehen wäre — `SupportedMarketplaces` (`accountaccess/port/spi`)
-und `MarketplaceCatalog` entfallen beide ersatzlos,
-statt in einen anderen Kontext verschoben zu werden.
-Die eingeführte Inversion war an die Preisabfrage gebunden und verschwindet mit ihr;
-[ADR-0019](docs/adr/0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) bleibt gültig,
-verliert hier aber ihren zweiten Anwendungsfall
-(`PosterAttributionProvider` bleibt der erste).
+---
 
-**Bestandsaufnahme (erhoben, vollständig):**
+### ✅ TODO-56 — eBay price lookup removed
+The price lookup via the Browse API (ADR-0017) **worked** — the developer account was
+activated, the feature was in use in the application.
+It has proven not good enough in production and is therefore being removed.
+The state is preserved on the branch `feature/ebay_search` —
+nothing is lost here, it just leaves `dev`.
 
-| Bereich | Entfällt |
+**Where it fell down** (from production, 2026-09-09) — the most important sentence in this entry,
+because it stops the next person from building the same thing again:
+
+1. **Opaque.** You saw a number, but not *what* it referred to.
+   A price without the offer behind it can't be checked —
+   the user has to either believe it or ignore it.
+2. **Too many variables in an offer.** Condition and quality of the medium, DVD or Blu-ray,
+   director's cut or theatrical version, collector's edition, language version.
+   "Cheapest price" lumps together things that are not alternatives to one another.
+   The cheapest disc is regularly not the one anybody wants.
+
+**This is not an implementation error but a modelling error** — and it was independent of
+the API variant: for physical media, "one price per title" is the wrong abstraction.
+No quota, no better search term and no choice of vendor would have changed that.
+
+That's precisely why the replacement (TODO-57) isn't merely the cheaper solution but the more honest one:
+the search link doesn't answer the price question at all, it puts the user in front of the
+list of offers where those variables are visible — and leaves the decision to the
+human, who is the only one who knows which edition is meant.
+**The per-user marketplace selection stays**, because the replacement (TODO-57) needs it.
+
+**To settle first — mandatory before deleting, otherwise the application won't start:**
+The marketplace selection that stays hangs on two things that live in the context being removed.
+
+1. The enum `Marketplace` (EBAY_DE/EBAY_US/EBAY_GB with marketplace id, currency, base domain)
+   lives in `purchaseoffers/domain`.
+2. `MarketplaceCatalog` (`purchaseoffers/adapter/in/spi`) implements
+   `accountaccess.port.spi.SupportedMarketplaces` — and is the **only** implementation.
+   If it goes away without replacement, Spring finds no bean for the SPI,
+   `UserPreferencesService` has it injected, and **the application context no longer starts**.
+   On top of that, validation of the marketplace input would be gone —
+   `app_user.ebay_marketplace` would become a free-text field.
+
+**Settled by TODO-57 (2026-09-06):** The deep link is built entirely in the client,
+from `EbayMarketplace` in `core/models.ts`.
+The backend contributes nothing to it — it only needs `Marketplace` to validate a
+user's setting.
+That puts the enum in `accountaccess`, the context the setting belongs to anyway.
+
+That takes care of point 2 along the way: with the enum there, there is no cross-context
+dependency left to invert — `SupportedMarketplaces` (`accountaccess/port/spi`)
+and `MarketplaceCatalog` both go away without replacement,
+instead of being moved into another context.
+The inversion that was introduced was tied to the price lookup and disappears with it;
+[ADR-0019](docs/adr/0019-port-spi-for-inverted-context-dependencies.md) remains valid
+but loses its second use case here
+(`PosterAttributionProvider` remains the first).
+
+**Inventory (surveyed, complete):**
+
+| Area | Removed |
 | --- | --- |
-| Backend | Ganzer Bounded Context `purchaseoffers`: `domain` (`Offer`, `OfferPrice`, `TitleOffers`, `OfferLookupResult`, `QuotaDay`, `QuotaVerdict`, `GlobalQuotaUsage`, `UserQuotaUsage`, `OfferSourceUnavailableException`, `UpstreamQuotaExhaustedException`, `Marketplace` — siehe oben), `application` (`TitleOfferService`, `QuotaService`, `dto/OfferDto`, `dto/TitleOffersDto`), `port/out` (`PurchaseOfferSource`, `GlobalQuotaUsageRepository`, `UserQuotaUsageRepository`), `adapter/out/ebay` (`EbayBrowseApiSource`, `EbayOAuthTokenProvider`, `EbayProperties`, `EbayCircuitBreakerConfig`), `adapter/in/api/PurchaseOfferApiController`, `adapter/in/spi/MarketplaceCatalog` — plus alle zugehörigen Tests |
-| Frontend | **Achtung:** neben jeder dieser Stellen steht seit TODO-57 ein gleichnamiger `showEbayLink`-Eingang, der **bleibt** — er trägt den Suchlink. Ein `grep`-getriebener Rückbau löscht ihn mit, und weil Angular-Inputs einen Default haben, fällt das weder beim Kompilieren noch zur Laufzeit auf: der Link verschwindet still. Es entfallen: `core/api/offers-api.ts`, `core/offers-store.ts`, `shared/offer-prices/` (Komponente + Spec), der `showOffers`-Eingang samt eBay-Spalte in `shared/catalog-table/catalog-table.ts`, der Chip in `shared/title-tile/title-tile.ts`, das Durchreichen in `shared/title-grid/title-grid.ts` (die Aktivierung in `features/overview/overview-page.ts` ist bereits entfernt — siehe TODO-57), die Typen `Offer`/`TitleOffers`/`OfferStatus` in `core/models.ts`, der i18n-Block `offers.*` in `i18n/de.json` und `i18n/en.json`, der Spaltenkopf `table.offers` |
-| Konfiguration | `ebay.*`-Block in `application.properties` (**ohne** `ebay.default-marketplace` — der gehört zur bleibenden Auswahl), eBay-Abschnitt in `.env.example`, die beiden `EBAY_*`-Zeilen in `compose.yml`, Abhängigkeit `io.github.resilience4j:resilience4j-spring-boot4` samt `resilience4j.version`-Property in `pom.xml` (wird ausschließlich von diesem Feature genutzt) |
-| ArchUnit | Regel `purchaseoffers_is_only_accessed_through_its_published_ports`; `purchaseoffers` fliegt aus der Paketliste von `spring_data_repositories_are_the_port_not_the_adapter`. `bounded_contexts_are_free_of_cycles` bleibt. |
+| Backend | The entire bounded context `purchaseoffers`: `domain` (`Offer`, `OfferPrice`, `TitleOffers`, `OfferLookupResult`, `QuotaDay`, `QuotaVerdict`, `GlobalQuotaUsage`, `UserQuotaUsage`, `OfferSourceUnavailableException`, `UpstreamQuotaExhaustedException`, `Marketplace` — see above), `application` (`TitleOfferService`, `QuotaService`, `dto/OfferDto`, `dto/TitleOffersDto`), `port/out` (`PurchaseOfferSource`, `GlobalQuotaUsageRepository`, `UserQuotaUsageRepository`), `adapter/out/ebay` (`EbayBrowseApiSource`, `EbayOAuthTokenProvider`, `EbayProperties`, `EbayCircuitBreakerConfig`), `adapter/in/api/PurchaseOfferApiController`, `adapter/in/spi/MarketplaceCatalog` — plus all associated tests |
+| Frontend | **Careful:** next to every one of these places there has been, since TODO-57, an identically named `showEbayLink` input that **stays** — it carries the search link. A `grep`-driven removal deletes it too, and because Angular inputs have a default, that shows up neither at compile time nor at runtime: the link silently disappears. Removed are: `core/api/offers-api.ts`, `core/offers-store.ts`, `shared/offer-prices/` (component + spec), the `showOffers` input together with the eBay column in `shared/catalog-table/catalog-table.ts`, the chip in `shared/title-tile/title-tile.ts`, the pass-through in `shared/title-grid/title-grid.ts` (the activation in `features/overview/overview-page.ts` has already been removed — see TODO-57), the types `Offer`/`TitleOffers`/`OfferStatus` in `core/models.ts`, the i18n block `offers.*` in `i18n/de.json` and `i18n/en.json`, the column header `table.offers` |
+| Configuration | `ebay.*` block in `application.properties` (**excluding** `ebay.default-marketplace` — that belongs to the selection that stays), eBay section in `.env.example`, the two `EBAY_*` lines in `compose.yml`, dependency `io.github.resilience4j:resilience4j-spring-boot4` together with the `resilience4j.version` property in `pom.xml` (used exclusively by this feature) |
+| ArchUnit | Rule `purchaseoffers_is_only_accessed_through_its_published_ports`; `purchaseoffers` drops out of the package list of `spring_data_repositories_are_the_port_not_the_adapter`. `bounded_contexts_are_free_of_cycles` stays. |
 
-**Datenbank:** Liquibase `016-ebay-quota.xml` legt `ebay_quota_day` und `ebay_user_quota_day` an.
-Angewendete Changesets dürfen nicht aus dem Changelog gelöscht werden —
-es braucht ein **neues** Changeset, das beide Tabellen droppt.
-`017-user-ebay-marketplace.xml` bleibt unangetastet.
+**Database:** Liquibase `016-ebay-quota.xml` creates `ebay_quota_day` and `ebay_user_quota_day`.
+Applied changesets must not be deleted from the changelog —
+this needs a **new** changeset that drops both tables.
+`017-user-ebay-marketplace.xml` stays untouched.
 
-**Weiteres, das mitzuziehen ist:**
+**Further items to be pulled along:**
 
-- `accountaccess.port.in.ImpersonationPort` wurde nur für die Sperre der Preisabfrage
-  während einer Impersonierung eingeführt und hat danach keinen Aufrufer mehr —
-  entfällt, ebenso der Status `IMPERSONATION_ACTIVE` und der i18n-Schlüssel `offers.impersonating`.
-- [ADR-0017](docs/adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md) wird gegenstandslos →
-  auf `Superseded` setzen, nicht löschen.
-  [ADR-0020](docs/adr/0020-admin-impersonierung-ueber-switchuserfilter.md) verweist auf die
-  Quota-Wechselwirkung → diesen Absatz anpassen.
-- `docs/EBAY_PRICE_LOOKUP_PLAN.md` bleibt als historisches Dokument,
-  bekommt aber einen Statushinweis, dass das Vorhaben eingestellt wurde.
-- TODO-51 (resilience4j) und TODO-52 (Bundle-Größe) beziehen sich teilweise auf entfallenden Code;
-  TODO-52 wird durch den Rückbau eher besser.
+- `accountaccess.port.in.ImpersonationPort` was introduced only for blocking the price lookup
+  during an impersonation and has no caller left afterwards —
+  removed, as are the status `IMPERSONATION_ACTIVE` and the i18n key `offers.impersonating`.
+- [ADR-0017](docs/adr/0017-quota-management-for-the-ebay-browse-api.md) becomes moot →
+  set to `Superseded`, don't delete.
+  [ADR-0020](docs/adr/0020-admin-impersonation-via-switchuserfilter.md) refers to the
+  quota interaction → adjust that paragraph.
+- `docs/EBAY_PRICE_LOOKUP_PLAN.md` stays as a historical document,
+  but gets a status note saying the initiative was discontinued.
+- TODO-51 (resilience4j) and TODO-52 (bundle size) refer in part to code being removed;
+  TODO-52 rather improves through the removal.
 
-- **Akzeptanzkriterium:** im Produktionscode bleibt von eBay nur die Marktplatz-Auswahl und der
-  Suchlink; der Anwendungskontext startet; alle Tests grün;
-  die beiden Quota-Tabellen sind per Changeset entfernt.
-  (Das ursprüngliche „`grep -ri ebay` trifft nichts mehr" war so nicht erreichbar:
-  die Changelogs `016`–`018` sind append-only und bleiben Treffer.)
+- **Acceptance criterion:** in production code, all that remains of eBay is the marketplace selection and the
+  search link; the application context starts; all tests green;
+  the two quota tables are removed via a changeset.
+  (The original "`grep -ri ebay` no longer hits anything" was not achievable as stated:
+  the changelogs `016`–`018` are append-only and remain hits.)
 
-**Erledigt am 2026-09-07, in fünf Schritten mit je einem grünen Build.**
-Der Plan wurde vorher von einem Subagenten gegen den Code geprüft;
-drei seiner Korrekturen haben die Umsetzung verändert:
+**Done on 2026-09-07, in five steps, each with a green build.**
+The plan was checked against the code by a subagent beforehand;
+three of its corrections changed the implementation:
 
-1. **`ebay.default-marketplace` bleibt nicht.**
-   Der Plan nahm an, das Property gehöre zur bleibenden Auswahl.
-   Tatsächlich las es nur `EbayProperties` → `TitleOfferService`;
-   der Default der Auswahl steht in `AppUser` und `UserPreferences`.
-   Es entfällt samt `EBAY_DEFAULT_MARKETPLACE` in `compose.yml` und `.env.example`.
-2. **Zwei Ports, die der Plan nicht nannte, wurden aufruferlos:**
-   `UserDirectoryPort` (+`UserDirectoryService`) und `ImpersonationPort` (+`ImpersonationService`).
-   Beide entfallen; das Impersonierungs-Feature selbst ist unberührt,
-   weil `MeApiController` `ImpersonationConfig` direkt liest.
-3. **Die Bestandsaufnahme war an vier Stellen doppeldeutig geworden:**
-   neben jedem `showOffers` steht seit TODO-57 ein `showEbayLink`,
-   neben der `offers`-Spalte eine `ebay`-Spalte, neben `.offer-chip` ein `.ebay-chip`.
-   Ein `grep`-getriebener Rückbau hätte den Ersatz mitgerissen.
+1. **`ebay.default-marketplace` does not stay.**
+   The plan assumed the property belonged to the selection that stays.
+   In fact only `EbayProperties` → `TitleOfferService` read it;
+   the default for the selection lives in `AppUser` and `UserPreferences`.
+   It goes away along with `EBAY_DEFAULT_MARKETPLACE` in `compose.yml` and `.env.example`.
+2. **Two ports the plan didn't mention ended up without callers:**
+   `UserDirectoryPort` (+`UserDirectoryService`) and `ImpersonationPort` (+`ImpersonationService`).
+   Both go away; the impersonation feature itself is untouched,
+   because `MeApiController` reads `ImpersonationConfig` directly.
+3. **The inventory had become ambiguous in four places:**
+   next to every `showOffers` there has been a `showEbayLink` since TODO-57,
+   next to the `offers` column an `ebay` column, next to `.offer-chip` an `.ebay-chip`.
+   A `grep`-driven removal would have torn the replacement out with it.
 
-**Auch gegen MariaDB verifiziert** (nachgeholt am 2026-09-08):
-`mvn -Ptestcontainers verify` läuft in diesem Container — es ist ein Maven-**Profil**,
-kein `-Dgroups`, weshalb der erste Versuch null Tests fand.
-409 statt 391 Tests, alle grün.
-Da `spring.jpa.hibernate.ddl-auto=none` gilt, kann das Schema nur von Liquibase stammen:
-der Kontext ist gegen ein echtes MariaDB gestartet, also hat Liquibase das komplette
-Changelog inklusive `018` angewandt.
-Ein direkter Logeintrag je Changeset liegt nicht vor (Liquibase loggt das auf Default-Level nicht) —
-der Beleg ist der erfolgreiche Kontextstart, nicht die Zeile.
+**Also verified against MariaDB** (caught up on 2026-09-08):
+`mvn -Ptestcontainers verify` runs in this container — it is a Maven **profile**,
+not a `-Dgroups`, which is why the first attempt found zero tests.
+409 tests instead of 391, all green.
+Since `spring.jpa.hibernate.ddl-auto=none` applies, the schema can only come from Liquibase:
+the context started against a real MariaDB, so Liquibase applied the complete
+changelog including `018`.
+There is no direct log entry per changeset (Liquibase doesn't log that at the default level) —
+the evidence is the successful context start, not the line.
 
 ---
 
-### ✅ TODO-57 — eBay-Suchlink pro Titel auf dem Dashboard
-Der Ersatz für die zurückgebaute Preisabfrage (TODO-56) — im ursprünglichen Plan
-([`docs/EBAY_PRICE_LOOKUP_PLAN.md`](docs/EBAY_PRICE_LOOKUP_PLAN.md), Abschnitt 4) war das
-**Variante A**, dort bewertet als „trivial, minimales Risiko, Stunden statt Tage".
+### ✅ TODO-57 — eBay search link per title on the dashboard
+The replacement for the removed price lookup (TODO-56) — in the original plan
+([`docs/EBAY_PRICE_LOOKUP_PLAN.md`](docs/EBAY_PRICE_LOOKUP_PLAN.md), section 4) this was
+**variant A**, rated there as "trivial, minimal risk, hours instead of days".
 
-Neben jedem Titel auf dem Dashboard steht ein Link, der in einem neuen Tab die eBay-Suche öffnet:
-Suchbegriff `"<Titel> <Erscheinungsjahr>"`,
-Marktplatz nach der Einstellung des Nutzers (`ebayMarketplace` aus `/api/me`,
+Next to every title on the dashboard there is a link that opens the eBay search in a new tab:
+search term `"<title> <release year>"`,
+marketplace according to the user's setting (`ebayMarketplace` from `/api/me`,
 EBAY_DE/EBAY_US/EBAY_GB → `ebay.de`/`ebay.com`/`ebay.co.uk`).
 
-**Warum das funktioniert, wo der Vorgänger scheiterte:**
-Der Link wird im Client gebaut — **kein Server-Aufruf, keine Quota, kein Account,
-kein Circuit Breaker**.
-Es gibt nichts, was eine Freischaltung voraussetzt.
+**Why this works where its predecessor failed:**
+The link is built in the client — **no server call, no quota, no account,
+no circuit breaker**.
+There is nothing here that requires being granted access.
 
-**Die Randbedingung des Vorgängers gilt hier nicht mehr, und das ändert den Entwurf.**
-Beim Preisabruf kostete jede Anfrage zwei Calls aus einem geteilten Tagesbudget — deshalb war die
-Suche dort auf *ein* Ergebnis optimiert und jede Verfeinerung ein Kompromiss.
-Ein Link kostet nichts, weder beim Bauen noch beim Nichtanklicken.
-Die Suchanfrage darf deshalb so gut sein, wie wir sie hinbekommen, statt so sparsam wie möglich.
+**The predecessor's constraint no longer applies here, and that changes the design.**
+With the price lookup, every request cost two calls out of a shared daily budget — which is why the
+search there was optimised for *one* result and every refinement was a compromise.
+A link costs nothing, neither to build nor to leave unclicked.
+The search query is therefore allowed to be as good as we can make it, instead of as frugal as possible.
 
-- **URL-Form:** `https://www.<domain>/sch/i.html?_nkw=<urlencodierter Suchbegriff>`.
-  **Nicht verifiziert** — aus der Recherche des alten Plans übernommen.
-- **Kategoriefilter `&_sacat=…` — der größte Hebel auf die Trefferqualität, und der einzige Punkt,
-  der vor der Umsetzung geprüft gehört.**
-  Der alte Plan nannte `617` („DVDs & Blu-ray Discs") für `ebay.de`.
-  Ohne ihn findet „Heat" Heizungszubehör, mit ihm Filme.
-  **Zweifach unverifiziert:** weder ist die Zahl bestätigt, noch dass sie auf `ebay.com` und
-  `ebay.co.uk` dieselbe ist — eBay-Kategorie-Ids sind nicht garantiert marktplatzübergreifend
-  identisch.
-  Das ist in Minuten von Hand nachzusehen, indem man die Suche auf jedem der drei Marktplätze
-  einmal aufruft.
-  Falls die Ids abweichen, gehört die Kategorie zur Marktplatz-Zuordnung, nicht in eine Konstante.
-- **Deutscher Titel, wenn vorhanden und passend.**
-  Eine Suche auf `ebay.de` nach „Der Pate 1972" trifft besser als nach „The Godfather 1972".
-  Der deutsche Titel liegt in `TitleMeta.germanTitle` und ist im Client über `injectTitleMeta`
-  erreichbar — **aber nur, wenn er ohnehin schon geladen wird**, also wenn Altersfreigaben oder
-  deutsche Titel eingeschaltet sind (`title-meta.ts` holt sonst nichts).
-  **Regel:** deutscher Titel nur für `EBAY_DE` und nur, wenn er ohne Zusatzabruf verfügbar ist;
-  sonst `OverviewEntry.name`.
-  **Ausdrücklich keinen Abruf allein für den Link auslösen** — eine Anfrage je Titel beim
-  Seitenaufbau ist genau das, was dieser Ersatz loswerden soll.
-- **Sortierung nach Gesamtpreis, aufsteigend — `&_sop=15` („Preis + Versand: niedrigste zuerst").**
-  Kein Extra, sondern der Punkt, an dem der Link das ersetzt, was die Preisabfrage leisten sollte:
-  Die alte Funktion beantwortete „was kostet das mindestens?" mit einer Zahl,
-  der Link beantwortet dieselbe Frage mit dem ersten Treffer der Liste.
-  Ohne Sortierung landet man auf eBays Relevanz-Reihenfolge, und die Antwort steht irgendwo.
-  Dass die Sortierung Versand einschließt, ist dabei die eigentliche Übereinstimmung —
-  auch der alte Vergleich rechnete Preis plus Versand
-  (`offerTotalCents` im entfallenden `offer-prices.ts`).
-  **Der Wert `15` ist nicht verifiziert.** Beim Prüfen des Kategoriefilters mit abhaken —
-  es ist derselbe Handgriff. Falls er nicht stimmt: den Parameter weglassen, nicht raten.
-- **Kein Link bei noch nicht erschienenen Titeln.**
-  `ReleaseYear` nutzt `0` für „noch nicht erschienen/unbekannt".
-  Das alte Feature ließ in diesem Fall nur das Jahr weg und suchte trotzdem
-  (`TitleOfferService.searchTermFor`) — hier ist der Absprung stattdessen ganz wegzulassen:
-  was nicht erschienen ist, wird auch nicht verkauft, und eine Suche nach dem blanken Titel
-  liefert dann bestenfalls Rauschen.
-  Das erspart zugleich den Sonderfall im Suchbegriff — er enthält immer Titel **und** Jahr,
-  oder es gibt ihn nicht.
-  Zu entscheiden bleibt die Darstellung: gar nichts rendern oder ein deaktivierter Hinweis.
-  Vorschlag: gar nichts, damit die Zeile ruhig bleibt.
-- **Darstellung:** `<a target="_blank" rel="noopener">` wie der bestehende IMDb-Link,
-  aber **nicht** in der Titelzelle:
-  ein Inline-Link säße über ein paar hundert Zeilen in jeder an einer anderen x-Position
-  und wäre nicht mehr scanbar.
-  In der Tabelle deshalb eine eigene Spalte, im Grid eine Badge unter der Kachel.
-  Nur Dashboard, nicht auf den Provider-Seiten.
-  Beide Komponenten werden von den Provider-Seiten mitgenutzt, die Abgrenzung braucht also einen
-  ausdrücklichen Eingang (wie zuvor `showOffers`) und ergibt sich nicht von selbst.
-  Die Begründung ist diesmal aber eine andere: kein Budget, das zu schützen wäre, sondern schlicht,
-  dass der Absprung dort nicht hingehört.
-- **Barrierefreiheit:** der Link braucht einen zugänglichen Namen, der den Titel nennt.
-  Zweihundert Zeilen mit dem identischen Linktext „eBay" sind mit einer Vorlesehilfe unbenutzbar.
-  Muster wie beim alten `offers.loadFor`: sichtbarer Kurztext, `aria-label` mit dem Titelnamen.
-- **i18n** in `de.json` und `en.json`, Schlüssel parallel halten.
-- **Tests (Vitest):** URL-Bildung als reine, testbare Funktion
-  (Marktplatz-Zuordnung, Sonderzeichen im Titel korrekt kodiert);
-  Rendering mit `rel="noopener"`, und dass bei `year = 0` **kein** Link entsteht.
-- **Kein CSP-Problem:** ein `<a href>` ist eine Navigation und wird von den Fetch-Direktiven
-  der Content-Security-Policy nicht erfasst.
+- **URL form:** `https://www.<domain>/sch/i.html?_nkw=<url-encoded search term>`.
+  **Not verified** — taken over from the old plan's research.
+- **Category filter `&_sacat=…` — the biggest lever on match quality, and the only point
+  that ought to be checked before implementation.**
+  The old plan named `617` ("DVDs & Blu-ray Discs") for `ebay.de`.
+  Without it, "Heat" finds heating supplies; with it, films.
+  **Unverified twice over:** neither is the number confirmed, nor that it is the same on `ebay.com` and
+  `ebay.co.uk` — eBay category ids are not guaranteed to be identical across
+  marketplaces.
+  This can be looked up by hand in minutes by running the search once on each of the three
+  marketplaces.
+  If the ids differ, the category belongs with the marketplace mapping, not in a constant.
+- **German title where available and appropriate.**
+  A search on `ebay.de` for "Der Pate 1972" hits better than for "The Godfather 1972".
+  The German title lives in `TitleMeta.germanTitle` and is reachable in the client via
+  `injectTitleMeta` — **but only if it is being loaded anyway**, i.e. if age ratings or
+  German titles are switched on (otherwise `title-meta.ts` fetches nothing).
+  **Rule:** German title only for `EBAY_DE` and only if it is available without an extra fetch;
+  otherwise `OverviewEntry.name`.
+  **Explicitly do not trigger a fetch just for the link** — one request per title on
+  page load is exactly what this replacement is meant to get rid of.
+- **Sorted by total price, ascending — `&_sop=15` ("price + shipping: lowest first").**
+  Not a nicety, but the point at which the link replaces what the price lookup was supposed to deliver:
+  the old function answered "what does this cost at a minimum?" with a number,
+  the link answers the same question with the first hit in the list.
+  Without sorting you land on eBay's relevance ordering, and the answer is somewhere in there.
+  That the sorting includes shipping is the real correspondence here —
+  the old comparison also added price plus shipping
+  (`offerTotalCents` in the departing `offer-prices.ts`).
+  **The value `15` is not verified.** Tick it off while checking the category filter —
+  it's the same operation. If it isn't right: leave the parameter out, don't guess.
+- **No link for titles not yet released.**
+  `ReleaseYear` uses `0` for "not yet released/unknown".
+  In that case the old feature simply dropped the year and searched anyway
+  (`TitleOfferService.searchTermFor`) — here the jump-off link is to be omitted entirely instead:
+  what hasn't been released isn't being sold either, and a search on the bare title
+  yields noise at best.
+  That also saves the special case in the search term — it always contains title **and** year,
+  or it doesn't exist.
+  What remains to be decided is the presentation: render nothing at all, or a disabled hint.
+  Suggestion: nothing at all, to keep the row calm.
+- **Presentation:** `<a target="_blank" rel="noopener">` like the existing IMDb link,
+  but **not** in the title cell:
+  across a few hundred rows an inline link would sit at a different x position in every one
+  and would no longer be scannable.
+  In the table therefore a column of its own, in the grid a badge below the tile.
+  Dashboard only, not on the provider pages.
+  Both components are also used by the provider pages, so the distinction needs an
+  explicit input (as `showOffers` did before) and doesn't follow by itself.
+  The reasoning this time is a different one, though: not a budget that needs protecting, but simply
+  that the jump-off link doesn't belong there.
+- **Accessibility:** the link needs an accessible name that states the title.
+  Two hundred rows with the identical link text "eBay" are unusable with a screen reader.
+  Same pattern as the old `offers.loadFor`: short visible text, `aria-label` with the title name.
+- **i18n** in `de.json` and `en.json`, keys kept in parallel.
+- **Tests (Vitest):** URL construction as a pure, testable function
+  (marketplace mapping, special characters in the title encoded correctly);
+  rendering with `rel="noopener"`, and that with `year = 0` **no** link is produced.
+- **No CSP problem:** an `<a href>` is a navigation and is not covered by the fetch directives
+  of the Content Security Policy.
 
-- **Akzeptanzkriterium:** Ein Klick neben einem erschienenen Titel öffnet in einem neuen Tab
-  die eBay-Suche des eingestellten Marktplatzes nach Titel und Jahr,
-  aufsteigend nach Preis inklusive Versand sortiert.
-  Bei einem noch nicht erschienenen Titel gibt es keinen Absprung.
+- **Acceptance criterion:** A click next to a released title opens, in a new tab,
+  the eBay search of the configured marketplace for title and year,
+  sorted ascending by price including shipping.
+  For a title not yet released there is no jump-off link.
 
-**Umgesetzt (2026-09-06).**
-`core/ebay-search.ts` baut die URL als reine Funktion; die Marktplatz-Tabelle dort hält Host,
-Kategorie und die Frage, ob der deutsche Titel hier der bessere Suchbegriff ist —
-je Marktplatz, nicht als eine Konstante, damit eine falsche Kategorie-Id eine Zeile kostet.
-Dargestellt wird er von `shared/ebay-link/` in zwei Erscheinungsformen —
-in der Tabelle als Wort in einer **eigenen Spalte**,
-im Poster-Grid als **Badge mit dem eBay-Schriftzug** in den vier Markenfarben.
-Eine Komponente für beides, damit die zwei Ansichten nicht auseinanderlaufen
-und dieselbe Zeile nicht je nach Ansichtsmodus etwas anderes sucht.
-`CatalogTable` und `TitleTile` bekommen je einen `showEbayLink`-Eingang (aus, sofern nicht gesetzt);
-nur `OverviewPage` schaltet ihn an.
-`TileEntry` trägt jetzt zusätzlich `releaseYear: ReleaseYear | null` —
-für die Provider-Kacheln null, weil `PaidEntry` das Jahr nur als fertigen Text liefert
-und ein zurückgerechnetes Jahr ein erfundenes wäre.
+**Implemented (2026-09-06).**
+`core/ebay-search.ts` builds the URL as a pure function; the marketplace table there holds host,
+category and the question of whether the German title is the better search term here —
+per marketplace, not as a single constant, so that a wrong category id costs one line.
+It is rendered by `shared/ebay-link/` in two forms —
+in the table as a word in a **column of its own**,
+in the poster grid as a **badge with the eBay wordmark** in the four brand colours.
+One component for both, so the two views don't drift apart
+and the same row doesn't search for something different depending on the view mode.
+`CatalogTable` and `TitleTile` each get a `showEbayLink` input (off unless set);
+only `OverviewPage` switches it on.
+`TileEntry` now additionally carries `releaseYear: ReleaseYear | null` —
+null for the provider tiles, because `PaidEntry` only supplies the year as finished text
+and a back-computed year would be a made-up one.
 
-Die beiden eBay-Parameter (`_sacat=617`, `_sop=15`) sind unter **TODO-58** geprüft
-und bestätigt — über `m.ebay.*`, weil `www.ebay.*` automatisierte Anfragen mit `403` abweist.
+The two eBay parameters (`_sacat=617`, `_sop=15`) have been checked and confirmed under **TODO-58** —
+via `m.ebay.*`, because `www.ebay.*` rejects automated requests with `403`.
 
-**Nachgezogen nach dem Review (2026-09-07):** siehe Commit „Review-Anmerkungen zu TODO-57".
-Wesentlich: der deutsche Titel hing an der Altersfreigaben-Einstellung
-(und wechselte nach dem Laden der Metadaten unter dem Cursor);
-die Verdrahtung über drei Komponenten war ungetestet;
-und das Dashboard zeigte den Suchlink **neben** der alten Preisabfrage —
-zwei Bedienelemente namens „eBay" pro Zeile.
-`showOffers` ist deshalb auf dem Dashboard bereits abgeschaltet;
-der Code selbst entfällt mit TODO-56.
+**Followed up after the review (2026-09-07):** see commit "Review-Anmerkungen zu TODO-57".
+The substance: the German title hung off the age-ratings setting
+(and changed under the cursor after the metadata had loaded);
+the wiring across three components was untested;
+and the dashboard showed the search link **next to** the old price lookup —
+two controls named "eBay" per row.
+`showOffers` is therefore already switched off on the dashboard;
+the code itself goes away with TODO-56.
 
 ---
 
-### ✅ TODO-58 — eBay-Suchparameter `_sacat` und `_sop` verifiziert
-Der Suchlink aus TODO-57 trägt zwei Werte, die nie gegen eBay geprüft wurden:
-die Kategorie `_sacat=617` („DVDs & Blu-ray Discs")
-und die Sortierung `_sop=15` („Preis + Versand, niedrigste zuerst").
+### ✅ TODO-58 — eBay search parameters `_sacat` and `_sop` verified
+The search link from TODO-57 carries two values that were never checked against eBay:
+the category `_sacat=617` ("DVDs & Blu-ray Discs")
+and the sort order `_sop=15` ("price + shipping, lowest first").
 
-**Herkunft:** `617` stammt aus dem Default der zurückgebauten Preisabfrage
-(`EbayProperties.categoryId`) — dort war er ebenso ungeprüft.
-Aus der Containerumgebung ist das nicht nachzuholen:
-eBay beantwortet automatisierte Anfragen mit `403`.
+**Origin:** `617` comes from the default of the price query that was rolled back
+(`EbayProperties.categoryId`) — where it was just as unverified.
+There is no way to make up for that from inside the container environment:
+eBay answers automated requests with `403`.
 
-**Warum das nicht kosmetisch ist:** Der Link sortiert nach dem niedrigsten Gesamtpreis.
-Ohne wirksamen Kategoriefilter steht damit nicht das billigste *Exemplar des Films* oben,
-sondern der billigste Treffer überhaupt — ein Poster, eine Leerhülle, ein Schlüsselanhänger.
-Der Filter trägt hier mehr Last als in einer relevanzsortierten Liste.
+**Why this is not cosmetic:** The link sorts by the lowest total price.
+Without an effective category filter, what ends up at the top is not the cheapest *copy of the film*
+but the cheapest hit of any kind — a poster, an empty case, a keyring.
+The filter carries more weight here than it would in a relevance-sorted list.
 
-**Zu tun** (Minuten, von Hand, im Browser):
-1. Je Marktplatz (`ebay.de`, `ebay.com`, `ebay.co.uk`) eine Suche aufrufen und prüfen,
-   ob `_sacat=617` dort dieselbe Kategorie meint.
-   eBay garantiert Kategorie-Ids **nicht** marktplatzübergreifend.
-2. Prüfen, ob `_sop=15` tatsächlich nach Preis inklusive Versand aufsteigend sortiert.
-3. Ergebnis in `core/ebay-search.ts` eintragen.
-   Die Tabelle dort ist je Marktplatz aufgebaut, eine Korrektur kostet eine Zeile;
-   `categoryId: null` schaltet den Filter für einen einzelnen Marktplatz ab.
+**To do** (minutes, by hand, in the browser):
+1. Run one search per marketplace (`ebay.de`, `ebay.com`, `ebay.co.uk`) and check
+   whether `_sacat=617` means the same category there.
+   eBay does **not** guarantee category ids across marketplaces.
+2. Check whether `_sop=15` really sorts ascending by price including shipping.
+3. Record the result in `core/ebay-search.ts`.
+   The table there is organised per marketplace, so a correction costs one line;
+   `categoryId: null` turns the filter off for a single marketplace.
 
-**Erledigt am 2026-09-07 — beide Werte stimmen, der Code bleibt unverändert.**
+**Done on 2026-09-07 — both values are correct, the code stays unchanged.**
 
-Der Weg über `www.ebay.*` scheitert weiter an `403`.
-Die **mobile** Domain `m.ebay.*` antwortet dagegen mit einer echten Trefferseite
-(200, ~100 kB, kein Captcha) — dieselben Parameter, dieselbe Suchmaschine.
-Das ist der Handgriff, der beim nächsten Mal Zeit spart.
+The route via `www.ebay.*` still fails with `403`.
+The **mobile** domain `m.ebay.*`, on the other hand, answers with a real results page
+(200, ~100 kB, no captcha) — same parameters, same search engine.
+That is the trick that will save time next time.
 
-| Prüfung | Ergebnis |
+| Check | Result |
 | --- | --- |
-| `_sacat=617` auf `.de` | ✅ Seitentitel: „DVDs & Blu-rays \| eBay" |
-| `_sacat=617` auf `.com` | ✅ Seitentitel: „Heat 1995 **in DVDs & Blu-ray Discs** for sale" |
-| `_sacat=617` auf `.co.uk` | ⚠️ wirksam, aber nie benannt: Filmsuche 296 → 193 Treffer, „kettle" 32.000 → 370. Konsistent mit derselben Kategorie, **direkt belegt ist es nicht** |
-| `_sop=15` auf `.de` | ✅ erste Treffer 1,50 / 2,49 / 3,00 / 3,90 € zzgl. Versand, aufsteigend |
-| `_sop=15` auf `.com` | ✅ Reihenfolge kippt gegenüber derselben Suche ohne den Parameter sichtbar zu den günstigeren Angeboten |
+| `_sacat=617` on `.de` | ✅ page title: "DVDs & Blu-rays \| eBay" |
+| `_sacat=617` on `.com` | ✅ page title: "Heat 1995 **in DVDs & Blu-ray Discs** for sale" |
+| `_sacat=617` on `.co.uk` | ⚠️ effective, but never named: film search 296 → 193 hits, "kettle" 32,000 → 370. Consistent with the same category, but **not directly proven** |
+| `_sop=15` on `.de` | ✅ first hits 1.50 / 2.49 / 3.00 / 3.90 € plus shipping, ascending |
+| `_sop=15` on `.com` | ✅ compared with the same search without the parameter, the order visibly shifts towards the cheaper offers |
 
-**Ein Nebenbefund, der eine Notiz wert ist:** `_sop=12` heißt **nicht** aufsteigend.
-Es war der naheliegende Kandidat — die Menü-Beschriftung „Niedrigster Preis inkl. Versand"
-steht im Markup direkt daneben — und liefert doch eine ungeordnete Liste
-(4,99 / 58,50 / 5,99 / 2,00 €).
-Wer den Wert künftig „korrigiert", macht es schlechter.
-Steht deshalb als Warnung im JSDoc.
+**One side finding worth a note:** `_sop=12` does **not** mean ascending.
+It was the obvious candidate — the menu label "Lowest price incl. shipping"
+sits right next to it in the markup — and yet it returns an unordered list
+(4.99 / 58.50 / 5.99 / 2.00 €).
+Anyone who "corrects" the value in future makes it worse.
+That is why it is in the JSDoc as a warning.
 
-Die Werte bleiben Magie aus einem fremden System:
-`ebay-search.spec.ts` schreibt sie fest, damit eine Änderung eine bewusste Handlung ist.
-Die Prüfung hindert eBay nicht daran, morgen umzunummerieren.
+The values remain magic from a foreign system:
+`ebay-search.spec.ts` pins them down so that changing one is a deliberate act.
+The check does not stop eBay from renumbering tomorrow.
 
 ---
 
-### ✅ TODO-61 — Nach abgelaufener Sitzung führt ein erfolgreicher Login nicht zum Dashboard
-**Gemeldet am 2026-09-08 aus dem Betrieb.**
+### ✅ TODO-61 — After an expired session, a successful login does not lead to the dashboard
+**Reported on 2026-09-08 from operations.**
 
-**Reproduktion (so berichtet):**
-In einem Browser, in dem man angemeldet **war** und dann abgemeldet wurde,
-führt eine erneute Anmeldung nicht zum Dashboard —
-man bleibt auf der Login-Seite stehen, **obwohl die Anmeldung erfolgreich war**.
+**Reproduction (as reported):**
+In a browser where you **were** signed in and were then signed out,
+signing in again does not lead to the dashboard —
+you stay on the login page, **even though the sign-in succeeded**.
 
-Der Zusatz „obwohl eingeloggt" ist der wichtige Teil:
-es ist kein fehlgeschlagener Login, sondern ein Weiterleitungsproblem *nach* dem Login.
-Ein frischer Browser (oder ein privates Fenster) ist nach dem bisherigen Bild nicht betroffen —
-das deutet auf Zustand, der aus der abgelaufenen Sitzung übrig bleibt.
+The addition "even though logged in" is the important part:
+this is not a failed login but a redirect problem *after* the login.
+A fresh browser (or a private window) appears not to be affected, going by what we know so far —
+which points at state left over from the expired session.
 
-**Was am Code gesichert ist** (gelesen, nicht ausprobiert):
+**What is established about the code** (read, not tried out):
 
-1. `SecurityConfig` setzt **kein** `defaultSuccessUrl`.
-   Damit gilt Spring Securitys Standard, der `SavedRequestAwareAuthenticationSuccessHandler`:
-   nach dem Login wird auf den **gemerkten Request** weitergeleitet, falls einer in der Sitzung liegt,
-   sonst auf `/`.
-2. `unauthorized-interceptor.ts` schickt den Browser bei **jedem** 401 hart auf `/login`
+1. `SecurityConfig` sets **no** `defaultSuccessUrl`.
+   So Spring Security's default applies, the `SavedRequestAwareAuthenticationSuccessHandler`:
+   after login the browser is redirected to the **saved request** if there is one in the session,
+   otherwise to `/`.
+2. `unauthorized-interceptor.ts` sends the browser hard to `/login` on **every** 401
    (`globalThis.location.href = …`).
-3. Für `/api/**` ist ein `HttpStatusEntryPoint(401)` gesetzt.
-   Das ändert nur die *Antwort* — den Request merkt sich der `ExceptionTranslationFilter`
-   trotzdem, **bevor** er den Entry Point aufruft.
+3. For `/api/**` an `HttpStatusEntryPoint(401)` is configured.
+   That only changes the *response* — the `ExceptionTranslationFilter` still saves the request,
+   **before** it invokes the entry point.
 
-**Die Arbeitshypothese von gestern ist widerlegt.**
-Sie lautete: der abgewiesene XHR landet als `SavedRequest` in der Sitzung,
-und der Login leitet auf diese API-URL statt auf die SPA.
-`LoginRedirectTest` (neu) zeigt, dass die Kette schon im ersten Glied reißt:
-ein `/api/**`-Aufruf, der mit blankem 401 beantwortet wird, **legt gar keine Sitzung an** —
-es gibt also nichts zu merken.
-Der Test hält das fest, weil die Sache kippt, sobald jemand diesen Entry Point gegen eine
-Weiterleitung tauscht: dann entsteht eine Sitzung, mit ihr der `SavedRequest`,
-und der beschriebene Fehlermodus wird real, ohne dass ein Test es bemerkt.
+**Yesterday's working hypothesis has been disproven.**
+It went: the rejected XHR ends up in the session as a `SavedRequest`,
+and the login redirects to that API URL instead of the SPA.
+`LoginRedirectTest` (new) shows that the chain breaks at the very first link:
+an `/api/**` call answered with a bare 401 **does not create a session at all** —
+so there is nothing to save.
+The test records this because the situation flips the moment someone swaps this entry point
+for a redirect: then a session is created, with it the `SavedRequest`,
+and the failure mode described becomes real without any test noticing.
 
-**Was damit ausgeschlossen ist** (je ein Test in
+**What that rules out** (one test each in
 `accountaccess/adapter/in/security/LoginRedirectTest.java`):
 
-| Geprüft | Ergebnis |
+| Checked | Result |
 | --- | --- |
-| Login ohne Vorgeschichte | → `/` → `/app/` ✅ |
-| Merkt sich der abgewiesene `/api/**`-Aufruf etwas? | **nein** — ein blankes 401 legt gar keine Sitzung an, also gibt es keinen `SavedRequest` ✅ |
-| Hinterlässt der Login einen authentifizierten Kontext? | ja ✅ |
-| Browser-Navigation vs. XHR auf `/app/` | 302 auf die Loginseite bzw. blankes 401 ✅ |
+| Login with no prior history | → `/` → `/app/` ✅ |
+| Does the rejected `/api/**` call save anything? | **no** — a bare 401 does not create a session at all, so there is no `SavedRequest` ✅ |
+| Does the login leave an authenticated context behind? | yes ✅ |
+| Browser navigation vs. XHR on `/app/` | 302 to the login page and a bare 401 respectively ✅ |
 
-Ebenfalls durchgesehen und unauffällig:
-`SpaController` (`/` → `/app/`, kontextpfad-relativ),
-die Boot-Sequenz in `app.ts` (nichts darin leitet auf `/login`),
-und der einzige Absprung im Frontend überhaupt — der 401-Interceptor.
+Also reviewed and unremarkable:
+`SpaController` (`/` → `/app/`, relative to the context path),
+the boot sequence in `app.ts` (nothing in it redirects to `/login`),
+and the only bail-out in the frontend at all — the 401 interceptor.
 
-**Der Fehler ist damit im Backend nicht nachstellbar.**
-Das grenzt ein, beweist aber nichts: die Meldung hängt an echtem Browser-Zustand
-(Cookies aus einer toten Sitzung, `XSRF-TOKEN`, Remember-me, Cache),
-und den bildet MockMvc nicht ab.
+**So the bug cannot be reproduced in the backend.**
+That narrows things down but proves nothing: the report hinges on real browser state
+(cookies from a dead session, `XSRF-TOKEN`, remember-me, cache),
+and MockMvc does not model that.
 
-**Spur aus dem Betrieb (2026-09-09) — und daraus ein belegter Fehler:**
+**Trace from operations (2026-09-09) — and out of it a proven bug:**
 
 ```
-http://domain/w2s/     -> 302  http://domain/w2s/login     <- unsere Antwort
-                       -> 307  https://domain/w2s/login    <- Caddy biegt zurück
+http://domain/w2s/     -> 302  http://domain/w2s/login     <- our response
+                       -> 307  https://domain/w2s/login    <- Caddy bends it back
                        -> 200
 [Sign in]              -> 302  /w2s/login
-URL von Hand auf /w2s  -> 302  http://domain/w2s/app/      <- unsere Antwort
-                       -> 307  https://domain/w2s/app/     <- Caddy biegt zurück
-                       -> 200  (angemeldet)
+URL changed by hand to /w2s  -> 302  http://domain/w2s/app/      <- our response
+                       -> 307  https://domain/w2s/app/     <- Caddy bends it back
+                       -> 200  (signed in)
 ```
 
-Zwei Dinge stehen damit fest.
-Erstens: **die Anmeldung funktioniert** — der letzte Schritt kommt ohne neuen Login ins Dashboard.
-Zweitens, und das ist der eigentliche Fund: **jede absolute Weiterleitung, die wir bauen, trägt
-`http://`, obwohl die Anfrage über `https` hereinkam.** Jedes `-> 307` in der Spur ist Caddy,
-das unsere Antwort zurückbiegt.
+Two things are now certain.
+First: **sign-in works** — the last step reaches the dashboard without a fresh login.
+Second, and this is the actual find: **every absolute redirect we build carries
+`http://`, even though the request arrived over `https`.** Every `-> 307` in the trace is Caddy
+bending our response back.
 
-**Ursache:** In der Infrastruktur terminiert Caddy TLS.
-`server.servlet.context-path=/w2s` war gesetzt (`compose.yml`),
-`server.forward-headers-strategy` **nicht** — Spring Boots Default ist `NONE`.
-Die Anwendung hielt sich also für unverschlüsselt erreichbar
-und baute jede absolute URL mit dem falschen Schema.
-Spring gibt selbst nur ein relatives `Location` aus; absolut macht es erst der Servlet-Container,
-und der kannte bloß den Klartext-Hop vom Proxy.
+**Cause:** In the infrastructure, Caddy terminates TLS.
+`server.servlet.context-path=/w2s` was set (`compose.yml`),
+`server.forward-headers-strategy` was **not** — Spring Boot's default is `NONE`.
+So the application believed it was reachable unencrypted
+and built every absolute URL with the wrong scheme.
+Spring itself only emits a relative `Location`; it is the servlet container that makes it absolute,
+and that container only knew about the plaintext hop from the proxy.
 
-**Behoben** mit `server.forward-headers-strategy=native`, abgesichert durch
-`ProxyForwardedHeadersTest` (echter Port, weil `native` ein Tomcat-Ventil ist,
-das MockMvc nie erreichen würde — der Test wäre sonst leer wahr).
+**Fixed** with `server.forward-headers-strategy=native`, backed by
+`ProxyForwardedHeadersTest` (a real port, because `native` is a Tomcat valve
+that MockMvc would never reach — otherwise the test would be vacuously true).
 
-`native` statt `framework`, und zwar wegen der Vertrauensgrenze:
-Tomcats `RemoteIpValve` wertet `X-Forwarded-*` nur aus, wenn der Peer zu
-`server.tomcat.remoteip.internal-proxies` passt (private Bereiche per Default),
-Springs `ForwardedHeaderFilter` glaubt jedem.
-Direkt erreichbar sind wir heute nicht — `compose.yml` veröffentlicht keinen Port —,
-aber „sicher, weil es zufällig so deployt ist" ist die schwächere Zusicherung als
-„sicher, weil der Code prüft".
+`native` rather than `framework`, and specifically because of the trust boundary:
+Tomcat's `RemoteIpValve` only evaluates `X-Forwarded-*` if the peer matches
+`server.tomcat.remoteip.internal-proxies` (private ranges by default),
+while Spring's `ForwardedHeaderFilter` believes anyone.
+We are not directly reachable today — `compose.yml` publishes no port —
+but "safe because that happens to be how it is deployed" is a weaker guarantee than
+"safe because the code checks".
 
-Der Preis: es **scheitert leise**.
-Ein Peer außerhalb dieser Bereiche heißt, die Header werden ignoriert
-und die `http`-URLs sind zurück, ohne Logeintrag.
-Ein Blick auf das `Location` einer beliebigen Weiterleitung sagt nach jeder Infrastrukturänderung,
-auf welcher Seite dieser Grenze man steht.
-Realistischer Stolperstein: ein IPv6-fähiges Docker-Netz —
-der Default kennt dort nur `::1`.
+The price: it **fails quietly**.
+A peer outside those ranges means the headers are ignored
+and the `http` URLs are back, with no log entry.
+A glance at the `Location` of any redirect tells you, after every infrastructure change,
+which side of that boundary you are on.
+Realistic stumbling block: an IPv6-enabled Docker network —
+the default only knows `::1` there.
 
-**Kontextpfad bleibt, wo er ist.**
-Die Caddyfile nutzt `handle`, nicht `handle_path`, das Präfix kommt also unverändert an —
-womit `server.servlet.context-path=/w2s` das passende Gegenstück ist.
-Die Abhängigkeiten zwischen beiden Seiten stehen bei der Einstellung selbst
-in [`compose.yml`](compose.yml), nicht hier und nicht im Code.
+**The context path stays where it is.**
+The Caddyfile uses `handle`, not `handle_path`, so the prefix arrives unchanged —
+which makes `server.servlet.context-path=/w2s` the matching counterpart.
+The dependencies between the two sides are documented at the setting itself
+in [`compose.yml`](compose.yml), not here and not in the code.
 
-**Randnotiz zu den `307` in der Spur:** die stammen vermutlich gar nicht von Caddy.
-Chrome zeigt HSTS-Aufwertungen als „307 Internal Redirect".
-Der Browser hat unsere falschen `Location`-Angaben also stillschweigend repariert —
-weshalb es überhaupt so lange unauffällig funktioniert hat.
+**Side note on the `307`s in the trace:** they probably do not come from Caddy at all.
+Chrome displays HSTS upgrades as "307 Internal Redirect".
+So the browser has been silently repairing our wrong `Location` headers —
+which is why it worked unnoticed for so long in the first place.
 
-**Was damit nicht bewiesen ist.**
-Der Sprung nach `[Sign in]` auf `/w2s/login` lässt sich aus dem Code **nicht** herleiten:
-Spring Securitys Erfolgs-Handler kennt nur zwei Ziele — den gemerkten Request
-oder ersatzweise `/` — und keines davon ergibt die Loginseite.
-Der Fix beseitigt den belegten Fehler und räumt die Kette auf;
-ob er auch das gemeldete Symptom beseitigt, ist offen.
+**What this does not prove.**
+The jump to `/w2s/login` after `[Sign in]` **cannot** be derived from the code:
+Spring Security's success handler knows only two targets — the saved request
+or, failing that, `/` — and neither of them yields the login page.
+The fix removes the proven bug and tidies up the chain;
+whether it also removes the reported symptom is open.
 
-**Erledigt und im Betrieb bestätigt (2026-09-09):** der Login funktioniert wieder einwandfrei.
+**Done and confirmed in operations (2026-09-09):** login works flawlessly again.
 
-Damit ist auch die Zurückhaltung von gestern beantwortet.
-Ich hatte geschrieben, der Fix behebe den belegten Fehler, ob er auch das Symptom beseitige,
-sei offen — weil sich der Sprung auf `/w2s/login` aus Spring Securitys Erfolgs-Handler
-nicht herleiten ließ.
-Er ließ sich deshalb nicht herleiten, weil er dort nicht entstand:
-das falsche Schema in unseren absoluten `Location`-Angaben hat die Kette gekippt,
-nicht die Zielauswahl nach dem Login.
-Die Lehre für das nächste Mal: bei einer Weiterleitungskette hinter einem Proxy zuerst
-das **Schema jeder einzelnen Antwort** ansehen, nicht das Ziel der letzten.
+That also answers yesterday's reservation.
+I had written that the fix removes the proven bug but that whether it also removes the symptom
+was open — because the jump to `/w2s/login` could not be derived from Spring Security's
+success handler.
+It could not be derived because it did not originate there:
+the wrong scheme in our absolute `Location` headers tipped the chain over,
+not the target selection after login.
+The lesson for next time: with a redirect chain behind a proxy, look first at
+the **scheme of every single response**, not at the target of the last one.
 
-- **Akzeptanzkriterium:** Eine Anmeldung nach abgelaufener Sitzung landet im Dashboard,
-  in derselben Browser-Sitzung wie zuvor, ohne Cookies von Hand zu löschen.
-  Kein `307` mehr in der Kette — jede unserer Weiterleitungen bleibt auf `https`.
-
----
+- **Acceptance criterion:** A sign-in after an expired session lands on the dashboard,
+  in the same browser session as before, without deleting cookies by hand.
+  No more `307` in the chain — every one of our redirects stays on `https`.
 
 ---
 
-### ✅ TODO-62 — README gegen den Code abgleichen
-Die README ist an vielen Stellen vom Code überholt.
-Beim Prüfen der TODOs fielen unabhängig voneinander diese Punkte auf:
+---
 
-| Stelle | Steht dort | Tatsächlich |
+### ✅ TODO-62 — Reconcile the README with the code
+The README has been overtaken by the code in many places.
+While checking the TODOs, these points came up independently of one another:
+
+| Place | Says | Actually |
 | --- | --- | --- |
-| `:12` | „Spring Boot 4.1" | 4.2.0-M1 |
+| `:12` | "Spring Boot 4.1" | 4.2.0-M1 |
 | `:37` | `WerStreamtEsApiClient` | `WerStreamtEsSource` |
-| `:132` | „`ImdbApiClientTest` ist per Default ausgeschlossen" | Test und Klasse gibt es seit TODO-1 nicht mehr; kein solcher Ausschluss in `pom.xml` |
-| `:201` | `curl … /check-pre-cache` | Endpunkt entfällt; heute `/api/cache/uncached` |
-| `:284` | „Cache füllt sich via `/pre-cache`" | heute `POST /api/cache` |
-| `:264`/`:267` | Rate-Limit-Defaults `2` | `src/main/resources/application.properties` setzt `20` bzw. `10`; die `2` ist nur der Code-Fallback |
-| `:298` | „`mvn verify` startet einen Container" | die Tests hängen an Surefire, laufen also schon bei `mvn test` |
-| Endpunkt-Tabelle | — | fehlen u. a. `/api/imdb/…`, `/api/titles/{id}/meta`, die `PUT /api/me/*`, Impersonierung |
-| Feature-Liste | — | weder eBay-Suchlink (TODO-57) noch Admin-Impersonierung (TODO-53) erwähnt |
+| `:132` | "`ImdbApiClientTest` is excluded by default" | neither test nor class has existed since TODO-1; no such exclusion in `pom.xml` |
+| `:201` | `curl … /check-pre-cache` | endpoint is gone; today `/api/cache/uncached` |
+| `:284` | "cache fills up via `/pre-cache`" | today `POST /api/cache` |
+| `:264`/`:267` | rate limit defaults `2` | `src/main/resources/application.properties` sets `20` and `10` respectively; the `2` is only the code fallback |
+| `:298` | "`mvn verify` starts a container" | the tests hang off Surefire, so they already run with `mvn test` |
+| Endpoint table | — | missing, among others, `/api/imdb/…`, `/api/titles/{id}/meta`, the `PUT /api/me/*`, impersonation |
+| Feature list | — | mentions neither the eBay search link (TODO-57) nor admin impersonation (TODO-53) |
 
-Nicht in der README, aber deploymentkritisch und nirgends dokumentiert:
-`server.forward-headers-strategy=native` und `server.servlet.context-path=/w2s`
-— beide mit **leisem** Fehlverhalten, wenn sie nicht stimmen (TODO-61).
+Not in the README, but deployment-critical and documented nowhere:
+`server.forward-headers-strategy=native` and `server.servlet.context-path=/w2s`
+— both with **quiet** misbehaviour if they are wrong (TODO-61).
 
-Auch `http-clients/testing.http` zeigt noch auf die gelöschten `/pre-cache`-Endpunkte.
+`http-clients/testing.http` also still points at the deleted `/pre-cache` endpoints.
 
-- **Akzeptanzkriterium:** Die Tabellen und Beispiele der README treffen den Code.
-  Sinnvoll wäre, dabei zu überlegen, was sich **automatisch** prüfen lässt —
-  eine Endpunkt-Tabelle von Hand zu pflegen driftet zuverlässig wieder ab.
+- **Acceptance criterion:** The README's tables and examples match the code.
+  It would make sense to think about what can be checked **automatically** while doing so —
+  maintaining an endpoint table by hand reliably drifts again.
 
-**Erledigt am 2026-09-09.** Alle neun Punkte der Tabelle abgearbeitet, jeder vorher am Code
-verifiziert statt aus dem Bericht übernommen (die Rate-Limit-Defaults etwa stehen tatsächlich
-auf 20 bzw. 10, die `2` war nur der `@DefaultValue`-Fallback).
-Dazu ergänzt: die Endpunkt-Tabelle um `/api/titles/{id}/meta`, `/api/imdb/search`,
-die übrigen `PUT /api/me/*`, den Passwort-Reset und die Impersonierung;
-die Feature-Liste um den eBay-Suchlink und die Admin-Impersonierung;
-die Konfigurationstabelle um `context-path` und `forward-headers-strategy`
-— beide deploymentkritisch und beide mit **leisem** Fehlverhalten.
-`http-clients/testing.http` zeigte noch auf die gelöschten `/pre-cache`-Endpunkte.
+**Done on 2026-09-09.** All nine points in the table worked through, each verified against the code
+beforehand instead of taken from the report (the rate limit defaults, for instance, really are
+20 and 10; the `2` was only the `@DefaultValue` fallback).
+Added on top: the endpoint table gained `/api/titles/{id}/meta`, `/api/imdb/search`,
+the remaining `PUT /api/me/*`, the password reset and impersonation;
+the feature list gained the eBay search link and admin impersonation;
+the configuration table gained `context-path` and `forward-headers-strategy`
+— both deployment-critical and both with **quiet** misbehaviour.
+`http-clients/testing.http` still pointed at the deleted `/pre-cache` endpoints.
 
-Der gefährlichste Fund war nicht in der Tabelle: die README riet, für ein bestehendes Deployment
-„die alten Daten zu löschen, der Cache füllt sich neu". Das galt, als die DB nur Scrape-Ergebnisse
-hielt — heute lägen dort Benutzerkonten, Watchlists und Sessions.
+The most dangerous find was not in the table: for an existing deployment the README advised
+"deleting the old data, the cache will refill". That held when the DB only kept scrape results —
+today it would hold user accounts, watchlists and sessions.
 
-**Was nicht gelöst ist:** eine von Hand gepflegte Endpunkt-Tabelle driftet wieder.
-Das Akzeptanzkriterium fragte danach; eine Antwort habe ich nicht.
-`DocumentationConsistencyTest` prüft die README bewusst **nicht** — sie enthält
-Beispiel-URLs und Prosa, an denen ein Pfad-Test nur Rauschen produzieren würde.
-
-
----
-
-### ✅ TODO-64 — Kleine Aufräumfunde aus der TODO-Prüfung
-Einzeln zu klein für ein Ticket, zusammen eine Stunde Pfadfinderarbeit:
-
-- **Toter Code:** `QueryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(...)` hat keinen
-  Aufrufer mehr — verdrängt von `findByImdbIdIn(...)`.
-- **Verwaistes Javadoc:** `PreCacheService` behauptet, auch der „per-import targeted pre-cache"
-  nutze den Service — `WatchlistImportService` injiziert ihn gar nicht.
-  `CatalogApiController` beschreibt sich als „die Daten hinter der Thymeleaf-`index`-Seite";
-  Thymeleaf ist mit ADR-0008 entfallen.
-- **`docs/reviews/2026-07-28-architecture-review.md` widerspricht dem Code:** behauptet, `AggregateService` existiere
-  nicht mehr (existiert), und beschreibt die Schichtung als `api/ → application/ → services/ →
-  persistence/` (Stand vor ADR-0014).
-- **Überflüssige Imports** in `StatusController` (importiert aus dem eigenen Paket).
-- **Nicht erzwungen:** dass in `adapter/in` kein `@Transactional` steht, hält heute — es gibt aber
-  keine ArchUnit-Regel dafür. Eine Regel wäre billiger als der nächste Rückfall.
-
-**Erledigt am 2026-09-09**, jeder Punkt vorher am Code geprüft:
-
-- `QueryMetaRepository.findByImdbIdInAndInvalidatedIsFalse` hatte tatsächlich keinen Aufrufer
-  mehr — entfernt.
-- `PreCacheService` behauptete, auch der Import nutze ihn. Tut er nicht: importierte Titel werden
-  beim ersten Seitenaufruf aufgelöst. Javadoc korrigiert.
-- `CatalogApiController` beschrieb sich als „die Daten hinter der Thymeleaf-`index`-Seite" —
-  Thymeleaf ist seit ADR-0008 weg.
-- Überflüssige Importe aus dem eigenen Paket in `StatusController` entfernt.
-- **Der Widerspruch im Architecture Review hat sich von selbst erledigt:** das Dokument liegt
-  jetzt als datierte Momentaufnahme unter `docs/reviews/` und darf veraltet sein — sein Banner
-  nennt den `AggregateService`-Fehler sogar als Beispiel. Eine Momentaufnahme zu korrigieren
-  hieße, sie zu fälschen.
-- **Neu dazu, weil es beim Prüfen auffiel:** die Regel „kein `@Transactional` in `adapter.in`"
-  hielt zwar, war aber von nichts erzwungen. Jetzt zwei ArchUnit-Regeln — und beim ersten Lauf
-  fanden sie drei Verstöße, die sich als **legitim** herausstellten (ein Startup-Runner und ein
-  Security-Callback, beide keine HTTP-Handler). Die Regel wurde daraufhin auf `adapter.in.api`
-  eingeengt: eine Regel, deren Begründung ihre eigenen Verstöße nicht deckt, glaubt niemand.
+**What is not solved:** a hand-maintained endpoint table will drift again.
+The acceptance criterion asked about that; I do not have an answer.
+`DocumentationConsistencyTest` deliberately does **not** check the README — it contains
+example URLs and prose on which a path test would only produce noise.
 
 ---
 
-### ✅ TODO-63 — `W2S_ADMIN_PASSWORD` aus `.env` bindet an keine Property
-`.env.example:11` dokumentiert `W2S_ADMIN_PASSWORD` als das initiale Admin-Passwort.
-Es bindet an nichts.
+### ✅ TODO-64 — Small clean-up finds from the TODO review
+Individually too small for a ticket, together an hour of boy scout work:
 
-`compose.yml` mappt nur noch `W2S_SECURITY_INITIALADMIN_USERNAME` (Zeile 27);
-die zugehörige Passwort-Zeile wurde entfernt, als `env_file: .env` hinzukam.
-Über `env_file` landet `W2S_ADMIN_PASSWORD` zwar im Container, aber der Property-Prefix ist
-`w2s.security` — ein `w2s.admin.password` gibt es nicht.
+- **Dead code:** `QueryMetaRepository.findByImdbIdInAndInvalidatedIsFalse(...)` has no
+  caller left — displaced by `findByImdbIdIn(...)`.
+- **Orphaned Javadoc:** `PreCacheService` claims that the "per-import targeted pre-cache"
+  also uses the service — `WatchlistImportService` does not inject it at all.
+  `CatalogApiController` describes itself as "the data behind the Thymeleaf `index` page";
+  Thymeleaf went away with ADR-0008.
+- **`docs/reviews/2026-07-28-architecture-review.md` contradicts the code:** claims `AggregateService` no longer
+  exists (it does), and describes the layering as `api/ → application/ → services/ →
+  persistence/` (the state before ADR-0014).
+- **Superfluous imports** in `StatusController` (imports from its own package).
+- **Not enforced:** the fact that there is no `@Transactional` in `adapter/in` holds today — but there
+  is no ArchUnit rule for it. A rule would be cheaper than the next relapse.
 
-**Folge:** Wer das dokumentierte Passwort setzt, bekommt es nicht.
-`AdminUserSeeder` hält den Wert für leer, erzeugt ein zufälliges Passwort und **loggt es**.
-Das fällt niemandem auf, der nicht ins Log sieht — man probiert das Passwort aus `.env`,
-es geht nicht, und die naheliegende Vermutung ist ein Tippfehler beim Anlegen.
+**Done on 2026-09-09**, each point checked against the code beforehand:
 
-**Der Kontrast, der den Befund stützt:** `TMDB_API_KEY` flog im selben Commit aus `compose.yml`
-und funktioniert über `env_file` trotzdem — weil `tmdb.api-key` relaxed-binding-fähig ist.
-Beim Admin-Passwort passt der Name nicht.
+- `QueryMetaRepository.findByImdbIdInAndInvalidatedIsFalse` really did have no caller
+  left — removed.
+- `PreCacheService` claimed the import used it too. It does not: imported titles are
+  resolved on the first page view. Javadoc corrected.
+- `CatalogApiController` described itself as "the data behind the Thymeleaf `index` page" —
+  Thymeleaf has been gone since ADR-0008.
+- Superfluous imports from its own package removed in `StatusController`.
+- **The contradiction in the architecture review resolved itself:** the document now sits
+  under `docs/reviews/` as a dated snapshot and is allowed to be out of date — its banner
+  even names the `AggregateService` error as an example. Correcting a snapshot
+  would mean falsifying it.
+- **Newly added, because it stood out during the review:** the rule "no `@Transactional` in `adapter.in`"
+  did hold, but nothing enforced it. Now there are two ArchUnit rules — and on the first run
+  they found three violations that turned out to be **legitimate** (a startup runner and a
+  security callback, neither of them HTTP handlers). The rule was then narrowed to `adapter.in.api`:
+  nobody believes a rule whose rationale does not cover its own violations.
 
-- **Akzeptanzkriterium:** Entweder die Zeile in `compose.yml` wiederherstellen, oder
-  `.env.example` auf den bindungsfähigen Namen umstellen.
-  Danach einmal mit gesetztem Passwort hochfahren und prüfen, dass der Seeder **kein**
-  generiertes Passwort loggt — das ist die Probe, die den Fehler von Anfang an gezeigt hätte.
-- **Ungeprüft:** `README.md:212` nennt `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`, `compose.yml:26`
-  besteht auf `…INITIALADMIN_…`. Beide binden vermutlich über Spring Boots
-  Underscore-Mapping — verifiziert ist das nicht, und die beiden Aussagen widersprechen sich.
+---
 
-**Erledigt am 2026-09-09.** Der Befund war größer als das eine fehlende Mapping: es gibt **drei**
-Wege, auf denen eine `.env`-Variable eine Property erreicht, und man sieht einer Variablen nicht
-an, welchen sie nimmt — Mapping in `compose.yml`, Platzhalter in einer Properties-Datei, oder
-Relaxed Binding über den Namen selbst. `W2S_ADMIN_PASSWORD` nahm keinen, `TMDB_API_KEY` den
-unsichtbaren.
+### ✅ TODO-63 — `W2S_ADMIN_PASSWORD` from `.env` binds to no property
+`.env.example:11` documents `W2S_ADMIN_PASSWORD` as the initial admin password.
+It binds to nothing.
 
-**Gelöst über Platzhalter**, symmetrisch für Username und Passwort, plus eine sichtbare Zeile für
-`tmdb.api-key`. Ein Platzhalter umgeht die Namensregel vollständig — `${W2S_ADMIN_PASSWORD}` ist
-eine gewöhnliche Substitution, bei der weder Bindestriche noch Groß/Kleinschreibung zählen — und
-wirkt zusätzlich beim lokalen Start, nicht nur in Compose. Das Mapping für den Username entfällt
-damit aus `compose.yml`.
+`compose.yml` now only maps `W2S_SECURITY_INITIALADMIN_USERNAME` (line 27);
+the corresponding password line was removed when `env_file: .env` was added.
+Via `env_file`, `W2S_ADMIN_PASSWORD` does end up in the container, but the property prefix is
+`w2s.security` — there is no `w2s.admin.password`.
 
-**Zur Namensfrage, weil sie unterwegs strittig war:** Spring Boots Referenz sagt für
-Umgebungsvariablen „Replace dots with underscores. **Remove any dashes.** Convert to uppercase" —
-dokumentiert ist also `W2S_SECURITY_INITIALADMIN_PASSWORD`. Gemessen bindet
-`W2S_SECURITY_INITIAL_ADMIN_PASSWORD` ebenfalls, aber über einen zusätzlichen Pfad in Spring
-Frameworks Namensauflösung, nicht über Boots dokumentiertes Relaxed Binding. Ich hatte die beiden
-Formen zunächst als gleichwertig dargestellt; das war zu großzügig — „funktioniert" und „ist
-zugesichert" sind zweierlei. Der Kommentar in `compose.yml` gab den richtigen Rat.
+**Consequence:** whoever sets the documented password does not get it.
+`AdminUserSeeder` considers the value empty, generates a random password and **logs it**.
+Nobody notices unless they look in the log — you try the password from `.env`,
+it does not work, and the obvious assumption is a typo when the account was created.
 
-**Abgesichert** durch `EnvExampleIsWiredUpTest`: jede Variable aus `.env.example` muss wörtlich in
-`compose.yml` oder einer `application*.properties` vorkommen. Bewusst stumpf — ob Relaxed Binding
-sie ohnehin auflösen würde, prüft der Test nicht, denn eine Verdrahtung, die man nicht greppen
-kann, kann auch niemand nachvollziehen.
+**The contrast that supports the finding:** `TMDB_API_KEY` was dropped from `compose.yml` in the
+same commit and still works via `env_file` — because `tmdb.api-key` is relaxed-binding-capable.
+For the admin password the name does not match.
 
-Der Test hat sich bei seiner eigenen Entstehung bewährt: die Ausnahmeliste, mit der ich ihn
-schrieb, stellte sich als überflüssig heraus — beide vermeintlichen Tooling-Variablen stehen in
-`compose.yml`. Sie ist ersatzlos entfallen.
+- **Acceptance criterion:** Either restore the line in `compose.yml`, or
+  change `.env.example` to the bindable name.
+  Then start up once with the password set and check that the seeder logs **no**
+  generated password — that is the test that would have exposed the bug from the start.
+- **Unverified:** `README.md:212` names `W2S_SECURITY_INITIAL_ADMIN_PASSWORD`, `compose.yml:26`
+  insists on `…INITIALADMIN_…`. Both presumably bind via Spring Boot's
+  underscore mapping — that is not verified, and the two statements contradict each other.
+
+**Done on 2026-09-09.** The finding was bigger than the one missing mapping: there are **three**
+ways in which a `.env` variable can reach a property, and you cannot tell from a variable
+which one it takes — mapping in `compose.yml`, a placeholder in a properties file, or
+relaxed binding via the name itself. `W2S_ADMIN_PASSWORD` took none, `TMDB_API_KEY` took the
+invisible one.
+
+**Solved via placeholders**, symmetrically for username and password, plus a visible line for
+`tmdb.api-key`. A placeholder bypasses the naming rule entirely — `${W2S_ADMIN_PASSWORD}` is
+an ordinary substitution in which neither dashes nor case matter — and it works on a local
+start as well, not only in Compose. The mapping for the username therefore drops out of
+`compose.yml`.
+
+**On the naming question, because it was contentious along the way:** Spring Boot's reference says,
+for environment variables, "Replace dots with underscores. **Remove any dashes.** Convert to uppercase" —
+so what is documented is `W2S_SECURITY_INITIALADMIN_PASSWORD`. Measured,
+`W2S_SECURITY_INITIAL_ADMIN_PASSWORD` binds as well, but via an additional path in Spring
+Framework's name resolution, not via Boot's documented relaxed binding. I had initially presented the two
+forms as equivalent; that was too generous — "works" and "is
+guaranteed" are two different things. The comment in `compose.yml` gave the right advice.
+
+**Backed** by `EnvExampleIsWiredUpTest`: every variable from `.env.example` must appear verbatim in
+`compose.yml` or in an `application*.properties`. Deliberately blunt — the test does not check whether
+relaxed binding would resolve it anyway, because wiring you cannot grep for
+is wiring nobody can follow.
+
+The test proved itself while it was being written: the exception list I wrote it
+with turned out to be superfluous — both supposed tooling variables are in
+`compose.yml`. It was dropped with nothing put in its place.
+
+---
+
+### ✅ TODO-67 — Check the ADRs against reality
+20 ADRs: 19 `Accepted`, one `Superseded`. None has ever been reviewed — and the fact that three of
+them sat at `Proposed` until 2026-09-09 while already running in production shows that nobody
+notices the status field.
+
+**An ADR nobody follows is worse than none** — it looks like a guarantee you can rely on. Two cases
+found while checking the TODOs point exactly that way:
+
+- [ADR-0011](docs/adr/0011-no-open-session-in-view.md) ("no OSIV, everything EAGER") holds — but
+  TODO-12 demanded the opposite for a year and nobody noticed the contradiction.
+- [ADR-0019](docs/adr/0019-port-spi-for-inverted-context-dependencies.md) lost one of its two
+  use cases with the eBay rollback. It still holds, but now stands on one leg.
+
+**Three questions per ADR:** does it describe reality? Is it followed — demonstrably, not
+apparently? Is its reasoning still the one that would count today?
+
+- **Outcome:** update the status (`Superseded` where overtaken) and the references to it. An ADR
+  being broken quietly is **not** a documentation problem — then either the code or the decision is
+  wrong, and both deserve their own ticket.
+- **Distinct from TODO-65:** the architecture review checks the code against itself, this ticket
+  checks the decisions against the code. Sensible to do together — the `architecture-review` skill
+  carries the ADR reconciliation as its own area.
+
+**Done on 2026-09-09.** All 20 ADRs were checked against the code by six parallel agents and
+translated into English in the same pass; the files were renamed to English slugs and every
+reference in the repository pulled through. `DONE.md` was translated too.
+
+**No ADR turned out to be superseded.** Every decision still holds. What the review did find falls
+into three groups.
+
+**Two decisions are being broken quietly** — the outcome this ticket was really looking for, since
+an ADR nobody follows looks like a guarantee you can rely on:
+
+- ADR-0015 removed request validation from controllers at nine places and missed a tenth
+  (`ImdbSearchApiController`), written days before the ADR. → TODO-68.
+- ADR-0004 named a countermeasure (`matNativeControl`) that no longer exists, and the test that
+  needed it reaches into `MatSelect` internals instead of using a harness. → TODO-69.
+
+**One live falsehood was corrected outside the ADRs.** The changeset comment in
+`src/main/resources/db/changelog/changes/018-drop-ebay-quota.xml` still claimed the eBay developer
+account "was never granted" and the lookup "never ran" — the last surviving copy of the error that
+started this whole review. Editing an applied changeset needs care, so the assumption that
+Liquibase excludes `<comment>` from the checksum was verified rather than believed: a file-based
+H2 database was migrated, the comment changed, and the migration rerun against it. No validation
+error. The comment now says what happened, and says that it was corrected.
+
+**Everything else is text that aged, and stays.** Roughly a dozen ADRs name a class, package or
+count that has since moved: `shared.time` became `shared.platform.time`, `ImdbTitleClient` became
+`ImdbTitleSource`, "276 backend tests" is now 403, ADR-0020 announces "four constraints" and lists
+five. None of it was repaired, on purpose — an ADR records the world it was written in, and
+rewriting that turns a decision log into a fiction. The one exception is ADR-0012's
+`POST /api/manage/scrape-invalidated`, corrected to `/api/manage/scrape` because that endpoint
+never existed under the name the ADR gave it: it had been renamed nine days *before* the ADR was
+written. Correcting something that was never true is not editing history.
+
+**Two things the review surfaced that are worth keeping in view**, neither big enough for a ticket:
+
+- ADR-0011 says nothing about `default_batch_fetch_size=50`, which is what actually defuses the
+  N+1 risk that its EAGER rule creates. The code documents it in three places and points back at
+  ADR-0011; only the ADR does not know. Worth one sentence the next time it is touched.
+- ADR-0019 now stands on a single use case. It still holds, but a rule with one instance is a rule
+  waiting to be questioned.

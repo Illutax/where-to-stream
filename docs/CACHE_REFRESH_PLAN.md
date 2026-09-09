@@ -1,6 +1,6 @@
 # Plan: „Cache Verwalten" nutzbar machen + asynchrone, gestaffelte Cache-Aktualisierung
 
-Dieses Dokument ist der Umsetzungsplan zu [ADR-0016](adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md).
+Dieses Dokument ist der Umsetzungsplan zu [ADR-0016](adr/0016-asynchronous-deferred-cache-refresh.md).
 Es ist bewusst so geschrieben, dass eine **andere Claude-Code-Session ohne Vorwissen aus diesem
 Gespräch** direkt damit arbeiten kann: jeder Schritt nennt die konkrete Datei, die betroffenen
 Methoden/Klassen und was sich ändert.
@@ -468,8 +468,8 @@ Diese Punkte sind bewusst nicht vorentschieden — beim Start von Phase 2/4 kurz
 
 ## Zugehörige Dokumente
 
-- [ADR-0016](adr/0016-asynchrone-verzoegerte-cache-aktualisierung.md) — die Architekturentscheidung
+- [ADR-0016](adr/0016-asynchronous-deferred-cache-refresh.md) — die Architekturentscheidung
   (Warum), dieses Dokument beschreibt das Wie.
-- [ADR-0012](adr/0012-permanenter-titel-cache-vs-ttl-verfuegbarkeits-cache.md) — die bestehende
+- [ADR-0012](adr/0012-permanent-title-cache-vs-ttl-availability-cache.md) — die bestehende
   Caching-Strategie, die dieser Plan erweitert (nicht ersetzt).
 - [`TODOs.md`](../TODOs.md) — Backlog-Einträge TODO-43 bis TODO-46, je einer pro Phase.

@@ -5,7 +5,7 @@
 > **Stand 2026-09-09.** Dieses Vorhaben ist umgesetzt worden — und wieder zurückgebaut.
 > Der Developer-Account wurde freigeschaltet, Variante C lief in der Anwendung und war in Benutzung.
 > Im Betrieb erwies sie sich als nicht gut genug; mit TODO-56 ist sie aus `dev` entfernt,
-> [ADR-0017](adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md) ist `Superseded`.
+> [ADR-0017](adr/0017-quota-management-for-the-ebay-browse-api.md) ist `Superseded`.
 > Der gebaute Stand liegt auf dem Branch `feature/ebay_search`.
 >
 > **Was stattdessen ausgeliefert ist:** Variante A aus Abschnitt 4 — ein Suchlink je Titel,
@@ -647,7 +647,7 @@ Der Code ist **heute schon nicht zyklenfrei** — unabhängig von diesem Feature
   Beide Richtungen laufen über *veröffentlichte* Ports — die bestehenden Regeln sind deshalb zu
   Recht grün, der Kreis existiert dennoch.
 - **Erledigt am 2026-09-05:** Der Zyklus ist aufgelöst — durch Umkehrung der Abhängigkeit, siehe
-  [ADR-0019](adr/0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md).
+  [ADR-0019](adr/0019-port-spi-for-inverted-context-dependencies.md).
   `accountaccess` deklariert seinen Bedarf selbst (`port/spi/PosterAttributionProvider`),
   `titlecatalog` erfüllt ihn.
   Ein erster Versuch, das Interface nach `shared` zu verschieben, wurde verworfen: das hätte die
@@ -795,7 +795,7 @@ Für die nun primäre Variante C — gegen die Sandbox zu prüfen, sobald der Ac
   Zone als `America/Los_Angeles` statt als fester PST-Offset, weil Pazifik-Zeit Sommerzeit hat.
   Zwei Wege zur Überprüfung der Hypothese beschrieben (passiv aus dem Log, aktiv per
   Ausschöpfung nach vollständiger Implementierung).
-- **2026-09-05** — Entwurf v3.5: [ADR-0017](adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md)
+- **2026-09-05** — Entwurf v3.5: [ADR-0017](adr/0017-quota-management-for-the-ebay-browse-api.md)
   angelegt (Status `Proposed`), das die Quota-Entscheidungen aus Abschnitt 11 festhält —
   darunter die Aufteilung auf zwei eigene Tabellen statt Spalten an `AppUser`.
   Die reale Nutzerzahl (fünf) in 11.1 ergänzt, mitsamt der Feststellung, dass das Per-User-Limit
@@ -1041,7 +1041,7 @@ Das erfordert ein Liquibase-Changelog und schmale Tabellen — die einzige Persi
 Feature, und ausdrücklich keine für Preise oder Angebote.
 Die Aufteilung auf zwei Tabellen (global je Kontingenttag, Verbrauch je Kontingenttag und Nutzer)
 und die Begründung, warum die Per-User-Zähler **nicht** als Spalten an `AppUser` hängen,
-stehen in [ADR-0017](adr/0017-quota-verwaltung-fuer-die-ebay-browse-api.md).
+stehen in [ADR-0017](adr/0017-quota-management-for-the-ebay-browse-api.md).
 
 **Aufbewahrung:** eine Aufräumregel für die Per-User-Tabelle ist bewusst auf eine spätere
 Ausbaustufe verschoben — die Nutzungszahlen sind retrospektiv aufschlussreich, und bei fünf

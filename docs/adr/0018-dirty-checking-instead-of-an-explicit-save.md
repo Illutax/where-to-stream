@@ -6,7 +6,7 @@
 ## Context
 
 The application uses Spring Data JPA. Transactions sit on the methods of the application layer
-(`@Transactional`), and [ADR-0011](0011-kein-open-session-in-view.md) switched Open Session in View
+(`@Transactional`), and [ADR-0011](0011-no-open-session-in-view.md) switched Open Session in View
 off — so the persistence context ends **exactly at the transaction boundary** and not only when the
 response is rendered.
 
@@ -19,7 +19,7 @@ For a **newly constructed** entity the opposite holds: it is *transient*, Hibern
 and without an explicit `save()` it disappears without a trace.
 
 The point came up during the quota management for the eBay integration
-([ADR-0017](0017-quota-verwaltung-fuer-die-ebay-browse-api.md)) and has **not been decided** so far.
+([ADR-0017](0017-quota-management-for-the-ebay-browse-api.md)) and has **not been decided** so far.
 The situation in the code is inconsistent, with a clear majority on the redundant side:
 
 - `UserPreferencesService.update(...)` loads an `AppUser`, mutates it via a `Consumer` and then calls

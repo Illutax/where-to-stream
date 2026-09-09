@@ -34,12 +34,13 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 | 🔴 | [TODO-54](#todo-54) | Pin the Node/npm version in one authoritative place |
 | 🟠 | [TODO-65](#todo-65) | A new architecture review, as a dated snapshot |
 | 🟠 | [TODO-66](#todo-66) | Bring resilience4j back, for the outbound adapters |
-| 🟠 | [TODO-67](#todo-67) | Check the ADRs against reality |
+| 🟠 | [TODO-68](#todo-68) | `ImdbSearchApiController` validates in the controller body (breaks ADR-0015) |
 | 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: one request per row, never cancelled |
 | 🟢 | [TODO-22](#todo-22) | Hard-coded CSV header array |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
 | 🟢 | [TODO-60](#todo-60) | Serve `PaidEntryDto.year` as a number |
+| 🟢 | [TODO-69](#todo-69) | The settings test reaches into `MatSelect` internals (breaks ADR-0004) |
 
 ---
 
@@ -82,7 +83,7 @@ diverged:
 
 ### 🟠 TODO-65 — A new architecture review, as a dated snapshot
 Its predecessor ([`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md))
-is dated the day **before** [ADR-0014](docs/adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md).
+is dated the day **before** [ADR-0014](docs/adr/0014-backend-by-bounded-context-and-ports-adapters.md).
 It triggered the restructuring that then invalidated it, and no successor has been written since.
 
 **The form matters more than the cadence.** A review is a **snapshot with a date in its filename**,
@@ -136,28 +137,24 @@ outage should not take the availability lookup down with it.
   and a test per adapter shows that the breaker opens under sustained failure — and that an open
   breaker does **not** break the page, but lands in the same state a single failure does today.
 
-### 🟠 TODO-67 — Check the ADRs against reality
-20 ADRs: 19 `Accepted`, one `Superseded`. None has ever been reviewed — and the fact that three of
-them sat at `Proposed` until 2026-09-09 while already running in production shows that nobody
-notices the status field.
+### 🟠 TODO-68 — `ImdbSearchApiController` validates in the controller body
+[ADR-0015](docs/adr/0015-self-validating-commands-instead-of-scattered-request-validation.md)
+moved request validation out of controllers and into self-validating command records. It found the
+pattern at nine places and removed all of them — except this one, which was written days before the
+ADR and simply missed:
 
-**An ADR nobody follows is worse than none** — it looks like a guarantee you can rely on. Two cases
-found while checking the TODOs point exactly that way:
+`src/main/java/tech/dobler/where2stream/titlecatalog/adapter/in/api/ImdbSearchApiController.java`
+still throws `ValidationException` from the handler body when `q` is blank, and
+`ImdbSearchService.search(UUID, String)` takes loose parameters instead of a command.
 
-- [ADR-0011](docs/adr/0011-kein-open-session-in-view.md) ("no OSIV, everything EAGER") holds — but
-  TODO-12 demanded the opposite for a year and nobody noticed the contradiction.
-- [ADR-0019](docs/adr/0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) lost one of its two
-  use cases with the eBay rollback. It still holds, but now stands on one leg.
+**This is the interesting kind of finding**, which is why it is a ticket and not a footnote: the
+ADR reads as though the pattern is gone. It is not — it survived in the one place nobody looked,
+and nothing would have told us. A rule enforced by having tidied up once is not enforced.
 
-**Three questions per ADR:** does it describe reality? Is it followed — demonstrably, not
-apparently? Is its reasoning still the one that would count today?
-
-- **Outcome:** update the status (`Superseded` where overtaken) and the references to it. An ADR
-  being broken quietly is **not** a documentation problem — then either the code or the decision is
-  wrong, and both deserve their own ticket.
-- **Distinct from TODO-65:** the architecture review checks the code against itself, this ticket
-  checks the decisions against the code. Sensible to do together — the `architecture-review` skill
-  carries the ADR reconciliation as its own area.
+- **Acceptance:** an `ImdbSearchCommand(UUID userId, String query)` that validates itself, the
+  controller reduced to mapping, and the `ValidationException` gone from the handler body.
+- **Worth considering while there:** whether an ArchUnit rule can catch the general case —
+  "no class in `adapter.in.api` throws `ValidationException`" would have found this one.
 
 ---
 
@@ -198,6 +195,25 @@ cancelled — point 1 is untouched.
 ---
 
 ## 🟢 Low
+
+### 🟢 TODO-69 — The settings test reaches into `MatSelect` internals
+[ADR-0004](docs/adr/0004-vitest-as-the-angular-test-runner.md) chose Vitest with jsdom, and named
+the price: jsdom has no layout, so Material overlays need component harnesses. It listed one
+countermeasure by name — use a native `<select matNativeControl>` instead of `mat-select`.
+
+Both halves have quietly come apart:
+
+- `matNativeControl` no longer exists anywhere in the repository; it went with the watchlist-import
+  rework. `src/main/frontend/src/app/features/settings/settings-page.ts` uses `mat-select` again.
+- Its test does not use a harness either. It queries `By.directive(MatSelect)`, calls `open()` and
+  reads `.options` — component internals, which is exactly what the ADR warns against. There is no
+  `MatSelectHarness` anywhere in the project.
+
+The test is commented and it works. Nobody weighed it against the ADR, though, and that is the
+part worth fixing: either use `MatSelectHarness` here, or record in ADR-0004 that harnesses are the
+rule with a named exception. Both are fine; the current silence is not.
+
+- **Acceptance:** either the test goes through a harness, or ADR-0004 says why it does not.
 
 ### 🟢 TODO-22 — Hard-coded CSV header array
 `watchlist/application/ExportReader.headers`: 18 fixed column names, and the file's **real** header

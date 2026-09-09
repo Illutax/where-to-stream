@@ -3,7 +3,7 @@
 > **Momentaufnahme vom 2026-07-28. Wird nicht fortgeschrieben.**
 >
 > Dieses Dokument beschreibt den Stand an einem Tag — und zwar an dem Tag **vor**
-> [ADR-0014](../adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md) (29.07.),
+> [ADR-0014](../adr/0014-backend-by-bounded-context-and-ports-adapters.md) (29.07.),
 > der Entscheidung, die es selbst ausgelöst hat.
 > Der Umbau danach hat fast jede hier genannte Klasse verschoben oder aufgelöst;
 > einzelne Aussagen sind inzwischen nachweislich falsch

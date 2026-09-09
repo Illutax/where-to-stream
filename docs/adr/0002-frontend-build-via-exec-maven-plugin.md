@@ -1,107 +1,107 @@
-# 0002. Frontend-Build über exec-maven-plugin (System-Node) statt frontend-maven-plugin
+# 0002. Frontend build via exec-maven-plugin (system Node) instead of frontend-maven-plugin
 
 - **Date**: 2026-07-19
 - **Status**: Accepted
 
 ## Context
 
-Der Angular-Client (`src/main/frontend`) muss Teil des **einen** Fat-JARs bleiben: `mvn package`
-baut das Frontend und kopiert `dist/w2s-ui/browser` nach `static/app` auf den Classpath.
-Dafür muss der Maven-Build während `package` einen Node/npm-Toolchain aufrufen (`npm ci` +
+The Angular client (`src/main/frontend`) has to remain part of the **single** fat JAR: `mvn package`
+builds the frontend and copies `dist/w2s-ui/browser` to `static/app` on the classpath.
+For that, the Maven build has to invoke a Node/npm toolchain during `package` (`npm ci` +
 `npm run build`).
 
-Rahmenbedingungen der Build-Umgebung:
+Constraints of the build environment:
 
-- Dev-Container: Node v24.18.0, npm 11.16.0 vorhanden; `registry.npmjs.org` über einen
-  Nexus-Mirror erreichbar.
-  `mvn deploy` ist blockiert, `mvn package` funktioniert.
-- Docker-Builder-Stage basiert auf `maven:3-amazoncorretto-25-alpine` (musl/Alpine).
-- Die Erreichbarkeit von `nodejs.org` (für einen Node-Self-Download) ist im Sandbox-/Proxy-Setup
-  **nicht verifiziert**.
-- `node_modules` ist ~300 MB groß; `npm ci` löscht und installiert es bei jedem Aufruf neu.
+- Dev container: Node v24.18.0, npm 11.16.0 present; `registry.npmjs.org` reachable via a
+  Nexus mirror.
+  `mvn deploy` is blocked, `mvn package` works.
+- The Docker builder stage is based on `maven:3-amazoncorretto-25-alpine` (musl/Alpine).
+- Whether `nodejs.org` is reachable (for a Node self-download) is **not verified** in the
+  sandbox/proxy setup.
+- `node_modules` is ~300 MB; `npm ci` deletes and reinstalls it on every invocation.
 
-Zwei etablierte Wege, npm aus Maven aufzurufen: `exec-maven-plugin` (ruft ein
-**vorinstalliertes** System-npm) oder `com.github.eirslett:frontend-maven-plugin` (lädt eine im
-`pom.xml` **gepinnte** Node-Version selbst von `nodejs.org` herunter).
+Two established ways to call npm from Maven: `exec-maven-plugin` (calls a **pre-installed**
+system npm) or `com.github.eirslett:frontend-maven-plugin` (downloads a Node version **pinned** in
+`pom.xml` from `nodejs.org` itself).
 
 ## Decision
 
-Der Frontend-Build läuft über **`exec-maven-plugin`** mit dem System-`npm`, gebunden an die Phase
-`generate-resources` (`npm run build`), plus einer separaten, geführten `npm ci`-Ausführung.
-`-Dskip.frontend=true` überspringt den gesamten Frontend-Build (Backend-only).
+The frontend build runs through **`exec-maven-plugin`** with the system `npm`, bound to the phase
+`generate-resources` (`npm run build`), plus a separate, guarded `npm ci` execution.
+`-Dskip.frontend=true` skips the entire frontend build (backend only).
 
-Zusätzlich sind drei Härtungen umgesetzt (siehe auch Consequences):
+On top of that, three hardening measures are in place (see also Consequences):
 
-1. **Node-Version-Pinning ohne Plugin**: `engines` (`node: ">=22 <25"`) in `package.json`,
-   `engine-strict=true` in `src/main/frontend/.npmrc`, `.nvmrc` für Dev-Laptops; der
-   Docker-Builder kopiert ein festes Node aus `node:24-alpine` statt eines ungepinnten
+1. **Node version pinning without a plugin**: `engines` (`node: ">=22 <25"`) in `package.json`,
+   `engine-strict=true` in `src/main/frontend/.npmrc`, `.nvmrc` for dev laptops; the
+   Docker builder copies a fixed Node out of `node:24-alpine` instead of an unpinned
    `apk add nodejs`.
-2. **`npm ci` nur bei geändertem Lock-File**: Ein `maven-antrun-plugin`-`uptodate`-Check
-   vergleicht `node_modules/.package-lock.json` (von npm nach jeder Installation geschrieben) mit
-   `package-lock.json`; ein Ant-`unless:set`-Guard führt `npm ci` nur aus, wenn die Deps stale
-   sind.
-   Das spart bei unverändertem Lock-File die ~300-MB-Neuinstallation.
-3. **Windows-Kompatibilität**: Ein OS-aktiviertes Maven-Profil `windows` setzt
-   `npm.executable=npm.cmd`; der Build referenziert `${npm.executable}`.
+2. **`npm ci` only when the lock file changed**: a `maven-antrun-plugin` `uptodate` check
+   compares `node_modules/.package-lock.json` (written by npm after every installation) against
+   `package-lock.json`; an Ant `unless:set` guard runs `npm ci` only when the deps are stale.
+   With an unchanged lock file, this saves the ~300 MB reinstallation.
+3. **Windows compatibility**: an OS-activated Maven profile `windows` sets
+   `npm.executable=npm.cmd`; the build references `${npm.executable}`.
 
 ## Consequences
 
-**Einfacher / besser:**
+**Easier / better:**
 
-- **Funktioniert nachweislich in allen drei Umgebungen** (Dev-Container, Docker-Builder, lokale
-  Builds) ohne Abhängigkeit von `nodejs.org` — dessen Erreichbarkeit ist hier unverifiziert.
-- Simpel und transparent: `exec`-Aufruf von `npm`; `exec-maven-plugin` ist ein Standard-Plugin
-  mit trivialer Wartung, das Node selbst nicht kennt (keine Plugin-Updates bei neuen Node-Majors).
-- Nutzt den vorhandenen npm-Setup inkl. dessen Registry-Konfiguration — passt zur
-  Nexus-Mirror-Policy des Projekts.
-- Durch Härtung 1 ist die Node-Version über Maschinen hinweg kontrolliert; ein falsches Node
-  bricht den Install dank `engine-strict` mit klarer Meldung statt subtiler Fehler ab.
-- Durch Härtung 2 kostet ein wiederholter `mvn package` bei unverändertem Lock-File keine
-  300-MB-Neuinstallation mehr.
-- `-Dskip.frontend=true` bietet einen sauberen Backend-only-Pfad.
+- **Demonstrably works in all three environments** (dev container, Docker builder, local
+  builds) without depending on `nodejs.org` — whose reachability is unverified here.
+- Simple and transparent: an `exec` call to `npm`; `exec-maven-plugin` is a standard plugin
+  with trivial maintenance that knows nothing about Node itself (no plugin updates for new Node
+  majors).
+- Uses the existing npm setup including its registry configuration — a fit for the project's
+  Nexus mirror policy.
+- Thanks to hardening 1, the Node version is controlled across machines; a wrong Node aborts the
+  install with a clear message thanks to `engine-strict`, instead of causing subtle failures.
+- Thanks to hardening 2, a repeated `mvn package` with an unchanged lock file no longer costs a
+  300 MB reinstallation.
+- `-Dskip.frontend=true` offers a clean backend-only path.
 
-**Schwieriger / Nachteile:**
+**Harder / drawbacks:**
 
-- **„Node muss vorinstalliert sein"** bleibt eine implizite Voraussetzung: Ein frischer Rechner
-  ganz ohne Node bricht mit `Cannot run program "npm"` ab (nicht mit einer fachlichen Meldung).
-- Der Docker-Builder pinnt Node über einen zusätzlichen Multi-Stage-Copy (`node:24-alpine`) —
-  minimal mehr Dockerfile-Komplexität als ein `apk add`.
-- Reproduzierbarkeit hängt weiterhin teils an Disziplin (Pinning per `engines`/`.nvmrc`), nicht an
-  einem Tool, das die Toolchain erzwingt und mitliefert.
-- Die `npm ci`-Guard-Logik (antrun `uptodate` + `unless:set`) ist Build-Sonderlogik, die man
-  kennen muss; ihre Korrektheit wurde in beide Richtungen verifiziert (skippt bei aktuellem
-  Lock-File, läuft bei getouchtem Lock-File).
+- **"Node must be pre-installed"** remains an implicit prerequisite: a fresh machine without any
+  Node at all fails with `Cannot run program "npm"` (not with a meaningful message).
+- The Docker builder pins Node through an additional multi-stage copy (`node:24-alpine`) —
+  marginally more Dockerfile complexity than an `apk add`.
+- Reproducibility still partly rests on discipline (pinning via `engines`/`.nvmrc`), not on a
+  tool that enforces and ships the toolchain.
+- The `npm ci` guard logic (antrun `uptodate` + `unless:set`) is build-specific logic one has to
+  know about; its correctness was verified in both directions (skips with an up-to-date lock file,
+  runs with a touched lock file).
 
 ## Alternatives Considered
 
-**`com.github.eirslett:frontend-maven-plugin`** (lädt eine gepinnte Node-Version selbst).
+**`com.github.eirslett:frontend-maven-plugin`** (downloads a pinned Node version itself).
 
-Pro: gepinnte Node/npm-Version direkt im `pom.xml` → identische Toolchain auf CI, Docker-Builder
-und jedem Dev-Laptop, per `mvn package` ohne jede Vorinstallation; Windows out of the box;
-air-gapped-tauglich, **sobald** ein Nexus-Raw-Proxy für `nodejs.org/dist` steht.
+Pro: a pinned Node/npm version directly in `pom.xml` → an identical toolchain on CI, the Docker
+builder and every dev laptop, via `mvn package` without any pre-installation; Windows out of the
+box; air-gap capable, **as soon as** a Nexus raw proxy for `nodejs.org/dist` exists.
 
-Contra (ausschlaggebend gegen diese Option):
+Contra (decisive against this option):
 
-- **Self-Download von `nodejs.org` ist der Default — und genau dessen Erreichbarkeit ist im Sandbox-/Proxy-Setup unverifiziert.**
-  Ohne funktionierenden Download bricht jeder Build hart ab.
-  Abhilfe (`nodeDownloadRoot` auf ein Nexus-Raw-Repo) erfordert eine **neue, heute nicht existierende**
-  Nexus-Repo-Konfiguration (Raw-Format).
-- Im Docker-Builder doppelte Node-Installation bzw. ein nicht layer-cachebarer Download innerhalb
-  der `mvn package`-Layer.
-- Das Plugin ist eher im Maintenance-Modus (träge Release-Zyklen; neue Node-Majors brauchen
-  gelegentlich Plugin-Updates).
-- Löst das `npm ci`-bei-jedem-Build-Problem **nicht** — es führt dieselben npm-Goals aus.
+- **Self-download from `nodejs.org` is the default — and it is precisely that reachability which is unverified in the sandbox/proxy setup.**
+  Without a working download, every build fails hard.
+  The remedy (`nodeDownloadRoot` pointing at a Nexus raw repo) requires a **new Nexus repo
+  configuration that does not exist today** (raw format).
+- In the Docker builder, a duplicate Node installation, or a download inside the `mvn package`
+  layer that cannot be layer-cached.
+- The plugin is more or less in maintenance mode (slow release cycles; new Node majors
+  occasionally require plugin updates).
+- It does **not** solve the `npm ci`-on-every-build problem — it runs the same npm goals.
 
-Bewertung: Der einzige substanzielle Vorteil (gepinnte Node-Version) hängt in dieser Umgebung an
-einer unverifizierten Voraussetzung; ein Wechsel tauschte ein theoretisches
-Reproduzierbarkeitsproblem gegen ein reales Build-Bricht-Risiko.
-Die Lücken der gewählten Lösung
-lassen sich billiger schließen (die drei Härtungen oben), daher bleibt es bei `exec-maven-plugin`.
+Assessment: the only substantial advantage (a pinned Node version) hangs, in this environment, on
+an unverified prerequisite; switching would trade a theoretical reproducibility problem for a real
+build-breaking risk.
+The gaps in the chosen solution
+can be closed more cheaply (the three hardening measures above), so `exec-maven-plugin` stays.
 
-**Anders entscheiden, wenn:** die Nexus-Instanz ein Raw-Proxy-Repo für `nodejs.org/dist` bekommt
-(dann kippt die Abwägung: gepinnte Node-Version + vollständige Nexus-Abdeckung bei null
-Internet-Abhängigkeit), das Team wächst und heterogene Dev-Maschinen (insb. Windows ohne
-vorinstalliertes Node) dazukommen, ein konkreter Bug durch Node-Version-Drift auftritt, oder
-CI-Runner ohne vorinstalliertes Node eingeführt werden.
-In diesen Fällen ist `frontend-maven-plugin` mit `nodeDownloadRoot` auf Nexus die richtige Wahl —
-die Migration ist dann ein überschaubarer pom-Umbau ohne Änderung am Frontend selbst.
+**Decide differently if:** the Nexus instance gets a raw proxy repo for `nodejs.org/dist`
+(then the trade-off flips: a pinned Node version + full Nexus coverage with zero
+internet dependency), the team grows and heterogeneous dev machines (especially Windows without
+pre-installed Node) come along, a concrete bug from Node version drift shows up, or
+CI runners without pre-installed Node are introduced.
+In those cases `frontend-maven-plugin` with `nodeDownloadRoot` pointing at Nexus is the right choice —
+the migration is then a manageable pom rework with no change to the frontend itself.

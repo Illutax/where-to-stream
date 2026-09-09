@@ -5,7 +5,7 @@
 
 ## Context
 
-[ADR-0014](0014-backend-nach-bounded-contexts-und-ports-adaptern.md) organises the backend by
+[ADR-0014](0014-backend-by-bounded-context-and-ports-adapters.md) organises the backend by
 bounded contexts with `port.in` (what others may call on us) and `port.out` (our own dependencies on
 the database and on foreign systems). `ArchitectureTest` enforces per context that only `port.in` is
 reachable from outside.

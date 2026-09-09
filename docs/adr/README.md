@@ -1,31 +1,35 @@
 # Architecture Decision Records (ADRs)
 
-Diese ADRs halten fest, **warum** bestimmte Architekturentscheidungen so getroffen wurden
-(Kontext, Optionen, Trade-offs) — nicht **wie** das System implementiert ist.
-Format: [Nygard-ADR](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions),
-analog zum `adr`-Skill der Team-Doku.
+These ADRs record **why** a given architectural decision was made — context, options, trade-offs —
+not **how** the system is implemented.
+Format: [Nygard ADR](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions),
+matching the `adr` skill in the team documentation.
 
-| Nr. | Titel | Status |
+Every ADR is checked against the code and translated as of 2026-09-09; what that review found is
+recorded in TODO-67 in [`DONE.md`](../../DONE.md).
+`DocumentationConsistencyTest` keeps this table and the files in step.
+
+| No. | Title | Status |
 | --- | --- | --- |
-| [0001](0001-hash-routing-fuer-den-angular-client.md) | Hash-Routing für den Angular-Client | Accepted |
-| [0002](0002-frontend-build-via-exec-maven-plugin.md) | Frontend-Build über exec-maven-plugin (System-Node) | Accepted |
-| [0003](0003-zeit-ueber-timeservice-facade.md) | Zeit über eine TimeService-Facade statt statischer now()-Aufrufe | Accepted |
-| [0004](0004-vitest-als-angular-test-runner.md) | Vitest als Test-Runner für den Angular-Client | Accepted |
-| [0005](0005-assertj-und-mockito-im-backend.md) | AssertJ (mit Mockito) für Backend-Tests | Accepted |
-| [0006](0006-authentifizierung-und-autorisierung.md) | Authentifizierung & Autorisierung (Spring Security) | Accepted |
-| [0007](0007-watchlist-pro-benutzer.md) | Watchlist pro Benutzer (DB-gestützt statt globaler Dateiliste) | Accepted |
-| [0008](0008-thymeleaf-client-entfernen.md) | Thymeleaf-Client entfernen — SPA-only UI | Accepted |
-| [0009](0009-domainvalues-statt-primitiven.md) | Domain-Values statt primitiver Datentypen | Accepted |
-| [0010](0010-optionals-nicht-auf-null-defaulten.md) | Optionals nicht auf `null` defaulten (funktional konsumieren) | Accepted |
-| [0011](0011-kein-open-session-in-view.md) | Kein Open-Session-in-View, kein Lazy Loading | Accepted |
-| [0012](0012-permanenter-titel-cache-vs-ttl-verfuegbarkeits-cache.md) | Permanenter Titel-Cache vs. TTL-basierter Verfügbarkeits-Cache | Accepted |
-| [0013](0013-effects-nur-fuer-laufende-synchronisation-nicht-fuer-einmal-bootstrap.md) | `effect()` nur für laufende Synchronisation, nicht für einmaliges Bootstrapping | Accepted |
-| [0014](0014-backend-nach-bounded-contexts-und-ports-adaptern.md) | Backend nach Bounded Contexts, mit pragmatischen Ports & Adaptern | Accepted |
-| [0015](0015-selbstvalidierende-commands-statt-verstreuter-request-validierung.md) | Selbstvalidierende Commands statt verstreuter Request-Validierung | Accepted |
-| [0016](0016-asynchrone-verzoegerte-cache-aktualisierung.md) | Asynchrone, verzögerte Aktualisierung des Verfügbarkeits-Caches statt synchronem Reload | Accepted |
-| [0017](0017-quota-verwaltung-fuer-die-ebay-browse-api.md) | Quota-Verwaltung für die eBay Browse API | Superseded |
-| [0018](0018-dirty-checking-statt-explizitem-save.md) | Dirty Checking statt explizitem `save()` für geladene Entitäten | Accepted |
-| [0019](0019-port-spi-fuer-umgekehrte-kontextabhaengigkeiten.md) | `port.spi` für umgekehrte Kontextabhängigkeiten statt Ablage in `shared` | Accepted |
-| [0020](0020-admin-impersonierung-ueber-switchuserfilter.md) | Admin-Impersonierung über Spring Securitys `SwitchUserFilter` | Accepted |
+| [0001](0001-hash-routing-for-the-angular-client.md) | Hash routing for the Angular client | Accepted |
+| [0002](0002-frontend-build-via-exec-maven-plugin.md) | Frontend build via exec-maven-plugin (system Node) | Accepted |
+| [0003](0003-time-through-a-timeservice-facade.md) | Time through a TimeService facade instead of static now() calls | Accepted |
+| [0004](0004-vitest-as-the-angular-test-runner.md) | Vitest as the test runner for the Angular client | Accepted |
+| [0005](0005-assertj-and-mockito-in-the-backend.md) | AssertJ (with Mockito) for backend tests | Accepted |
+| [0006](0006-authentication-and-authorisation.md) | Authentication and authorisation | Accepted |
+| [0007](0007-a-watchlist-per-user.md) | A watchlist per user | Accepted |
+| [0008](0008-remove-the-thymeleaf-client.md) | Remove the Thymeleaf client — SPA-only UI | Accepted |
+| [0009](0009-domain-value-objects-instead-of-primitives.md) | Domain value objects instead of primitive types | Accepted |
+| [0010](0010-optionals-must-not-default-to-null.md) | Don't default Optionals to null | Accepted |
+| [0011](0011-no-open-session-in-view.md) | No Open Session in View, no lazy loading | Accepted |
+| [0012](0012-permanent-title-cache-vs-ttl-availability-cache.md) | Permanent title cache vs. TTL-based availability cache | Accepted |
+| [0013](0013-effects-for-ongoing-sync-not-one-shot-bootstrap.md) | effect() for ongoing sync, not for one-shot bootstrapping | Accepted |
+| [0014](0014-backend-by-bounded-context-and-ports-adapters.md) | Backend by bounded context, with pragmatic ports and adapters | Accepted |
+| [0015](0015-self-validating-commands-instead-of-scattered-request-validation.md) | Self-validating commands instead of scattered request validation | Accepted |
+| [0016](0016-asynchronous-deferred-cache-refresh.md) | Asynchronous, deferred refresh of the availability cache | Accepted |
+| [0017](0017-quota-management-for-the-ebay-browse-api.md) | Quota management for the eBay Browse API | Superseded |
+| [0018](0018-dirty-checking-instead-of-an-explicit-save.md) | Dirty checking instead of an explicit save() | Accepted |
+| [0019](0019-port-spi-for-inverted-context-dependencies.md) | port.spi for inverted context dependencies instead of parking them in shared | Accepted |
+| [0020](0020-admin-impersonation-via-switchuserfilter.md) | Admin impersonation via Spring Security SwitchUserFilter | Accepted |
 
-Neue ADR: nächste freie 4-stellige Nummer, `NNNN-kurzer-slug.md`.
+New ADR: next free four-digit number, `NNNN-short-slug.md`, written in English.

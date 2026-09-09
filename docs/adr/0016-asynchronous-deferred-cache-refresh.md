@@ -5,7 +5,7 @@
 
 ## Context
 
-[ADR-0012](0012-permanenter-titel-cache-vs-ttl-verfuegbarkeits-cache.md) established that the
+[ADR-0012](0012-permanent-title-cache-vs-ttl-availability-cache.md) established that the
 streaming availability cache (`query_meta`, `query_result`) is TTL-based
 (`wer-streamt.invalidate.after-days`, default 28 days) and can additionally be invalidated early
 and selectively by an ADMIN (`POST /api/manage/invalidate`, the `/manage` UI, "Cache Verwalten").
