@@ -44,6 +44,11 @@ import java.util.regex.Pattern;
  *
  * <p>Only the five columns actually read are required. IMDb is free to add, drop or move anything
  * else — the point of matching by name is that it costs us nothing.
+ *
+ * <p>Individual rows that cannot be read are still skipped rather than failing the file, but the
+ * count is reported (TODO-70). It is not a statistic: an import that could not read everything must
+ * not be allowed to delete, because the rows it dropped are indistinguishable from titles the user
+ * removed upstream.
  */
 @Slf4j
 @Service
@@ -69,9 +74,23 @@ public class ExportReader {
             .setDuplicateHeaderMode(DuplicateHeaderMode.DISALLOW)
             .build();
 
+    /**
+     * What a single upload yielded.
+     *
+     * @param entries         the rows that were read
+     * @param unreadableRows  rows that were skipped — see {@link ExportReader} for why the caller
+     *                        must not delete anything when this is not zero
+     */
+    public record ParsedExport(List<ImdbEntry> entries, int unreadableRows) {
+        public boolean isComplete() {
+            return unreadableRows == 0;
+        }
+    }
+
     /** Parses the given IMDb CSV export stream (UTF-8). The stream is not closed by this method. */
-    public List<ImdbEntry> parse(InputStream csv) {
+    public ParsedExport parse(InputStream csv) {
         final var entries = new ArrayList<ImdbEntry>();
+        int unreadable = 0;
         try (var reader = withoutByteOrderMark(csv);
              CSVParser parser = FORMAT.parse(reader)) {
             requireKnownColumns(parser.getHeaderNames());
@@ -79,6 +98,7 @@ public class ExportReader {
                 try {
                     entries.add(toEntry(record));
                 } catch (RuntimeException e) {
+                    unreadable++;
                     log.warn("Skipping malformed CSV row {}: {}", record.getRecordNumber(), e.getMessage());
                 }
             }
@@ -89,8 +109,12 @@ public class ExportReader {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        if (unreadable > 0) {
+            log.warn("{} of {} rows in the upload could not be read — this import will not remove anything",
+                    unreadable, entries.size() + unreadable);
+        }
         log.debug("Parsed {} watchlist entries", entries.size());
-        return entries;
+        return new ParsedExport(List.copyOf(entries), unreadable);
     }
 
     private static void requireKnownColumns(List<String> header) {

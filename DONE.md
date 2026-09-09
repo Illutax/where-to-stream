@@ -1904,3 +1904,36 @@ the message there as an RFC-7807 `detail` on a 400.
 **What this does not fix — see TODO-70:** a *partial* format change still deletes. Rows that fail
 to parse are skipped individually, so if IMDb changes, say, the date format for only some rows, the
 survivors drive a full sync and the rest are removed.
+
+### ✅ TODO-70 — A partly unreadable export still deletes the rows it could not read
+TODO-22 closed the case where the *header* changes. A change to the row *values* still slipped
+through: rows that failed to parse were skipped individually, the survivors drove a **full sync**,
+and every stored title absent from that shortened list was deleted. The import reported success.
+
+- **Acceptance:** a partly unreadable export cannot silently remove stored titles, and whichever
+  rule is chosen is stated in the reader's Javadoc next to the header check.
+
+**Done on 2026-09-09**, with the safe rule: **if any row could not be read, nothing is removed.**
+
+`ExportReader.parse` now returns `ParsedExport(entries, unreadableRows)` instead of a bare list,
+and `WatchlistImportService` runs the removal half of the sync only when `unreadableRows` is zero.
+Adding and updating still happen on a partial file — those only ever write what the file actually
+said. Deleting is the asymmetric one: **a row we could not parse and a title the user deleted
+upstream are the same absence from the service's point of view**, so a deletion on a partial file
+destroys data on the strength of an absence nothing can account for.
+
+**The user is told, and that is not decoration.** Without it the change would be a quiet
+downgrade — the user asks for a full sync, gets a merge, and their list keeps titles they removed
+on IMDb. `WatchlistImportResultDto` carries `unreadableRows` through to the client, and the import
+page shows a **persistent** notice (`.import-notice`, `role="status"`) rather than the four-second
+snackbar the success path uses. Translated in both languages.
+
+**The rejected alternatives**, for whoever revisits this: a *threshold* (abort above some share of
+skipped rows) needs a number nobody can justify, and gets it wrong in both directions on small
+files. *Refusing the import outright* would also throw away the adds and updates, which were never
+in doubt. Suppressing only the deletions keeps everything that is safe and drops only what is not.
+
+**Both directions are pinned**: an upload with unreadable rows adds and updates but calls
+`repository.delete` never, and a fully readable one still removes — the control case, so the guard
+cannot quietly disable the full sync altogether. The frontend notice was verified by suppressing
+it and watching the test fail.

@@ -56,6 +56,11 @@ class WatchlistImportServiceTest {
         return new WatchlistImportService(repository, exportReader, currentUserPort, timeService);
     }
 
+    /** A parse in which every row was readable — the default for tests not about TODO-70. */
+    private static ExportReader.ParsedExport readable(ImdbEntry... entries) {
+        return new ExportReader.ParsedExport(List.of(entries), 0);
+    }
+
     private static InputStream anyCsv() {
         return new ByteArrayInputStream("csv".getBytes(StandardCharsets.UTF_8));
     }
@@ -78,7 +83,7 @@ class WatchlistImportServiceTest {
     void importIsAFullSyncAddingUpdatingAndRemoving() {
         when(timeService.now()).thenReturn(NOW);
         // Upload: tt1 (unchanged), tt2 (renamed), tt4 (new). Existing tt3 is absent -> removed.
-        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable(
                 incoming("tt1", "Same", false),
                 incoming("tt2", "Renamed", false),
                 incoming("tt4", "Brand New", true)));
@@ -106,7 +111,7 @@ class WatchlistImportServiceTest {
 
     @Test
     void emptyUploadIsRejectedAndTouchesNothing() {
-        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of());
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable());
 
         final var service = newService();
         final var csv = anyCsv();
@@ -144,9 +149,46 @@ class WatchlistImportServiceTest {
     }
 
     @Test
+    void anUploadWithUnreadableRowsAddsAndUpdatesButRemovesNothing() {
+        // TODO-70: a row we could not parse and a title the user deleted upstream are the same
+        // absence from here. Adding and updating only ever writes what the file said, so those go
+        // ahead; deleting would destroy data on the strength of an absence we cannot account for.
+        when(timeService.now()).thenReturn(NOW);
+        when(exportReader.parse(any(InputStream.class))).thenReturn(
+                new ExportReader.ParsedExport(List.of(incoming("tt1", "Renamed", false), incoming("tt4", "New", false)), 2));
+        when(repository.findByUserId(USER)).thenReturn(List.of(
+                stored("tt1", "Old Name", false),
+                stored("tt3", "Absent, but perhaps only unreadable", false)));
+
+        final var result = newService().importCsv(USER, anyCsv());
+
+        assertThat(result)
+                .extracting(WatchlistImportResultDto::added, WatchlistImportResultDto::updated,
+                        WatchlistImportResultDto::removed, WatchlistImportResultDto::unreadableRows)
+                .containsExactly(1, 1, 0, 2);
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void aFullyReadableUploadStillRemoves() {
+        // The guard above must not turn the full sync off in general — this is the control case.
+        when(timeService.now()).thenReturn(NOW);
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable(incoming("tt1", "Kept", false)));
+        when(repository.findByUserId(USER)).thenReturn(List.of(
+                stored("tt1", "Kept", false),
+                stored("tt3", "Gone", false)));
+
+        final var result = newService().importCsv(USER, anyCsv());
+
+        assertThat(result)
+                .extracting(WatchlistImportResultDto::removed, WatchlistImportResultDto::unreadableRows)
+                .containsExactly(1, 0);
+    }
+
+    @Test
     void reimportUpdatesWhenOnlyTheRatedFlagDiffers() {
         when(timeService.now()).thenReturn(NOW);
-        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(incoming("tt1", "Same", true)));
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable(incoming("tt1", "Same", true)));
         when(repository.findByUserId(USER)).thenReturn(List.of(stored("tt1", "Same", false)));
 
         final var result = newService().importCsv(USER, anyCsv());
@@ -159,7 +201,7 @@ class WatchlistImportServiceTest {
         when(timeService.now()).thenReturn(NOW);
         final var differentYear = new ImdbEntry("Same", URI.create("https://www.imdb.com/title/tt1/"),
                 WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(1999), id("tt1"));
-        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(differentYear));
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable(differentYear));
         when(repository.findByUserId(USER)).thenReturn(List.of(stored("tt1", "Same", false)));
 
         final var result = newService().importCsv(USER, anyCsv());
@@ -172,7 +214,7 @@ class WatchlistImportServiceTest {
         when(timeService.now()).thenReturn(NOW);
         final var differentAdded = new ImdbEntry("Same", URI.create("https://www.imdb.com/title/tt1/"),
                 WatchlistDate.of("2021-06-15"), false, ReleaseYear.of(2020), id("tt1"));
-        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(differentAdded));
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable(differentAdded));
         when(repository.findByUserId(USER)).thenReturn(List.of(stored("tt1", "Same", false)));
 
         final var result = newService().importCsv(USER, anyCsv());
@@ -185,7 +227,7 @@ class WatchlistImportServiceTest {
         when(timeService.now()).thenReturn(NOW);
         // ImdbEntry with no url at all (differs() must still compare it against the stored, non-null url).
         final var noUrl = new ImdbEntry("Same", null, WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(2020), id("tt1"));
-        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(noUrl));
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable(noUrl));
         final var existing = stored("tt1", "Same", false);
         when(repository.findByUserId(USER)).thenReturn(List.of(existing));
 
@@ -203,7 +245,7 @@ class WatchlistImportServiceTest {
         final var noUrlIncoming = new ImdbEntry("Same", null, WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(2020), id("tt1"));
         final var noUrlStored = WatchlistEntry.of(USER, id("tt1"), "Same", null,
                 WatchlistDate.of("2020-01-01"), false, ReleaseYear.of(2020), NOW);
-        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(noUrlIncoming));
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable(noUrlIncoming));
         when(repository.findByUserId(USER)).thenReturn(List.of(noUrlStored));
 
         final var result = newService().importCsv(USER, anyCsv());
@@ -215,7 +257,7 @@ class WatchlistImportServiceTest {
     @Test
     void duplicateImdbIdsInTheUploadCollapseToOneRowLastWins() {
         when(timeService.now()).thenReturn(NOW);
-        when(exportReader.parse(any(InputStream.class))).thenReturn(List.of(
+        when(exportReader.parse(any(InputStream.class))).thenReturn(readable(
                 incoming("tt1", "First", false),
                 incoming("tt1", "Second", true)));
         when(repository.findByUserId(USER)).thenReturn(List.of());

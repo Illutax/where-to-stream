@@ -33,7 +33,7 @@ describe('WatchlistApi', () => {
   });
 
   it('posts the CSV as multipart form data and returns the sync result', () => {
-    const result: WatchlistImportResult = { added: 2, updated: 1, removed: 3, total: 10 };
+    const result: WatchlistImportResult = { added: 2, updated: 1, removed: 3, total: 10, unreadableRows: 0 };
     const file = new File(['some,csv'], 'list.csv', { type: 'text/csv' });
 
     let received: WatchlistImportResult | undefined;

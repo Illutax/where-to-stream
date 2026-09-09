@@ -77,6 +77,7 @@
     "clear": "Watchlist leeren",
     "working": "Wird verarbeitet…",
     "imported": "Importiert: +{{ added }} ~{{ updated }} -{{ removed }} ({{ total }} gesamt).",
+    "importedPartial": "{{ unreadable }} Zeile(n) der Datei konnten nicht gelesen werden. Die übrigen Titel wurden wie gewohnt hinzugefügt und aktualisiert, aber es wurde nichts aus deiner Liste entfernt: eine unlesbare Zeile sieht genauso aus wie ein Titel, den du auf IMDb gelöscht hast. Exportiere die Datei erneut und importiere sie noch einmal, um den Abgleich abzuschließen.",
     "importFailed": "Die Datei konnte nicht importiert werden.",
     "cleared": "Watchlist geleert.",
     "clearFailed": "Deine Watchlist konnte nicht geleert werden.",

@@ -34,7 +34,6 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 | 🟠 | [TODO-65](#todo-65) | A new architecture review, as a dated snapshot |
 | 🟠 | [TODO-66](#todo-66) | Bring resilience4j back, for the outbound adapters |
 | 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: one request per row, never cancelled |
-| 🟡 | [TODO-70](#todo-70) | A partly unreadable export still deletes the rows it could not read |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
 
@@ -133,34 +132,6 @@ cancelled — point 1 is untouched.
 
 - **Acceptance:** switching views leaves no requests in flight; a dashboard with n rows no longer
   produces n metadata requests.
-
-### 🟡 TODO-70 — A partly unreadable export still deletes the rows it could not read
-TODO-22 closed the case where the *header* changes: the columns are matched by name, and a file
-missing one is refused before anything is read
-(`src/main/java/tech/dobler/where2stream/watchlist/application/ExportReader.java`).
-
-**A change to the row *values* still slips through.** Individual rows that fail to parse are
-skipped and logged; the ones that survive then drive a **full sync**, and every stored title absent
-from that shortened list is deleted. So if IMDb changes the date format, or the `Year` column, for
-only part of an export — a re-release, a new title type, a locale difference — the user loses the
-titles whose rows happened to be affected. The import reports success.
-
-The two ends are already handled: an export where *every* row fails yields no entries and is
-rejected, and one where none fail is correct. It is the middle that is unguarded, and the middle is
-what a gradual upstream change looks like.
-
-**Not verified:** whether IMDb has ever shipped such a mixed export. The mechanism is certain from
-the code; the likelihood is not.
-
-**To decide, which is why this is a ticket and not a fix:** what the rule should be. A share of
-skipped rows above which the import aborts (what share?), or never deleting on the strength of a
-file that had any unreadable row at all, or reporting the skipped count and letting the user
-confirm. The safe-by-default reading of "don't delete what you could not read" argues for the
-second, at the cost of refusing imports that today succeed.
-
-- **Acceptance:** a partly unreadable export cannot silently remove stored titles, and whichever
-  rule is chosen is stated in the reader's Javadoc next to the header check.
-
 
 ---
 

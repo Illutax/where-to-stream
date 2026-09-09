@@ -79,6 +79,13 @@ export interface WatchlistImportResult {
   updated: number;
   removed: number;
   total: number;
+  /**
+   * Rows of the upload the server could not parse. When this is above zero the server skipped the
+   * removal half of the sync entirely, so `removed` is 0 and the user's list may still hold titles
+   * they deleted on IMDb — the import was a merge, not the full sync they asked for. It has to be
+   * said out loud, hence this field.
+   */
+  unreadableRows: number;
 }
 
 /** A single IMDb title-search hit (mirrors the server ImdbSearchResultDto). */

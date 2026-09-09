@@ -25,6 +25,9 @@ import { ErrorAlert } from '../../shared/error-alert/error-alert';
       </mat-menu>
     </div>
     <app-error-alert [message]="error()" />
+    @if (notice()) {
+      <div class="import-notice" role="status">{{ notice() }}</div>
+    }
 
     @if (loading()) {
       <mat-card>
@@ -72,6 +75,16 @@ import { ErrorAlert } from '../../shared/error-alert/error-alert';
     }
   `,
   styles: `
+    /* A partial import has to stay on screen -- a 4s snackbar is not where you put "your list was
+       not synced". Not an error either, so it takes the same calmer token as .stale-data-banner
+       rather than .error-alert. If a third of these appears, generalise the two into one class. */
+    .import-notice {
+      background: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+      padding: 0.75rem 1rem;
+      border-radius: var(--mat-sys-corner-small);
+      margin-bottom: 1rem;
+    }
     .watchlist-clear {
       margin-top: 1.5rem;
     }
@@ -96,6 +109,8 @@ export class WatchlistImportPage {
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** Set when an import could not read every row, so the removal half of the sync was skipped. */
+  protected readonly notice = signal<string | null>(null);
   protected readonly file = signal<File | null>(null);
 
   constructor() {
@@ -129,10 +144,16 @@ export class WatchlistImportPage {
     }
     this.busy.set(true);
     this.error.set(null);
+    this.notice.set(null);
     this.api.import(file).subscribe({
       next: (result) => {
         this.busy.set(false);
         this.file.set(null);
+        if (result.unreadableRows > 0) {
+          this.notice.set(
+            this.transloco.translate('watchlist.importedPartial', { unreadable: result.unreadableRows }),
+          );
+        }
         this.snackBar.open(
           this.transloco.translate('watchlist.imported', {
             added: result.added,

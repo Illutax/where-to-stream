@@ -76,12 +76,12 @@ public class WatchlistImportService {
     @Transactional
     public WatchlistImportResultDto importCsv(UUID userId, InputStream csv) {
         final var parsed = exportReader.parse(csv);
-        if (parsed.isEmpty()) {
+        if (parsed.entries().isEmpty()) {
             throw new InvalidImportException("No valid entries found in the uploaded file.");
         }
         // De-duplicate the upload by imdbId (last row wins), preserving order.
         final Map<ImdbId, ImdbEntry> incoming = new LinkedHashMap<>();
-        parsed.forEach(e -> incoming.put(e.imdbId(), e));
+        parsed.entries().forEach(e -> incoming.put(e.imdbId(), e));
 
         final Map<ImdbId, WatchlistEntry> existing = repository.findByUserId(userId).stream()
                 .collect(Collectors.toMap(WatchlistEntry::getImdbId, Function.identity()));
@@ -104,15 +104,26 @@ public class WatchlistImportService {
                 updated++;
             }
         }
-        for (WatchlistEntry current : existing.values()) {
-            if (!incoming.containsKey(current.getImdbId())) {
-                repository.delete(current);
-                removed++;
+        // The removal half of the sync runs only when the whole file was readable (TODO-70).
+        // A row we could not parse and a title the user deleted upstream look identical from here:
+        // both are simply absent from `incoming`. Adding and updating on a partial file is safe --
+        // it only ever writes what the file actually said -- but deleting on one destroys data on
+        // the strength of an absence we cannot account for.
+        if (parsed.isComplete()) {
+            for (WatchlistEntry current : existing.values()) {
+                if (!incoming.containsKey(current.getImdbId())) {
+                    repository.delete(current);
+                    removed++;
+                }
             }
+        } else {
+            log.warn("Watchlist import for {}: {} unreadable row(s), skipping removal of {} title(s) "
+                            + "absent from the upload", userId, parsed.unreadableRows(),
+                    existing.keySet().stream().filter(id -> !incoming.containsKey(id)).count());
         }
 
         log.info("Watchlist import for {}: +{} ~{} -{} ({} total)", userId, added, updated, removed, incoming.size());
-        return new WatchlistImportResultDto(added, updated, removed, incoming.size());
+        return new WatchlistImportResultDto(added, updated, removed, incoming.size(), parsed.unreadableRows());
     }
 
     @Transactional

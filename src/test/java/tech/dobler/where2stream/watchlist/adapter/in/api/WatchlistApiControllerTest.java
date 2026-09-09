@@ -70,7 +70,7 @@ class WatchlistApiControllerTest {
     void importReturnsTheSyncResult() throws Exception {
         when(watchlistImportService.resolveUserId("alice")).thenReturn(USER);
         when(watchlistImportService.importCsv(eq(USER), any(InputStream.class)))
-                .thenReturn(new WatchlistImportResultDto(2, 1, 3, 10));
+                .thenReturn(new WatchlistImportResultDto(2, 1, 3, 10, 0));
 
         final var file = new MockMultipartFile("file", "list.csv", "text/csv",
                 "some,csv".getBytes(StandardCharsets.UTF_8));

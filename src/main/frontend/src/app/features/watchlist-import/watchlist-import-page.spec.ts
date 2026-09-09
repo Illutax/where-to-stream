@@ -73,10 +73,45 @@ describe('WatchlistImportPage', () => {
     const post = httpMock.expectOne((r) => r.url.endsWith('/api/watchlist/import') && r.method === 'POST');
     expect(post.request.body instanceof FormData).toBe(true);
     expect((post.request.body as FormData).get('file')).toBe(file);
-    post.flush({ added: 2, updated: 0, removed: 0, total: 2 });
+    post.flush({ added: 2, updated: 0, removed: 0, total: 2, unreadableRows: 0 });
 
     // reloads the status afterwards
     httpMock.expectOne((r) => r.url.endsWith('/api/watchlist') && r.method === 'GET').flush(status(2, null));
+  });
+
+  it('warns persistently when the server could not read every row, since nothing was removed', () => {
+    // A 4s snackbar is the wrong place for "your list was not synced", so this has to be an
+    // element that stays on the page. The count comes through so the user can tell how much of
+    // the file was skipped.
+    flushInitialLoad(status(4));
+    pickFile();
+    (fixture.componentInstance as unknown as { onImport(e: Event): void }).onImport(new Event('submit'));
+
+    httpMock
+      .expectOne((r) => r.url.endsWith('/api/watchlist/import') && r.method === 'POST')
+      .flush({ added: 1, updated: 0, removed: 0, total: 5, unreadableRows: 3 });
+    httpMock.expectOne((r) => r.url.endsWith('/api/watchlist') && r.method === 'GET').flush(status(5, null));
+    fixture.detectChanges();
+
+    const notice = fixture.nativeElement.querySelector('.import-notice') as HTMLElement | null;
+    expect([notice?.getAttribute('role'), notice?.textContent]).toEqual([
+      'status',
+      expect.stringContaining('3'),
+    ]);
+  });
+
+  it('shows no such warning when every row was readable', () => {
+    flushInitialLoad(status(4));
+    pickFile();
+    (fixture.componentInstance as unknown as { onImport(e: Event): void }).onImport(new Event('submit'));
+
+    httpMock
+      .expectOne((r) => r.url.endsWith('/api/watchlist/import') && r.method === 'POST')
+      .flush({ added: 1, updated: 0, removed: 2, total: 5, unreadableRows: 0 });
+    httpMock.expectOne((r) => r.url.endsWith('/api/watchlist') && r.method === 'GET').flush(status(5, null));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.import-notice')).toBeNull();
   });
 
   it('clears the watchlist and reloads', () => {

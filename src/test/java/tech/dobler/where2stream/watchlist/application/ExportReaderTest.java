@@ -28,20 +28,25 @@ class ExportReaderTest {
         return in;
     }
 
+    /** The entries only; the unreadable-row count has its own tests. */
+    private List<ImdbEntry> parse(InputStream csv) {
+        return exportReader.parse(csv).entries();
+    }
+
     private static InputStream streamOf(String csv) {
         return new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
     void parsesAllRows() {
-        final List<ImdbEntry> entries = exportReader.parse(sampleExport());
+        final List<ImdbEntry> entries = parse(sampleExport());
 
         assertThat(entries).hasSize(35);
     }
 
     @Test
     void mapsColumnsOfFirstEntry() {
-        final ImdbEntry first = exportReader.parse(sampleExport()).getFirst();
+        final ImdbEntry first = parse(sampleExport()).getFirst();
 
         final var expected = List.of(
                 "The Prestige",
@@ -63,7 +68,7 @@ class ExportReaderTest {
 
     @Test
     void extractsImdbIdFromUrl() {
-        final List<ImdbEntry> entries = exportReader.parse(sampleExport());
+        final List<ImdbEntry> entries = parse(sampleExport());
 
         assertThat(entries)
                 .extracting(ImdbEntry::imdbId)
@@ -72,7 +77,7 @@ class ExportReaderTest {
 
     @Test
     void handlesQuotedTitlesWithApostrophes() {
-        final List<ImdbEntry> entries = exportReader.parse(sampleExport());
+        final List<ImdbEntry> entries = parse(sampleExport());
 
         assertThat(entries)
                 .extracting(ImdbEntry::name)
@@ -81,7 +86,7 @@ class ExportReaderTest {
 
     @Test
     void marksEntriesWithYourRatingAsRated() {
-        final List<ImdbEntry> entries = exportReader.parse(sampleExport());
+        final List<ImdbEntry> entries = parse(sampleExport());
 
         // Every row in the fixture has a "Your Rating" value, so all entries are rated.
         assertThat(entries).allMatch(ImdbEntry::isRated);
@@ -97,7 +102,7 @@ class ExportReaderTest {
                 """;
         final var in = new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8));
 
-        final ImdbEntry entry = exportReader.parse(in).getFirst();
+        final ImdbEntry entry = parse(in).getFirst();
 
         assertThat(entry).extracting(ImdbEntry::imdbId, ImdbEntry::url)
                 .containsExactly(ImdbId.of("tt1337"), URI.create("https://www.imdb.com/title/tt1337/"));
@@ -113,7 +118,7 @@ class ExportReaderTest {
                 tt0000001,Netflix,"The Prestige",https://www.imdb.com/title/tt0000001/,2006,2012-06-22,10
                 """;
 
-        final ImdbEntry entry = exportReader.parse(streamOf(csv)).getFirst();
+        final ImdbEntry entry = parse(streamOf(csv)).getFirst();
 
         assertThat(entry)
                 .extracting(ImdbEntry::name, ImdbEntry::imdbId, ImdbEntry::year, ImdbEntry::added, ImdbEntry::isRated)
@@ -130,7 +135,7 @@ class ExportReaderTest {
                 1,tt0000001,2012-06-22,"The Prestige",https://www.imdb.com/title/tt0000001/,2006,10
                 """;
 
-        assertThatThrownBy(() -> exportReader.parse(streamOf(csv)))
+        assertThatThrownBy(() -> parse(streamOf(csv)))
                 .isInstanceOf(InvalidImportException.class)
                 .hasMessageContaining("missing the column(s) Title")
                 .hasMessageContaining("your watchlist is unchanged")
@@ -144,7 +149,7 @@ class ExportReaderTest {
                 2012-06-22,"Real","Decoy",https://www.imdb.com/title/tt0000001/,2006,10
                 """;
 
-        assertThatThrownBy(() -> exportReader.parse(streamOf(csv)))
+        assertThatThrownBy(() -> parse(streamOf(csv)))
                 .isInstanceOf(InvalidImportException.class)
                 .hasMessageContaining("unusable header row");
     }
@@ -158,9 +163,38 @@ class ExportReaderTest {
                 2012-06-22,"The Prestige",https://www.imdb.com/title/tt0000001/,2006,10
                 """;
 
-        assertThat(exportReader.parse(streamOf(csv)))
+        assertThat(parse(streamOf(csv)))
                 .extracting(ImdbEntry::name)
                 .containsExactly("The Prestige");
+    }
+
+    @Test
+    void countsTheRowsItCouldNotRead() {
+        // The count is what stops the import deleting (TODO-70), so it is asserted rather than
+        // left to be inferred from the entry count — a row can also vanish through de-duplication.
+        final var csv = """
+                Created,Title,URL,Year,Your Rating
+                2012-06-22,"Good One",https://www.imdb.com/title/tt0000001/,2006,10
+                2012-06-22,"Bad Year",https://www.imdb.com/title/tt0000002/,notayear,10
+                2012-06-22,"Bad Url",not-an-imdb-url,2010,10
+                2012-06-22,"Good Two",https://www.imdb.com/title/tt0000004/,2011,10
+                """;
+
+        final var parsed = exportReader.parse(streamOf(csv));
+
+        assertThat(parsed)
+                .extracting(p -> p.entries().size(), ExportReader.ParsedExport::unreadableRows,
+                        ExportReader.ParsedExport::isComplete)
+                .containsExactly(2, 2, false);
+    }
+
+    @Test
+    void reportsAFullyReadableFileAsComplete() {
+        final var parsed = exportReader.parse(sampleExport());
+
+        assertThat(parsed)
+                .extracting(ExportReader.ParsedExport::unreadableRows, ExportReader.ParsedExport::isComplete)
+                .containsExactly(0, true);
     }
 
     @Test
@@ -174,7 +208,7 @@ class ExportReaderTest {
                 """;
         final var in = new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8));
 
-        final List<ImdbEntry> entries = exportReader.parse(in);
+        final List<ImdbEntry> entries = parse(in);
 
         // Bad-year and bad-url rows are skipped; the two well-formed rows survive.
         assertThat(entries)
