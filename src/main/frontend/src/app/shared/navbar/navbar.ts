@@ -41,6 +41,8 @@ import { PROVIDERS } from '../../core/models';
            (click)="navigate.emit()">{{ 'nav.manageCache' | transloco }}</a>
         <a mat-list-item routerLink="/admin/users" routerLinkActive="active-link"
            (click)="navigate.emit()">{{ 'nav.users' | transloco }}</a>
+        <a mat-list-item routerLink="/admin/metrics" routerLinkActive="active-link"
+           (click)="navigate.emit()">{{ 'nav.metrics' | transloco }}</a>
       }
 
       <mat-divider />

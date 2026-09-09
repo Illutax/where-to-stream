@@ -108,6 +108,25 @@ export interface ScrapeResult {
 export interface Status {
   version: string | null;
   serverStart: string;
+  /** Distinct titles tracked. Also on the unauthenticated /public/status probe, and cached there
+   *  for a few minutes, so it can lag a fresh import slightly. */
+  titles: number;
+}
+
+/**
+ * Instance metrics for the ADMIN dashboard (mirrors the server InstanceMetricsDto).
+ * Kept separate from {@link Status} because that one is public; this one is not.
+ */
+export interface InstanceMetrics {
+  users: number;
+  distinctTitles: number;
+  watchlistEntries: number;
+  metadataRows: number;
+  metadataWithoutData: number;
+  posterRows: number;
+  postersWithImage: number;
+  availabilityTitles: number;
+  availabilityStale: number;
 }
 
 /** UI colour-scheme preference (mirrors the server Theme enum). */

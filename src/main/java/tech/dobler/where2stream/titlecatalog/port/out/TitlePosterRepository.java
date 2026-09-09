@@ -11,4 +11,7 @@ import java.util.UUID;
 @Repository
 public interface TitlePosterRepository extends CrudRepository<TitlePoster, UUID> {
     Optional<TitlePoster> findByImdbId(ImdbId imdbId);
+
+    /** Negative cache entries: a null {@code posterPath} means "this title has no poster". */
+    long countByPosterPathIsNull();
 }

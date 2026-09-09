@@ -8,7 +8,8 @@
     "users": "Benutzer",
     "myList": "Meine Liste: {{ count }} Titel",
     "signedInAs": "Angemeldet als {{ username }}",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "metrics": "Metriken"
   },
   "settings": {
     "title": "Einstellungen",
@@ -151,7 +152,8 @@
     "generalInfo": "Allgemeine Informationen",
     "version": "Version:",
     "serverStart": "Serverstart:",
-    "dev": "dev"
+    "dev": "dev",
+    "titles": "Erfasste Titel:"
   },
   "app": {
     "toggleNav": "Navigation umschalten",
@@ -172,5 +174,26 @@
   "ebay": {
     "search": "Suche",
     "searchFor": "Auf eBay nach {{name}} suchen, günstigste zuerst"
+  },
+  "metrics": {
+    "title": "Instanz-Metriken",
+    "intro": "Was diese Installation enthält und wie gut ihre Caches gefüllt sind. Nur für Administratoren sichtbar.",
+    "sizeHeading": "Größe",
+    "cacheHeading": "Titel-Caches",
+    "availabilityHeading": "Streaming-Verfügbarkeit",
+    "users": "Benutzerkonten",
+    "titles": "Verschiedene Titel",
+    "watchlistEntries": "Merklisten-Einträge",
+    "acrossLists": "verteilt auf {{ entries }} Merklisten-Einträge",
+    "posters": "Poster im Cache",
+    "posterCoverage": "% Poster-Abdeckung",
+    "coverageDetail": "von {{ titles }} verschiedenen Titeln",
+    "metadata": "Titel mit IMDb-Metadaten",
+    "negativeRows": "dazu {{ count }} Eintrag/Einträge, die festhalten, dass es nichts zu cachen gibt",
+    "availabilityTitles": "Titel mit Verfügbarkeit im Cache",
+    "availabilityStale": "Veraltet, wartet auf erneuten Abruf",
+    "staleDetail": "Diese werden im Hintergrund erneut abgerufen, sobald sie aufgerufen werden.",
+    "allFresh": "Alles im Cache ist aktuell.",
+    "loadFailed": "Die Instanz-Metriken konnten nicht geladen werden."
   }
 }

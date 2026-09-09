@@ -37,4 +37,13 @@ public interface WatchlistEntryRepository extends ListCrudRepository<WatchlistEn
 
     @Query("select max(w.createdAt) from WatchlistEntry w where w.userId = :userId")
     Optional<Instant> findLastImportedAt(UUID userId);
+
+    /**
+     * How many distinct titles this instance tracks, across every user's list.
+     * Counted rather than derived from {@code count()}, because the same film on ten watchlists is
+     * one title and ten rows — and the gap between those two numbers is what the shared title,
+     * poster and availability caches are earning.
+     */
+    @Query("select count(distinct w.imdbId) from WatchlistEntry w")
+    long countDistinctTitles();
 }

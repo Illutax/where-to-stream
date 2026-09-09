@@ -27,7 +27,7 @@ class StatusControllerTest {
 
     @Test
     void statusReturnsVersionAndServerStartAsJson() throws Exception {
-        when(statusService.status()).thenReturn(new StatusDto("1.2.3", Instant.parse("2026-01-01T00:00:00Z")));
+        when(statusService.status()).thenReturn(new StatusDto("1.2.3", Instant.parse("2026-01-01T00:00:00Z"), 1234L));
 
         mockMvc.perform(get("/public/status"))
                 .andExpect(status().isOk())

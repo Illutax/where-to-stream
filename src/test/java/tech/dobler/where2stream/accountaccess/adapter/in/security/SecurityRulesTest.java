@@ -55,6 +55,22 @@ class SecurityRulesTest {
     }
 
     @Test
+    void userIsForbiddenFromInstanceMetrics() throws Exception {
+        // The metrics endpoint carries no @PreAuthorize -- its path is its authorisation, because
+        // SecurityConfig maps /api/admin/** to hasRole("ADMIN"). Moving it out from under that
+        // prefix would silently publish the user count to every logged-in account, so the gate is
+        // asserted here rather than assumed from the mapping.
+        mockMvc.perform(get("/api/admin/metrics").with(user("u").roles("USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminCanReadInstanceMetrics() throws Exception {
+        mockMvc.perform(get("/api/admin/metrics").with(user("a").roles("ADMIN")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void userIsForbiddenFromMutations() throws Exception {
         mockMvc.perform(post("/api/refresh").with(user("u").roles("USER")).with(csrf()))
                 .andExpect(status().isForbidden());

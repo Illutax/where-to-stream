@@ -1937,3 +1937,56 @@ in doubt. Suppressing only the deletions keeps everything that is safe and drops
 `repository.delete` never, and a fully readable one still removes — the control case, so the guard
 cannot quietly disable the full sync altogether. The frontend notice was verified by suppressing
 it and watching the test fail.
+
+### ✅ TODO-71 — An admin-only metrics dashboard, plus the title count on the public probe
+The status page showed the version and the server start time and nothing else, so "did the import
+work", "is the poster cache filling up" and "how much availability data is stale" could only be
+answered from the database.
+
+- **Acceptance:** an ADMIN-only metrics dashboard; `/public/status` gains the title count and
+  nothing else, pinned by a test; each count comes through the contributing context's `port.in`;
+  the page renders while the counts load.
+
+**Done on 2026-09-09.** `/app/admin/metrics` behind `adminGuard`, fed by `/api/admin/metrics`,
+which `SecurityConfig` already gates through the `/api/admin/**` prefix. Three groups of tiles:
+size (users, distinct titles, watchlist entries), title caches (posters, poster coverage,
+metadata), availability (cached titles, stale). Responsive through one
+`grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr))` — one column on a phone, as many as
+fit on a desktop, and no breakpoints to keep in sync with Material's.
+
+**The tiles report gaps, not just totals**, which was the part worth building carefully: a cache row
+that records "there is nothing here" is still a row, so "180 posters cached" reads as a full cache
+when 60 of those rows mean the title has none. Each cache tile carries the negative share beside
+its number, and poster coverage is computed against distinct titles rather than against cache rows.
+
+**The exemption that made this honest.** The four context-isolation rules in `ArchitectureTest`
+exempted all of `..shared..`, so nothing would have stopped `InstanceMetricsService` — which lives
+in `shared/platform` — from injecting the four contexts' repositories directly. The ticket claimed
+ArchUnit enforced `port.in` there; **it did not**. The exemption existed for `ApiExceptionHandler`
+mapping every context's exception types, and it is now written as exactly that one class. Verified
+by adding an `AppUserRepository` to the metrics service and watching the rule fail.
+
+Each context therefore publishes its own figures: `UserMetricsPort`, `WatchlistMetricsPort`,
+`TitleCatalogMetricsPort`, `AvailabilityMetricsPort`. That is deliberate beyond rule-following —
+"a title" means a distinct `imdbId` to Watchlist and one cache row to Title Catalog, and only those
+contexts can say so.
+
+**The public title count is cached, with the stampede guarded.** `StatusService` holds the count
+and the instant it was taken, and refreshes past a five-minute TTL. Expire-then-recompute would
+have reopened the hole it was added to close, since every concurrent caller sees an expired value
+at the same moment; instead the refresh runs under `tryLock` and losers serve the stale number. The
+guarantee is **at most one count query in flight, ever**, and a 16-thread burst test pins it. Cold
+start stays lazy on purpose — one query was never the problem, and priming in the constructor would
+tie startup to the database being quick.
+
+**`PublicStatusIsMinimalTest` asserts the shape of `StatusDto`, not a blocklist**, because adding a
+field to a record served at `/public/status` is a one-line change that nothing else would flag. A
+list of forbidden names only catches the fields somebody already thought of.
+
+**The "not verified" note is now partly discharged.** The distinct-title count and the availability
+freshness aggregate run against real MariaDB in the Testcontainers tests, including the three
+conditions that decide freshness — invalidated, past due, and the legacy row with no due date at
+all, which a plain "expired?" reading gets backwards. What is still unmeasured is the cost of the
+distinct count on a large `watchlist_entry`; the cache bounds how often it runs, not how long.
+
+**Out of scope as planned:** poster BLOB storage totals.

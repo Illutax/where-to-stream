@@ -8,7 +8,8 @@
     "users": "Users",
     "myList": "My list: {{ count }} titles",
     "signedInAs": "Signed in as {{ username }}",
-    "logout": "Logout"
+    "logout": "Logout",
+    "metrics": "Metrics"
   },
   "settings": {
     "title": "Settings",
@@ -151,7 +152,8 @@
     "generalInfo": "General Information",
     "version": "Version:",
     "serverStart": "Server start:",
-    "dev": "dev"
+    "dev": "dev",
+    "titles": "Titles tracked:"
   },
   "app": {
     "toggleNav": "Toggle navigation",
@@ -172,5 +174,26 @@
   "ebay": {
     "search": "Search",
     "searchFor": "Search eBay for {{name}}, cheapest first"
+  },
+  "metrics": {
+    "title": "Instance metrics",
+    "intro": "What this deployment holds, and how well its caches are filled. Visible to administrators only.",
+    "sizeHeading": "Size",
+    "cacheHeading": "Title caches",
+    "availabilityHeading": "Streaming availability",
+    "users": "User accounts",
+    "titles": "Distinct titles",
+    "watchlistEntries": "Watchlist entries",
+    "acrossLists": "across {{ entries }} watchlist entries",
+    "posters": "Posters cached",
+    "posterCoverage": "% poster coverage",
+    "coverageDetail": "of {{ titles }} distinct titles",
+    "metadata": "Titles with IMDb metadata",
+    "negativeRows": "plus {{ count }} row(s) recording that there is nothing to cache",
+    "availabilityTitles": "Titles with cached availability",
+    "availabilityStale": "Stale, awaiting re-scrape",
+    "staleDetail": "These are re-scraped in the background as they are viewed.",
+    "allFresh": "Everything cached is current.",
+    "loadFailed": "Could not load the instance metrics."
   }
 }

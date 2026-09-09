@@ -20,6 +20,7 @@ It is a personal project, run as a single small deployment for a handful of user
   by lowest total price. It is a link, not a price lookup: see
   [TODO-56 in `DONE.md`](DONE.md) for why the price lookup was built, used, and then withdrawn.
 - **Cache management** for admins: see when each title was last scraped, invalidate, re-scrape.
+- **Instance metrics** for admins: titles, posters, users and cache coverage.
 - **Impersonation** for admins: act as another user to reproduce a report
   ([ADR-0020](docs/adr/0020-admin-impersonation-via-switchuserfilter.md)).
 
@@ -97,7 +98,7 @@ cd src/main/frontend && nvm install    # picks up .nvmrc (Node 24); `nvm use` in
 curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt-get install -y nodejs         # includes npm
 
-node --version   # v24.x (v22–v24 accepted)
+node --version   # v24.x — nothing else is accepted
 ```
 
 **Then pick a database.** Production runs on MariaDB; locally you have two options, and it is
@@ -170,7 +171,9 @@ and the eBay marketplace your search links open.
 
 **As an admin.** *Manage cache* lists every title with the time it was last scraped, and lets you
 invalidate or re-scrape a selection. *Users* manages accounts and passwords, and starts an
-impersonation when you need to see what someone else sees.
+impersonation when you need to see what someone else sees. *Metrics* shows how much this instance
+holds and how well its caches are filled — including how much of each cache is a "there is nothing
+here" entry rather than real data, which a plain row count would hide.
 
 ---
 

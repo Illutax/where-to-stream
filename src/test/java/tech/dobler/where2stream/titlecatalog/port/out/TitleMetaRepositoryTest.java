@@ -48,4 +48,19 @@ class TitleMetaRepositoryTest {
                         TitleMeta::getGermanTitle)
                 .containsOnlyNulls();
     }
+
+    @Test
+    void countsNegativeRowsSeparatelyFromRowsThatActuallyCarryData() {
+        // A row saying "IMDb had nothing" is still a cache row, so count() alone reports a cache
+        // full of absences as full (TODO-71). A row with only *some* data is not a negative --
+        // the German title alone is enough to make it worth having.
+        sut.save(TitleMeta.of(ImdbId.of("tt1"), "/a.jpg", RatingSystem.FSK, "16", "Titel", NOW));
+        sut.save(TitleMeta.of(ImdbId.of("tt2"), null, null, null, "Nur der Titel", NOW));
+        sut.save(TitleMeta.of(ImdbId.of("tt3"), null, null, null, null, NOW));
+        sut.save(TitleMeta.of(ImdbId.of("tt4"), null, null, null, null, NOW));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(new long[]{sut.count(), sut.countWithoutData()}).containsExactly(4L, 2L);
+    }
 }

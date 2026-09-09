@@ -10,13 +10,14 @@ describe('StatusCard', () => {
     fixture = TestBed.createComponent(StatusCard);
   });
 
-  it('renders the version and server start time', () => {
-    fixture.componentRef.setInput('status', { version: '1.2.3', serverStart: '2026-01-01T00:00:00Z' });
+  it('renders the version, server start time and title count', () => {
+    fixture.componentRef.setInput('status', { version: '1.2.3', serverStart: '2026-01-01T00:00:00Z', titles: 1234 });
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('1.2.3');
     expect(text).toContain('2026-01-01');
+    expect(text).toContain('1234');
     expect(fixture.nativeElement.querySelector('.skeleton-bar')).toBeNull();
   });
 

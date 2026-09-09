@@ -44,6 +44,23 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 class ArchitectureTest {
 
     /**
+     * The one class outside the contexts that may see their internals.
+     *
+     * <p>{@code ApiExceptionHandler} maps every context's own exception types onto HTTP problem
+     * responses — a cross-cutting concern the platform is meant to know about, and different in
+     * kind from one context calling into another.
+     *
+     * <p>These rules used to exempt all of {@code ..shared..}, which was broader than the reason
+     * for it. Nothing enforced that a service in {@code shared/platform} went through a context's
+     * {@code port.in}, and TODO-71 needed exactly that: {@code InstanceMetricsService} composes
+     * figures from all four contexts and could as easily have injected their repositories. The
+     * exemption is one class because the justification is one class.
+     */
+    private static final String EXCEPTION_HANDLER =
+            "tech.dobler.where2stream.shared.platform.api.ApiExceptionHandler";
+
+
+    /**
      * Time must be read through the {@code TimeService} facade, never via static {@code now()}
      * calls (ADR-0003).
      * The only exception is the facade's production implementation.
@@ -82,9 +99,9 @@ class ArchitectureTest {
      * rule below) are the context's own dependency on its database/external systems, not something
      * other contexts are meant to call.
      * One isolation rule gets added per migrated context.
-     * {@code shared..} is exempt: {@code ApiExceptionHandler} deliberately maps every context's own
-     * exception types (a cross-cutting concern the shared kernel is meant to know about),
-     * which is a different thing from one bounded context depending on another's internals.
+     * {@link #EXCEPTION_HANDLER} is exempt: {@code ApiExceptionHandler} deliberately maps every
+     * context's own exception types (a cross-cutting concern the shared kernel is meant to know
+     * about), which is a different thing from one bounded context depending on another's internals.
      *
      * <p>{@code port.spi} is published alongside {@code port.in}, and the distinction is
      * deliberate. {@code port.in} is what others may <em>call</em> on this context; {@code port.spi}
@@ -97,7 +114,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule accountaccess_is_only_accessed_through_its_published_ports = noClasses()
             .that().resideOutsideOfPackage("..accountaccess..")
-            .and().resideOutsideOfPackage("..shared..")
+            .and().doNotHaveFullyQualifiedName(EXCEPTION_HANDLER)
             .should().dependOnClassesThat(
                     resideInAPackage("..accountaccess..")
                             .and(not(resideInAPackage("..accountaccess.port.in..")))
@@ -118,7 +135,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule watchlist_is_only_accessed_through_its_published_ports = noClasses()
             .that().resideOutsideOfPackage("..watchlist..")
-            .and().resideOutsideOfPackage("..shared..")
+            .and().doNotHaveFullyQualifiedName(EXCEPTION_HANDLER)
             .should().dependOnClassesThat(
                     resideInAPackage("..watchlist..")
                             .and(not(resideInAPackage("..watchlist.port.in..")))
@@ -139,7 +156,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule titlecatalog_is_only_accessed_through_its_published_ports = noClasses()
             .that().resideOutsideOfPackage("..titlecatalog..")
-            .and().resideOutsideOfPackage("..shared..")
+            .and().doNotHaveFullyQualifiedName(EXCEPTION_HANDLER)
             .should().dependOnClassesThat(
                     resideInAPackage("..titlecatalog..")
                             .and(not(resideInAPackage("..titlecatalog.port.in..")))
@@ -159,7 +176,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule streamingavailability_is_only_accessed_through_its_published_ports = noClasses()
             .that().resideOutsideOfPackage("..streamingavailability..")
-            .and().resideOutsideOfPackage("..shared..")
+            .and().doNotHaveFullyQualifiedName(EXCEPTION_HANDLER)
             .should().dependOnClassesThat(
                     resideInAPackage("..streamingavailability..")
                             .and(not(resideInAPackage("..streamingavailability.port.in..")))

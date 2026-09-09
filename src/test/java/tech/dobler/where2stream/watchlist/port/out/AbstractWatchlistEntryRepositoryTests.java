@@ -65,6 +65,25 @@ public abstract class AbstractWatchlistEntryRepositoryTests {
     }
 
     @Test
+    void countsTitlesOnceEvenWhenSeveralUsersHaveThem() {
+        // The point of the distinct count (TODO-71): the same film on two lists is one title and
+        // two rows, and the gap between those numbers is what the shared caches earn. Also worth
+        // running against MariaDB rather than only H2, because imdb_id goes through an
+        // AttributeConverter and "distinct" has to apply to the stored column.
+        sut.save(entry(alice, "tt1", true));
+        sut.save(entry(alice, "tt2", false));
+        sut.save(entry(bob, "tt1", true));
+        flushAndClear();
+
+        assertThat(new long[]{sut.countDistinctTitles(), sut.count()}).containsExactly(2L, 3L);
+    }
+
+    @Test
+    void countsNoTitlesOnAnEmptyInstance() {
+        assertThat(sut.countDistinctTitles()).isZero();
+    }
+
+    @Test
     void savesAndFindsEntriesScopedToTheUser() {
         sut.save(entry(alice, "tt1", true));
         sut.save(entry(alice, "tt2", false));

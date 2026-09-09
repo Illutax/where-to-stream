@@ -3,7 +3,7 @@ import { MatCardModule } from '@angular/material/card';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Status } from '../../core/models';
 
-/** Presentational status card (version + server start time). */
+/** Presentational status card (version, server start time, and how many titles the instance tracks). */
 @Component({
   selector: 'app-status-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,6 +20,7 @@ import { Status } from '../../core/models';
         } @else if (status(); as s) {
           <p>{{ 'status.version' | transloco }} <span>{{ s.version ?? ('status.dev' | transloco) }}</span></p>
           <p>{{ 'status.serverStart' | transloco }} <span>{{ s.serverStart }}</span></p>
+          <p>{{ 'status.titles' | transloco }} <span>{{ s.titles }}</span></p>
         }
       </mat-card-content>
     </mat-card>
