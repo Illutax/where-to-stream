@@ -274,6 +274,22 @@ changelog against the database production actually uses, and a check you have to
 check that gets skipped. They are excluded only where no Docker socket exists, notably inside the
 image build stages.
 
+To check that the build still works **inside the image toolchain** — a different question from
+"does it work on my machine", and the one that decides whether a deploy will succeed:
+
+```bash
+docker build . --target verify     # same toolchain as the deploy build, runs mvn clean package
+```
+
+It needs no `DOCKER_IMAGE_TAG` and produces no runtime image. Note what it does *not* cover: that
+stage excludes the Testcontainers tests, so a green run says nothing about the schema against
+MariaDB. Run `mvn verify` on the host for that.
+
+The deploy build itself (`docker build .`, see [With Docker](#with-docker)) goes through a
+different stage which stamps the version from `DOCKER_IMAGE_TAG` before compiling — so that
+variable is required there, and passing it is what makes the tests run against the coordinates
+that actually ship.
+
 Coverage: JaCoCo for the backend (`target/site/jacoco/`), Vitest v8 for the frontend
 (`npm run test:coverage`).
 
