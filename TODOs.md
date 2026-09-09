@@ -34,6 +34,7 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 | 🟠 | [TODO-65](#todo-65) | A new architecture review, as a dated snapshot |
 | 🟠 | [TODO-66](#todo-66) | Bring resilience4j back, for the outbound adapters |
 | 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: one request per row, never cancelled |
+| 🟡 | [TODO-71](#todo-71) | An admin-only metrics dashboard; a cached title count on the public probe |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
 
@@ -132,6 +133,110 @@ cancelled — point 1 is untouched.
 
 - **Acceptance:** switching views leaves no requests in flight; a dashboard with n rows no longer
   produces n metadata requests.
+
+### 🟡 TODO-71 — An admin-only metrics dashboard, plus the title count on the public probe
+[`src/main/frontend/src/app/features/status/status-page.ts`](src/main/frontend/src/app/features/status/status-page.ts)
+renders exactly two facts, both from
+[`StatusDto`](src/main/java/tech/dobler/where2stream/shared/platform/web/StatusDto.java): the
+version and the server start time. Nothing says how much the instance actually holds, so questions
+like "did the import work", "is the poster cache filling up" or "how much of the availability cache
+is stale" can only be answered by opening the database.
+
+**Two audiences, and they get different things** (decided, not open):
+
+| Where | Who | Shows |
+| --- | --- | --- |
+| A new **metrics dashboard**, `/app/admin/metrics` | ADMIN only | everything in the table below |
+| `/api/status` and `/public/status` | any logged-in user / anyone | version, start time, **and the total number of titles** |
+
+The title count is deliberately on both sides — it is a size-of-instance figure with nothing
+personal in it, and having it on the unauthenticated probe means external monitoring can see that
+the instance still has its data. Everything else — above all the user count — stays behind ADMIN.
+
+**The reason this needs saying at all:** `StatusService` feeds **both** endpoints, and
+[`StatusController`](src/main/java/tech/dobler/where2stream/shared/platform/web/StatusController.java)
+is unauthenticated (matched by `/public/**` in `SecurityConfig`) while
+[`StatusApiController`](src/main/java/tech/dobler/where2stream/shared/platform/api/StatusApiController.java)
+is not. Anything added to the shared `StatusDto` is therefore public by default. Adding the title
+count there is a decision; adding anything else there would be an accident.
+
+**Both guards already exist**, so the dashboard does not need new security machinery: the SPA has
+[`adminGuard`](src/main/frontend/src/app/core/admin-guard.ts) (used by the `admin/users` route in
+[`src/main/frontend/src/app/app.routes.ts`](src/main/frontend/src/app/app.routes.ts)), and
+`SecurityConfig` already maps `/api/admin/**` to `hasRole("ADMIN")` — so an endpoint at
+`/api/admin/metrics` is covered the moment it exists.
+
+**What the dashboard shows** (all `count()`-style queries, no entity loading):
+
+| Metric | Source |
+| --- | --- |
+| Users | [`AppUserRepository`](src/main/java/tech/dobler/where2stream/accountaccess/port/out/AppUserRepository.java) |
+| Distinct titles tracked | [`WatchlistEntryRepository`](src/main/java/tech/dobler/where2stream/watchlist/port/out/WatchlistEntryRepository.java) — `count(distinct imdbId)` |
+| Watchlist rows in total | the same repository — the ratio to the line above is how much the shared caches are earning |
+| Titles with cached metadata | [`TitleMetaRepository`](src/main/java/tech/dobler/where2stream/titlecatalog/port/out/TitleMetaRepository.java) |
+| Posters cached | [`TitlePosterRepository`](src/main/java/tech/dobler/where2stream/titlecatalog/port/out/TitlePosterRepository.java) |
+| Availability results cached, and how many stale | [`QueryResultRepository`](src/main/java/tech/dobler/where2stream/streamingavailability/port/out/QueryResultRepository.java), [`QueryMetaRepository`](src/main/java/tech/dobler/where2stream/streamingavailability/port/out/QueryMetaRepository.java) |
+
+**Three of these are more interesting as a gap than as a number**, which is the part worth getting
+right rather than just emitting rows:
+
+- **Poster coverage** — posters against distinct titles. A large gap means the cache is cold or
+  TMDB is failing, and nothing currently surfaces that.
+- **Negative-cache share** — `TitlePoster` and `TitleMeta` both store a null `posterPath` as
+  "there is no poster" (see their Javadoc). A count that lumps those in with real posters says
+  the cache is full when it is full of absences.
+- **Stale availability** — the dashboard already shows a per-user "some data is stale" banner via
+  `AggregateService.hasStaleEntries`; the instance-wide count is the same question asked once.
+
+**Explicitly out of scope, so nobody builds it by accident:** poster BLOB storage totals. It is the
+one figure that would need `SUM(LENGTH(...))` over the heavy table on every page load, and the
+page is not worth that. If it turns out to be wanted, measure the query first.
+
+**Architecture note.** The counts live in four different bounded contexts, and `shared/platform`
+may not reach into them — `ArchitectureTest` enforces that a context is only used through its
+published `port.in` ([ADR-0014](docs/adr/0014-backend-by-bounded-context-and-ports-adapters.md)).
+So each context that contributes a number needs a small `port.in` method, and the metrics service
+composes them. That is more work than a single query joining six tables, and it is the reason the
+ticket is not a ten-minute job. The title count that `StatusService` needs comes through the same
+`watchlist` port, so it is written once and read twice.
+
+- **Acceptance:** an ADMIN-only metrics dashboard showing the table above; `/public/status` gains
+  the title count and nothing else, pinned by a test that a non-admin cannot reach the metrics
+  endpoint; each count comes through the contributing context's `port.in`, so `ArchitectureTest`
+  stays green; and the page renders while the counts load (the skeleton pattern in
+  [`src/main/frontend/src/app/shared/status-card/status-card.ts`](src/main/frontend/src/app/shared/status-card/status-card.ts),
+  per [`CLAUDE.md`](CLAUDE.md)).
+**The public title count is cached, and the reason is the caveat.** On an unauthenticated
+endpoint the count must not be one database query per request. The value is held in memory with the
+instant it was taken and recomputed when it has aged past a TTL of a few minutes — the same shape
+`TitleMetaService.isNegativeFresh` already uses for negative cache rows, `fetchedAt` plus a
+configured duration against `timeService.now()`, only in memory rather than in a row. Reading
+"now" through
+[`TimeService`](src/main/java/tech/dobler/where2stream/shared/platform/time/TimeService.java) is
+what [ADR-0003](docs/adr/0003-time-through-a-timeservice-facade.md) requires anyway, and it is what
+makes the TTL testable without a sleeping test.
+
+**A naive lazy TTL reopens the hole it was meant to close.** Expire, then recompute on read, means
+that at the moment of expiry every concurrent request sees a stale value and every one of them runs
+the query. That is a smaller denial-of-service surface than no cache at all, but it is the same
+kind. **Serve the stale value while a single thread refreshes** — one `AtomicReference` holding
+`(count, takenAt)` plus a `tryLock` so the loser returns the old number instead of queueing. Then
+the property is not "at most one query per TTL", it is **"at most one count query in flight, ever"**,
+which is the bound worth having on a public endpoint.
+
+Cold start is deliberately left alone: the first caller pays for one query. A single query was never
+the problem — unbounded ones were — and seeding it in the bean constructor would tie application
+startup to the database being quick.
+
+**The admin dashboard reads the live count, not the cached one.** It is behind ADMIN, it is
+low-traffic, and an operator looking at metrics wants the current number rather than one up to a
+TTL old. So the `port.in` method returns the live count and the caching lives in `StatusService`,
+at the one consumer that needs it.
+
+- **Not verified:** whether the distinct-title count is cheap enough to run unindexed on a large
+  `watchlist_entry`. The cache bounds how often it runs, but a query that takes seconds still ties
+  up a connection every few minutes and makes the admin dashboard slow — check the plan, and add an
+  index in a new changeset if it is not cheap.
 
 ---
 
