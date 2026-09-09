@@ -23,13 +23,16 @@ offending version rather than the file that disagrees with the others.
 
 Three facts settled the shape of the decision, all of them measured rather than assumed:
 
-1. **Node 24 is the Active LTS** (from 2025-10-28, maintenance from 2026-10-20, end of life
-   2028-04-30). Node 22 is in maintenance; **Node 25 reached end of life on 2026-06-01** — so the
-   old upper bound `<25` was excluding something already dead. Node 26 becomes LTS on 2026-10-28.
-   Read from the `node-releases` release schedule, because `nodejs.org` is not reachable from the
-   build environment.
-2. **Angular 22.0.7 requires `^22.22.3 || ^24.15.0 || >=26.0.0`** — a range with a hole in it,
-   because 25 was never an LTS.
+1. **Node 24 is the Active LTS** — codename Krypton, LTS from 2025-10-28, maintenance from
+   2026-10-20, end of life 2028-04-30. Node 22 is in maintenance; **Node 25 reached end of life on
+   2026-06-01**, so the old upper bound `<25` was excluding something already dead. Node 26 became
+   Current on 2026-05-05 and becomes LTS on 2026-10-28.
+   Taken from the `node-releases` release schedule and then confirmed against
+   `nodejs.org/dist/index.json`, which corroborates it independently: 24 is flagged `Krypton`, 26 is
+   still `false`, and 25 has had no release since 2026-03-31.
+2. **Angular requires `^22.22.3 || ^24.15.0 || >=26.0.0`** — a range with a hole in it, because 25
+   was never an LTS. Read from the installed `@angular/core` 22.0.7 and confirmed unchanged in the
+   current 22.1.5.
 3. **Corepack accepts only an exact version in `packageManager`.** `npm@12`, `npm@^12` and
    `npm@12.x` are each rejected with *"Invalid package manager specification … expected a semver
    version"*; only `npm@12.0.2` resolves. The field therefore cannot express a policy, only a
@@ -82,7 +85,11 @@ statement; ours is a statement about what we ship.
   instead of a silent divergence. The README says which version to install.
 - We are committed to moving deliberately. **Node 26 becomes LTS on 2026-10-28**, roughly seven
   weeks from this decision, and nothing here will tell us: the test compares the repository against
-  itself, not against the release schedule. Whoever bumps it changes three files and this ADR's
-  first table.
+  itself, not against the release schedule. Whoever bumps it edits `.nvmrc`, `engines` and
+  `NODE_BASE_IMAGE`, runs `npm install --package-lock-only`, and updates this ADR's first table.
+- **That blindness is deliberate.** A test that asked `nodejs.org` would turn an upstream release
+  or an outage into a red build on a change that touched nothing — and would make the build depend
+  on network access it otherwise does not need. Checking the world is a thing to do when upgrading,
+  not on every run.
 - Removing `packageManager` gives up a reproducible npm version across dev/CI/Docker — in theory.
   In practice it never provided one here, since no Corepack ran.
