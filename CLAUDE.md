@@ -38,7 +38,10 @@ Where it belongs:
 | Architecture, stack and convention decisions | `docs/adr/` — via the `adr` skill, indexed in `docs/adr/README.md` |
 | How we work together, review/test conventions | this file (`CLAUDE.md`) |
 | What the project is, how to build and run it | `README.md` |
-| Outstanding and planned work | `TODOs.md`, or a plan document under `docs/` for larger efforts |
+| Outstanding work | `TODOs.md` — **open items only** |
+| Finished and abandoned work | `DONE.md` — history, explicitly **not** maintained |
+| A snapshot of how things stand on a given day | `docs/reviews/YYYY-MM-DD-*.md`, never edited afterwards |
+| A plan for a larger effort | a document under `docs/` |
 | Repeatable, mechanical procedures | `.claude/skills/` |
 | Why a specific change was made | the commit message |
 
@@ -53,6 +56,32 @@ down here instead of being remembered privately.
 The practical rule: **if it is worth remembering, it is worth a commit.**
 If something genuinely does not fit any of the files above, say so and propose where it should
 live — do not fall back to a private note.
+
+## Documentation that stays true
+
+The split between `TODOs.md` and `DONE.md` is not filing, it is what makes the first file
+trustworthy. When both lived together, 86 % of the lines were history written in the present
+tense — and you could not tell a merely outdated class name from a statement that had become
+false without checking each one. A full check of all 63 entries took twelve parallel agents.
+
+So the rules are:
+
+- **`TODOs.md` holds only open work.** Finishing something means *moving* it to `DONE.md`,
+  never ticking it off in place. `DocumentationConsistencyTest` fails on a ✅ in `TODOs.md`.
+- **`DONE.md` is history and says so.** An entry there pointing at `services/OldName` is
+  correct — it describes the world it was written in. Nothing checks that file.
+- **Point, don't restate.** Link the authoritative place instead of copying its content.
+  Every copy of a fact drifts on its own: `ddl-auto` once stood in three places, two of them
+  claiming `validate` long after it had become `none`.
+- **A review is a dated snapshot**, filed as `docs/reviews/YYYY-MM-DD-*.md` and not edited
+  afterwards. The predecessor drifted precisely because it was undated and therefore read as
+  current — it was written one day before the restructuring that invalidated it.
+- `DocumentationConsistencyTest` checks paths, links, ticket numbers and status markers on
+  every build. It cannot tell whether a *statement* is still true; it only shrinks what a human
+  has to re-read.
+
+The routine for both lives in `.claude/skills/` — `ticket` for opening/closing work,
+`architecture-review` for the periodic snapshot.
 
 ## Before writing or reviewing code
 

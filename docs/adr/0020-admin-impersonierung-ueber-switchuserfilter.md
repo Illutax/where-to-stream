@@ -1,7 +1,7 @@
 # 0020. Admin-Impersonierung über Spring Securitys `SwitchUserFilter`
 
 - **Date**: 2026-09-06
-- **Status**: Proposed
+- **Status**: Accepted (2026-09-09 nachgetragen — umgesetzt und im Betrieb)
 
 ## Context
 

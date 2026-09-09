@@ -21,7 +21,7 @@ mit der Veröffentlichung eines Films fixierte, praktisch unveränderliche Fakte
 Streaming-Verfügbarkeit ändert sich dagegen laufend — Lizenzen laufen aus, Anbieter wechseln,
 Preise ändern sich — und muss regelmäßig neu abgefragt werden.
 
-Der Architektur-Review vom 2026-07-28 (`docs/ARCHITECTURE_REVIEW.md`, Fund F7) bemängelte
+Der Architektur-Review vom 2026-07-28 (`../reviews/2026-07-28-architecture-review.md`, Fund F7) bemängelte
 zunächst, dass `title_meta`/`title_poster` keine Ablaufsteuerung/kein Cleanup für positive
 Treffer haben.
 Das ist für den Titel-Cache jedoch **beabsichtigtes Verhalten**, kein Defizit — bislang aber

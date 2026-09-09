@@ -1,5 +1,20 @@
 # Architecture Review — where-to-stream (w2s)
 
+> **Momentaufnahme vom 2026-07-28. Wird nicht fortgeschrieben.**
+>
+> Dieses Dokument beschreibt den Stand an einem Tag — und zwar an dem Tag **vor**
+> [ADR-0014](../adr/0014-backend-nach-bounded-contexts-und-ports-adaptern.md) (29.07.),
+> der Entscheidung, die es selbst ausgelöst hat.
+> Der Umbau danach hat fast jede hier genannte Klasse verschoben oder aufgelöst;
+> einzelne Aussagen sind inzwischen nachweislich falsch
+> (z. B. dass `AggregateService` nicht mehr existiere — es existiert).
+>
+> **Das ist der Zweck der Form, nicht ihr Mangel:** ein datierter Stand darf veralten,
+> ein undatiertes „so ist die Architektur" darf es nicht.
+> Genau deshalb liegt es jetzt unter `docs/reviews/` mit dem Datum im Namen.
+> Nachfolger siehe TODO-65.
+
+
 Date: 2026-07-28.
 Scope: whole module (backend + Angular frontend).
 Architecture-level review across five dimensions (backend structure/duplication, database/persistence, frontend consistency, security/operational posture, test coverage/code health)

@@ -1,7 +1,7 @@
 # 0018. Auf Hibernates Dirty Checking stützen statt explizitem `save()` für geladene Entitäten
 
 - **Date**: 2026-09-05
-- **Status**: Proposed
+- **Status**: Accepted (2026-09-09 nachgetragen — umgesetzt und im Betrieb)
 
 ## Context
 

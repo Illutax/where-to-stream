@@ -186,7 +186,7 @@ des Codes sichtbar, nicht vorher planbar).
 
 - **Flache Schichtung beibehalten, nur Namenskonvention/Dokumentation verbessern**: kostet nichts,
   löst aber das eigentliche Problem nicht —
-  die F3/F8-artige Duplikation (siehe `docs/ARCHITECTURE_REVIEW.md`) entsteht gerade *weil* die
+  die F3/F8-artige Duplikation (siehe `../reviews/2026-07-28-architecture-review.md`) entsteht gerade *weil* die
   Paketstruktur fachlich zusammengehörigen Code technisch auseinanderreißt.
 - **"Admin Operations" als eigenen fünften Context**: hätte impliziert, dass Cache-Verwaltung eine
   eigene fachliche Fähigkeit ist —

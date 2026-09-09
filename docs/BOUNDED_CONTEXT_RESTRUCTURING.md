@@ -13,7 +13,7 @@ how the outcome was actually reached, or who's about to attempt something simila
 
 ## Why
 
-The architecture review (`docs/ARCHITECTURE_REVIEW.md`) had already flagged two concrete
+The architecture review (`reviews/2026-07-28-architecture-review.md`) had already flagged two concrete
 symptoms of the old layering, F3 and F8: four separate outbound HTTP-client/rate-limiter
 copies, and `PosterService` (`application/`) and `TitleMetaService` (`services/`)
 independently reinventing the same non-trivial "self-proxy short transaction, swallow a

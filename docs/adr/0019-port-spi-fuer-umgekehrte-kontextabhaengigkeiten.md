@@ -1,7 +1,7 @@
 # 0019. `port.spi` für umgekehrte Kontextabhängigkeiten statt Ablage in `shared`
 
 - **Date**: 2026-09-05
-- **Status**: Proposed
+- **Status**: Accepted (2026-09-09 nachgetragen — umgesetzt und im Betrieb)
 
 ## Context
 
