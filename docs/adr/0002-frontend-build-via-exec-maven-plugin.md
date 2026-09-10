@@ -2,6 +2,11 @@
 
 - **Date**: 2026-07-19
 - **Status**: Accepted
+- **Update (2026-09-10):** Hardening 1's `engines` range is no longer `">=22 <25"` —
+  [ADR-0021](0021-track-one-node-lts-major-checked-by-a-test.md) narrowed the pin to one LTS major
+  (`^24.15.0`, checked by `ToolchainVersionsAgreeTest`).
+  The mechanism (engines + `engine-strict` + `.nvmrc` + pinned builder image) is unchanged;
+  the range quoted below is historical.
 
 ## Context
 

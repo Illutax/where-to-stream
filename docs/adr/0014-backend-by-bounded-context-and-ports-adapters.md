@@ -2,6 +2,14 @@
 
 - **Date**: 2026-07-29
 - **Status**: Accepted
+- **Update (2026-09-10):** Two details below have moved on (found by the 2026-09-10 architecture
+  review).
+  `shared/platform/` has since gained `concurrency/` and `observability/` alongside the four
+  subpackages listed.
+  And the ArchUnit exemption described under "Isolation, enforced by ArchUnit" is no longer all of
+  `shared..` — it was narrowed to the single class `ApiExceptionHandler` (TODO-71 in `DONE.md`);
+  `shared`'s other context-facing classes reach the contexts through their published `port.in`
+  metrics ports.
 - **Update (2026-07-29):** `shared` itself has been split into `shared/kernel/` (the domain value
   types `ImdbId`/`ReleaseYear` plus their adapters: the JPA `AttributeConverter`, the Spring MVC
   `Converter`) and `shared/platform/` (`time/`, `outbound/`, `api/`, `web/` — unchanged, only
