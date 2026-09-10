@@ -31,41 +31,51 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 
 | | Ticket | Summary |
 | --- | --- | --- |
-| 🟠 | [TODO-65](#todo-65) | A new architecture review, as a dated snapshot |
+| 🔴 | [TODO-72](#todo-72) | A failed scrape is cached as fresh "available nowhere" for 28 days |
 | 🟠 | [TODO-66](#todo-66) | Bring resilience4j back, for the outbound adapters |
+| 🟠 | [TODO-73](#todo-73) | A refresh burst leaks the in-flight tracker until restart |
+| 🟠 | [TODO-74](#todo-74) | No scrape timeout; one failing title answers 502 for a whole page |
+| 🟠 | [TODO-75](#todo-75) | A poster/metadata outage is negative-cached for 14 days |
+| 🟠 | [TODO-76](#todo-76) | The navbar IMDb search dies permanently after one failed request |
+| 🟠 | [TODO-77](#todo-77) | `query_meta` generations accumulate forever; every page view loads all of them |
 | 🟡 | [TODO-59](#todo-59) | `/api/titles/{id}/meta`: one request per row, never cancelled |
+| 🟡 | [TODO-78](#todo-78) | Serving a poster thumbnail loads the full-size BLOB too |
+| 🟡 | [TODO-79](#todo-79) | `shared/platform` hosts single-context classes; ADR-0014 and ADR-0019 contradict each other |
+| 🟡 | [TODO-80](#todo-80) | The SecurityContext ArchUnit rule no longer covers the packages it targets |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
+| 🟢 | [TODO-81](#todo-81) | "Clear entire watchlist" runs without confirmation |
+| 🟢 | [TODO-82](#todo-82) | Hardcoded English user-facing strings bypass Transloco |
+| 🟢 | [TODO-83](#todo-83) | Small clean-up finds from the 2026-09-10 architecture review |
 
 ---
 
+## 🔴 High
+
+### 🔴 TODO-72 — A failed scrape is cached as fresh "available nowhere" for 28 days
+`src/main/java/tech/dobler/where2stream/streamingavailability/adapter/out/werstreamtes/WerStreamtEsSource.java`
+maps any `HttpStatusException` (404, 429, 503, …) to an empty list,
+and a site-wide markup change makes `parse` return the same empty list —
+with **zero** log signal if the top-level selector stops matching.
+`StreamInfoService.fetch`
+(`src/main/java/tech/dobler/where2stream/streamingavailability/application/StreamInfoService.java`)
+then persists that empty result as a fresh, non-invalidated row that **overwrites** previously good
+availability data for the next 28 days.
+"Scrape failed", "markup changed" and "genuinely available nowhere" are stored identically;
+only a *transport* failure (which throws `ScrapingException`) correctly leaves the old row alone.
+Full reasoning: F14 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+The fix needs a decision first — [ADR-0012](docs/adr/0012-permanent-title-cache-vs-ttl-availability-cache.md)
+and [ADR-0016](docs/adr/0016-asynchronous-deferred-cache-refresh.md) are silent on failure
+semantics, so the chosen rule ("a failure result is never persisted as data") belongs in an ADR
+extension alongside the code change.
+
+- **Acceptance:** an HTTP-status failure or an empty parse of a structurally unexpected document
+  does not replace an existing availability row; a dead top-level selector is visible in the logs;
+  a test per case pins it.
+
 ## 🟠 Medium
-
-### 🟠 TODO-65 — A new architecture review, as a dated snapshot
-Its predecessor ([`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md))
-is dated the day **before** [ADR-0014](docs/adr/0014-backend-by-bounded-context-and-ports-adapters.md).
-It triggered the restructuring that then invalidated it, and no successor has been written since.
-
-**The form matters more than the cadence.** A review is a **snapshot with a date in its filename**,
-not a living document. That is exactly where the predecessor failed: it sat undated under `docs/`
-and was read as describing the present. A snapshot that carries its date is allowed to age.
-
-- **Location:** `docs/reviews/`, named **YYYY-MM-DD-architecture-review.md**, **not edited**
-  after writing (typos excepted).
-- **The output is actions, not prose:** what keeps applying becomes an **ADR**, what needs doing
-  becomes a **TODO**. The review document only carries the finding and its reasoning. Without that
-  rule you get a third document drifting away from the other two.
-- **Scope:** the four bounded contexts and their boundaries, `shared`, the frontend structure, the
-  ArchUnit rules (do they still cover what they should?), and explicitly the question of which of
-  the 20 ADRs no longer describe reality.
-- **Run it only after TODO-64** (in `DONE.md`) — otherwise the review examines documentation we
-  already know to be wrong.
-- **Repeatable:** the procedure is a skill,
-  [`.claude/skills/architecture-review/SKILL.md`](.claude/skills/architecture-review/SKILL.md),
-  so the next run is not reinvented.
-
-- **Acceptance:** a dated document under `docs/reviews/` describing the current state, with every
-  resulting action captured as a TODO or an ADR rather than as an open list inside the review.
 
 ### 🟠 TODO-66 — Bring resilience4j back, for the outbound adapters
 Removing `purchaseoffers` (TODO-56) removed the only user of `resilience4j-spring-boot4`, and the
@@ -96,6 +106,101 @@ outage should not take the availability lookup down with it.
 - **Acceptance:** each of the three adapters has its own breaker, the configuration lives in Java,
   and a test per adapter shows that the breaker opens under sustained failure — and that an open
   breaker does **not** break the page, but lands in the same state a single failure does today.
+
+### 🟠 TODO-73 — A refresh burst leaks the in-flight tracker until restart
+The refresh executor is 2 threads over a 200-deep queue with the default abort policy
+(`src/main/java/tech/dobler/where2stream/shared/platform/concurrency/AsyncConfig.java` —
+no `RejectedExecutionHandler` exists anywhere).
+`src/main/java/tech/dobler/where2stream/streamingavailability/application/BackgroundCacheRefreshService.java`
+marks **all** due ids in-flight first, then submits one by one:
+submission #203 throws `TaskRejectedException`, aborts the loop, and every already-marked id whose
+task never ran stays in
+`src/main/java/tech/dobler/where2stream/shared/platform/concurrency/RefreshInFlightTracker.java`
+**forever** (it has no expiry) — those titles are never refreshed again until an app restart.
+Bulk invalidation from *Manage cache* makes all invalidated titles due at once and bypasses the
+jitter, so >202 due titles is a realistic scenario.
+The demand-driven path in `StreamInfoService` has the same tryStart-then-submit shape.
+Details: F16 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** a rejected submission releases its tracker entry (or submission cannot be
+  rejected, e.g. caller-runs/bounded batching), and a test shows a burst larger than the queue
+  leaves no id permanently in flight.
+
+### 🟠 TODO-74 — No scrape timeout; one failing title answers 502 for a whole page
+Two related gaps in the synchronous miss path, measured against how the JSON adapters already do it
+(5 s connect / 10 s request via `src/main/java/tech/dobler/where2stream/shared/platform/outbound/OutboundHttpClients.java`):
+
+1. The jsoup connection sets no `.timeout(...)` at all
+   (`src/main/java/tech/dobler/where2stream/streamingavailability/adapter/out/werstreamtes/ApiClientUtils.java`),
+   so the library default applies — on the user's request thread, since never-cached titles are
+   fetched synchronously via `misses.parallelStream()` on the common pool
+   (`src/main/java/tech/dobler/where2stream/streamingavailability/application/StreamInfoService.java`).
+2. A single `ScrapingException` escapes that collector and turns the **entire** dashboard/provider
+   response into a 502 — cached titles and all.
+   `src/main/java/tech/dobler/where2stream/streamingavailability/application/RefreshService.java`
+   has the same all-or-nothing shape, non-resumable.
+
+Adjacent to, not covered by, [TODO-66](#todo-66): the breaker decides *whether* to call;
+this ticket bounds *how long* a call may take and *how much* one failure may break.
+Details: F17 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** an explicit, configured timeout on the scrape; a page with n cached titles and
+  one failing miss renders the n titles (the miss degrades per-title, not per-page); a test pins
+  both.
+
+### 🟠 TODO-75 — A poster/metadata outage is negative-cached for 14 days
+Same principle as [TODO-72](#todo-72), titlecatalog side.
+`discover` in `src/main/java/tech/dobler/where2stream/titlecatalog/application/PosterService.java`
+stores `findPosterPath(...).orElse(null)` unconditionally, collapsing "fetch failed" into
+"title has no poster" — a fresh negative for `poster.negative-cache-days` (14 d).
+`src/main/java/tech/dobler/where2stream/titlecatalog/application/TitleMetaService.java` gets the
+hard-failure case right (not cached), but an HTTP-200 GraphQL response with an `errors` payload
+parses to an all-null row in
+`src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbTitleSource.java`
+that **is** negative-cached.
+[ADR-0012](docs/adr/0012-permanent-title-cache-vs-ttl-availability-cache.md)'s own rationale for
+the negative TTL ("a miss is more often a temporary problem") argues for retry-next-request on
+failure instead.
+Details: F15 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** a source failure (transport, HTTP status, or GraphQL `errors`) is never stored
+  as a negative-cache row; only a confirmed "there is no poster/metadata" is; a test per source
+  pins it.
+
+### 🟠 TODO-76 — The navbar IMDb search dies permanently after one failed request
+`src/main/frontend/src/app/shared/imdb-search-box/imdb-search-box.ts`: the HTTP call sits inside
+`switchMap` with no `catchError` (no API class in `src/main/frontend/src/app/core/api/` has one),
+so one HTTP error completes the outer subscription — the results freeze and every subsequent
+keystroke does nothing until a full page reload, with no message to the user.
+Needs `catchError` **inside** the `switchMap` (per request, so the stream survives), ideally with
+user feedback.
+Details: F21 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** a failing search request leaves the box functional for the next keystroke, and a
+  test simulating an HTTP error proves it.
+
+### 🟠 TODO-77 — `query_meta` generations accumulate forever; every page view loads all of them
+Every re-scrape inserts a new `QueryMeta` row plus its eager `query_result`/availability children
+(`src/main/java/tech/dobler/where2stream/streamingavailability/application/StreamInfoService.java`);
+nothing ever deletes old generations (no delete method on
+`src/main/java/tech/dobler/where2stream/streamingavailability/port/out/QueryMetaRepository.java`,
+no pruning job).
+`findByImdbIdIn` — executed on **every** library page view — loads every historical generation
+eagerly and discards all but the newest per title: read-path cost grows linearly with instance age
+(~13 generations per title per year at the 28-day TTL).
+[ADR-0012](docs/adr/0012-permanent-title-cache-vs-ttl-availability-cache.md) accepts unbounded
+growth for posters (disk only) but is silent on this one, which sits on the per-request path.
+To decide: prune superseded generations on write, keep-latest-per-title queries, or both —
+the decision belongs in an ADR-0012 extension.
+Details: F11 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** page-view queries no longer load superseded generations, and the growth story
+  (prune or bounded history) is decided and documented.
 
 ---
 
@@ -132,6 +237,64 @@ cancelled — point 1 is untouched.
 
 - **Acceptance:** switching views leaves no requests in flight; a dashboard with n rows no longer
   produces n metadata requests.
+
+### 🟡 TODO-78 — Serving a poster thumbnail loads the full-size BLOB too
+`src/main/java/tech/dobler/where2stream/titlecatalog/domain/TitlePoster.java` maps both sizes as
+materialized `@Lob byte[]`; `readCached` in
+`src/main/java/tech/dobler/where2stream/titlecatalog/application/PosterService.java` fetches the
+whole entity — so every thumbnail request (the grid's dominant request type) drags up to a 16 MB
+MEDIUMBLOB through the driver to read the small one, and `warmPosterThumbnails` multiplies that
+across the watchlist union.
+Not verified with SQL logging (eager `@Lob` loading follows from standard Hibernate behaviour with
+no bytecode enhancement configured) — verify first, per the `probe` skill.
+Fix shape: a Spring Data projection per size, or one row per size.
+Details: F12 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** verified (SQL log or probe) that a thumbnail request no longer transfers the
+  full-size column.
+
+### 🟡 TODO-79 — `shared/platform` hosts single-context classes; ADR-0014 and ADR-0019 contradict each other
+Three residents of `shared/platform` are used by exactly one context and have a natural owner —
+the criterion [ADR-0019](docs/adr/0019-port-spi-for-inverted-context-dependencies.md) itself gives
+for *not* living in `shared`:
+
+| Class | Only user | Natural owner |
+| --- | --- | --- |
+| `src/main/java/tech/dobler/where2stream/shared/platform/outbound/HttpClientFactory.java` (+ `RealHttpClientFactory`, `OutboundHttpClients`) | titlecatalog's four sources | `titlecatalog/adapter/out` |
+| `src/main/java/tech/dobler/where2stream/shared/platform/concurrency/RefreshInFlightTracker.java` | streamingavailability | that context's application layer |
+| the `cacheRefreshExecutor` bean in `src/main/java/tech/dobler/where2stream/shared/platform/concurrency/AsyncConfig.java` | streamingavailability (its sizing comment encodes werstreamt.es knowledge) | ditto |
+
+On `HttpClientFactory` the ADRs actively disagree:
+[ADR-0014](docs/adr/0014-backend-by-bounded-context-and-ports-adapters.md) says it "turned out to
+be Title-Catalog-internal", [ADR-0019](docs/adr/0019-port-spi-for-inverted-context-dependencies.md)
+lists it as a legitimate `shared` resident.
+Its javadoc's claim that callers span contexts is false either way.
+Moving the classes settles the contradiction; the losing ADR gets an update note.
+Details: F7 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** the three residents live in their owning context (or an ADR update documents why
+  not), the ADR-0014/0019 contradiction is resolved in writing, and `ArchitectureTest` still passes.
+
+### 🟡 TODO-80 — The SecurityContext ArchUnit rule no longer covers the packages it targets
+`security_context_is_only_read_in_the_presentation_layer` in
+`src/test/java/tech/dobler/where2stream/architecture/ArchitectureTest.java` restricts
+`..application..`, `..persistence..` and `..domain..` — but `persistence` packages were dissolved
+by [ADR-0014](docs/adr/0014-backend-by-bounded-context-and-ports-adapters.md); persistence now
+lives in `adapter.out.persistence`/`port.out`, which the pattern does not match, so a class in
+`adapter.out` could read the SecurityContext today without failing any rule
+(against [ADR-0006](docs/adr/0006-authentication-and-authorisation.md)/ADR-0007's intent).
+While in there: `StreamInfoService` imports the adapter classes `WerStreamtProperties` and
+`QueryResultMapper` directly — the same no-ceremony shortcut ADR-0014's update note blesses for
+the two IMDb sources, but undocumented for these two.
+Either extend the ADR-0014 blessing explicitly or route them behind the context's ports.
+Details: F2/F3 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** the rule covers all non-presentation packages (a probe violation in
+  `adapter.out` turns it red), and the two undocumented imports are either ADR-documented or
+  removed.
 
 ---
 
@@ -206,3 +369,67 @@ construction. The only lever is which framework surface ends up in the *initial*
 **What is explicitly not the answer:** swapping Angular Material for hand-written components
 (238 kB against a permanent maintenance and accessibility debt), or splitting further just to hit
 a number.
+
+### 🟢 TODO-81 — "Clear entire watchlist" runs without confirmation
+The most destructive action in the app fires directly
+(`onClear` in `src/main/frontend/src/app/features/watchlist-import/watchlist-import-page.ts`),
+while the milder "remove watched" on the same page uses the shared `ConfirmDialog`
+(`src/main/frontend/src/app/shared/confirm-dialog/confirm-dialog.ts`) and
+`src/main/frontend/src/app/features/admin-users/admin-users-page.ts` uses native
+`window.prompt`/`window.confirm` — three conventions for one interaction class.
+Details: F22 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** clearing the watchlist asks first, and destructive/confirm interactions use one
+  shared mechanism (`ConfirmDialog`).
+
+### 🟢 TODO-82 — Hardcoded English user-facing strings bypass Transloco
+Three spots never enter the (parity-tested) translation catalogues:
+the seen-toggle snackbars and their Undo action in
+`src/main/frontend/src/app/core/seen-store.ts`;
+the `'OK'` snackbar action in
+`src/main/frontend/src/app/features/manage/manage-page.ts` and
+`src/main/frontend/src/app/features/watchlist-import/watchlist-import-page.ts`
+(settings already translates its action as `common.dismiss`);
+and the route titles in `src/main/frontend/src/app/app.routes.ts`.
+A German user sees English snackbars for the seen toggle — the only untranslated user-visible
+strings the review found.
+Details: F23 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** the named strings come from the de/en catalogues (route-title localization may be
+  deliberately declined — then documented where the titles are defined), and `i18n-parity` still
+  passes.
+
+### 🟢 TODO-83 — Small clean-up finds from the 2026-09-10 architecture review
+Collected from
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md)
+(F-numbers there); none is worth its own ticket:
+
+- **Decide the werstreamt.es rate limit** (F18): `src/main/resources/application.properties` sets 20 req/s while the
+  property default, the executor-sizing comment in
+  `src/main/java/tech/dobler/where2stream/shared/platform/concurrency/AsyncConfig.java` and
+  [ADR-0016](docs/adr/0016-asynchronous-deferred-cache-refresh.md) all reason from 2 req/s —
+  either stand by 20 and update the reasoning, or lower the config.
+- **Stale Javadoc in `ArchitectureTest`** (F5): the streamingavailability rule still claims the
+  context "publishes no inbound port at all" — false since `AvailabilityMetricsPort`.
+- **`QueryResultRepository` has no production caller** (F13), and `ix_query_result_imdb_id`
+  (changeset `src/main/resources/db/changelog/changes/014-index-query-cache-imdb-id.xml`) supports
+  only its tests — drop or justify.
+- **Changeset `src/main/resources/db/changelog/changes/015-query-meta-due-for-refresh-at.xml`**
+  uses bare `TIMESTAMP` instead of the file's own `${timestamp.type}` convention (F13).
+- **MariaDB test parity** (F13): `AppUser` and `TitleMeta` repositories are H2-tested only; the
+  historical MariaDB-only type bugs argue for adding them to the shared-container suite.
+- **ADR-0010 idiom** (F25): `resolveAll` in
+  `src/main/java/tech/dobler/where2stream/streamingavailability/application/StreamInfoService.java`
+  uses guarded `isEmpty()`-then-`get()` — safe, but the literal shape the ADR forbids.
+- **README smart/dumb claim** (F24): stated as absolute, contradicted by three deliberate
+  exceptions (`src/main/frontend/src/app/shared/imdb-search-box/imdb-search-box.ts`,
+  `src/main/frontend/src/app/shared/impersonation-banner/impersonation-banner.ts`, the
+  `injectTitleMeta` consumers) — add the footnote, and record the "shared components may read
+  `UserPrefsStore`" de-facto convention.
+- **`platform/api` vs `platform/web`** (F9): two `@RestController`s in `web`, two in `api`, no
+  discernible line — pick one and say which.
+
+- **Acceptance:** each bullet either done or explicitly declined with the reason recorded where the
+  respective code/doc lives.

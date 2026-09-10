@@ -1990,3 +1990,41 @@ all, which a plain "expired?" reading gets backwards. What is still unmeasured i
 distinct count on a large `watchlist_entry`; the cache bounds how often it runs, not how long.
 
 **Out of scope as planned:** poster BLOB storage totals.
+
+---
+
+### ✅ TODO-65 — A new architecture review, as a dated snapshot
+Its predecessor ([`docs/reviews/2026-07-28-architecture-review.md`](docs/reviews/2026-07-28-architecture-review.md))
+is dated the day **before** [ADR-0014](docs/adr/0014-backend-by-bounded-context-and-ports-adapters.md).
+It triggered the restructuring that then invalidated it, and no successor has been written since.
+
+**The form matters more than the cadence.** A review is a **snapshot with a date in its filename**,
+not a living document. That is exactly where the predecessor failed: it sat undated under `docs/`
+and was read as describing the present. A snapshot that carries its date is allowed to age.
+
+- **Location:** `docs/reviews/`, named **YYYY-MM-DD-architecture-review.md**, **not edited**
+  after writing (typos excepted).
+- **The output is actions, not prose:** what keeps applying becomes an **ADR**, what needs doing
+  becomes a **TODO**. The review document only carries the finding and its reasoning. Without that
+  rule you get a third document drifting away from the other two.
+- **Scope:** the four bounded contexts and their boundaries, `shared`, the frontend structure, the
+  ArchUnit rules (do they still cover what they should?), and explicitly the question of which of
+  the 20 ADRs no longer describe reality.
+- **Run it only after TODO-64** (in `DONE.md`) — otherwise the review examines documentation we
+  already know to be wrong.
+- **Repeatable:** the procedure is a skill,
+  `.claude/skills/architecture-review/SKILL.md`,
+  so the next run is not reinvented.
+
+- **Acceptance:** a dated document under `docs/reviews/` describing the current state, with every
+  resulting action captured as a TODO or an ADR rather than as an open list inside the review.
+
+**Done 2026-09-10.** Filed as `docs/reviews/2026-09-10-architecture-review.md` (commit `5688966`
+as the reviewed state), produced by six parallel read-only reviewers per the skill, on a green
+tree (458 backend / 260 frontend tests). Headline result: the bounded contexts and all 20 accepted
+ADRs hold; the weak flank is behaviour under failure. Every actionable finding became a ticket —
+TODO-72 (availability cache poisoning, the one 🔴), TODO-73 through TODO-77, TODO-78 through
+TODO-80, and TODO-81 through TODO-83 — plus update notes correcting stale details in ADR-0002 and
+ADR-0014. No new ADR was written: the two decisions the review surfaced (failure-result caching,
+`query_meta` growth) are recorded in their tickets as "decide, then extend the ADR", not decided
+unilaterally.
