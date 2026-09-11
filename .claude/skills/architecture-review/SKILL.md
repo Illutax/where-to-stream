@@ -56,6 +56,7 @@ so an agent can actually read rather than grep:
 | Persistence | Entities, repositories, Liquibase changelog, indexes — does the model still match the usage? |
 | Outbound adapters | werstreamt.es, IMDb, TMDB: rate limits, error handling, timeouts, behaviour under failure |
 | Frontend | Signals/stores, loading states, shared components, bundle composition |
+| Security & operations | Authn/authz and session config, the admin/impersonation surface, secrets handling (`.env`, `check-env.sh`), the reverse-proxy seams that fail quietly, deployment/update scripts, backup story — and what an authenticated non-admin can abuse |
 | **ADR reconciliation** | **Which ADRs no longer describe reality?** Per ADR: does it hold, is it superseded, or is it being broken quietly? |
 
 That last row is the most valuable one and the easiest to forget.
