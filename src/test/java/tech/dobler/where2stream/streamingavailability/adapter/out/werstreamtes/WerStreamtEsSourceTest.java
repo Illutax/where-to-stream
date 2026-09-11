@@ -17,6 +17,7 @@ import tech.dobler.where2stream.streamingavailability.domain.SearchResult;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,21 +30,19 @@ import static org.mockito.Mockito.when;
 class WerStreamtEsSourceTest {
 
     private static final ImdbId IMDB_ID = ImdbId.of("tt0482571");
+    private static final WerStreamtProperties PROPS = new WerStreamtProperties(new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0), new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *"), Duration.ofSeconds(10));
     private static final String MINUS = "<i class=\"fi-minus-circle\"></i>";
     private static final String CHECK = "<i class=\"fi-check\"></i>";
 
     // parse() does not hit the network, so the rate limiter is irrelevant here (disabled).
     private final WerStreamtEsSource client = new WerStreamtEsSource(
-            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0), new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *")),
-            new RealConnectionFactory());
+            PROPS, new RealConnectionFactory(PROPS));
 
     @Mock
     private Connection connection;
 
     private static WerStreamtEsSource clientWithFakeConnection(Connection connection) {
-        return new WerStreamtEsSource(
-                new WerStreamtProperties(new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0), new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *")),
-                uri -> connection);
+        return new WerStreamtEsSource(PROPS, uri -> connection);
     }
 
     // --- search()/query() network-error handling (connectionFactory seam, network-free) ---

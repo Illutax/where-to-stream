@@ -27,11 +27,12 @@ class RefreshApiControllerTest {
 
     @Test
     void defaultScopeRefreshesSeen() throws Exception {
-        when(refreshService.refreshSeen()).thenReturn(new RefreshResultDto(4));
+        when(refreshService.refreshSeen()).thenReturn(new RefreshResultDto(4, 1));
 
         mockMvc.perform(post("/api/refresh"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.refreshed").value(4));
+                .andExpect(jsonPath("$.refreshed").value(4))
+                .andExpect(jsonPath("$.failed").value(1));
 
         verify(refreshService).refreshSeen();
         verifyNoMoreInteractions(refreshService);
@@ -39,11 +40,12 @@ class RefreshApiControllerTest {
 
     @Test
     void scopeAllRefreshesEverything() throws Exception {
-        when(refreshService.refreshAll()).thenReturn(new RefreshResultDto(9));
+        when(refreshService.refreshAll()).thenReturn(new RefreshResultDto(9, 0));
 
         mockMvc.perform(post("/api/refresh").param("scope", "all"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.refreshed").value(9));
+                .andExpect(jsonPath("$.refreshed").value(9))
+                .andExpect(jsonPath("$.failed").value(0));
 
         verify(refreshService).refreshAll();
         verifyNoMoreInteractions(refreshService);

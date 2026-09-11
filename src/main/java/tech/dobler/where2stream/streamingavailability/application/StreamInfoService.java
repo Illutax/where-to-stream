@@ -9,6 +9,7 @@ import tech.dobler.where2stream.streamingavailability.adapter.out.werstreamtes.W
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 import tech.dobler.where2stream.streamingavailability.domain.QueryMeta;
+import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaRepository;
 import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityPort;
 import tech.dobler.where2stream.streamingavailability.adapter.out.persistence.QueryResultMapper;
@@ -94,6 +95,8 @@ public class StreamInfoService {
      * {@link ResolvedEntry#stale()}) and a refresh is kicked off in the background instead of
      * blocking this call — this is what lets a page render instantly even right after a bulk
      * invalidation from "Cache Verwalten", instead of the request paying for every re-scrape.
+     * A miss whose synchronous fetch fails degrades per title instead of failing the whole call
+     * (see {@link #fetchMiss}).
      * Returns the results keyed by imdbId, preserving the iteration order of {@code imdbIds}.
      */
     @LogExecutionTime
@@ -123,15 +126,31 @@ public class StreamInfoService {
 
         final var tx = self.getObject();
         final var fetched = misses.parallelStream()
-                .collect(Collectors.toConcurrentMap(imdbId -> imdbId, tx::resolve));
+                .collect(Collectors.toConcurrentMap(imdbId -> imdbId, imdbId -> fetchMiss(tx, imdbId)));
 
         final var resolved = new LinkedHashMap<ImdbId, ResolvedEntry>();
         for (ImdbId imdbId : imdbIds) {
             resolved.put(imdbId, existing.containsKey(imdbId)
                     ? existing.get(imdbId)
-                    : new ResolvedEntry(fetched.get(imdbId), false));
+                    : fetched.get(imdbId));
         }
         return resolved;
+    }
+
+    /**
+     * One miss's synchronous fetch, degraded per title: a failing scrape must not 502 the whole
+     * page when every other title's data is right there. The failed title renders without
+     * availability, marked {@link ResolvedEntry#stale()} so the page-level banner shows, and
+     * nothing is persisted for it — a failure result must never become a cache row — so the next
+     * view simply retries.
+     */
+    private static ResolvedEntry fetchMiss(StreamInfoService tx, ImdbId imdbId) {
+        try {
+            return new ResolvedEntry(tx.resolve(imdbId), false);
+        } catch (ScrapingException e) {
+            log.warn("Fetching {} failed; rendering it without availability", imdbId, e);
+            return new ResolvedEntry(List.of(), true);
+        }
     }
 
     /** Starts a background refresh for {@code imdbId} unless one is already under way. */

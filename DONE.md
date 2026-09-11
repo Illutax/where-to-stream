@@ -2028,3 +2028,39 @@ TODO-80, and TODO-81 through TODO-83 — plus update notes correcting stale deta
 ADR-0014. No new ADR was written: the two decisions the review surfaced (failure-result caching,
 `query_meta` growth) are recorded in their tickets as "decide, then extend the ADR", not decided
 unilaterally.
+
+---
+
+### ✅ TODO-74 — No scrape timeout; one failing title answers 502 for a whole page
+Two related gaps in the synchronous miss path, measured against how the JSON adapters already do it
+(5 s connect / 10 s request via `src/main/java/tech/dobler/where2stream/shared/platform/outbound/OutboundHttpClients.java`):
+
+1. The jsoup connection sets no `.timeout(...)` at all
+   (`src/main/java/tech/dobler/where2stream/streamingavailability/adapter/out/werstreamtes/ApiClientUtils.java`),
+   so the library default applies — on the user's request thread, since never-cached titles are
+   fetched synchronously via `misses.parallelStream()` on the common pool
+   (`src/main/java/tech/dobler/where2stream/streamingavailability/application/StreamInfoService.java`).
+2. A single `ScrapingException` escapes that collector and turns the **entire** dashboard/provider
+   response into a 502 — cached titles and all.
+   `src/main/java/tech/dobler/where2stream/streamingavailability/application/RefreshService.java`
+   has the same all-or-nothing shape, non-resumable.
+
+Adjacent to, not covered by, [TODO-66](#todo-66): the breaker decides *whether* to call;
+this ticket bounds *how long* a call may take and *how much* one failure may break.
+Details: F17 in
+[`docs/reviews/2026-09-10-architecture-review.md`](docs/reviews/2026-09-10-architecture-review.md).
+
+- **Acceptance:** an explicit, configured timeout on the scrape; a page with n cached titles and
+  one failing miss renders the n titles (the miss degrades per-title, not per-page); a test pins
+  both.
+
+**Done 2026-09-11.** Three changes, no departure from the plan:
+`wer-streamt.timeout` (default `10s`, bound in `WerStreamtProperties`, applied by
+`RealConnectionFactory` on every jsoup connection — query and search alike);
+`StreamInfoService.resolveAll` now degrades a failing miss per title (empty results, marked
+stale so the page banner shows, nothing persisted — a failure result must never become a cache
+row) instead of letting `ScrapingException` 502 the whole page;
+and `RefreshService` skips a failing title instead of aborting the run, with the new
+`failed` count in `RefreshResultDto` so the admin sees a partial refresh for what it is.
+Tests pin all three (`RealConnectionFactoryTest`, `resolveAllRendersTheOtherTitlesWhenOneMissFailsToScrape`,
+`refreshContinuesPastAFailingTitleAndReportsIt`).

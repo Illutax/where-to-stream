@@ -140,6 +140,7 @@ Key properties (`src/main/resources/application.properties`):
 | `wer-streamt.invalidate.after-days` | `28` | Days before a cached lookup is considered stale |
 | `wer-streamt.invalidate.jitter-min-factor` / `-max-factor` | `1.5` / `2.0` | Staggering window (as a multiple of `after-days`) for the background refresh due date, so titles cached together don't all become due at once ([ADR-0016](docs/adr/0016-asynchronous-deferred-cache-refresh.md)) |
 | `wer-streamt.rate-limit.requests-per-second` | `20` | Outbound throttle for werstreamt.es (`<= 0` disables) |
+| `wer-streamt.timeout` | `10s` | Total per-request budget (connect + read) for one werstreamt.es scrape — misses are fetched on the request thread |
 | `wer-streamt.background-refresh.enabled` | `true` | Off switch for the proactive scheduled cache-refresh job |
 | `wer-streamt.background-refresh.cron` | `0 0 4 * * *` | When that job runs |
 | `imdb-poster.rate-limit.requests-per-second` | `10` | Outbound throttle for the IMDb poster lookup (`<= 0` disables) |

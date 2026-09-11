@@ -15,8 +15,10 @@ import tech.dobler.where2stream.streamingavailability.domain.QueryMeta;
 import tech.dobler.where2stream.streamingavailability.port.out.QueryMetaRepository;
 import tech.dobler.where2stream.streamingavailability.port.out.StreamAvailabilityPort;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResultDB;
+import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -38,7 +40,7 @@ class StreamInfoServiceTest {
 
     private static final WerStreamtProperties PROPS = new WerStreamtProperties(
             new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0),
-            new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *"));
+            new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *"), Duration.ofSeconds(10));
     // Fixed "now" injected through the TimeService facade — cache-freshness assertions are exact
     // and repeatable instead of relative to the wall clock.
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
@@ -169,6 +171,31 @@ class StreamInfoServiceTest {
             verify(streamProvider).query(imdbId);
         });
         verify(queryMetaRepository, times(misses.size())).save(any(QueryMeta.class));
+    }
+
+    @Test
+    void resolveAllRendersTheOtherTitlesWhenOneMissFailsToScrape() {
+        final var ids = List.of(id("tt1"), id("ttBad"), id("tt2"));
+        when(queryMetaRepository.findByImdbIdIn(ids)).thenReturn(List.of(meta("tt1", NOW, "Netflix")));
+        stubFindFirst("ttBad", Optional.empty());
+        stubFindFirst("tt2", Optional.empty());
+        when(streamProvider.query(id("ttBad")))
+                .thenThrow(new ScrapingException("werstreamt.es down", new java.io.IOException("timeout")));
+        when(streamProvider.query(id("tt2")))
+                .thenReturn(List.of(new QueryResult(id("tt2"), "Prime Video", true, List.of(), null)));
+
+        final var resolved = service.resolveAll(ids);
+
+        // The failed miss degrades per title: empty results, marked stale, page otherwise intact.
+        assertThat(resolved.get(id("ttBad"))).isEqualTo(new ResolvedEntry(List.of(), true));
+        assertThat(resolved.get(id("tt1")).results())
+                .extracting(QueryResult::streamingServiceName).containsExactly("Netflix");
+        assertThat(resolved.get(id("tt2")).results())
+                .extracting(QueryResult::streamingServiceName).containsExactly("Prime Video");
+        // Nothing is persisted for the failure — only tt2's successful fetch is saved.
+        final var saved = ArgumentCaptor.forClass(QueryMeta.class);
+        verify(queryMetaRepository, times(1)).save(saved.capture());
+        assertThat(saved.getValue().getImdbId()).isEqualTo(id("tt2"));
     }
 
     @Test

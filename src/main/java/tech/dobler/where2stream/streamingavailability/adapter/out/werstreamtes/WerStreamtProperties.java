@@ -3,18 +3,24 @@ package tech.dobler.where2stream.streamingavailability.adapter.out.werstreamtes;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
+import java.time.Duration;
+
 /**
  * Central binding for the {@code wer-streamt.*} configuration.
  *
  * @param invalidate       cache-invalidation settings
  * @param rateLimit        outbound throttling for werstreamt.es requests
  * @param backgroundRefresh the scheduled proactive-refresh job (ADR-0016)
+ * @param timeout          total per-request budget (connect + read) for one scrape; without it
+ *                         jsoup's own default applies and a stalling site pins the caller —
+ *                         which on the synchronous miss path is a user's request thread
  */
 @ConfigurationProperties(prefix = "wer-streamt")
 public record WerStreamtProperties(
         @DefaultValue Invalidate invalidate,
         @DefaultValue RateLimit rateLimit,
-        @DefaultValue BackgroundRefresh backgroundRefresh
+        @DefaultValue BackgroundRefresh backgroundRefresh,
+        @DefaultValue("10s") Duration timeout
 ) {
     /**
      * @param afterDays      number of days after which a cached query result is considered stale

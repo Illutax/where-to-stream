@@ -5,11 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import tech.dobler.where2stream.streamingavailability.application.dto.RefreshResultDto;
+import tech.dobler.where2stream.streamingavailability.domain.ScrapingException;
 import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.watchlist.port.in.WatchlistCatalogPort;
 import tech.dobler.where2stream.streamingavailability.application.StreamInfoService;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Force-refreshes cached stream availability across all users' watchlists (global, ADMIN),
@@ -41,9 +43,26 @@ public class RefreshService {
 
     private RefreshResultDto refresh(List<ImdbId> imdbIds) {
         log.info("Refreshing {} titles", imdbIds.size());
+        // One failing title must not abort the whole (non-resumable) run: skip it, keep its old
+        // cache row, and report the failure count instead of answering 502 halfway through.
+        final var failed = new AtomicInteger();
         final var refreshed = imdbIds.parallelStream()
-                .map(imdbId -> streamInfoService.resolve(imdbId, true))
+                .filter(imdbId -> refreshOne(imdbId, failed))
                 .toList();
-        return new RefreshResultDto(refreshed.size());
+        if (failed.get() > 0) {
+            log.warn("Refresh finished with {} of {} titles failed", failed.get(), imdbIds.size());
+        }
+        return new RefreshResultDto(refreshed.size(), failed.get());
+    }
+
+    private boolean refreshOne(ImdbId imdbId, AtomicInteger failed) {
+        try {
+            streamInfoService.resolve(imdbId, true);
+            return true;
+        } catch (ScrapingException e) {
+            log.warn("Refresh of {} failed; skipping it", imdbId, e);
+            failed.incrementAndGet();
+            return false;
+        }
     }
 }

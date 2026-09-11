@@ -9,6 +9,7 @@ import tech.dobler.where2stream.shared.kernel.domain.ImdbId;
 import tech.dobler.where2stream.streamingavailability.domain.QueryResult;
 
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,9 +23,9 @@ class WerStreamtEsSourceIntegrationTest {
 
     private static final ImdbId IMDB_ID = ImdbId.of("tt0822847");
 
-    private final WerStreamtEsSource client = new WerStreamtEsSource(
-            new WerStreamtProperties(new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0), new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *")),
-            new RealConnectionFactory());
+    private static final WerStreamtProperties PROPS = new WerStreamtProperties(new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(0), new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *"), Duration.ofSeconds(10));
+
+    private final WerStreamtEsSource client = new WerStreamtEsSource(PROPS, new RealConnectionFactory(PROPS));
 
     private List<QueryResult> parseFixture() throws Exception {
         try (InputStream in = getClass().getResourceAsStream("/werstreamt/priest-tt0822847.html")) {
