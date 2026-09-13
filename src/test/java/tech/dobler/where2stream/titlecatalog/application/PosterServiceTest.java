@@ -3,6 +3,7 @@ package tech.dobler.where2stream.titlecatalog.application;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -15,6 +16,7 @@ import tech.dobler.where2stream.titlecatalog.port.out.PosterPort;
 import tech.dobler.where2stream.shared.platform.time.TimeService;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -211,5 +213,34 @@ class PosterServiceTest {
 
         assertThat(service.thumb(TT)).get().extracting(PosterService.Poster::bytes).isEqualTo(new byte[]{7});
         verify(posterSource).download("/p.jpg", PosterSize.THUMB);
+    }
+
+
+    @Test
+    void storeBytesWritesTheThumbOntoTheExistingRowAndLeavesTheFullSizeAlone() {
+        final var row = TitlePoster.of(TT, "/p.jpg", NOW);
+        when(repository.findByImdbId(TT)).thenReturn(Optional.of(row));
+
+        service().storeBytes(TT, "/p.jpg", PosterSize.THUMB, new byte[]{1, 2});
+
+        verify(repository).save(row);
+        // byte[] compares by reference inside a list — normalized via Arrays.toString instead.
+        assertThat(row)
+                .extracting(p -> Arrays.toString(p.getThumb()), TitlePoster::getThumbContentType, TitlePoster::getFull)
+                .isEqualTo(Arrays.asList("[1, 2]", "image/jpeg", null));
+    }
+
+    @Test
+    void storeBytesCreatesTheRowOnAFirstEverFullSizeDownload() {
+        when(repository.findByImdbId(TT)).thenReturn(Optional.empty());
+
+        service().storeBytes(TT, "/p.jpg", PosterSize.FULL, new byte[]{9});
+
+        final var saved = ArgumentCaptor.forClass(TitlePoster.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue())
+                .extracting(TitlePoster::getPosterPath, p -> Arrays.toString(p.getFull()),
+                        TitlePoster::getFullContentType, TitlePoster::getThumb)
+                .isEqualTo(Arrays.asList("/p.jpg", "[9]", "image/jpeg", null));
     }
 }

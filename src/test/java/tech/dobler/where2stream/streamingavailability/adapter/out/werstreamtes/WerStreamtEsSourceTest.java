@@ -314,4 +314,43 @@ class WerStreamtEsSourceTest {
         assertThat(WerStreamtEsSource.capLanguages(tooLong))
                 .hasSize(WerStreamtEsSource.MAX_LANGUAGES_LENGTH);
     }
+
+
+    @Test
+    void queryParsesTheFlatLayoutByChunkingColumnsIntoGroupsOfThree() throws Exception {
+        // No per-listing ".panel.available" rows: the 3-N-columns fallback chunks six columns
+        // into two offerings (flatrate yes / no).
+        when(connection.followRedirects(true)).thenReturn(connection);
+        when(connection.get()).thenReturn(Jsoup.parse("<div id=\"avalibility\">"
+                + "<div class=\"provider\" data-ext-provider-name=\"Netflix\">"
+                + "<div class=\"columns small-4\"><small>Flatrate</small><br><i class=\"fi-check\"></i></div>"
+                + "<div class=\"columns small-4\"><small>Leihen</small><br>-</div>"
+                + "<div class=\"columns small-4\"><small>Kaufen</small><br>-</div>"
+                + "<div class=\"columns small-4\"><small>Flatrate</small><br><i class=\"fi-minus-circle\"></i></div>"
+                + "<div class=\"columns small-4\"><small>Leihen</small><br>-</div>"
+                + "<div class=\"columns small-4\"><small>Kaufen</small><br>-</div>"
+                + "</div></div>"));
+
+        final var results = clientWithFakeConnection(connection).query(IMDB_ID);
+
+        assertThat(results)
+                .extracting(QueryResult::streamingServiceName, QueryResult::flatrate)
+                .containsExactly(tuple("Netflix", true), tuple("Netflix", false));
+    }
+
+    @Test
+    void queryRejectsAFlatLayoutWhoseColumnCountIsNotAMultipleOfThree() throws Exception {
+        // Four columns cannot be listings of three cells each — better no result than a
+        // misaligned one read across listing boundaries.
+        when(connection.followRedirects(true)).thenReturn(connection);
+        when(connection.get()).thenReturn(Jsoup.parse("<div id=\"avalibility\">"
+                + "<div class=\"provider\" data-ext-provider-name=\"Netflix\">"
+                + "<div class=\"columns small-4\"><small>Flatrate</small><br><i class=\"fi-check\"></i></div>"
+                + "<div class=\"columns small-4\"><small>Leihen</small><br>-</div>"
+                + "<div class=\"columns small-4\"><small>Kaufen</small><br>-</div>"
+                + "<div class=\"columns small-4\"><small>Flatrate</small><br><i class=\"fi-check\"></i></div>"
+                + "</div></div>"));
+
+        assertThat(clientWithFakeConnection(connection).query(IMDB_ID)).isEmpty();
+    }
 }

@@ -14,6 +14,7 @@ import java.net.http.HttpResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -143,5 +144,32 @@ class TmdbPosterSourceTest {
         // A full URL is a stale path from a previously active, different source (TODO-47).
         assertThat(source.isValidPosterPath("https://m.media-amazon.com/images/old.jpg")).isFalse();
         assertThat(source.isValidPosterPath(null)).isFalse();
+    }
+
+
+    @Test
+    void outboundCallsGoThroughTheRateLimiter() throws Exception {
+    // The politeness promise: a removed acquire() finishes in ~0ms; with 20 req/s the second
+    // call must wait ~50ms. Lower-bound timing only (the RateLimiterTest style).
+        final var throttled = new TmdbProperties(true, "api-key", "https://api.themoviedb.org/3",
+                "https://image.tmdb.org/t/p", new TmdbProperties.RateLimit(20));
+        doReturn(stringResponse).when(httpClient).send(any(), eq(HttpResponse.BodyHandlers.ofString()));
+        when(stringResponse.statusCode()).thenReturn(200);
+        when(stringResponse.body()).thenReturn("{\"movie_results\":[]}");
+        final var source = new TmdbPosterSource(throttled, () -> httpClient);
+
+        // findPosterPath and download share the one limiter, so exercise both: three calls,
+        // two of them blocking ~50ms each.
+        doReturn(bytesResponse).when(httpClient).send(any(), eq(HttpResponse.BodyHandlers.ofByteArray()));
+        when(bytesResponse.statusCode()).thenReturn(200);
+        when(bytesResponse.body()).thenReturn(new byte[]{1});
+
+        final long start = System.nanoTime();
+        source.findPosterPath(ImdbId.of("tt1")); // primes the limiter, never blocks
+        source.findPosterPath(ImdbId.of("tt2")); // waits ~50ms
+        source.download("/p.jpg", PosterSize.THUMB); // another ~50ms through the same limiter
+        final long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertThat(elapsedMs).isGreaterThanOrEqualTo(80);
     }
 }

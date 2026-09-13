@@ -156,7 +156,9 @@ public class SecurityConfig {
      * on each restart) and a warning is logged — set {@code w2s.security.remember-me.key} to
      * keep users logged in across restarts.
      */
-    private String rememberMeKey(SecurityProperties securityProperties) {
+    // Package-private static so the fallback rule is unit-testable without building the whole
+    // filter chain (the same seam style as ImpersonationConfig.refuseAdminTargets).
+    static String rememberMeKey(SecurityProperties securityProperties) {
         final String key = securityProperties.rememberMe().key();
         if (key != null && !key.isBlank()) {
             return key;

@@ -158,4 +158,24 @@ class ImdbSuggestionSourceTest {
         assertThat(ImdbSuggestionSource.parse("not json", 10)).isEmpty();
         assertThat(ImdbSuggestionSource.parse("{}", 10)).isEmpty();
     }
+
+
+    @Test
+    void searchesGoThroughTheRateLimiter() throws Exception {
+    // The politeness promise: a removed acquire() finishes in ~0ms; with 20 req/s the second
+    // call must wait ~50ms. Lower-bound timing only (the RateLimiterTest style).
+        final var throttled = new ImdbSearchProperties("https://v2.sg.media-imdb.com/suggestion",
+                new ImdbSearchProperties.RateLimit(20), 8);
+        doReturn(response).when(httpClient).send(any(), any());
+        when(response.statusCode()).thenReturn(200);
+        when(response.body()).thenReturn("{\"d\":[]}");
+        final var client = new ImdbSuggestionSource(throttled, () -> httpClient);
+
+        final long start = System.nanoTime();
+        client.search("matrix");  // primes the limiter, never blocks
+        client.search("inception"); // waits ~50ms
+        final long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertThat(elapsedMs).isGreaterThanOrEqualTo(40);
+    }
 }

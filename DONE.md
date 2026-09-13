@@ -2064,3 +2064,72 @@ and `RefreshService` skips a failing title instead of aborting the run, with the
 `failed` count in `RefreshResultDto` so the admin sees a partial refresh for what it is.
 Tests pin all three (`RealConnectionFactoryTest`, `resolveAllRendersTheOtherTitlesWhenOneMissFailsToScrape`,
 `refreshContinuesPastAFailingTitleAndReportsIt`).
+
+---
+
+### ✅ TODO-85 — Surviving mutants from the 2026-09-13 baseline — the worked triage
+### 🟡 TODO-85 — Surviving mutants from the 2026-09-13 baseline — the worked triage
+First full pitest run ([ADR-0022](docs/adr/0022-coverage-as-a-signal-audited-by-mutation-testing.md)):
+766 mutants, 637 killed. The same day's strengthening pass killed the top tier
+(`RefreshInFlightTracker` dedup, `WerStreamtEsSource` rate-limiter application,
+`UserAdminService` update/list/last-admin). **Still worth killing**, in this order:
+
+1. **Rate-limiter application in the titlecatalog sources** —
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/tmdb/TmdbPosterSource.java`,
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbPosterSource.java`,
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbTitleSource.java`,
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbSuggestionSource.java`:
+   `removed call to RateLimiter::acquire` survives in each. The lower-bound timing pattern to copy
+   is `queryAndSearchGoThroughTheRateLimiter` in
+   `src/test/java/tech/dobler/where2stream/streamingavailability/adapter/out/werstreamtes/WerStreamtEsSourceTest.java`
+   (these sources have the `HttpClientFactory` fake seam instead of a fake connection).
+2. **`PosterService.storeBytes`** (`src/main/java/tech/dobler/where2stream/titlecatalog/application/PosterService.java`):
+   removing `setThumb`/`setFull` and negating the dual-path conditional survives — the
+   find-or-create write is not asserted on content.
+3. **`MeApiController.updateUsername`** — the whole path (session invalidation, context clear) is
+   NO_COVERAGE.
+4. **`WerStreamtEsSource.parseOfferings`** — the modulus/conditional family around the
+   3·N-columns multi-language case survives the single Prime fixture; a second fixture with a
+   different column count would pin it.
+5. **`SecurityConfig.rememberMeKey`** — the stable-key-vs-generated fallback conditionals survive.
+
+**Allowed survivors, deliberately not chased** (kept here so nobody re-triages them):
+`ApiExceptionHandler` `setTitle` removals (cosmetic ProblemDetail titles);
+`ExportReader` log-guard/log-arithmetic mutants (logging only — the counts themselves are
+asserted); `RateLimiter` boundary mutants (equivalent-ish via nanos overflow);
+`@Configuration` wiring survivors (measurement artifact — see the blind-spot note in ADR-0022);
+`AsyncConfig` executor setters (owned by [TODO-73](#todo-73));
+metrics-port default methods.
+
+- **Acceptance:** items 1–5 each killed by a test at an observable seam (or individually declined
+  here with a reason), verified by a scoped pitest run.
+
+**Done 2026-09-13.** Verified by scoped pitest re-runs, not by coverage.
+
+- **Item 1 (rate-limiter application) — killed** in all four sources. Lower-bound timing tests
+  (the `RateLimiterTest` style) now fail if `acquire()` is removed:
+  `outboundCallsGoThroughTheRateLimiter` in `TmdbPosterSourceTest` (both the `find` and the
+  `download` call, which share one limiter) and `ImdbTitleSourceTest`;
+  `downloadsGoThroughTheRateLimiter` in `ImdbPosterSourceTest`;
+  `searchesGoThroughTheRateLimiter` in `ImdbSuggestionSourceTest` (that class now has 0 survivors).
+- **Item 2 (`PosterService.storeBytes`) — killed.** `storeBytesWritesTheThumbOntoTheExistingRow…`
+  and `storeBytesCreatesTheRowOnAFirstEverFullSizeDownload` assert the written bytes/content-type
+  (byte[] normalised via `Arrays.toString`, since it compares by reference inside a list), so
+  removing `setThumb`/`setFull` now fails.
+- **Item 3 (`MeApiController.updateUsername`) — killed.** Unit-tested at the controller seam
+  (`UpdateUsernameTest`) rather than through MockMvc: session-fixation protection swaps the
+  session instance end to end, which makes the invalidation unobservable there. The two cases pin
+  the command hand-off, `session.invalidate()`, the null-session branch, and the
+  `SecurityContextHolder.clearContext()`.
+- **Item 4 (`parseOfferings`) — core killed.** `queryParsesTheFlatLayoutByChunkingColumnsIntoGroupsOfThree`
+  and `queryRejectsAFlatLayoutWhoseColumnCountIsNotAMultipleOfThree` kill the `% 3` / chunking
+  mutants. **Declined:** the `capLanguages` 1024-char truncation boundary and the `qualityLabel`
+  string — cosmetic, not worth a brittle length-boundary test.
+- **Item 5 (`SecurityConfig.rememberMeKey`) — killed.** Extracted to a package-private static seam
+  (same style as `ImpersonationConfig.refuseAdminTargets`) and pinned by `RememberMeKeyTest`:
+  configured key used verbatim, blank/null falls back to a non-blank generated secret.
+
+**Deliberately left, as the ticket listed:** `Thread::interrupt` removals, `redactApiKey`/`tmdbSize`
+string mutants, `ifPresentOrElse` logging branches, `AsyncConfig` executor setters (TODO-73), and
+the `@Configuration` wiring survivors in `SecurityConfig` (`passwordEncoder`/`securityFilterChain`)
+— the measurement artifact documented in ADR-0022, which a test cannot fix.

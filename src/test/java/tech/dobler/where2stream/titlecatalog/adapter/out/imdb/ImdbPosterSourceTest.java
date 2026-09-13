@@ -102,4 +102,24 @@ class ImdbPosterSourceTest {
         assertThat(source.isValidPosterPath("/abc.jpg")).isFalse();
         assertThat(source.isValidPosterPath(null)).isFalse();
     }
+
+
+    @Test
+    void downloadsGoThroughTheRateLimiter() throws Exception {
+    // The politeness promise: a removed acquire() finishes in ~0ms; with 20 req/s the second
+    // call must wait ~50ms. Lower-bound timing only (the RateLimiterTest style).
+        final var throttled = new ImdbPosterProperties("https://api.graphql.imdb.com/",
+                new ImdbPosterProperties.RateLimit(20), 100, 50, 600, 85);
+        doReturn(response).when(httpClient).send(any(), any());
+        when(response.statusCode()).thenReturn(200);
+        when(response.body()).thenReturn(new byte[]{1});
+        final var source = new ImdbPosterSource(throttled, titleMetaService, () -> httpClient);
+
+        final long start = System.nanoTime();
+        source.download(POSTER, PosterSize.THUMB); // primes the limiter, never blocks
+        source.download(POSTER, PosterSize.FULL);  // waits ~50ms
+        final long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertThat(elapsedMs).isGreaterThanOrEqualTo(40);
+    }
 }

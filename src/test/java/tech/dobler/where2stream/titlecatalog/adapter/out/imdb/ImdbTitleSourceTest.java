@@ -148,4 +148,24 @@ class ImdbTitleSourceTest {
         assertThat(malformed).extracting(ImdbTitleSource.ImdbTitleData::posterUrl, ImdbTitleSource.ImdbTitleData::rating)
                 .containsOnlyNulls();
     }
+
+
+    @Test
+    void outboundCallsGoThroughTheRateLimiter() throws Exception {
+    // The politeness promise: a removed acquire() finishes in ~0ms; with 20 req/s the second
+    // call must wait ~50ms. Lower-bound timing only (the RateLimiterTest style).
+        final var throttled = new ImdbPosterProperties("https://api.graphql.imdb.com/",
+                new ImdbPosterProperties.RateLimit(20), 100, 50, 600, 85);
+        doReturn(response).when(httpClient).send(any(), any());
+        when(response.statusCode()).thenReturn(200);
+        when(response.body()).thenReturn("{}");
+        final var client = new ImdbTitleSource(throttled, () -> httpClient);
+
+        final long start = System.nanoTime();
+        client.fetch(ImdbId.of("tt1")); // primes the limiter, never blocks
+        client.fetch(ImdbId.of("tt2")); // waits ~50ms
+        final long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertThat(elapsedMs).isGreaterThanOrEqualTo(40);
+    }
 }
