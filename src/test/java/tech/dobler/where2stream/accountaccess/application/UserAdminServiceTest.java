@@ -167,6 +167,46 @@ class UserAdminServiceTest {
     }
 
     @Test
+    void listReturnsEveryAccountSortedByUsername() {
+        final var bob = user("bob", Set.of(Role.USER), true, AuthProvider.LOCAL);
+        final var alice = user("alice", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
+        when(users.findAll()).thenReturn(List.of(bob, alice));
+
+        assertThat(service.list()).extracting(UserDto::username).containsExactly("alice", "bob");
+    }
+
+    @Test
+    void updateRefusesDemotingTheLastAdminEvenWhenOtherEnabledUsersExist() {
+        // An enabled plain USER must not count as an admin: with only this pair in the table,
+        // demoting the admin still hits the last-admin guard.
+        final var admin = user("admin", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
+        final var plain = user("bob", Set.of(Role.USER), true, AuthProvider.LOCAL);
+        final var id = (UUID) ReflectionTestUtils.getField(admin, "id");
+        when(users.findById(id)).thenReturn(Optional.of(admin));
+        when(users.findAll()).thenReturn(List.of(admin, plain));
+
+        assertThatThrownBy(() -> service.update(new UpdateUserCommand(id, "admin@x", List.of(Role.USER), true)))
+                .isInstanceOf(UserManagementException.class);
+    }
+
+    @Test
+    void updateWritesEmailRolesAndEnabledOntoTheAccount() {
+        final var admin = user("admin", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
+        final var other = user("other", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
+        final var id = (UUID) ReflectionTestUtils.getField(admin, "id");
+        when(users.findById(id)).thenReturn(Optional.of(admin));
+        when(users.findAll()).thenReturn(List.of(admin, other)); // another admin remains
+
+        final var dto = service.update(new UpdateUserCommand(id, "new@x", List.of(Role.USER), false));
+
+        final var expected = List.of("new@x", List.of("USER"), false);
+        assertThat(dto)
+                .isNotNull()
+                .extracting(UserDto::email, UserDto::roles, UserDto::enabled)
+                .isEqualTo(expected);
+    }
+
+    @Test
     void updateDisablingTheLastAdminIsRefusedEvenWithTheRoleKept() {
         final var admin = user("admin", Set.of(Role.ADMIN), true, AuthProvider.LOCAL);
         final var id = (UUID) ReflectionTestUtils.getField(admin, "id");

@@ -48,6 +48,27 @@ class WerStreamtEsSourceTest {
     // --- search()/query() network-error handling (connectionFactory seam, network-free) ---
 
     @Test
+    void queryAndSearchGoThroughTheRateLimiter() throws Exception {
+        // The politeness promise (README, ADR-0016): outbound calls are throttled. A removed
+        // acquire() finishes in ~0ms; with 20 req/s the second and third call must each wait
+        // ~50ms. Lower-bound timing only — the same style RateLimiterTest established.
+        final var throttled = new WerStreamtProperties(
+                new WerStreamtProperties.Invalidate(28, 1.5, 2.0), new WerStreamtProperties.RateLimit(20),
+                new WerStreamtProperties.BackgroundRefresh(true, "0 0 4 * * *"), Duration.ofSeconds(10));
+        when(connection.followRedirects(true)).thenReturn(connection);
+        when(connection.get()).thenReturn(Jsoup.parse(""));
+        final var client = new WerStreamtEsSource(throttled, uri -> connection);
+
+        final long start = System.nanoTime();
+        client.query(IMDB_ID);   // primes the limiter, never blocks
+        client.query(IMDB_ID);   // waits ~50ms
+        client.search("matrix"); // same instance throttles search too: another ~50ms
+        final long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertThat(elapsedMs).isGreaterThanOrEqualTo(80); // ~100ms expected, generous margin
+    }
+
+    @Test
     void searchReturnsAnEmptyListWhenTheSiteRespondsWithAnErrorStatus() throws Exception {
         when(connection.get()).thenThrow(new HttpStatusException("Not Found", 404, "https://www.werstreamt.es/filme/"));
 

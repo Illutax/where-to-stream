@@ -41,6 +41,7 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 | 🟡 | [TODO-78](#todo-78) | Serving a poster thumbnail loads the full-size BLOB too |
 | 🟡 | [TODO-79](#todo-79) | `shared/platform` hosts single-context classes; ADR-0014 and ADR-0019 contradict each other |
 | 🟡 | [TODO-80](#todo-80) | The SecurityContext ArchUnit rule no longer covers the packages it targets |
+| 🟡 | [TODO-85](#todo-85) | Surviving mutants from the 2026-09-13 baseline — the worked triage |
 | 🟢 | [TODO-42](#todo-42) | No minimum length or complexity for passwords |
 | 🟢 | [TODO-52](#todo-52) | Reduce the Angular bundle (trigger: 1 MB initial bundle) |
 | 🟢 | [TODO-81](#todo-81) | "Clear entire watchlist" runs without confirmation |
@@ -272,6 +273,42 @@ Details: F2/F3 in
 - **Acceptance:** the rule covers all non-presentation packages (a probe violation in
   `adapter.out` turns it red), and the two undocumented imports are either ADR-documented or
   removed.
+
+### 🟡 TODO-85 — Surviving mutants from the 2026-09-13 baseline — the worked triage
+First full pitest run ([ADR-0022](docs/adr/0022-coverage-as-a-signal-audited-by-mutation-testing.md)):
+766 mutants, 637 killed. The same day's strengthening pass killed the top tier
+(`RefreshInFlightTracker` dedup, `WerStreamtEsSource` rate-limiter application,
+`UserAdminService` update/list/last-admin). **Still worth killing**, in this order:
+
+1. **Rate-limiter application in the titlecatalog sources** —
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/tmdb/TmdbPosterSource.java`,
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbPosterSource.java`,
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbTitleSource.java`,
+   `src/main/java/tech/dobler/where2stream/titlecatalog/adapter/out/imdb/ImdbSuggestionSource.java`:
+   `removed call to RateLimiter::acquire` survives in each. The lower-bound timing pattern to copy
+   is `queryAndSearchGoThroughTheRateLimiter` in
+   `src/test/java/tech/dobler/where2stream/streamingavailability/adapter/out/werstreamtes/WerStreamtEsSourceTest.java`
+   (these sources have the `HttpClientFactory` fake seam instead of a fake connection).
+2. **`PosterService.storeBytes`** (`src/main/java/tech/dobler/where2stream/titlecatalog/application/PosterService.java`):
+   removing `setThumb`/`setFull` and negating the dual-path conditional survives — the
+   find-or-create write is not asserted on content.
+3. **`MeApiController.updateUsername`** — the whole path (session invalidation, context clear) is
+   NO_COVERAGE.
+4. **`WerStreamtEsSource.parseOfferings`** — the modulus/conditional family around the
+   3·N-columns multi-language case survives the single Prime fixture; a second fixture with a
+   different column count would pin it.
+5. **`SecurityConfig.rememberMeKey`** — the stable-key-vs-generated fallback conditionals survive.
+
+**Allowed survivors, deliberately not chased** (kept here so nobody re-triages them):
+`ApiExceptionHandler` `setTitle` removals (cosmetic ProblemDetail titles);
+`ExportReader` log-guard/log-arithmetic mutants (logging only — the counts themselves are
+asserted); `RateLimiter` boundary mutants (equivalent-ish via nanos overflow);
+`@Configuration` wiring survivors (measurement artifact — see the blind-spot note in ADR-0022);
+`AsyncConfig` executor setters (owned by [TODO-73](#todo-73));
+metrics-port default methods.
+
+- **Acceptance:** items 1–5 each killed by a test at an observable seam (or individually declined
+  here with a reason), verified by a scoped pitest run.
 
 ---
 

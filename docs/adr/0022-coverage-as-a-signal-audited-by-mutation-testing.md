@@ -74,6 +74,17 @@ classes JaCoCo excludes (MapStruct impls, the boot class) are excluded here.
 Incremental analysis (`withHistory`) is unavailable — since pitest 1.30 it requires the
 commercial arcmutate history plugin — so every run is a full run.
 
+**Known blind spot — Spring `@Configuration` wiring survivors are measurement artifacts, not
+findings.** Spring's test-context cache spans the mutants a pitest minion JVM runs in sequence,
+so a `@Bean` method executes only while the first mutant of a batch is active; wiring mutants in
+later slots never run and "survive".
+Measured, not assumed (2026-09-13): `ImpersonationConfig` keeps 10 of 17 mutants even though
+`ImpersonationTest` exercises the filter end to end over MockMvc, and the kill rate tracks the
+minion batch size (the two-mutant batches killed 100 %).
+The commercial arcmutate Spring plugin exists for exactly this.
+Triage rule: survivors inside `@Configuration`/security wiring classes are skipped, not chased
+with tests — a test cannot fix the measurement.
+
 **5. The frontend half is decided in principle and deferred in practice.**
 `@angular/build:unit-test` owns the Vitest configuration internally, and Stryker's Vitest runner
 needs a standalone config replicating the Angular compile pipeline — an integration to evaluate,
