@@ -358,6 +358,40 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <!-- Mutation testing (ADR-0022). Not bound to any phase: coverage says code ran,
+                 only a killed mutant says an assertion bites, and the run is far too slow for
+                 every build. Run it at architecture-review cadence:
+                 mvn test-compile org.pitest:pitest-maven:mutationCoverage
+                 Report at target/pit-reports/. -->
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.30.0</version>
+                <dependencies>
+                    <dependency>
+                        <!-- Without this the run silently examines 0 tests (JUnit 5). -->
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.3</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <threads>4</threads>
+                    <timestampedReports>false</timestampedReports>
+                    <!-- No withHistory: since 1.30 incremental analysis needs the commercial
+                         arcmutate history plugin; without it the flag aborts the run. -->
+                    <excludedClasses>
+                        <!-- Same non-logic exclusions as JaCoCo above. -->
+                        <excludedClass>*MapperImpl</excludedClass>
+                        <excludedClass>tech.dobler.where2stream.WerStreamtApplication</excludedClass>
+                    </excludedClasses>
+                    <excludedTestClasses>
+                        <!-- Container boots per mutant would dominate the run; the MariaDB tests
+                             guard the schema, not mutable logic. -->
+                        <excludedTestClass>*MariaDbTest</excludedTestClass>
+                    </excludedTestClasses>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

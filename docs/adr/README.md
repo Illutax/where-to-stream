@@ -32,5 +32,6 @@ recorded in TODO-67 in [`DONE.md`](../../DONE.md).
 | [0019](0019-port-spi-for-inverted-context-dependencies.md) | port.spi for inverted context dependencies instead of parking them in shared | Accepted |
 | [0020](0020-admin-impersonation-via-switchuserfilter.md) | Admin impersonation via Spring Security SwitchUserFilter | Accepted |
 | [0021](0021-track-one-node-lts-major-checked-by-a-test.md) | Track one Node LTS major, checked by a test | Accepted |
+| [0022](0022-coverage-as-a-signal-audited-by-mutation-testing.md) | Coverage is a signal, not a target — audited by mutation testing | Accepted |
 
 New ADR: next free four-digit number, `NNNN-short-slug.md`, written in English.

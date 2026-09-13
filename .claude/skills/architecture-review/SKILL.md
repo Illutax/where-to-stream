@@ -42,6 +42,11 @@ Written in English, like everything else in the repository (see `CLAUDE.md`).
 - Tree green, via the full round in the `run-tests` skill.
   A review on a red tree confuses symptoms with findings.
   Record the evidence (test counts, commit) — it goes into the snapshot header.
+- Start the backend mutation run (ADR-0022) — it takes minutes, so kick it off before the
+  agents and read it when consolidating:
+  `mvn test-compile org.pitest:pitest-maven:mutationCoverage` → `target/pit-reports/`.
+  Surviving mutants in code the review leans on are findings like any other;
+  a skipped run goes into the header's "not examined" list, not under the rug.
 
 ## Running it
 

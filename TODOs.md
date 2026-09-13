@@ -46,6 +46,7 @@ The full routine is a skill: [`.claude/skills/ticket/SKILL.md`](.claude/skills/t
 | 🟢 | [TODO-81](#todo-81) | "Clear entire watchlist" runs without confirmation |
 | 🟢 | [TODO-82](#todo-82) | Hardcoded English user-facing strings bypass Transloco |
 | 🟢 | [TODO-83](#todo-83) | Small clean-up finds from the 2026-09-10 architecture review |
+| 🟢 | [TODO-84](#todo-84) | Mutation testing for the frontend — evaluate Stryker vs. the Angular builder |
 
 ---
 
@@ -409,3 +410,29 @@ Collected from
 
 - **Acceptance:** each bullet either done or explicitly declined with the reason recorded where the
   respective code/doc lives.
+
+### 🟢 TODO-84 — Mutation testing for the frontend — evaluate Stryker vs. the Angular builder
+[ADR-0022](docs/adr/0022-coverage-as-a-signal-audited-by-mutation-testing.md) adopts mutation
+testing at architecture-review cadence; the backend half runs (pitest, configured in `pom.xml`).
+The frontend half is blocked on an integration question, not a flag:
+`src/main/frontend/angular.json` runs tests through `@angular/build:unit-test`, which owns the
+Vitest configuration internally — there is no standalone `vitest.config` for Stryker's Vitest
+runner to load, and hand-writing one means replicating the Angular compile pipeline
+(the `@analogjs/vite-plugin-angular` route) and keeping it in step with the builder.
+
+**Probed 2026-09-13** (builder schema read, npm registry queried — not guessed):
+the builder does accept an external config (`runnerConfig`, merged into its own run — an options
+overlay, not a runnable pipeline, since compilation stays in the builder's build step);
+Stryker launches Vitest itself, bypassing the builder, so it would need the Angular compilation
+as a Vite plugin (`@analogjs/vite-plugin-angular`) — a second compile pipeline with the usual
+drift cost, whose mutants would also run against a different pipeline than the real suite;
+and versions do not block (Stryker 10 wants `vitest >=2`, we run 4.x).
+
+To evaluate: (a) wait for the builder to expose its built test bundle to external runners,
+(b) migrate the suite to plain Vitest + `@analogjs/vite-plugin-angular` (a real ADR-0004
+revision — one pipeline again, Stryker native, at the cost of tracking Angular majors), or
+(c) declining frontend mutation testing with reasons.
+A mutation-only shadow config next to the builder is ruled out — two pipelines for one suite.
+
+- **Acceptance:** either a working `npm run test:mutation` documented in the README, or an update
+  note on ADR-0022 recording that the frontend stays out and why.

@@ -295,7 +295,10 @@ variable is required there, and passing it is what makes the tests run against t
 that actually ship.
 
 Coverage: JaCoCo for the backend (`target/site/jacoco/`), Vitest v8 for the frontend
-(`npm run test:coverage`).
+(`npm run test:coverage`). Neither is a gate —
+[ADR-0022](docs/adr/0022-coverage-as-a-signal-audited-by-mutation-testing.md) says why, what earns
+a test, and how mutation testing (`mvn test-compile org.pitest:pitest-maven:mutationCoverage`,
+report at `target/pit-reports/`) audits the suite at architecture-review cadence.
 
 Two rules are enforced rather than agreed: bounded-context isolation and "no `Instant.now()` /
 `Date.now()` outside the `TimeService` facade" ([ADR-0003](docs/adr/0003-time-through-a-timeservice-facade.md))
