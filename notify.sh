@@ -20,7 +20,7 @@
 #
 # Secrets and local overrides, not in Git:
 #
-#     ENV_FILE="${ENV_FILE:-$HOME/.config/w2s-update.env}"
+#     ENV_FILE="${ENV_FILE:-$HOME/.config/ntfy-w2s.env}"
 #
 #     NTFY_URL=https://ntfy.example.net/my-topic
 #     NTFY_TOKEN=tk_...
@@ -36,8 +36,8 @@
 # Nothing in here may fail the update: a notifier that is down, misconfigured or slow must not keep
 # a deployment from happening, so every path returns 0 and curl is bounded by a timeout.
 
-# Secrets & local overrides (NTFY_URL, NTFY_TOKEN, ...) – not in Git
-ENV_FILE="${ENV_FILE:-$HOME/.config/w2s-update.env}"
+# ntfy destination & credentials – not in Git
+ENV_FILE="${ENV_FILE:-$HOME/.config/ntfy-w2s.env}"
 # shellcheck disable=SC1090
 [[ -r "$ENV_FILE" ]] && source "$ENV_FILE"
 

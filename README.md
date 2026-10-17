@@ -332,7 +332,7 @@ to do — a topic that is quiet for a week should mean "no news", not "cron stop
 
 `notify.sh` is the same interface as the host's pihole update job, down to the variable names:
 `notify <title> <message> [priority] [tags]`, configured through
-`ENV_FILE="${ENV_FILE:-$HOME/.config/w2s-update.env}"` with `NTFY_URL` (the full topic URL; empty
+`ENV_FILE="${ENV_FILE:-$HOME/.config/ntfy-w2s.env}"` with `NTFY_URL` (the full topic URL; empty
 means "do not notify") and `NTFY_TOKEN`.
 Which server and which topic is deployment configuration and lives only in that file — the
 address of a piece of home infrastructure does not belong in a repository, and on a server that
