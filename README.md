@@ -322,6 +322,25 @@ presentational components under `shared/` only render their inputs.
 
 `update-and-restart.sh` (pull, rebuild, restart) and `upgrade-spring-boot.sh` (bump the Spring
 Boot parent, test in the image, push) run on the host, driven by `cron.sh`.
+Both report back to `cron.sh` with the same exit codes: `0` did something, `2` there was nothing
+to do, anything else broke.
+
+`cron.sh` publishes the outcome to an ntfy topic via [`notify.sh`](notify.sh):
+`white_check_mark` when a new version was deployed, `rotating_light` at high priority with the
+last 20 lines of output when a step failed, and a `min`-priority line when the run found nothing
+to do — a topic that is quiet for a week should mean "no news", not "cron stopped firing".
+
+`notify.sh` is the same interface as the host's pihole update job, down to the variable names:
+`notify <title> <message> [priority] [tags]`, configured through
+`ENV_FILE="${ENV_FILE:-$HOME/.config/w2s-update.env}"` with `NTFY_URL` (the full topic URL; empty
+means "do not notify") and `NTFY_TOKEN`.
+Which server and which topic is deployment configuration and lives only in that file — the
+address of a piece of home infrastructure does not belong in a repository, and on a server that
+allows anonymous publishing the topic URL is itself close to a credential.
+The file is not part of this repository and should be `chmod 600`.
+`./notify.sh --test` sends a probe notification and changes nothing else.
+Notifying can never fail a deployment: if the server is unreachable, `notify.sh` says so on stderr
+and the update carries on.
 
 ---
 
