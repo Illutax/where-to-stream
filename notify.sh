@@ -2,13 +2,21 @@
 #
 # notify.sh — ntfy notifications for the nightly update run.
 #
-# Sourced by cron.sh; run directly with --test to send a probe notification and check the setup.
+# Sourced by cron.sh; run directly to check the setup without touching the deployment:
+#
+#     ./notify.sh --test            one probe notification — does the configuration reach the topic
+#     ./notify.sh --test-events     one of each notification the nightly run can actually send
 #
 # The interface is deliberately the one the pihole-update job on this host already uses — same
 # function signature, same variable names, same meanings — so neither script has to be re-read to
 # understand the other:
 #
 #     notify <title> <message> [priority] [tags]
+#
+# What each event looks like lives here, in notify_deployed/notify_nothing_new/notify_failed,
+# rather than at the call sites in cron.sh. That is what makes --test-events worth anything: it
+# fires the production messages themselves, so a drill cannot drift away from the real thing while
+# still passing.
 #
 # Secrets and local overrides, not in Git:
 #
@@ -36,8 +44,11 @@ ENV_FILE="${ENV_FILE:-$HOME/.config/w2s-update.env}"
 NTFY_URL="${NTFY_URL:-}"      # optional, full topic URL, e.g. https://ntfy.sh/my-topic
 NTFY_TOKEN="${NTFY_TOKEN:-}"  # token of a user with write access to the topic
 
+# Set by --test-events so a drill cannot be mistaken for a real 4 a.m. alert. Empty in production.
+NOTIFY_TITLE_PREFIX="${NOTIFY_TITLE_PREFIX:-}"
+
 notify() {
-    local title="$1" msg="$2" prio="${3:-default}" tags="${4:-}"
+    local title="${NOTIFY_TITLE_PREFIX}$1" msg="$2" prio="${3:-default}" tags="${4:-}"
     [[ -n "$NTFY_URL" ]] || return 0
     local -a auth=()
     [[ -n "$NTFY_TOKEN" ]] && auth=(-H "Authorization: Bearer $NTFY_TOKEN")
@@ -49,9 +60,46 @@ notify() {
     return 0
 }
 
-# ./notify.sh --test  → check that the configuration actually reaches the topic, change nothing
+# ---------------------------------------------------------------- The events cron.sh can report
+head_line() { # one line identifying what is deployed now
+    git log -1 --format='%h %s' 2>/dev/null || echo "unknown commit"
+}
+
+notify_deployed() { # previous commit, Spring Boot status
+    notify "w2s deployed" "$(head_line)
+Previously: $1
+$2" low white_check_mark
+}
+
+notify_nothing_new() { # current commit, Spring Boot status
+    notify "w2s update ran" "Nothing new to deploy ($1). $2" min +1
+}
+
+notify_failed() { # step, tail of the run log
+    notify "w2s update failed" "$1 failed on $(hostname).
+
+$2" high rotating_light
+}
+
+# ---------------------------------------------------------------- Run directly: check, change nothing
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-    [[ "${1:-}" == "--test" ]] || { echo "Usage: source notify.sh   |   $0 --test" >&2; exit 64; }
     [[ -n "$NTFY_URL" ]] || { echo "NTFY_URL is not set (ENV_FILE: $ENV_FILE)" >&2; exit 1; }
-    notify "w2s update: test" "Notification works. HEAD: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)" low test_tube
+    case "${1:-}" in
+        --test)
+            notify "w2s update: test" "Notification works. HEAD: $(head_line)" low test_tube
+            ;;
+        --test-events)
+            # The real functions with stand-in data, so what arrives is what a real run would send
+            # -- only the titles are marked, and the deployment is not touched.
+            NOTIFY_TITLE_PREFIX="[drill] "
+            notify_deployed "0000000" "Spring Boot updated."
+            notify_nothing_new "$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" "No new Spring Boot version."
+            notify_failed "Application update" "    | this is a drill, no deployment was attempted
+    | the real notification carries the last 20 lines of the run log here"
+            ;;
+        *)
+            echo "Usage: source notify.sh   |   $0 --test   |   $0 --test-events" >&2
+            exit 64
+            ;;
+    esac
 fi

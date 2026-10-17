@@ -338,7 +338,13 @@ Which server and which topic is deployment configuration and lives only in that 
 address of a piece of home infrastructure does not belong in a repository, and on a server that
 allows anonymous publishing the topic URL is itself close to a credential.
 The file is not part of this repository and should be `chmod 600`.
-`./notify.sh --test` sends a probe notification and changes nothing else.
+`./notify.sh --test` sends a probe notification; `./notify.sh --test-events` sends one of each
+notification the nightly run can produce, titled `[drill]` so it cannot be mistaken for a real
+4 a.m. alert.
+Neither touches the deployment.
+The drill calls the same `notify_deployed`/`notify_nothing_new`/`notify_failed` functions
+`cron.sh` calls, which is the point of them living in `notify.sh` rather than at the call sites —
+a rehearsal that is allowed to drift from the real message is worth nothing.
 Notifying can never fail a deployment: if the server is unreachable, `notify.sh` says so on stderr
 and the update carries on.
 

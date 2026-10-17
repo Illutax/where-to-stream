@@ -18,9 +18,7 @@ run() { # command... -- run it, show its output, and keep a copy in $RUN_LOG
 
 handle_error() { # step
   echo "Error occurred. Bailing"
-  notify "w2s update failed" "$1 failed on $(hostname).
-
-$(tail -n 20 "$RUN_LOG")" high rotating_light
+  notify_failed "$1" "$(tail -n 20 "$RUN_LOG")"
   exit 1
 }
 
@@ -48,11 +46,9 @@ echo "Updating application..."
 # that stopped firing -- but at `min`, so a night with no news does not buzz anyone's phone.
 run ./update-and-restart.sh
 case $? in
-  0) notify "w2s deployed" "$(git rev-parse --short HEAD) $(git show -s --format=%s)
-Previously: $DEPLOYED_BEFORE
-$SPRING_BOOT_STATUS" low white_check_mark ;;
+  0) notify_deployed "$DEPLOYED_BEFORE" "$SPRING_BOOT_STATUS" ;;
   2) echo "Nothing to deploy."
-     notify "w2s update ran" "Nothing new to deploy ($DEPLOYED_BEFORE). $SPRING_BOOT_STATUS" min +1 ;;
+     notify_nothing_new "$DEPLOYED_BEFORE" "$SPRING_BOOT_STATUS" ;;
   *) handle_error "Application update" ;;
 esac
 
