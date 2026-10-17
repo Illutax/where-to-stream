@@ -20,7 +20,7 @@ services:
       #  - Caddy reaches us over the `webserver` network below, and Tomcat only trusts X-Forwarded-*
       #    from a peer in a private range. Docker's IPv4 pools qualify; an IPv6-enabled network
       #    would not, and the symptom is silent -- redirects quietly go out as http again.
-      - server.servlet.context-path=/w2s
+      # - server.servlet.context-path=/w2s
       - SERVER_SERVLET_SESSION_TIMEOUT=${W2S_SESSION_TIMEOUT:-30m}
       # W2S_ADMIN_USER / W2S_ADMIN_PASSWORD need no mapping: application.properties reads them
       # as placeholders, and env_file below hands them to the container.
