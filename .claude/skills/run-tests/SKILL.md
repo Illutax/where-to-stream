@@ -25,9 +25,10 @@ cd /workspace/w2s && mvn verify     # 59 s
 
 Same tests plus the production Angular build and the packaged jar.
 
-Only leave the containers out where there is no container runtime at all
-(`-Pno-testcontainers`, 36 s, 408 tests).
-It is an escape hatch for an environment that cannot run them, not a faster mode.
+There is no switch for leaving the containers out, and none is needed: without a Docker socket
+`@Testcontainers(disabledWithoutDocker = true)` disables those four classes and they report as
+skipped (`Tests run: 21 … Skipped: 21`), so the suite stays green in an environment that cannot
+run them.
 
 ## Where the time goes
 
@@ -38,7 +39,7 @@ before and after the four MariaDB tests were put on one shared container:
 | --- | --- | --- | --- |
 | `mvn verify` | 94 s | **59 s** | 426 |
 | `mvn test -Dskip.frontend=true` | 91 / 102 / 114 s | **47 s** | 426 |
-| the same, `-Pno-testcontainers` | 36 s | 36 s | 408 |
+| the same, without the container tests | 36 s | 36 s | 408 |
 | the 18 container tests alone | 69 s | **30 s** | 18 |
 | `ng lint` + `ng test` | 13 s | 13 s | 249 |
 
@@ -88,9 +89,13 @@ Parallel JVMs did not help, because the cost was container boots, not CPU.
   A `grep` filter that does not match the failure output makes a broken run look like a clean one —
   once reported here as "four tests green" when the test had not compiled at all.
   Check `Tests run: …` and `BUILD`, and treat missing output as "I do not know", not as "fine".
-- **Testcontainers are a Maven profile, not a JUnit group.**
-  `-Dgroups=testcontainers` silently runs zero tests.
-  It is `-Pno-testcontainers` to leave them out; they are on by default.
+- **There is no flag for the Testcontainers tests any more, in either direction.**
+  `-Dgroups=testcontainers` silently runs zero tests, and the `-Pno-testcontainers` profile that
+  used to leave them out is gone — Spring Boot 4.2 pulls in Surefire 3.6.0, where the
+  `<excludedGroups>` it rested on no longer excludes anything, so the profile had become a
+  promise the build did not keep.
+  They are on by default and skip themselves where no Docker socket exists.
+  To run only those four classes, `-Dtest='*MariaDbTest'` works; the `@Tag` does not.
 - **`target/` remembers deleted tests, in two different ways.**
   A leftover `target/test-classes/…` class can still be picked up by Surefire after the source is
   gone, so clear it when you delete or rename a test.

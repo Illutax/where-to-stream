@@ -56,8 +56,8 @@ COPY --from=dependencies /root/.m2 /root/.m2
 # `.claude/skills/`, referenced from TODOs.md and CONTRIBUTING.md. `.dockerignore` already says
 # what must not come along, so this reuses that answer instead of maintaining a second one.
 #
-# The alternative -- tagging those tests and excluding them here, as the Testcontainers ones are --
-# was rejected: "checked on every build" is a claim README.md and CLAUDE.md both make, and this is
+# The alternative -- tagging those tests and excluding them from this build -- was rejected:
+# "checked on every build" is a claim README.md and CLAUDE.md both make, and this is
 # the build that ships. The cost is that editing a Markdown file re-runs the suite; the Maven
 # dependency layer above is untouched, so that is the minute the tests take, not a cold build.
 #
@@ -73,10 +73,14 @@ COPY . .
 # every ordinary commit would reach production untested.
 #
 #
-# `-Dtest.excluded.groups=testcontainers` is the one exception to "built WITH tests": a build stage
-# has no Docker socket, so the Testcontainers (MariaDB) tests cannot start a database here and would
-# fail for want of a runtime rather than for want of correctness. They are the default everywhere a
-# runtime exists -- a developer's `mvn verify` and CI -- so the gap is one build, not the habit.
+# The Testcontainers (MariaDB) tests need no flag to be left out here: a build stage has no Docker
+# socket, and `@Testcontainers(disabledWithoutDocker = true)` turns that into 21 skipped tests and
+# a green build rather than a failure for want of a runtime. Measured, not assumed -- with the
+# socket hidden behind a bind mount, `mvn test -Dtest=*MariaDbTest` reports
+# `Tests run: 21, Failures: 0, Errors: 0, Skipped: 21`.
+#
+# They therefore run everywhere a runtime exists -- a developer's `mvn verify`, CI -- and nowhere
+# else, which is the same gap as before without a build flag to keep in step with the pom.
 #
 # The version is stamped before the build rather than after, so the tests run against the same
 # coordinates that ship.
@@ -84,7 +88,7 @@ FROM sources AS builder
 ARG DOCKER_IMAGE_TAG
 ENV DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG
 RUN echo "$DOCKER_IMAGE_TAG" | mvn versions:set -DnewVersion= -DgenerateBackupPoms=false
-RUN mvn -B package -Dtest.excluded.groups=testcontainers
+RUN mvn -B package
 
 #############################################################
 # the same toolchain and the same tests, without the version stamping -- built by
@@ -94,7 +98,7 @@ RUN mvn -B package -Dtest.excluded.groups=testcontainers
 # extra frontend compilation along, and this target needs no DOCKER_IMAGE_TAG. Both share the
 # cached `sources` stage, so the duplication is in the file, not in the work.
 FROM sources AS verify
-RUN mvn -B clean package -Dtest.excluded.groups=testcontainers
+RUN mvn -B clean package
 
 #############################################################
 # run

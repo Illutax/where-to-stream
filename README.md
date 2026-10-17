@@ -269,14 +269,13 @@ each context's `adapter/in/api`.
 
 ```bash
 mvn verify                          # backend, incl. the MariaDB Testcontainers tests
-mvn verify -Pno-testcontainers      # without a container runtime
 cd src/main/frontend && npm test    # frontend (vitest), watch mode
 ```
 
 The MariaDB tests run **by default** — they are the only ones that exercise the Liquibase
 changelog against the database production actually uses, and a check you have to remember is a
-check that gets skipped. They are excluded only where no Docker socket exists, notably inside the
-image build stages.
+check that gets skipped. There is nothing to switch off: where no Docker socket exists — notably
+inside the image build stages — they disable themselves and are reported as skipped.
 
 To check that the build still works **inside the image toolchain** — a different question from
 "does it work on my machine", and the one that decides whether a deploy will succeed:
@@ -286,8 +285,8 @@ docker build . --target verify     # same toolchain as the deploy build, runs mv
 ```
 
 It needs no `DOCKER_IMAGE_TAG` and produces no runtime image. Note what it does *not* cover: that
-stage excludes the Testcontainers tests, so a green run says nothing about the schema against
-MariaDB. Run `mvn verify` on the host for that.
+stage has no Docker socket, so the Testcontainers tests skip themselves there and a green run says
+nothing about the schema against MariaDB. Run `mvn verify` on the host for that.
 
 The deploy build itself (`docker build .`, see [With Docker](#with-docker)) goes through a
 different stage which stamps the version from `DOCKER_IMAGE_TAG` before compiling — so that
